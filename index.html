@@ -935,6 +935,7 @@ function initGame() {
     curSystem:   '',       // current system key "x,y" when in system/planet mode
     selPlanet:   0,        // selected planet index in system view (0-based)
     selMoon:     -1,       // selected moon index (-1 = none)
+    _viewInvSel: 0,        // selected inventory item index
     dead:        false,
     deathCause:  '',
     retired:     false,
@@ -2388,7 +2389,8 @@ const STATION_BUILDINGS = [
     col: '#ccaaff',
     actions: () => [
       { label: 'Buy supplies',   detail: '50 cr → crew +10 HP, ship +10 HP', id:'supplies' },
-      { label: 'Buy oxygen tank',detail: '(Coming soon)', id:'oxytank', disabled:true },
+      { label: 'Buy Medikit',    detail: '100 cr → heals lowest HP crew by 10', id:'medikit' },
+      { label: 'Buy Oxygen Tank', detail: '100 cr → refill O₂ to full on surface', id:'oxytank' },
     ],
   },
 ];
@@ -2568,16 +2570,31 @@ function drawInventoryOverlay(){
       ctx.font='16px Courier New'; ctx.fillStyle='#555';
       ctx.fillText('(empty — explore planets to find cargo)', 40, 80);
     } else {
+      const invSel = Math.min(G._viewInvSel||0, G.inventory.length-1);
       G.inventory.forEach((item,i)=>{
-        ctx.font='16px Courier New';
-        ctx.fillStyle=item.col; ctx.fillText((i+1)+'. '+item.name, 40, 68+i*24);
-        ctx.fillStyle='#556677'; ctx.fillText(item.desc, 300, 68+i*24);
-        ctx.fillStyle='#ffe066'; ctx.fillText((item.value||0)+' cr', cw-100, 68+i*24);
+        const isSel = i===invSel;
+        const ax=40, ay=52+i*28, aw=cw-80, ah=26;
+        ctx.fillStyle = isSel ? '#0e1a2a' : '#08080f';
+        ctx.fillRect(ax, ay, aw, ah);
+        ctx.strokeStyle = isSel ? (item.usable ? '#ff6688' : '#ffe066') : '#1a1a2a';
+        ctx.lineWidth = isSel ? 2 : 1;
+        ctx.strokeRect(ax, ay, aw, ah);
+        if(isSel){ ctx.fillStyle=item.usable?'#ff6688':'#ffe066'; ctx.font='bold 15px Courier New'; ctx.fillText('▶', ax+6, ay+18); }
+        ctx.font='15px Courier New';
+        ctx.fillStyle=item.col; ctx.fillText(item.name, ax+22, ay+18);
+        ctx.fillStyle='#556677'; ctx.fillText(item.desc, ax+220, ay+18);
+        if(item.usable){
+          ctx.fillStyle= isSel ? '#ff9999' : '#884455';
+          ctx.fillText('[Enter] Use', cw-130, ay+18);
+        } else {
+          ctx.fillStyle='#ffe066'; ctx.fillText((item.value||0)+' cr', cw-100, ay+18);
+        }
       });
       const tot=G.inventory.reduce((s,i)=>s+(i.value||0),0);
-      ctx.fillStyle='#223344'; ctx.fillRect(40, 68+G.inventory.length*24+4, cw-80, 1);
+      const listBottom = 52+G.inventory.length*28+8;
+      ctx.fillStyle='#223344'; ctx.fillRect(40, listBottom, cw-80, 1);
       ctx.fillStyle='#aaaaaa'; ctx.font='15px Courier New';
-      ctx.fillText('Total: '+tot+' cr', 40, 68+G.inventory.length*24+22);
+      ctx.fillText('Cargo value: '+tot+' cr', 40, listBottom+18);
     }
   } else {
     // Crew tab
@@ -3834,6 +3851,11 @@ function renderContextBar(){
   } else if(G.mode==='inventory'){
     btns.push(btn('←/→','Switch tab','info'));
     if(G._viewTab==='crew') btns.push(btn('↑/↓','Select crew','info'));
+    if(G._viewTab==='cargo' && G.inventory.length){
+      btns.push(btn('↑/↓','Select item','info'));
+      const item = G.inventory[G._viewInvSel||0];
+      if(item?.usable) btns.push(btn('Enter','Use item','good'));
+    }
     btns.push(btn('ESC','Close','info'));
   }
 
@@ -4713,6 +4735,20 @@ function executeBaseAction(actionId){
       if(G.credits>=50){ G.credits-=50; G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10)); G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10); addLog('Supplies bought. Crew and hull patched up.','lg'); }
       else addLog('Need 50 cr for supplies.','lw');
       break;
+    case 'medikit':
+      if(G.credits>=100){
+        G.credits-=100;
+        G.inventory.push({name:'Medikit',col:'#ff6688',desc:'A medikit.',value:0,usable:'medikit'});
+        addLog('Medikit purchased. Open inventory to use.','lg');
+      } else addLog('Need 100 cr for a Medikit.','lw');
+      break;
+    case 'oxytank':
+      if(G.credits>=100){
+        G.credits-=100;
+        G.inventory.push({name:'Oxygen Tank',col:'#44ddff',desc:'An oxygen tank.',value:0,usable:'oxytank'});
+        addLog('Oxygen Tank purchased. Open inventory to use on the surface.','lg');
+      } else addLog('Need 100 cr for an Oxygen Tank.','lw');
+      break;
   }
   renderAll();
 }
@@ -4996,6 +5032,34 @@ document.addEventListener('keydown', e=>{
         const living = G.crew.filter(c=>c.hp>0);
         if(e.key==='ArrowUp')  { G._viewCrewSel=Math.max(0,G._viewCrewSel-1); renderAll(); return; }
         if(e.key==='ArrowDown'){ G._viewCrewSel=Math.min(living.length-1,G._viewCrewSel+1); renderAll(); return; }
+      }
+      if(G._viewTab==='cargo'){
+        if(e.key==='ArrowUp')  { G._viewInvSel=Math.max(0,(G._viewInvSel||0)-1); renderAll(); return; }
+        if(e.key==='ArrowDown'){ G._viewInvSel=Math.min(G.inventory.length-1,(G._viewInvSel||0)+1); renderAll(); return; }
+        if(e.key==='Enter'){
+          const item = G.inventory[G._viewInvSel||0];
+          if(item?.usable==='medikit'){
+            const injured = G.crew.filter(c=>c.hp>0&&c.hp<c.maxHp).sort((a,b)=>a.hp-b.hp);
+            if(!injured.length){ addLog('All crew are at full health.','li'); }
+            else {
+              const target = injured[0];
+              target.hp = Math.min(target.maxHp, target.hp+10);
+              G.inventory.splice(G._viewInvSel||0, 1);
+              G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+              addLog('Medikit used on '+target.name+'. +10 HP.','lg');
+            }
+            renderAll(); return;
+          }
+          if(item?.usable==='oxytank'){
+            if(G.mode!=='planet'){ addLog('Oxygen Tank can only be used on a planet surface.','lw'); renderAll(); return; }
+            if(G.oxygen>=100){ addLog('Oxygen already full.','li'); renderAll(); return; }
+            G.oxygen = 100;
+            G.inventory.splice(G._viewInvSel||0, 1);
+            G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+            addLog('Oxygen Tank used. O₂ refilled to 100%.','lg');
+            renderAll(); return;
+          }
+        }
       }
       return;
     }
@@ -5432,6 +5496,9 @@ function drawMenuScreen(){
       '',
       'But beware of alien lifeforms and pirates.',
       'You start your career with a nice Light Scout.',
+      '',
+      'You will use your keyboard keys to do various actions.',
+      'Always check the context bar for hints.',
     ];
     const lineH = 26;
     const totalH = lines.length * lineH;
@@ -5468,9 +5535,11 @@ function drawMenuScreen(){
   MENU_STATE.mainSel = Math.min(MENU_STATE.mainSel, opts.length-1);
 
   ctx.font='bold 19px Courier New';
+  const _menuBtnRects = [];
   opts.forEach((o,i)=>{
     const sel = i===MENU_STATE.mainSel;
     const y=185+i*44;
+    _menuBtnRects.push({i, x:cx-160, y:y-20, w:320, h:34});
     ctx.fillStyle= sel ? '#14142a' : '#0e0e1a';
     ctx.fillRect(cx-160,y-20,320,34);
     ctx.strokeStyle= sel ? '#6655cc' : '#2a2a4a';
@@ -5483,6 +5552,8 @@ function drawMenuScreen(){
     ctx.fillStyle= sel ? '#ffffff' : o.col;
     ctx.fillText(o.label, cx-128, y+2);
   });
+  MENU_STATE._btnRects = _menuBtnRects;
+  MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
   ctx.fillText('v0.08  —  Goal: retire with 10,000 cr',cx,canvas.height-16);
@@ -5543,6 +5614,63 @@ function drawOptionsScreen(cx){
 // ─────────────────────────────────────────────────────────────────
 //  MENU KEY HANDLER
 // ─────────────────────────────────────────────────────────────────
+// ── Menu mouse click support ──────────────────────────────────
+canvas.addEventListener('click', e => {
+  if(G !== null) return; // only active on menu screen
+  if(MENU_STATE.screen !== 'main') return;
+  if(!MENU_STATE._btnRects || !MENU_STATE._opts) return;
+
+  // Get click position relative to canvas, accounting for CSS scaling
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top)  * scaleY;
+
+  // Build activate function (mirrors handleMenuKey logic)
+  const mainOpts = [];
+  mainOpts.push('n');
+  if(MENU_STATE.hasAutosave) mainOpts.push('c');
+  mainOpts.push('l');
+  mainOpts.push('o');
+
+  function activateMainOpt(sel){
+    if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=false; drawMenuScreen(); }
+    else if(sel==='c'){ if(loadFromStorage()){ loadSprites().then(()=>renderAll()); } else showMenu(); }
+    else if(sel==='l'){ loadFromFile(); }
+    else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
+  }
+
+  MENU_STATE._btnRects.forEach(btn => {
+    if(mx >= btn.x && mx <= btn.x+btn.w && my >= btn.y && my <= btn.y+btn.h){
+      MENU_STATE.mainSel = btn.i;
+      activateMainOpt(mainOpts[btn.i]);
+    }
+  });
+});
+
+// ── Menu hover highlighting ───────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  if(G !== null) return;
+  if(MENU_STATE.screen !== 'main') return;
+  if(!MENU_STATE._btnRects) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top)  * scaleY;
+  let changed = false;
+  let hovering = false;
+  MENU_STATE._btnRects.forEach(btn => {
+    if(mx >= btn.x && mx <= btn.x+btn.w && my >= btn.y && my <= btn.y+btn.h){
+      hovering = true;
+      if(MENU_STATE.mainSel !== btn.i){ MENU_STATE.mainSel = btn.i; changed = true; }
+    }
+  });
+  canvas.style.cursor = hovering ? 'pointer' : 'default';
+  if(changed) drawMenuScreen();
+});
+
 function handleMenuKey(e){
   const k=e.key.toLowerCase();
 
