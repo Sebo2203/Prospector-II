@@ -5051,7 +5051,8 @@ document.addEventListener('keydown', e=>{
             renderAll(); return;
           }
           if(item?.usable==='oxytank'){
-            if(G.mode!=='planet'){ addLog('Oxygen Tank can only be used on a planet surface.','lw'); renderAll(); return; }
+            const onPlanet = G.mode==='planet' || G._prevMode==='planet';
+            if(!onPlanet){ addLog('Oxygen Tank can only be used on a planet surface.','lw'); renderAll(); return; }
             if(G.oxygen>=100){ addLog('Oxygen already full.','li'); renderAll(); return; }
             G.oxygen = 100;
             G.inventory.splice(G._viewInvSel||0, 1);
@@ -5584,10 +5585,10 @@ function drawOptionsScreen(cx){
     const y = 185 + i*80;
     const sel = item.sel;
     ctx.fillStyle = sel ? '#12122a' : '#0a0a16';
-    ctx.fillRect(cx-220, y-28, 440, 60);
+    ctx.fillRect(cx-220, y-28, 440, 76);
     ctx.strokeStyle = sel ? '#6655aa' : '#2a2a4a';
     ctx.lineWidth = sel ? 2 : 1;
-    ctx.strokeRect(cx-220, y-28, 440, 60);
+    ctx.strokeRect(cx-220, y-28, 440, 76);
 
     // Label
     ctx.font = 'bold 15px Courier New'; ctx.textAlign='left';
