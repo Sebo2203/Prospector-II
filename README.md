@@ -7,3 +7,5 @@ To play all you need is a computer.
 
 Once the file is downloaded, click it and it should open a new window on your internet browser.
 There you can play the game. 
+
+https://sebo2203.github.io/Prospector-II/
