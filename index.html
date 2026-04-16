@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prospector v0.07</title>
+<title>Prospector II v0.09</title>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WDRH4STDM1"></script>
 <script>
@@ -383,7 +383,7 @@ canvas {
     <div><span class="ck">F5</span> save to file</div>
     <div><span class="ck">ESC</span> back / close</div>
   </div>
-  <div id="version-tag">v0.07</div>
+  <div id="version-tag">v0.09</div>
 
 </div><!-- #root -->
 
@@ -5491,6 +5491,16 @@ function drawMenuScreen(){
     return;
   }
 
+  if(MENU_STATE.screen==='changelog'){
+    drawChangelogScreen(cx);
+    return;
+  }
+
+  if(MENU_STATE.screen==='credits'){
+    drawCreditsScreen(cx);
+    return;
+  }
+
   if(MENU_STATE.screen==='intro'){
     const cy = canvas.height/2;
     const lines = [
@@ -5528,7 +5538,7 @@ function drawMenuScreen(){
 
   // Title
   ctx.font='bold 39px Courier New'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
-  ctx.fillText('PROSPECTOR',cx,100);
+  ctx.fillText('PROSPECTOR II',cx,100);
   ctx.font='17px Courier New'; ctx.fillStyle='#557799';
   ctx.fillText('A  R O G U E L I K E  I N  S P A C E',cx,130);
   ctx.fillStyle='#223344'; ctx.fillRect(cx-200,148,400,1);
@@ -5538,6 +5548,8 @@ function drawMenuScreen(){
   if(MENU_STATE.hasAutosave) opts.push({key:'C', label:'Continue', col:'#70d8ff'});
   opts.push({key:'L', label:'Load Save File', col:'#aaaaff'});
   opts.push({key:'O', label:'Options',        col:'#ffaa44'});
+  opts.push({key:'V', label:'Change Log',     col:'#aa88ff'});
+  opts.push({key:'X', label:'Credits',        col:'#ffdd88'});
 
   // Clamp selection in case Continue disappeared
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
@@ -5565,7 +5577,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.08  —  Goal: retire with 10,000 cr',cx,canvas.height-16);
+  ctx.fillText('v0.09  —  Goal: retire with 10,000 cr',cx,canvas.height-16);
   ctx.textAlign='left';
 }
 
@@ -5620,21 +5632,70 @@ function drawOptionsScreen(cx){
   ctx.textAlign='left';
 }
 
+function drawChangelogScreen(cx){
+  ctx.font='bold 31px Courier New'; ctx.fillStyle='#aa88ff'; ctx.textAlign='center';
+  ctx.fillText('CHANGE LOG',cx,70);
+  ctx.fillStyle='#2a1a44'; ctx.fillRect(cx-280,88,560,1);
+
+  // ── CHANGELOG ENTRIES — edit below, newest at top ──────────────
+  const entries = [
+    {
+      version: 'v0.09',
+      date: '2026',
+      changes: [
+        '',
+        '',
+        '',
+      ]
+    },
+  ];
+  // ── END OF CHANGELOG ENTRIES ───────────────────────────────────
+
+  let y = 116;
+  entries.forEach(entry => {
+    ctx.font='bold 17px Courier New'; ctx.fillStyle='#aa88ff'; ctx.textAlign='left';
+    ctx.fillText(entry.version+'  —  '+entry.date, cx-280, y);
+    y += 26;
+    ctx.fillStyle='#2a1a44'; ctx.fillRect(cx-280, y, 560, 1);
+    y += 10;
+    entry.changes.forEach(line => {
+      ctx.font='15px Courier New'; ctx.fillStyle='#8899aa';
+      ctx.fillText('›  '+line, cx-270, y);
+      y += 22;
+    });
+    y += 14;
+  });
+
+  ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+  ctx.fillText('[ ESC ]  Back to main menu', cx, canvas.height-16);
+  ctx.textAlign='left';
+}
+
 // ─────────────────────────────────────────────────────────────────
 //  MENU KEY HANDLER
 // ─────────────────────────────────────────────────────────────────
 // ── Menu mouse click support ──────────────────────────────────
 canvas.addEventListener('click', e => {
   if(G !== null) return; // only active on menu screen
-  if(MENU_STATE.screen !== 'main') return;
-  if(!MENU_STATE._btnRects || !MENU_STATE._opts) return;
 
-  // Get click position relative to canvas, accounting for CSS scaling
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width  / rect.width;
   const scaleY = canvas.height / rect.height;
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top)  * scaleY;
+
+  // Credits screen — clickable link
+  if(MENU_STATE.screen === 'credits' && MENU_STATE._linkY){
+    const lx = MENU_STATE._linkX - MENU_STATE._linkW/2;
+    const ly = MENU_STATE._linkY - 18;
+    if(mx >= lx && mx <= lx + MENU_STATE._linkW && my >= ly && my <= ly + 24){
+      window.open('http://prospector.at/', '_blank');
+      return;
+    }
+  }
+
+  if(MENU_STATE.screen !== 'main') return;
+  if(!MENU_STATE._btnRects || !MENU_STATE._opts) return;
 
   // Build activate function (mirrors handleMenuKey logic)
   const mainOpts = [];
@@ -5642,12 +5703,16 @@ canvas.addEventListener('click', e => {
   if(MENU_STATE.hasAutosave) mainOpts.push('c');
   mainOpts.push('l');
   mainOpts.push('o');
+  mainOpts.push('v');
+  mainOpts.push('x');
 
   function activateMainOpt(sel){
     if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=false; drawMenuScreen(); }
     else if(sel==='c'){ if(loadFromStorage()){ loadSprites().then(()=>renderAll()); } else showMenu(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
+    else if(sel==='v'){ MENU_STATE.screen='changelog'; drawMenuScreen(); }
+    else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
   }
 
   MENU_STATE._btnRects.forEach(btn => {
@@ -5661,13 +5726,24 @@ canvas.addEventListener('click', e => {
 // ── Menu hover highlighting ───────────────────────────────────
 canvas.addEventListener('mousemove', e => {
   if(G !== null) return;
-  if(MENU_STATE.screen !== 'main') return;
-  if(!MENU_STATE._btnRects) return;
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width  / rect.width;
   const scaleY = canvas.height / rect.height;
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top)  * scaleY;
+
+  // Pointer cursor over credits link
+  if(MENU_STATE.screen === 'credits' && MENU_STATE._linkY){
+    const lx = MENU_STATE._linkX - MENU_STATE._linkW/2;
+    const ly = MENU_STATE._linkY - 18;
+    if(mx >= lx && mx <= lx + MENU_STATE._linkW && my >= ly && my <= ly + 24){
+      canvas.style.cursor = 'pointer'; return;
+    }
+    canvas.style.cursor = 'default'; return;
+  }
+
+  if(MENU_STATE.screen !== 'main'){ canvas.style.cursor = 'default'; return; }
+  if(!MENU_STATE._btnRects) return;
   let changed = false;
   let hovering = false;
   MENU_STATE._btnRects.forEach(btn => {
@@ -5680,8 +5756,61 @@ canvas.addEventListener('mousemove', e => {
   if(changed) drawMenuScreen();
 });
 
+function drawCreditsScreen(cx){
+  const ch = canvas.height;
+  ctx.font='bold 31px Courier New'; ctx.fillStyle='#ffdd88'; ctx.textAlign='center';
+  ctx.fillText('CREDITS', cx, 70);
+  ctx.fillStyle='#443311'; ctx.fillRect(cx-280, 88, 560, 1);
+
+  const lines = [
+    { text:'Prospector II', col:'#ffe066', font:'bold 20px Courier New' },
+    { text:'A fan-made roguelike', col:'#8899aa', font:'16px Courier New' },
+    { text:'', col:'', font:'' },
+    { text:'────────────────────────────────────', col:'#2a2a44', font:'14px Courier New' },
+    { text:'', col:'', font:'' },
+    { text:'Art and ideas heavily inspired and borrowed', col:'#aaccee', font:'16px Courier New' },
+    { text:'with the author\'s permission from the creator', col:'#aaccee', font:'16px Courier New' },
+    { text:'of the original game Prospector (2009)', col:'#aaccee', font:'16px Courier New' },
+    { text:'made by Matthias Mennel', col:'#aaccee', font:'16px Courier New' },
+    { text:'', col:'', font:'' },
+    { text:'Check it out at:', col:'#556677', font:'15px Courier New' },
+    { text:'http://prospector.at/', col:'#70d8ff', font:'bold 16px Courier New' },
+  ];
+
+  let y = 120;
+  lines.forEach(line => {
+    if(!line.text){ y += 10; return; }
+    ctx.font = line.font;
+    ctx.fillStyle = line.col;
+    ctx.fillText(line.text, cx, y);
+    // Underline and track the clickable link
+    if(line.text==='http://prospector.at/'){
+      const w = ctx.measureText(line.text).width;
+      ctx.fillRect(cx - w/2, y+2, w, 1);
+      MENU_STATE._linkY = y;
+      MENU_STATE._linkX = cx;
+      MENU_STATE._linkW = w;
+    }
+    y += 26;
+  });
+
+  ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+  ctx.fillText('[ ESC ]  Back to main menu', cx, ch-16);
+  ctx.textAlign='left';
+}
+
 function handleMenuKey(e){
   const k=e.key.toLowerCase();
+
+  if(MENU_STATE.screen==='changelog'){
+    if(e.key==='Escape'){ MENU_STATE.screen='main'; drawMenuScreen(); return; }
+    return;
+  }
+
+  if(MENU_STATE.screen==='credits'){
+    if(e.key==='Escape'){ MENU_STATE.screen='main'; drawMenuScreen(); return; }
+    return;
+  }
 
   if(MENU_STATE.screen==='options'){
     if(e.key==='Escape'){ MENU_STATE.screen='main'; drawMenuScreen(); return; }
@@ -5705,6 +5834,8 @@ function handleMenuKey(e){
   if(MENU_STATE.hasAutosave) mainOpts.push('c');
   mainOpts.push('l');
   mainOpts.push('o');
+  mainOpts.push('v');
+  mainOpts.push('x');
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
 
   function activateMainOpt(sel){
@@ -5712,6 +5843,8 @@ function handleMenuKey(e){
     else if(sel==='c'){ if(loadFromStorage()){ loadSprites().then(()=>renderAll()); } else showMenu(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
+    else if(sel==='v'){ MENU_STATE.screen='changelog'; drawMenuScreen(); }
+    else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
   }
 
   if(e.key==='ArrowUp'){
@@ -5730,6 +5863,8 @@ function handleMenuKey(e){
   else if(k==='c' && MENU_STATE.hasAutosave) activateMainOpt('c');
   else if(k==='l') activateMainOpt('l');
   else if(k==='o') activateMainOpt('o');
+  else if(k==='v') activateMainOpt('v');
+  else if(k==='x') activateMainOpt('x');
 }
 
 // ─────────────────────────────────────────────────────────────────
