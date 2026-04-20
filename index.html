@@ -7320,18 +7320,14 @@ function showMenu(){
   // Fetch last commit time from GitHub (only once per session)
   if(MENU_STATE.lastUpdateText === undefined){
     MENU_STATE.lastUpdateText = null; // null = loading
-    fetch('https://api.github.com/repos/Sebastian2203/Prospector-II/commits?per_page=1', {
+    fetch('https://api.github.com/repos/sebo2203/Prospector-II/commits?per_page=1', {
       headers: { 'Accept': 'application/vnd.github.v3+json' }
     })
       .then(r => r.json())
       .then(data => {
-        console.log('GitHub API response:', JSON.stringify(data).slice(0, 300));
-        if(!Array.isArray(data) || !data[0]) {
-          MENU_STATE.lastUpdateText = 'API: '+(data?.message || JSON.stringify(data).slice(0,60));
-          drawMenuScreen(); return;
-        }
+        if(!Array.isArray(data) || !data[0]) { MENU_STATE.lastUpdateText = 'Update info unavailable'; drawMenuScreen(); return; }
         const date = new Date(data[0]?.commit?.committer?.date);
-        if(isNaN(date)) { MENU_STATE.lastUpdateText = 'Bad date in response'; drawMenuScreen(); return; }
+        if(isNaN(date)) { MENU_STATE.lastUpdateText = 'Update info unavailable'; drawMenuScreen(); return; }
         const diff = Date.now() - date.getTime();
         const mins  = Math.floor(diff / 60000);
         const hours = Math.floor(diff / 3600000);
@@ -7341,7 +7337,7 @@ function showMenu(){
         else                MENU_STATE.lastUpdateText = 'Last update: '+days+' day'+(days!==1?'s':'')+' ago';
         drawMenuScreen();
       })
-      .catch(err => { MENU_STATE.lastUpdateText = 'Fetch error: '+err.message; drawMenuScreen(); });
+      .catch(err => { MENU_STATE.lastUpdateText = 'Update info unavailable'; drawMenuScreen(); });
   }
 }
 
