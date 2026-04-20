@@ -2884,9 +2884,14 @@ function drawInventoryOverlay(){
       ctx.fillText('(empty — explore planets to find cargo)', 40, 80);
     } else {
       const invSel = Math.min(G._viewInvSel||0, G.inventory.length-1);
-      G.inventory.forEach((item,i)=>{
+      const rowH = 28;
+      const maxVisible = Math.max(1, Math.floor((ch - 160) / rowH));
+      const startIdx = Math.max(0, Math.min(invSel - Math.floor(maxVisible / 2), G.inventory.length - maxVisible));
+      const endIdx = Math.min(G.inventory.length, startIdx + maxVisible);
+      for(let i=startIdx;i<endIdx;i++){
+        const item = G.inventory[i];
         const isSel = i===invSel;
-        const ax=40, ay=52+i*28, aw=cw-80, ah=26;
+        const ax=40, ay=52+(i-startIdx)*rowH, aw=cw-80, ah=26;
         ctx.fillStyle = isSel ? '#0e1a2a' : '#08080f';
         ctx.fillRect(ax, ay, aw, ah);
         ctx.strokeStyle = isSel ? (item.usable ? '#ff6688' : '#ffe066') : '#1a1a2a';
@@ -2902,12 +2907,20 @@ function drawInventoryOverlay(){
         } else {
           ctx.fillStyle='#ffe066'; ctx.fillText((item.value||0)+' cr', cw-100, ay+18);
         }
-      });
+      }
       const tot=G.inventory.reduce((s,i)=>s+(i.value||0),0);
-      const listBottom = 52+G.inventory.length*28+8;
+      const listBottom = 52+(endIdx-startIdx)*rowH+8;
       ctx.fillStyle='#223344'; ctx.fillRect(40, listBottom, cw-80, 1);
       ctx.fillStyle='#aaaaaa'; ctx.font='15px Courier New';
       ctx.fillText('Cargo value: '+tot+' cr', 40, listBottom+18);
+      if(startIdx>0){
+        ctx.fillStyle='#667788';
+        ctx.fillText('^ more', cw-120, 44);
+      }
+      if(endIdx<G.inventory.length){
+        ctx.fillStyle='#667788';
+        ctx.fillText('v more', cw-120, listBottom+18);
+      }
     }
   } else {
     // Crew tab
@@ -3710,9 +3723,11 @@ function drawInGameOptions(){
   const cx=cw/2;
   // Reuse the existing options screen drawing — it uses canvas directly
   drawOptionsScreen(cx);
-  // Override the footer text
-  ctx.font='15px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('[ ESC ]  Close options',cx,ch-16);
+  ctx.fillStyle='rgba(0,0,0,0.92)';
+  ctx.fillRect(cx-300, ch-60, 600, 50);
+  ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+  ctx.fillText('Up/Down select   Left/Right change   Enter activate',cx,ch-36);
+  ctx.fillText('F feedback   ESC close options',cx,ch-18);
   ctx.textAlign='left';
 }
 
@@ -4976,14 +4991,52 @@ function getSurveySaleValue(pdata){
   return Math.floor(value);
 }
 
-function getPendingSurveySaleValue(){
+function getSurveyPayoutBreakdown(){
   let pending = 0;
-  Object.values(G.planets || {}).forEach(pdata=>{
-    const currentValue = getSurveySaleValue(pdata);
+  const fullBonusBodies = [];
+  Object.entries(G.planets || {}).forEach(([pKey, pdata])=>{
+    const scanMask = pdata.scanMask || [];
+    const explored = pdata.explored || [];
+    let scannedTiles = 0;
+    let exploredTiles = 0;
+    const len = Math.max(scanMask.length, explored.length);
+    for(let i=0;i<len;i++){
+      if(scanMask[i]) scannedTiles++;
+      if(explored[i]) exploredTiles++;
+    }
+    const scanOnlyTiles = Math.max(0, scannedTiles - exploredTiles);
+    const baseValue = Math.floor(scanOnlyTiles * SURVEY_SCAN_TILE_VALUE + exploredTiles * SURVEY_EXPLORE_TILE_VALUE);
+    const full = scannedTiles >= PLANET_W * PLANET_H;
+    const currentValue = full ? baseValue + SURVEY_FULL_SCAN_BONUS : baseValue;
     const soldValue = pdata.surveySoldValue || 0;
     if(currentValue > soldValue) pending += currentValue - soldValue;
+    if(full && soldValue < currentValue){
+      const bodyName = findBodyNameByKey(pKey);
+      if(bodyName) fullBonusBodies.push(bodyName);
+    }
   });
-  return pending;
+  return { pending, fullBonusBodies };
+}
+
+function getPendingSurveySaleValue(){
+  return getSurveyPayoutBreakdown().pending;
+}
+
+function findBodyNameByKey(pKey){
+  const parts = (pKey || '').split(':');
+  if(parts.length < 2) return pKey;
+  const sysKey = parts[0];
+  const pIdx = parseInt(parts[1], 10);
+  const sx = parseInt((sysKey.split(',')[0] || ''), 10);
+  const sy = parseInt((sysKey.split(',')[1] || ''), 10);
+  const cell = Number.isInteger(sx) && Number.isInteger(sy) ? G.galaxy?.[sy]?.[sx] : null;
+  const planet = cell?.planets?.[pIdx];
+  if(!planet) return pKey;
+  if(parts[2] && parts[2].startsWith('m')){
+    const moonIdx = parseInt(parts[2].slice(1), 10);
+    return planet.moons?.[moonIdx]?.name || pKey;
+  }
+  return planet.name || pKey;
 }
 
 function canLandAt(pdata, x, y){
@@ -5237,13 +5290,17 @@ function executeBaseAction(actionId){
       break;
     case 'sell':
       const sold=G.inventory.reduce((s,i)=>s+(i.value||0),0);
-      const surveySold = getPendingSurveySaleValue();
+      const surveyInfo = getSurveyPayoutBreakdown();
+      const surveySold = surveyInfo.pending;
       if(surveySold>0){
         Object.values(G.planets || {}).forEach(pdata=>{
           pdata.surveySoldValue = getSurveySaleValue(pdata);
         });
         G.credits+=surveySold;
         addLog('Sold survey data for '+surveySold+' cr.','lg');
+        if(surveyInfo.fullBonusBodies.length){
+          addLog('Full survey bonus awarded for '+surveyInfo.fullBonusBodies.join(', ')+'.','lg');
+        }
         if(G.credits>=10000) addLog('10,000 cr reached - visit the Science Office to retire.','lg');
       }
       if(sold>0){ G.credits+=sold; G.inventory=[]; addLog('Sold cargo for '+sold+' cr!','ll'); if(G.credits>=10000) addLog('10,000 cr reached — visit the Science Office to retire.','lg'); }
@@ -5399,11 +5456,31 @@ document.addEventListener('keydown', e=>{
 
     // In-game options overlay keys
     if(G.showOptions){
-      if(e.key==='Escape'){ G.showOptions=false; renderAll(); return; }
+      if(e.key==='Escape'){ G.showOptions=false; MENU_STATE._optHover=null; renderAll(); return; }
       if(e.key==='f'||e.key==='F'){ openFeedback(); return; }
-      if(e.key===' '||e.key==='Enter'||e.key==='ArrowLeft'||e.key==='ArrowRight'){
-        if(MENU_STATE.optSel===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
+      if(e.key==='ArrowUp'||e.key==='ArrowDown'){
+        MENU_STATE.optSel = MENU_STATE.optSel===1 ? 0 : 1;
+        MENU_STATE._optHover = null;
         renderAll();
+        return;
+      }
+      if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+        if(MENU_STATE.optSel===0){
+          OPTIONS.asciiMode=!OPTIONS.asciiMode;
+          saveOptions(OPTIONS);
+          renderAll();
+        }
+        return;
+      }
+      if(e.key===' '||e.key==='Enter'){
+        if(MENU_STATE.optSel===0){
+          OPTIONS.asciiMode=!OPTIONS.asciiMode;
+          saveOptions(OPTIONS);
+          renderAll();
+          return;
+        }
+        openFeedback();
+        return;
       }
       return;
     }
@@ -6238,7 +6315,7 @@ function drawOptionsScreen(cx){
   ctx.fillStyle='#223344'; ctx.fillRect(cx-200,108,400,1);
 
   ctx.font='16px Courier New'; ctx.fillStyle='#556677'; ctx.textAlign='center';
-  ctx.fillText('Use arrow keys to navigate,  Space / Enter to toggle',cx,134);
+  ctx.fillText('Up/Down select, Left/Right change, Enter activate',cx,134);
 
   const items=[
     {
@@ -6253,11 +6330,12 @@ function drawOptionsScreen(cx){
   ];
 
   MENU_STATE._optRects = [];
+  MENU_STATE._optArrowRects = [];
   items.forEach((item,i)=>{
     const y = 185 + i*80;
     MENU_STATE._optRects.push({ i, x: cx-220, y: y-28, w: 440, h: 76 });
     const sel = item.sel;
-    const hov = MENU_STATE._optHover === i; // hover state
+    const hov = MENU_STATE._optHover === i || MENU_STATE._optHover === 'opt-left' || MENU_STATE._optHover === 'opt-right';
     ctx.fillStyle = (sel||hov) ? '#12122a' : '#0a0a16';
     ctx.fillRect(cx-220, y-28, 440, 76);
     ctx.strokeStyle = sel ? '#6655aa' : hov ? '#4444aa' : '#2a2a4a';
@@ -6275,20 +6353,42 @@ function drawOptionsScreen(cx){
     ctx.fillStyle=item.valueCol; ctx.fillText(item.value, cx, y+18);
     ctx.fillStyle='#555577'; ctx.fillText('►', cx+110, y+18);
 
-    // Description
-    ctx.font='14px Courier New'; ctx.fillStyle='#445566'; ctx.textAlign='center';
-    ctx.fillText(item.desc, cx, y+36);
+    const leftArrow = { x: cx-132, y: y-2, w: 44, h: 28, dir: 'left' };
+    const rightArrow = { x: cx+88, y: y-2, w: 44, h: 28, dir: 'right' };
+    MENU_STATE._optArrowRects.push(leftArrow, rightArrow);
+    const leftActive = sel || MENU_STATE._optHover === 'opt-left';
+    const rightActive = sel || MENU_STATE._optHover === 'opt-right';
+    ctx.fillStyle = '#12122a';
+    ctx.fillRect(leftArrow.x-1, leftArrow.y-1, leftArrow.w+2, leftArrow.h+2);
+    ctx.fillRect(rightArrow.x-1, rightArrow.y-1, rightArrow.w+2, rightArrow.h+2);
+    ctx.font = 'bold 17px Courier New'; ctx.textAlign='center';
+    ctx.fillStyle = leftActive ? '#1a2240' : '#0f1020';
+    ctx.fillRect(leftArrow.x, leftArrow.y, leftArrow.w, leftArrow.h);
+    ctx.strokeStyle = leftActive ? '#7788cc' : '#333355';
+    ctx.lineWidth = leftActive ? 2 : 1;
+    ctx.strokeRect(leftArrow.x, leftArrow.y, leftArrow.w, leftArrow.h);
+    ctx.fillStyle = leftActive ? '#dde8ff' : '#777799';
+    ctx.fillText('<', cx-110, y+18);
+    ctx.fillStyle = rightActive ? '#1a2240' : '#0f1020';
+    ctx.fillRect(rightArrow.x, rightArrow.y, rightArrow.w, rightArrow.h);
+    ctx.strokeStyle = rightActive ? '#7788cc' : '#333355';
+    ctx.lineWidth = rightActive ? 2 : 1;
+    ctx.strokeRect(rightArrow.x, rightArrow.y, rightArrow.w, rightArrow.h);
+    ctx.fillStyle = rightActive ? '#dde8ff' : '#777799';
+    ctx.fillText('>', cx+110, y+18);
+
   });
 
   // Feedback button
   const fbY = 185 + items.length*80 + 20;
+  const fbSel = MENU_STATE.optSel===1;
   const fbHov = MENU_STATE._optHover === 'fb';
-  ctx.fillStyle = fbHov ? '#0e1a0e' : '#0e0e1a';
+  ctx.fillStyle = (fbSel||fbHov) ? '#0e1a0e' : '#0e0e1a';
   ctx.fillRect(cx-220, fbY, 440, 40);
-  ctx.strokeStyle = fbHov ? '#44cc77' : '#336644';
-  ctx.lineWidth = fbHov ? 2 : 1;
+  ctx.strokeStyle = fbSel ? '#55dd88' : fbHov ? '#44cc77' : '#336644';
+  ctx.lineWidth = (fbSel||fbHov) ? 2 : 1;
   ctx.strokeRect(cx-220, fbY, 440, 40);
-  ctx.font='bold 15px Courier New'; ctx.fillStyle= fbHov ? '#55dd88' : '#44bb77'; ctx.textAlign='center';
+  ctx.font='bold 15px Courier New'; ctx.fillStyle= (fbSel||fbHov) ? '#55dd88' : '#44bb77'; ctx.textAlign='center';
   ctx.fillText('[ F ]  Send Feedback', cx, fbY+25);
   MENU_STATE._feedbackBtnY = fbY;
 
@@ -6352,28 +6452,62 @@ canvas.addEventListener('click', e => {
 
   // In-game options — feedback button click
   if(G !== null && G.showOptions){
-    const fbY = MENU_STATE._feedbackBtnY;
-    const fcx = canvas.width/2;
-    if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
-      openFeedback();
-    }
-    return;
-  }
-
-  // Options screen — click to toggle item or open feedback
-  if(MENU_STATE.screen === 'options'){
-    (MENU_STATE._optRects||[]).forEach(r => {
+    let handled = false;
+    (MENU_STATE._optArrowRects||[]).forEach(r => {
       if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
+        MENU_STATE.optSel = 0;
+        OPTIONS.asciiMode=!OPTIONS.asciiMode;
+        saveOptions(OPTIONS);
+        handled = true;
+      }
+    });
+    (MENU_STATE._optRects||[]).forEach(r => {
+      if(!handled && mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
         MENU_STATE.optSel = r.i;
-        if(r.i===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
-        drawMenuScreen();
+        if(r.i===0){
+          OPTIONS.asciiMode=!OPTIONS.asciiMode;
+          saveOptions(OPTIONS);
+        }
+        handled = true;
       }
     });
     const fbY = MENU_STATE._feedbackBtnY;
     const fcx = canvas.width/2;
     if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
+      MENU_STATE.optSel = 1;
       openFeedback();
+      return;
     }
+    if(handled) renderAll();
+    return;
+  }
+
+  // Options screen — click to toggle item or open feedback
+  if(MENU_STATE.screen === 'options'){
+    let handled = false;
+    (MENU_STATE._optArrowRects||[]).forEach(r => {
+      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
+        MENU_STATE.optSel = 0;
+        OPTIONS.asciiMode=!OPTIONS.asciiMode;
+        saveOptions(OPTIONS);
+        handled = true;
+      }
+    });
+    (MENU_STATE._optRects||[]).forEach(r => {
+      if(!handled && mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
+        MENU_STATE.optSel = r.i;
+        if(r.i===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
+        handled = true;
+      }
+    });
+    const fbY = MENU_STATE._feedbackBtnY;
+    const fcx = canvas.width/2;
+    if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
+      MENU_STATE.optSel = 1;
+      openFeedback();
+      return;
+    }
+    if(handled) drawMenuScreen();
     return;
   }
 
@@ -6427,12 +6561,34 @@ canvas.addEventListener('mousemove', e => {
 
   // In-game options — feedback button hover only
   if(G !== null && G.showOptions){
+    let hit = false;
+    let newHover = null;
+    (MENU_STATE._optArrowRects||[]).forEach(r => {
+      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
+        MENU_STATE.optSel = 0;
+        newHover = r.dir === 'left' ? 'opt-left' : 'opt-right';
+        canvas.style.cursor = 'pointer';
+        hit = true;
+      }
+    });
+    (MENU_STATE._optRects||[]).forEach(r => {
+      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
+        MENU_STATE.optSel = r.i;
+        if(!hit) newHover = r.i;
+        canvas.style.cursor = 'pointer';
+        hit = true;
+      }
+    });
     const fbY = MENU_STATE._feedbackBtnY;
     const fcx = canvas.width/2;
-    const hit = fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40;
-    const newHover = hit ? 'fb' : null;
+    if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
+      MENU_STATE.optSel = 1;
+      newHover = 'fb';
+      canvas.style.cursor = 'pointer';
+      hit = true;
+    }
+    if(!hit){ canvas.style.cursor = 'default'; newHover = null; }
     if(newHover !== MENU_STATE._optHover){ MENU_STATE._optHover = newHover; renderAll(); }
-    canvas.style.cursor = hit ? 'pointer' : 'default';
     return;
   }
 
@@ -6450,18 +6606,29 @@ canvas.addEventListener('mousemove', e => {
   if(MENU_STATE.screen === 'options'){
     let hit = false;
     let newHover = null;
+    (MENU_STATE._optArrowRects||[]).forEach(r => {
+      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
+        MENU_STATE.optSel = 0;
+        newHover = r.dir === 'left' ? 'opt-left' : 'opt-right';
+        canvas.style.cursor = 'pointer';
+        hit = true;
+      }
+    });
     (MENU_STATE._optRects||[]).forEach(r => {
       if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        newHover = r.i;
         if(MENU_STATE.optSel !== r.i){ MENU_STATE.optSel = r.i; }
-        canvas.style.cursor = 'pointer'; hit = true;
+        if(!hit) newHover = r.i;
+        canvas.style.cursor = 'pointer';
+        hit = true;
       }
     });
     const fbY = MENU_STATE._feedbackBtnY;
     const fcx = canvas.width/2;
     if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
+      MENU_STATE.optSel = 1;
       newHover = 'fb';
-      canvas.style.cursor = 'pointer'; hit = true;
+      canvas.style.cursor = 'pointer';
+      hit = true;
     }
     if(!hit){ canvas.style.cursor = 'default'; newHover = null; }
     if(newHover !== MENU_STATE._optHover){ MENU_STATE._optHover = newHover; drawMenuScreen(); }
@@ -6542,11 +6709,27 @@ function handleMenuKey(e){
   if(MENU_STATE.screen==='options'){
     if(e.key==='Escape'){ MENU_STATE.screen='main'; MENU_STATE._optHover=null; drawMenuScreen(); return; }
     if(e.key==='f'||e.key==='F'){ openFeedback(); return; }
-    if(e.key===' '||e.key==='Enter'||e.key==='ArrowLeft'||e.key==='ArrowRight'){
-      // Toggle the selected option
+    if(e.key==='ArrowUp'||e.key==='ArrowDown'){
+      MENU_STATE.optSel = MENU_STATE.optSel===1 ? 0 : 1;
+      MENU_STATE._optHover = null;
+      drawMenuScreen();
+      return;
+    }
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
       if(MENU_STATE.optSel===0){
         OPTIONS.asciiMode=!OPTIONS.asciiMode;
         saveOptions(OPTIONS);
+        drawMenuScreen();
+      }
+      return;
+    }
+    if(e.key===' '||e.key==='Enter'){
+      if(MENU_STATE.optSel===0){
+        OPTIONS.asciiMode=!OPTIONS.asciiMode;
+        saveOptions(OPTIONS);
+      } else {
+        openFeedback();
+        return;
       }
       drawMenuScreen();
     }
