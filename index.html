@@ -7317,6 +7317,25 @@ function showMenu(){
   hideMsg();
   document.getElementById('ctx-bar').innerHTML = '';
   drawMenuScreen();
+  // Fetch last commit time from GitHub (only once per session)
+  if(MENU_STATE.lastUpdateText === undefined){
+    MENU_STATE.lastUpdateText = null; // null = loading
+    fetch('https://api.github.com/repos/Sebastian2203/Prospector-II/commits?per_page=1')
+      .then(r => r.json())
+      .then(data => {
+        const date = new Date(data[0]?.commit?.committer?.date);
+        if(isNaN(date)) { MENU_STATE.lastUpdateText = ''; return; }
+        const diff = Date.now() - date.getTime();
+        const mins  = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days  = Math.floor(diff / 86400000);
+        if(mins < 60)       MENU_STATE.lastUpdateText = 'Last update: '+mins+' minute'+(mins!==1?'s':'')+' ago';
+        else if(hours < 24) MENU_STATE.lastUpdateText = 'Last update: '+hours+' hour'+(hours!==1?'s':'')+' ago';
+        else                MENU_STATE.lastUpdateText = 'Last update: '+days+' day'+(days!==1?'s':'')+' ago';
+        drawMenuScreen();
+      })
+      .catch(() => { MENU_STATE.lastUpdateText = ''; });
+  }
 }
 
 function restoreGameUI(){
@@ -7432,7 +7451,14 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.09  —  Goal: retire with 10,000 cr',cx,canvas.height-16);
+  ctx.fillText('v0.09  —  Goal: retire with 10,000 cr', cx, canvas.height-28);
+  if(MENU_STATE.lastUpdateText){
+    ctx.fillStyle='#2a4a3a'; ctx.font='13px Courier New';
+    ctx.fillText(MENU_STATE.lastUpdateText, cx, canvas.height-12);
+  } else if(MENU_STATE.lastUpdateText === null){
+    ctx.fillStyle='#223333'; ctx.font='13px Courier New';
+    ctx.fillText('Checking for updates...', cx, canvas.height-12);
+  }
   ctx.textAlign='left';
 }
 
