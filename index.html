@@ -7325,9 +7325,13 @@ function showMenu(){
     })
       .then(r => r.json())
       .then(data => {
-        if(!Array.isArray(data) || !data[0]) { MENU_STATE.lastUpdateText = 'Update info unavailable'; drawMenuScreen(); return; }
+        console.log('GitHub API response:', JSON.stringify(data).slice(0, 300));
+        if(!Array.isArray(data) || !data[0]) {
+          MENU_STATE.lastUpdateText = 'API: '+(data?.message || JSON.stringify(data).slice(0,60));
+          drawMenuScreen(); return;
+        }
         const date = new Date(data[0]?.commit?.committer?.date);
-        if(isNaN(date)) { MENU_STATE.lastUpdateText = 'Update info unavailable'; drawMenuScreen(); return; }
+        if(isNaN(date)) { MENU_STATE.lastUpdateText = 'Bad date in response'; drawMenuScreen(); return; }
         const diff = Date.now() - date.getTime();
         const mins  = Math.floor(diff / 60000);
         const hours = Math.floor(diff / 3600000);
@@ -7337,7 +7341,7 @@ function showMenu(){
         else                MENU_STATE.lastUpdateText = 'Last update: '+days+' day'+(days!==1?'s':'')+' ago';
         drawMenuScreen();
       })
-      .catch(err => { MENU_STATE.lastUpdateText = 'Update info unavailable'; drawMenuScreen(); });
+      .catch(err => { MENU_STATE.lastUpdateText = 'Fetch error: '+err.message; drawMenuScreen(); });
   }
 }
 
