@@ -11,6 +11,14 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-WDRH4STDM1');
+
+  function trackEvent(name, params){
+    try{
+      if(typeof gtag === 'function'){
+        gtag('event', name, params || {});
+      }
+    }catch(_err){}
+  }
 </script>
 <style>
 /* ── Reset ── */
@@ -2795,6 +2803,90 @@ function addCargo(item){
   return true;
 }
 
+function analyticsShipClass(){
+  return G?.shipStats?.classId || G?.shipStats?.hullType || 'unknown';
+}
+
+function analyticsBaseParams(extra){
+  const params = {
+    turns_played: G?.turn || 0,
+    credits: G?.credits || 0,
+    ship_class: analyticsShipClass(),
+    mode: G?.mode || 'unknown',
+  };
+  return Object.assign(params, extra || {});
+}
+
+function trackTurnMilestone(){
+  if(!G) return;
+  const bucket = Math.floor((G.turn || 0) / 100);
+  if(bucket <= 0) return;
+  if(G._lastTrackedTurnBucket === bucket) return;
+  G._lastTrackedTurnBucket = bucket;
+  trackEvent('turn_milestone', analyticsBaseParams({
+    turns_bucket: bucket * 100,
+  }));
+}
+
+function classifyDeathCause(cause){
+  if(!cause) return 'unknown';
+  const c = cause.toLowerCase();
+  if(c.includes('suffocated') || c.includes('oxygen'))        return 'oxygen_deprivation';
+  if(c.includes('pirate') && c.includes('fleeing'))           return 'combat_pirate_fleeing';
+  if(c.includes('pirate') || c.includes('destroyed by pirate')) return 'combat_pirate';
+  if(c.includes('surrendered') || c.includes('custody'))      return 'surrender_captured';
+  if(c.includes('defense turret'))                            return 'combat_turrets';
+  if(c.includes('nebula'))                                    return 'hazard_nebula';
+  if(c.includes('crash landing'))                             return 'hazard_crash_landing';
+  if(c.includes('fuel scooping'))                             return 'hazard_fuel_scooping';
+  if(c.includes('gas giant') || c.includes('platform edge'))  return 'hazard_gas_giant';
+  if(c.includes('alien energy trap'))                         return 'hazard_alien_trap';
+  if(c.includes('combat on') || c.includes('killed in combat')) return 'combat_ground';
+  if(c.includes('deep space'))                                return 'hazard_deep_space';
+  if(c.includes('perished on the mission'))                   return 'mission_failure';
+  return 'unknown';
+}
+
+function trackDeathOnce(cause){
+  if(!G || G._analyticsDeathTracked) return;
+  G._analyticsDeathTracked = true;
+  const deathCause = cause || G.deathCause || 'unknown';
+  trackEvent('game_over', analyticsBaseParams({
+    death_cause: deathCause,
+    death_category: classifyDeathCause(deathCause),
+    crew_alive: (G.crew || []).filter(c=>c.hp>0).length,
+    combats_fought: G.combatsFought || 0,
+  }));
+}
+
+function trackRetirementOnce(){
+  if(!G || G._analyticsRetiredTracked) return;
+  G._analyticsRetiredTracked = true;
+  const tier = RETIREMENT_TIERS.find(t=>G.credits>=t.min&&G.credits<=t.max) || RETIREMENT_TIERS[0];
+  trackEvent('retired', analyticsBaseParams({
+    retirement_tier: tier?.title || 'unknown',
+    combats_fought: G.combatsFought || 0,
+    survey_credits: G.surveyCareerCredits || 0,
+    science_jobs_completed: G.scienceJob?.completed || 0,
+  }));
+}
+
+function syncAnalyticsState(){
+  if(!G) return;
+  trackTurnMilestone();
+  if(G.dead) trackDeathOnce();
+  if(G.retired) trackRetirementOnce();
+}
+
+function trackPlanetDiscoveryOnce(pKey, flag, eventName, extra){
+  const pdata = G?.planets?.[pKey];
+  if(!pdata) return;
+  const key = '_tracked_' + flag;
+  if(pdata[key]) return;
+  pdata[key] = true;
+  trackEvent(eventName, analyticsBaseParams(extra));
+}
+
 function initGame(chosenClass, captainName, shipName) {
   const cls = chosenClass || 'LIGHT_SCOUT';
   G = {
@@ -2878,6 +2970,11 @@ function initGame(chosenClass, captainName, shipName) {
   }
   G.installedModules = [];
   G.shipName    = shipName || 'Unnamed Vessel';
+  trackEvent('new_game_started', analyticsBaseParams({
+    ship_class: cls,
+    captain_name_set: !!(captainName || '').trim(),
+    ship_name_set: !!(shipName || '').trim(),
+  }));
   // Apply captain name to the captain crew member
   if(captainName){
     const cap = G.crew.find(c=>c.role==='captain');
@@ -5368,6 +5465,7 @@ function addLog(msg,cls){
 //  RENDER
 // ─────────────────────────────────────────────────────────────────
 function renderAll(){
+  syncAnalyticsState();
   drawCanvas();
   renderHUD();
   renderSidebar();
@@ -6874,6 +6972,10 @@ function startScienceJob(){
 
   state.active = job;
   state.nextIndex = remaining.length > 1 ? rnd(remaining.length) : 0;
+  trackEvent('science_job_taken', analyticsBaseParams({
+    job_type: job.type,
+    reward: job.reward || 0,
+  }));
   return true;
 }
 
@@ -6933,6 +7035,12 @@ function completeScienceJob(){
 
   if(!done) return false;
   G.credits += job.reward || 0;
+  trackEvent('science_job_completed', analyticsBaseParams({
+    job_type: job.type,
+    reward: job.reward || 0,
+    started_turn: job.startedTurn || 0,
+    mission_turns: Math.max(0, (G.turn || 0) - (job.startedTurn || 0)),
+  }));
   if(!(state.completedTypes||[]).includes(job.type)) state.completedTypes.push(job.type);
   state.active = null;
   state.cooldownUntil = G.turn + rollScienceJobCooldown();
@@ -9946,6 +10054,11 @@ function tryMove(dx,dy){
       const civ = pdata.civilization;
       const tierLabel = civ?.tierLabel || 'unknown';
       const species   = civ?.species   || 'alien';
+      trackPlanetDiscoveryOnce(G.curPlanet, 'civilization', 'civilization_found', {
+        biome: pdata.biome || 'unknown',
+        species,
+        tier: tierLabel,
+      });
       const msgs = {
         civ_hut:         species+' dwelling. Crude but inhabited.',
         civ_fire_pit:    'A communal fire pit. Recently used.',
@@ -10031,6 +10144,9 @@ function tryMove(dx,dy){
       addLog('Collected mineral sample.','ll'); cell.type=BIOMES[biomeKey]?.floor||'EARTH_FLOOR';
     } else if(cell.type==='ARTIFACT'){
       G.inventory.push({name:'Ancient Artifact',col:'#e090ff',desc:'Worth 200 cr',value:200});
+      trackPlanetDiscoveryOnce(G.curPlanet, 'artifact', 'artifact_found', {
+        biome: biomeKey || 'unknown',
+      });
       addLog('Found an ancient artifact!','ll'); cell.type=BIOMES[biomeKey]?.floor||'EARTH_FLOOR';
     } else if(cell.type==='BIODATA'){
       G.inventory.push({name:'Biodata Sample',col:'#70f090',desc:'Worth 60 cr',value:60});
@@ -10088,6 +10204,9 @@ function tryMove(dx,dy){
         cell.looted = true;
         if(cell.scienceJobData){
           G.inventory.push({name:'Research Ship Data',col:'#66ccff',desc:'Lost Science Office field data',value:0});
+          trackPlanetDiscoveryOnce(G.curPlanet, 'research_data', 'research_ship_data_found', {
+            biome: biomeKey || 'DERELICT',
+          });
           addLog('Recovered the lost research ship data. Return it to the Science Office.','ll');
         } else if(Math.random() < 0.60){
           G.inventory.push({name:'Station Datacore',col:'#44aaff',desc:'Worth 80 cr',value:80});
@@ -10717,6 +10836,11 @@ function startShipCombat(pirate){
   };
   G.mode = 'shipcombat';
   G.combatsFought = (G.combatsFought||0) + 1;
+  trackEvent('ship_combat_started', analyticsBaseParams({
+    enemy_name: pirate?.name || 'unknown',
+    enemy_type: isNeutralTarget ? (pirate?.type || 'neutral') : (pirate?.pirateType || 'pirate'),
+    neutral_target: isNeutralTarget ? 1 : 0,
+  }));
   addLog((isNeutralTarget?'INTERCEPTED by ':'INTERCEPTED by ')+pirate.name+'! Prepare for combat!','lc');
   renderAll();
 }
@@ -11386,6 +11510,13 @@ function doInteract(){
           G.cargo.splice(boxIdx, 1);
           const reward = sj.active.reward || 0;
           G.credits += reward;
+          trackEvent('science_job_completed', analyticsBaseParams({
+            job_type: sj.active.type,
+            reward,
+            started_turn: sj.active.startedTurn || 0,
+            mission_turns: Math.max(0, (G.turn || 0) - (sj.active.startedTurn || 0)),
+            station_name: cell.name,
+          }));
           addLog('Secured data box delivered to '+cell.name+'. +' + reward + ' cr.','lg');
           if(!(sj.completedTypes||[]).includes(sj.active.type)) sj.completedTypes.push(sj.active.type);
           sj.active = null;
@@ -12064,6 +12195,10 @@ function executeBaseAction(actionId){
           pdata.surveySoldValue = getSurveySaleValue(pdata);
         });
         G.credits+=surveySold;
+        trackEvent('survey_data_sold', analyticsBaseParams({
+          survey_value: surveySold,
+          full_survey_bodies: surveyInfo.fullBonusBodies.length,
+        }));
         addLog('Sold survey data for '+surveySold+' cr.','lg');
         awardSurveyMilestones(surveySold);
         if(surveyInfo.fullBonusBodies.length){
