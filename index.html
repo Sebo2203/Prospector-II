@@ -980,7 +980,13 @@ canvas {
   padding: 10px;
   font-size: 15px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #222 #0a0a0a;
 }
+#sidebar::-webkit-scrollbar { width: 6px; }
+#sidebar::-webkit-scrollbar-track { background: #0a0a0a; }
+#sidebar::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+#sidebar::-webkit-scrollbar-thumb:hover { background: #333; }
 .s-title {
   color: #555;
   font-size: 12px;
@@ -1249,6 +1255,7 @@ canvas {
     <div><span class="ck">Numpad 1-9</span> move (8-dir)</div>
     <div><span class="ck">WASD</span> move (4-dir)</div>
     <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
+    <div><span class="ck">Enter</span> interact / dock / land</div>
     <div><span class="ck">F5</span> save to file</div>
     <div><span class="ck">ESC</span> back / close</div>
     <!-- 8-dir compass — always visible, functional in galaxy/planet modes -->
@@ -6467,7 +6474,7 @@ function initGame(chosenClass, captainName, shipName) {
     _prevMode:   'galaxy',
     _oxyWarnedLow:  false,
     _oxyWarnedCrit: false,
-    _viewTab:    'inventory', // 'inventory' | 'cargo' | 'crew' | 'ship'
+    _viewTab:    'inventory', // 'inventory' | 'cargo' | 'crew' | 'ship' | 'log'
     _viewCrewSel: 0,
     _cargoSel:   0,        // selected crew index in crew tab
     _drinkCount:  0,        // drinks bought at current station visit
@@ -7752,7 +7759,7 @@ function generateGalaxy() {
   revealAround(bx, by, 5);
   revealAround(b2x, b2y, 3);
   addLog('Docked at '+grid[by][bx].name+'. Ready for departure.','li');
-  addLog('Fly to a star system and press E to enter orbit.','li');
+  addLog('Fly to a star system and press Enter to enter orbit.','li');
 }
 
 function revealAround(cx,cy,r){
@@ -9533,6 +9540,14 @@ function logDisplayText(entry){
   return String(msg ?? '') + (count > 1 ? ' x' + count : '');
 }
 
+const KEYBIND_CONFLICTS = {"KeyR":"Rest & repair","KeyF":"Fire (combat)","KeyH":"Radio hail","KeyI":"Inventory","KeyL":"Lift off","KeyO":"Refill oxygen","KeyT":"Tractor beam","KeyU":"Fuel scoop","KeyV":"View scan","KeyX":"Examine","KeyM":"Map","KeyS":"Scan (in system)","KeyC":"Communicate"};
+const DEFAULT_KEYBINDS = {
+  nw:'KeyQ', n:'KeyW', ne:'KeyE',
+   w:'KeyA',           e:'KeyD',
+  sw:'KeyZ', s:'KeyS', se:'KeyC',
+  wait:'Space',
+};
+
 function addLog(msg,cls){
   cls=cls||'';
   const latest = G.log[0];
@@ -9541,10 +9556,17 @@ function addLog(msg,cls){
     G.msg = logDisplayText(latest);
     return;
   }
-  const entry = {msg, cls, count:1};
+  const entry = {msg, cls, count:1, turn: G.turn||1};
   G.log.unshift(entry);
-  if(G.log.length>50) G.log.pop();
   G.msg=logDisplayText(entry);
+}
+
+// Like addLog but silent — writes to G.log history only, no sidebar flash.
+// Use for high-frequency detail (e.g. per-round ship combat) that belongs in
+// the LOG tab but must NOT duplicate into the sidebar or msg-bar.
+function archiveLog(msg,cls){
+  cls=cls||'';
+  G.log.unshift({msg, cls, count:1, turn: G.turn||1, archive:true});
 }
 
 function earnCredits(amount){
@@ -11338,7 +11360,7 @@ function drawScanView(){
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#70d8ff'; ctx.textAlign='center';
   ctx.fillText('SATELLITE SCAN  -  '+pKey.split(':')[0].replace(',',' ').toUpperCase()+'  -  '+B.name.toUpperCase(), cw/2, 15);
   ctx.font='14px Courier New'; ctx.fillStyle='#334455';
-  ctx.fillText('[ Arrows ] Move landing zone    [ E ] Land    [ ESC ] Back', cw/2, ch-8);
+  ctx.fillText('[ Arrows ] Move landing zone    [ Enter ] Land    [ ESC ] Back', cw/2, ch-8);
   ctx.textAlign='left';
 }
 
@@ -12501,7 +12523,7 @@ function drawBaseOverlay(){
     ctx.fillText('Cost: '+HULL_COST+' cr  ·  All upgrades reset to new hull base  ·  HP ratio preserved', cx, 46);
     ctx.fillStyle='#1a2a3a'; ctx.fillRect(cx-340, 52, 680, 1);
 
-    const cardW=200, cardH=220, cardGap=20;
+    const cardW=200, cardH=260, cardGap=20;
     const totalCardW = HULL_IDS.length*(cardW+cardGap)-cardGap;
     const cardStartX = cx - totalCardW/2;
 
@@ -12551,10 +12573,22 @@ function drawBaseOverlay(){
         ctx.fillText(s[1], bx+70, sy);
       });
 
-      // Desc
+      // Desc — word-wrapped
       ctx.font='10px Courier New'; ctx.fillStyle='#2a3a4a';
       ctx.textAlign='center';
-      ctx.fillText(cls.desc, bx+cardW/2, by+cardH-8);
+      const descWords = cls.desc.split(' ');
+      const descMaxW = cardW - 16;
+      let descLine = '', descY = by + cardH - 30;
+      const descLines = [];
+      descWords.forEach(w => {
+        const test = descLine ? descLine+' '+w : w;
+        if(ctx.measureText(test).width > descMaxW && descLine){ descLines.push(descLine); descLine=w; }
+        else descLine = test;
+      });
+      if(descLine) descLines.push(descLine);
+      const descLineH = 13;
+      const descStartY = by + cardH - 8 - (descLines.length-1)*descLineH;
+      descLines.forEach((dl,di) => ctx.fillText(dl, bx+cardW/2, descStartY+di*descLineH));
     });
 
     // Confirm prompt
@@ -12563,12 +12597,12 @@ function drawBaseOverlay(){
     ctx.textAlign='center';
     ctx.font='13px Courier New';
     if(isCurr){
-      ctx.fillStyle='#334455'; ctx.fillText('Already flying this hull type.', cx, 62+220+22);
+      ctx.fillStyle='#334455'; ctx.fillText('Already flying this hull type.', cx, 62+260+22);
     } else if(G.credits < HULL_COST){
-      ctx.fillStyle='#662222'; ctx.fillText('Insufficient credits (need '+HULL_COST+' cr, have '+G.credits+').', cx, 62+220+22);
+      ctx.fillStyle='#662222'; ctx.fillText('Insufficient credits (need '+HULL_COST+' cr, have '+G.credits+').', cx, 62+260+22);
     } else {
       ctx.fillStyle='#44aaff';
-      ctx.fillText('[ ENTER ]  Purchase '+selCls.hullType+' for '+HULL_COST+' cr', cx, 62+220+22);
+      ctx.fillText('[ ENTER ]  Purchase '+selCls.hullType+' for '+HULL_COST+' cr', cx, 62+260+22);
     }
     ctx.font='13px Courier New'; ctx.fillStyle='#334455';
     ctx.fillText('← → navigate   ESC cancel', cx, ch-14);
@@ -12586,8 +12620,8 @@ function drawInventoryOverlay(){
   const tab = G._viewTab || 'inventory';
 
   // Tab headers — 4 tabs, evenly spaced
-  const tabs = [{id:'inventory',label:'INVENTORY'},{id:'crew',label:'CREW'},{id:'ship',label:'SHIP'}];
-  const tw=118, tgap=8, totalW=tabs.length*(tw+tgap)-tgap;
+  const tabs = [{id:'inventory',label:'INVENTORY'},{id:'crew',label:'CREW'},{id:'ship',label:'SHIP'},{id:'log',label:'LOG'}];
+  const tw=110, tgap=8, totalW=tabs.length*(tw+tgap)-tgap;
   const tabsStartX = Math.round((cw-totalW)/2);
   tabs.forEach((t,i)=>{
     const sel = tab===t.id;
@@ -13003,10 +13037,163 @@ function drawInventoryOverlay(){
       }
       ctx.textAlign = 'left';
     }
+  } else if(tab==='log'){
+    // ── LOG tab ──────────────────────────────────────────────────────
+    // Filter buttons
+    const FILTERS = [
+      { id:'all',     label:'ALL' },
+      { id:'mission', label:'MISSION' },
+      { id:'combat',  label:'COMBAT' },
+      { id:'crew',    label:'CREW' },
+      { id:'critical',label:'CRITICAL' },
+    ];
+    if(!G._logFilter) G._logFilter = 'all';
+
+    // Draw filter buttons
+    const fBtnW = 90, fBtnH = 22, fBtnGap = 6;
+    const fTotalW = FILTERS.length*(fBtnW+fBtnGap)-fBtnGap;
+    const fStartX = Math.round((cw-fTotalW)/2);
+    const fY = 52;
+    FILTERS.forEach((f,i)=>{
+      const fx = fStartX + i*(fBtnW+fBtnGap);
+      const sel = G._logFilter === f.id;
+      ctx.fillStyle = sel ? '#1a2a1a' : '#0a0a12';
+      ctx.fillRect(fx, fY, fBtnW, fBtnH);
+      ctx.strokeStyle = sel ? '#88ff88' : '#2a3a2a';
+      ctx.lineWidth = sel ? 2 : 1;
+      ctx.strokeRect(fx, fY, fBtnW, fBtnH);
+      ctx.font = 'bold 11px Courier New';
+      ctx.fillStyle = sel ? '#88ff88' : '#445544';
+      ctx.textAlign = 'center';
+      ctx.fillText(f.label, fx+fBtnW/2, fY+15);
+    });
+    ctx.textAlign = 'left';
+
+    // Filter the log entries
+    function logMatchesFilter(entry, fid){
+      if(fid==='all') return true;
+      const m = entry.msg.toLowerCase();
+      const c = entry.cls || '';
+      if(fid==='critical') return c==='lc';
+      if(fid==='crew'){
+        // Build a set of known crew identifiers from G.crew at filter time
+        const crewTokens = new Set();
+        (G.crew||[]).forEach(c=>{
+          if(!c||!c.name) return;
+          // Last name (always shown)
+          const lastName = c.name.split(' ').slice(-1)[0].toLowerCase();
+          if(lastName) crewTokens.add(lastName);
+          // Full name parts
+          c.name.split(' ').forEach(p=>{ if(p.length>1) crewTokens.add(p.toLowerCase()); });
+          // Role label e.g. "engineer", "navigator"
+          const role = (window.CREW_ROLES||{})[c.role];
+          if(role) crewTokens.add(role.label.toLowerCase());
+        });
+        // Also allow general crew-state messages that don't name a person
+        const generalCrew = m.includes('the crew') || m.includes('all crew') || m.includes('crew member') || m.includes('terminates their contract') || m.includes('recruit');
+        if(generalCrew) return true;
+        // Match if any crew token appears at word boundary in message
+        for(const tok of crewTokens){
+          if(m.includes(tok)) return true;
+        }
+        return false;
+      }
+      if(fid==='combat'){
+        // Explicit combat-tagged messages we now pipe from doShipFire use pirate name in brackets
+        if(/^\[.+\] (You fire|They fire|They reject)/.test(entry.msg)) return true;
+        // Keyword sweep for everything else combat-related
+        return m.includes('intercepted') || m.includes('prepare for combat') ||
+               m.includes('hull dmg') || m.includes('hull damage') || m.includes('hull takes') ||
+               m.includes('ship destroyed') || m.includes('destroyed!') || m.includes('destroyed.') ||
+               m.includes('pirate') || m.includes('corsair') || m.includes('destroyer') || m.includes('battleship') ||
+               m.includes('surrend') || m.includes('took ') && m.includes('damage') ||
+               m.includes('retreat') || m.includes('escaped from') ||
+               m.includes('volley hits') || m.includes('defense turret') ||
+               m.includes('homing in') || m.includes('closes in') ||
+               m.includes('you fire') || m.includes('they fire') ||
+               m.includes('combat') || m.includes('patrol') && (m.includes('fire') || m.includes('stand down') || m.includes('arrest')) ||
+               m.includes('nebula gas damages') || m.includes('meteor impact') ||
+               m.includes('weapons fire detected') || m.includes('hostile transponder');
+      }
+      if(fid==='mission'){
+        return m.includes('contract') || m.includes('science office') ||
+               m.includes('survey bonus') || m.includes('survey data') ||
+               m.includes('mission') || m.includes('debrief') ||
+               m.includes('retired') || m.includes('10,000 cr') ||
+               m.includes('artifact') || m.includes('data box') ||
+               m.includes('research ship') || m.includes('alien corpse') || m.includes('biodata') ||
+               m.includes('civilization') && (m.includes('contact') || m.includes('survey') || m.includes('locate')) ||
+               m.includes('sector cleared') || m.includes('+3000 cr') ||
+               m.includes('intel is vague') || m.includes('lies ') && m.includes('sector') ||
+               m.includes('last fix:') || m.includes('signal cut out') ||
+               m.includes('job complete') || m.includes('jobs exhausted') ||
+               m.includes('salvaged') && m.includes('fuel') ||
+               m.includes('secured data box delivered') ||
+               // credit rewards: "+NNN cr" pattern (job payouts, bounties, bonuses)
+               /\+\d+ cr\.?$/.test(m) || /\+\d+ cr\b/.test(m);
+      }
+      return true;
+    }
+
+    const allEntries = G.log || [];
+    const filtered = allEntries.filter(e=>logMatchesFilter(e, G._logFilter));
+
+    // Scrollable list
+    const listTop = fY + fBtnH + 12;
+    const listBottom = ch - 30;
+    const rowH = 20;
+    const visRows = Math.floor((listBottom - listTop) / rowH);
+    const maxScroll = Math.max(0, filtered.length - visRows);
+    if(G._logScroll === undefined) G._logScroll = 0;
+    G._logScroll = Math.max(0, Math.min(G._logScroll, maxScroll));
+
+    if(!filtered.length){
+      ctx.font='15px Courier New'; ctx.fillStyle='#445544'; ctx.textAlign='center';
+      ctx.fillText('No log entries match this filter.', cw/2, listTop+40);
+      ctx.textAlign='left';
+    } else {
+      // Colour map matching sidebar log colours
+      const logColors = { lc:'#ff4444', ll:'#ffcc44', lw:'#ff9955', lg:'#44ff88', li:'#7788aa', '':'#99aaaa' };
+      const slice = filtered.slice(G._logScroll, G._logScroll+visRows);
+      slice.forEach((entry, i)=>{
+        const ey = listTop + i*rowH;
+        const col = logColors[entry.cls||''] || '#99aaaa';
+        // Turn stamp
+        const turnStr = '[T'+String(entry.turn||1).padStart(4,' ')+']';
+        ctx.font = '11px Courier New';
+        ctx.fillStyle = '#334455';
+        ctx.fillText(turnStr, 48, ey+14);
+        // Message
+        ctx.font = '12px Courier New';
+        ctx.fillStyle = col;
+        const countSuffix = entry.count > 1 ? ' (×'+entry.count+')' : '';
+        const maxW = cw - 48 - 62 - 16; // leave room for turn stamp
+        let txt = entry.msg + countSuffix;
+        // Truncate if too long
+        ctx.save();
+        ctx.font = '12px Courier New';
+        while(txt.length>2 && ctx.measureText(txt).width > maxW) txt = txt.slice(0,-4)+'…';
+        ctx.restore();
+        ctx.fillText(txt, 48+62, ey+14);
+      });
+      // Scroll indicator
+      if(filtered.length > visRows){
+        const pct = G._logScroll / maxScroll;
+        const trackH = listBottom - listTop;
+        const thumbH = Math.max(20, trackH * visRows/filtered.length);
+        const thumbY = listTop + pct*(trackH-thumbH);
+        ctx.fillStyle='#1a2a1a'; ctx.fillRect(cw-20, listTop, 10, trackH);
+        ctx.fillStyle='#44aa44'; ctx.fillRect(cw-20, thumbY, 10, thumbH);
+      }
+    }
   }
 
-  // Footer hint — only on inventory and crew tabs
-  if(tab !== 'ship'){
+  // Footer hint
+  if(tab==='log'){
+    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+    ctx.fillText('←/→ switch tab    ↑/↓ scroll    Shift+↑/↓ fast scroll    [1-5] filter    ESC close', cw/2, ch-14);
+    ctx.textAlign='left';
+  } else if(tab !== 'ship'){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
     const extra = tab === 'crew' && G._equipGunIdx === undefined && G._equipArmorIdx === undefined ? '    X channel/log' : '';
     ctx.fillText('←/→ switch tab    ↑/↓ select'+extra+'    ESC close', cw/2, ch-14);
@@ -13502,6 +13689,7 @@ function doAcceptRescue(){
   G._alarmFuelWarn = false;
   G._alarmFuelCrit = false;
   ns.rescuing = false;
+  (G.neutralShips||[]).forEach(s=>{ s.rescuing = false; }); // clear any stale follower flags
   const costMsg = ns.rescueCost>0 ? ' Paid '+ns.rescueCost+' cr.' : ' No charge.';
   addLog(ns.name+' transferred '+ns.fuelGift+' units of fuel.'+costMsg+' Engines back online!','lg');
   addLog('Crew HP damage from exposure cannot be undone. Seek medical attention.','lw');
@@ -13514,6 +13702,7 @@ function doDeclineRescue(){
   if(!st||!st.rescueShip) return;
   const ns = st.rescueShip;
   ns.rescuing = false;
+  (G.neutralShips||[]).forEach(s=>{ if(s !== ns) s.rescuing = false; }); // clear stale followers
   st.rescueShip = null;
   st.rescuePhase = null;
   addLog(ns.name+' acknowledged. They will not return.','li');
@@ -14087,13 +14276,21 @@ function drawInGameOptions(){
   const cw=canvas.width, ch=canvas.height;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
   const cx=cw/2;
-  // Reuse the existing options screen drawing — it uses canvas directly
+  if(G._kbScreen){
+    drawKeybindingsScreen(cx);
+    ctx.fillStyle='rgba(0,0,0,0.92)';
+    ctx.fillRect(cx-300, ch-38, 600, 28);
+    ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+    ctx.fillText('↑/↓ select   Enter remap   ESC back to options', cx, ch-18);
+    ctx.textAlign='left';
+    return;
+  }
   drawOptionsScreen(cx);
   ctx.fillStyle='rgba(0,0,0,0.92)';
   ctx.fillRect(cx-300, ch-60, 600, 50);
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
   ctx.fillText('Up/Down select   Left/Right change   Enter activate',cx,ch-36);
-  ctx.fillText('S save   F feedback   ESC close options',cx,ch-18);
+  ctx.fillText('S save   F feedback   K keybindings   ESC close',cx,ch-18);
   ctx.textAlign='left';
 }
 
@@ -14823,7 +15020,7 @@ function debugSpawnSystem(){
 
     // Reveal it
     G.visited[ty*MAP_W+tx]=true;
-    addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press E to land.','lg');
+    addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press Enter to land.','lg');
     placed=true;
     break;
   }
@@ -21443,7 +21640,7 @@ function renderSidebar(){
     document.querySelectorAll('#sidebar .s-title').forEach(el=>el.style.display='');
     document.getElementById('crew-list').innerHTML = renderCrewDialogueContextSidebar();
     document.getElementById('inv-list').innerHTML = '';
-    document.getElementById('log-list').innerHTML=G.log.slice(0,12).map(l=>
+    document.getElementById('log-list').innerHTML=G.log.filter(l=>!l.archive).slice(0,12).map(l=>
       `<div class="log-entry ${l.cls}">${htmlEsc(logDisplayText(l))}</div>`
     ).join('');
     return;
@@ -21670,7 +21867,7 @@ function renderSidebar(){
   // Inventory hidden from sidebar — shown in dedicated inventory overlay only
 
   // Log
-  document.getElementById('log-list').innerHTML=G.log.slice(0,18).map(l=>
+  document.getElementById('log-list').innerHTML=G.log.filter(l=>!l.archive).slice(0,18).map(l=>
     `<div class="log-entry ${l.cls}">${htmlEsc(logDisplayText(l))}</div>`
   ).join('');
 }
@@ -21750,11 +21947,11 @@ function renderContextBar(){
       }
     } else {
       if(cell.type==='BASE'){
-        btns.push(btn('E','Dock at Starbase','good'));
+        btns.push(btn('Enter','Dock at Starbase','good'));
       } else if(cell.type==='CASINO'){
-        btns.push(btn('E','Dock at The Void Royale','good'));
+        btns.push(btn('Enter','Dock at The Void Royale','good'));
       } else if(cell.type==='SYSTEM'){
-        btns.push(btn('E','Enter orbit — '+cell.name,'info'));
+        btns.push(btn('Enter','Enter orbit — '+cell.name,'info'));
       }
       const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
       if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
@@ -21769,11 +21966,11 @@ function renderContextBar(){
       const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
   if(npcStrandedHere){
     if(npcStrandedHere.type==='alive')
-      btns.push(btn('E','Hail '+npcStrandedHere.name+' (stranded — needs fuel)','good'));
+      btns.push(btn('Enter','Hail '+npcStrandedHere.name+' (stranded — needs fuel)','good'));
     else if(npcStrandedHere.type==='research')
-      btns.push(btn('E','Board '+npcStrandedHere.name+' (silent research vessel)','info'));
+      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (silent research vessel)','info'));
     else
-      btns.push(btn('E','Board '+npcStrandedHere.name+' (derelict)','info'));
+      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (derelict)','info'));
     // Tractor beam — tow dead derelict ships
     const hasTractor = (G.installedModules||[]).includes('tractor_beam');
     if(hasTractor && npcStrandedHere.type==='dead' && !G.towedShip){
@@ -21830,9 +22027,9 @@ function renderContextBar(){
     if(scanState!=='full') btns.push(btn('S','Scan (1 fuel)'));
     if(scanState==='full'||scanState==='partial') btns.push(btn('V','View scan'));
     if(isGasGiant && pDesc?.moons?.length && pDesc?.scanState==='full'){
-      if(G.selMoon>=0) btns.push(btn('E','Land on moon','good'));
+      if(G.selMoon>=0) btns.push(btn('Enter','Land on moon','good'));
     } else if(!isGasGiant){
-      btns.push(btn('E','Land on planet','good'));
+      btns.push(btn('Enter','Land on planet','good'));
     }
     // Fuel scoop on gas giant
     const _hasScoopSys = (G.installedModules||[]).includes('fuel_scoop');
@@ -22449,6 +22646,7 @@ function tryMove(dx,dy){
       // Enter stranded state if not already in it
       if(!G.stranded){
         G.stranded = { sos:false, turnsStranded:0, rescueShip:null, rescuePhase:null };
+        (G.neutralShips||[]).forEach(s=>{ s.rescuing = false; }); // fresh strand — reset all rescuers
         addLog('OUT OF FUEL — engines dead. Crew oxygen reserves depleting.','lc');
         addLog('Press [T] to toggle SOS beacon. Press any move key to wait a turn.','lw');
       } else {
@@ -22475,8 +22673,8 @@ function tryMove(dx,dy){
     // NPC stranded ship proximity log — fires regardless of cell type
       const _strandedHere=(G.npcStranded||[]).find(s=>s.x===nx&&s.y===ny);
       if(_strandedHere){
-        if(_strandedHere.type==='alive') addLog(_strandedHere.name+': "MAYDAY — engines dead, need fuel! [E] to hail."','lg');
-        else if(_strandedHere.type==='research') addLog(_strandedHere.name+' — transponder dark. No SOS. [E] to board.','lw');
+        if(_strandedHere.type==='alive') addLog(_strandedHere.name+': "MAYDAY — engines dead, need fuel! [Enter] to hail."','lg');
+        else if(_strandedHere.type==='research') addLog(_strandedHere.name+' — transponder dark. No SOS. [Enter] to board.','lw');
         else addLog(_strandedHere.name+' — silent. SOS still transmitting. [E] to board.','lw');
       }
     if(cell.type==='SYSTEM') addLog('Approaching '+cell.name+' System.','li');
@@ -23709,7 +23907,7 @@ function movePirates(){
 // ─────────────────────────────────────────────────────────────────
 const SHIP_WEAPONS = {
   mass_driver:   { id:'mass_driver',   name:'Mass Driver',       minDmg:6,  maxDmg:12, cost:300,  desc:'Basic kinetic slugs. Reliable and affordable.' },
-  railgun:       { id:'railgun',       name:'Railgun',           minDmg:8,  maxDmg:13, cost:450,  desc:'Electromagnetically accelerated projectile. Higher velocity, tighter damage range than a mass driver.' },
+  railgun:       { id:'railgun',       name:'Railgun',           minDmg:8,  maxDmg:13, cost:450,  desc:'Higher velocity, tighter damage range than a mass driver.' },
   laser_cannon:  { id:'laser_cannon',  name:'Laser Cannon',      minDmg:13, maxDmg:20, cost:700,  desc:'High-energy beam weapon. Consistent damage, no projectile drop-off.' },
   pulse_laser:   { id:'pulse_laser',   name:'Pulse Laser',       minDmg:14, maxDmg:24, cost:800,  desc:'Rapid pulse variant. Heavy damage.' },
   artemis:       { id:'artemis',       name:'Artemis Launcher',  minDmg:18, maxDmg:30, cost:1200, desc:'Missile system. Requires ammo (not yet implemented).', placeholder:true },
@@ -23984,6 +24182,9 @@ function doShipFire(){
   sc.log.unshift(outLog);
   sc.log.unshift(inLog);
   if(sc.log.length > 10) sc.log.length = 10;
+  // Mirror to G.log so the LOG tab captures full combat detail
+  archiveLog('['+sc.pirate.name+'] '+outLog, 'lc');
+  archiveLog('['+sc.pirate.name+'] '+inLog, totalDmgIn>0 ? 'lc' : 'li');
 
   if(pirate.hp <= 0){
     pirate.alive = false;
@@ -25867,40 +26068,55 @@ document.addEventListener('keydown', e=>{
 
     // In-game options overlay keys
     if(G.showOptions){
-      if(e.key==='Escape'){ G.showOptions=false; MENU_STATE._optHover=null; renderAll(); return; }
+      if(G._kbScreen){
+        // Keybindings sub-screen inside in-game options
+        const BIND_LIST = ['nw','n','ne','w','e','sw','s','se','wait'];
+        const totalRows = BIND_LIST.length + 1;
+        if(MENU_STATE._rebinding){
+          if(e.key==='Escape'){ MENU_STATE._rebinding=null; renderAll(); return; }
+          const blocked=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','Enter','F5','Tab'];
+          if(blocked.includes(e.key)) return;
+          if(!OPTIONS.keybinds) OPTIONS.keybinds = Object.assign({}, DEFAULT_KEYBINDS);
+          Object.keys(OPTIONS.keybinds).forEach(k=>{ if(OPTIONS.keybinds[k]===e.code) OPTIONS.keybinds[k]=null; });
+          OPTIONS.keybinds[MENU_STATE._rebinding] = e.code;
+          saveOptions(OPTIONS);
+          MENU_STATE._rebinding = null;
+          if(KEYBIND_CONFLICTS[e.code]) addLog('Keybind warning: '+codeLabel(e.code)+' is also used for "'+KEYBIND_CONFLICTS[e.code]+'". Both actions share this key.','lw');
+          renderAll(); return;
+        }
+        if(e.key==='Escape'){ G._kbScreen=false; MENU_STATE._kbSel=0; renderAll(); return; }
+        if(e.key==='ArrowUp'){ MENU_STATE._kbSel=((MENU_STATE._kbSel||0)-1+totalRows)%totalRows; renderAll(); return; }
+        if(e.key==='ArrowDown'){ MENU_STATE._kbSel=((MENU_STATE._kbSel||0)+1)%totalRows; renderAll(); return; }
+        if(e.key==='Enter'||e.key===' '){
+          const sel = MENU_STATE._kbSel||0;
+          if(sel===BIND_LIST.length){ OPTIONS.keybinds=Object.assign({},DEFAULT_KEYBINDS); saveOptions(OPTIONS); }
+          else MENU_STATE._rebinding = BIND_LIST[sel];
+          renderAll(); return;
+        }
+        return;
+      }
+      if(e.key==='Escape'){ G.showOptions=false; G._kbScreen=false; MENU_STATE._optHover=null; renderAll(); return; }
       if(e.key==='f'||e.key==='F'){ openFeedback(); return; }
       if(e.key==='s'||e.key==='S'){ saveToFile(); return; }
+      if(e.key==='k'||e.key==='K'){ G._kbScreen=true; MENU_STATE._kbSel=0; MENU_STATE._rebinding=null; renderAll(); return; }
       if(e.key==='ArrowUp'||e.key==='ArrowDown'){
-        const maxOpt = 2;
+        const maxOpt = 3;
         MENU_STATE.optSel = Number.isInteger(MENU_STATE.optSel) ? MENU_STATE.optSel : 0;
         MENU_STATE.optSel = e.key==='ArrowUp'
           ? (MENU_STATE.optSel + maxOpt) % (maxOpt + 1)
           : (MENU_STATE.optSel + 1) % (maxOpt + 1);
         MENU_STATE._optHover = null;
-        renderAll();
-        return;
+        renderAll(); return;
       }
       if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
-        if(MENU_STATE.optSel===0){
-          OPTIONS.asciiMode=!OPTIONS.asciiMode;
-          saveOptions(OPTIONS);
-          renderAll();
-        }
+        if(MENU_STATE.optSel===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); renderAll(); }
         return;
       }
       if(e.key===' '||e.key==='Enter'){
-        if(MENU_STATE.optSel===0){
-          OPTIONS.asciiMode=!OPTIONS.asciiMode;
-          saveOptions(OPTIONS);
-          renderAll();
-          return;
-        }
-        if(MENU_STATE.optSel===1){
-          saveToFile();
-          return;
-        }
-        openFeedback();
-        return;
+        if(MENU_STATE.optSel===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); renderAll(); return; }
+        if(MENU_STATE.optSel===1){ G._kbScreen=true; MENU_STATE._kbSel=0; MENU_STATE._rebinding=null; renderAll(); return; }
+        if(MENU_STATE.optSel===2){ saveToFile(); return; }
+        openFeedback(); return;
       }
       return;
     }
@@ -26307,7 +26523,7 @@ document.addEventListener('keydown', e=>{
           return;
         }
       }
-      if(e.key==='e'||e.key==='E'){ doInteract(); return; }
+      if(e.key==='Enter'){ doInteract(); return; }
       if(e.key==='u'||e.key==='U'){ doFuelScoop('gasgiant'); return; }
       if(e.key==='s'||e.key==='S'){ doScan(); return; }
       if(e.key==='v'||e.key==='V'){ doViewScan(); return; }
@@ -26358,7 +26574,7 @@ document.addEventListener('keydown', e=>{
           return;
         }
       }
-      if(e.key==='e'||e.key==='E'){
+      if(e.key==='Enter'){
         const cell = G.galaxy[G.ship.y][G.ship.x];
         const pDesc = cell?.planets?.[G.selPlanet];
         const targetDesc = (G.selMoon>=0 && pDesc?.moons?.[G.selMoon]) ? pDesc.moons[G.selMoon] : pDesc;
@@ -26405,13 +26621,21 @@ document.addEventListener('keydown', e=>{
         renderAll(); return;
       }
       if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
-        const tabOrder = ['inventory','crew','ship'];
+        const tabOrder = ['inventory','crew','ship','log'];
         const cur = tabOrder.indexOf(G._viewTab||'cargo');
         const dir = e.key==='ArrowRight' ? 1 : -1;
         G._viewTab = tabOrder[(cur+dir+tabOrder.length)%tabOrder.length];
         G._viewCrewSel = 0;
         G._inventoryExamine = false;
         G._crewExamine = false;
+        G._logScroll = 0;
+        renderAll(); return;
+      }
+      if(G._viewTab==='log'){
+        const FILTER_IDS = ['all','mission','combat','crew','critical'];
+        if(e.key==='ArrowUp')  { G._logScroll = Math.max(0,(G._logScroll||0)-(e.shiftKey?10:1)); renderAll(); return; }
+        if(e.key==='ArrowDown'){ G._logScroll = (G._logScroll||0)+(e.shiftKey?10:1); renderAll(); return; }
+        if(e.key>='1'&&e.key<='5'){ G._logFilter=FILTER_IDS[parseInt(e.key)-1]; G._logScroll=0; renderAll(); return; }
         renderAll(); return;
       }
       if(G._viewTab==='crew'){
@@ -26628,29 +26852,27 @@ document.addEventListener('keydown', e=>{
       return;
     }
 
-    // Movement — 4-dir WASD + arrows, 8-dir numpad (uses e.code, works regardless of NumLock) + Q/Z/C diagonals
-    const dirs={
-      // Cardinal — WASD + arrows (e.key)
-      ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
-      w:[0,-1], W:[0,-1], s:[0,1],  S:[0,1],
-      a:[-1,0], A:[-1,0], d:[1,0],  D:[1,0],
-      // Diagonal letter shortcuts (e.key)
-      q:[-1,-1], Q:[-1,-1],
-      z:[-1, 1], Z:[-1, 1],
-    };
-    // Numpad uses e.code — reliable regardless of NumLock state
+    // Rescue accept/decline — MUST be before movement dispatch so remapped keys can't swallow Y/N
+    if(G.mode==='galaxy' && G.stranded?.rescuePhase==='offer'){
+      if(e.key==='y'||e.key==='Y'||e.key==='Enter'){ doAcceptRescue(); return; }
+      if(e.key==='n'||e.key==='N'||e.key==='Escape'){ doDeclineRescue(); return; }
+    }
+
+    // Movement — arrows always work; numpad always works; letter keys use remappable keybinds
+    // All keybind checks use e.code (physical position, layout-independent)
+    const kb = (OPTIONS.keybinds || DEFAULT_KEYBINDS);
     const numpad={
       Numpad7:[-1,-1], Numpad8:[0,-1], Numpad9:[1,-1],
       Numpad4:[-1, 0],                 Numpad6:[1, 0],
       Numpad1:[-1, 1], Numpad2:[0, 1], Numpad3:[1, 1],
       Numpad5:null, // wait
     };
-    // E = diagonal NE on planet surface, interact everywhere else
-    if(e.key==='e'||e.key==='E'){
-      if(G.mode==='planet'){ e.preventDefault(); tryMove(1,-1); return; }
-      doInteract(); return;
-    }
-    if(dirs[e.key]!==undefined){ e.preventDefault(); tryMove(...dirs[e.key]); return; }
+    // Arrow keys — always cardinal, never remappable (UI navigation depends on them)
+    if(e.key==='ArrowUp')   { e.preventDefault(); tryMove( 0,-1); return; }
+    if(e.key==='ArrowDown') { e.preventDefault(); tryMove( 0, 1); return; }
+    if(e.key==='ArrowLeft') { e.preventDefault(); tryMove(-1, 0); return; }
+    if(e.key==='ArrowRight'){ e.preventDefault(); tryMove( 1, 0); return; }
+    // Numpad — always 8-dir
     if(e.code in numpad){
       e.preventDefault();
       const d=numpad[e.code];
@@ -26658,10 +26880,26 @@ document.addEventListener('keydown', e=>{
       else tryMove(...d);
       return;
     }
+    // Remappable keybinds (e.code = physical key, layout-independent)
+    const kbDirs = {
+      [kb.nw]:[-1,-1], [kb.n]:[0,-1], [kb.ne]:[1,-1],
+      [kb.w]: [-1, 0],                 [kb.e]: [1, 0],
+      [kb.sw]:[-1, 1], [kb.s]:[0, 1], [kb.se]:[1, 1],
+    };
+    const kbWait = kb.wait;
+    if(e.code === kbWait){
+      e.preventDefault();
+      if(G.mode==='planet') doWaitPlanet(); else doWaitGalaxy();
+      return;
+    }
+    // All 8 directions including NE — Enter handles interact/dock/land
+    if(e.code in kbDirs){ e.preventDefault(); tryMove(...kbDirs[e.code]); return; }
 
     if(e.key==='h'||e.key==='H'){
       if(G.mode==='galaxy'){ doRadioHail(); return; }
     }
+    // Enter = interact/dock/land — but not when rescue offer is pending
+    if(e.key==='Enter' && !(G.stranded?.rescuePhase==='offer')){ doInteract(); return; }
     if(e.key==='o'||e.key==='O'){ doRefillOxygen(); return; }
     if(e.key==='l'||e.key==='L'){ doLiftOff(); return; }
     if(e.key==='.'&&G.mode==='planet'){ doWaitPlanet(); return; }
@@ -26702,11 +26940,7 @@ document.addEventListener('keydown', e=>{
         }
       }
     }
-    // Rescue accept / decline
-    if(G.mode==='galaxy' && G.stranded?.rescuePhase==='offer'){
-      if(e.key==='y'||e.key==='Y'){ doAcceptRescue(); return; }
-      if(e.key==='n'||e.key==='N'){ doDeclineRescue(); return; }
-    }
+
     if(e.key==='r'||e.key==='R'){
       if(G.mode==='shipcombat'){ doShipRetreat(); return; }
       doRest(); return;
@@ -27165,12 +27399,33 @@ let MENU_STATE = { hasAutosave: false, screen: 'main' }; // screen: 'main'|'opti
 
 // ── Options (persisted to localStorage) ─────────────────────────
 const OPT_KEY = 'prospector_options';
+
+
+// Human-readable label for a e.code string
+function codeLabel(code){
+  if(!code) return '?';
+  if(code==='Space') return 'SPC';
+  if(code.startsWith('Key')) return code.slice(3);
+  if(code.startsWith('Digit')) return code.slice(5);
+  if(code.startsWith('Numpad')) return 'NP'+code.slice(6);
+  if(code==='ArrowUp') return '↑';
+  if(code==='ArrowDown') return '↓';
+  if(code==='ArrowLeft') return '←';
+  if(code==='ArrowRight') return '→';
+  return code.replace(/^(Key|Digit)/,'').slice(0,5);
+}
+
 function loadOptions(){
   try {
     const raw = localStorage.getItem(OPT_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      // Migrate: ensure keybinds exist
+      if(!parsed.keybinds) parsed.keybinds = Object.assign({}, DEFAULT_KEYBINDS);
+      return parsed;
+    }
   } catch(e){}
-  return { asciiMode: false };
+  return { asciiMode: false, keybinds: Object.assign({}, DEFAULT_KEYBINDS) };
 }
 function saveOptions(opts){
   try { localStorage.setItem(OPT_KEY, JSON.stringify(opts)); } catch(e){}
@@ -27240,6 +27495,11 @@ function drawMenuScreen(){
 
   if(MENU_STATE.screen==='options'){
     drawOptionsScreen(cx);
+    return;
+  }
+
+  if(MENU_STATE.screen==='keybindings'){
+    drawKeybindingsScreen(cx);
     return;
   }
 
@@ -27444,104 +27704,146 @@ function drawMenuScreen(){
 }
 
 function drawOptionsScreen(cx){
-  ctx.font='bold 31px Courier New'; ctx.fillStyle='#ffaa44'; ctx.textAlign='center';
-  ctx.fillText('OPTIONS',cx,90);
-  ctx.fillStyle='#223344'; ctx.fillRect(cx-200,108,400,1);
+  const ch = canvas.height;
+  ctx.font='bold 31px Courier New'; ctx.fillStyle='#cccccc'; ctx.textAlign='center';
+  ctx.fillText('OPTIONS', cx, 90);
+  ctx.fillStyle='#2a2a4a'; ctx.fillRect(cx-200, 106, 400, 1);
 
-  ctx.font='16px Courier New'; ctx.fillStyle='#556677'; ctx.textAlign='center';
-  ctx.fillText('Up/Down select, Left/Right change, Enter activate',cx,134);
-
-  const items=[
-    {
-      label: 'Render Mode',
-      value: OPTIONS.asciiMode ? 'ASCII' : 'SPRITES',
-      valueCol: OPTIONS.asciiMode ? '#ffe066' : '#70d8ff',
-      desc:  OPTIONS.asciiMode
-        ? 'Classic text characters — works without sprites'
-        : 'Original Prospector pixel art sprites',
-      sel: MENU_STATE.optSel===0,
-    },
+  // All rows: uniform 34px height, 14px gap = 48px per row
+  const rowH=34, rowGap=14, rowW=400, startY=150;
+  const rows=[
+    { i:0, label:'Render Mode', right: OPTIONS.asciiMode ? 'ASCII' : 'SPRITES' },
+    { i:1, label:'Movement Keybindings', right:'›' },
+    { i:2, label:'Save Game',   right:'S' },
+    { i:3, label:'Feedback',    right:'F' },
   ];
 
   MENU_STATE._optRects = [];
-  MENU_STATE._optArrowRects = [];
-  items.forEach((item,i)=>{
-    const y = 185 + i*80;
-    MENU_STATE._optRects.push({ i, x: cx-220, y: y-28, w: 440, h: 76 });
-    const sel = item.sel;
-    const hov = MENU_STATE._optHover === i || MENU_STATE._optHover === 'opt-left' || MENU_STATE._optHover === 'opt-right';
-    ctx.fillStyle = (sel||hov) ? '#12122a' : '#0a0a16';
-    ctx.fillRect(cx-220, y-28, 440, 76);
-    ctx.strokeStyle = sel ? '#6655aa' : hov ? '#4444aa' : '#2a2a4a';
-    ctx.lineWidth = (sel||hov) ? 2 : 1;
-    ctx.strokeRect(cx-220, y-28, 440, 76);
+  MENU_STATE._saveBtnY = null;
+  MENU_STATE._feedbackBtnY = null;
+  MENU_STATE._kbEntryY = null;
+
+  rows.forEach(row=>{
+    const y = startY + row.i*(rowH+rowGap);
+    const sel = MENU_STATE.optSel === row.i;
+    MENU_STATE._optRects.push({ i:row.i, x:cx-rowW/2, y, w:rowW, h:rowH });
+    if(row.i===2) MENU_STATE._saveBtnY = y;
+    if(row.i===3) MENU_STATE._feedbackBtnY = y;
+    if(row.i===1) MENU_STATE._kbEntryY = y;
+
+    ctx.fillStyle = sel ? '#14142a' : '#0e0e1a';
+    ctx.fillRect(cx-rowW/2, y, rowW, rowH);
+    ctx.strokeStyle = sel ? '#6655cc' : '#2a2a4a';
+    ctx.lineWidth = sel ? 2 : 1;
+    ctx.strokeRect(cx-rowW/2, y, rowW, rowH);
+
+    // ▶ cursor
+    ctx.font='bold 19px Courier New'; ctx.textAlign='left';
+    if(sel){ ctx.fillStyle='#ffe066'; ctx.fillText('▶', cx-rowW/2+8, y+rowH-8); }
 
     // Label
-    ctx.font = 'bold 15px Courier New'; ctx.textAlign='left';
-    ctx.fillStyle = sel ? '#ddd' : '#888';
-    ctx.fillText(item.label, cx-200, y-6);
+    ctx.fillStyle = sel ? '#ffffff' : '#cccccc';
+    ctx.fillText(row.label, cx-rowW/2+32, y+rowH-8);
 
-    // ◄ VALUE ►
-    ctx.font = 'bold 17px Courier New'; ctx.textAlign='center';
-    ctx.fillStyle='#555577'; ctx.fillText('◄', cx-110, y+18);
-    ctx.fillStyle=item.valueCol; ctx.fillText(item.value, cx, y+18);
-    ctx.fillStyle='#555577'; ctx.fillText('►', cx+110, y+18);
-
-    const leftArrow = { x: cx-132, y: y-2, w: 44, h: 28, dir: 'left' };
-    const rightArrow = { x: cx+88, y: y-2, w: 44, h: 28, dir: 'right' };
-    MENU_STATE._optArrowRects.push(leftArrow, rightArrow);
-    const leftActive = sel || MENU_STATE._optHover === 'opt-left';
-    const rightActive = sel || MENU_STATE._optHover === 'opt-right';
-    ctx.fillStyle = '#12122a';
-    ctx.fillRect(leftArrow.x-1, leftArrow.y-1, leftArrow.w+2, leftArrow.h+2);
-    ctx.fillRect(rightArrow.x-1, rightArrow.y-1, rightArrow.w+2, rightArrow.h+2);
-    ctx.font = 'bold 17px Courier New'; ctx.textAlign='center';
-    ctx.fillStyle = leftActive ? '#1a2240' : '#0f1020';
-    ctx.fillRect(leftArrow.x, leftArrow.y, leftArrow.w, leftArrow.h);
-    ctx.strokeStyle = leftActive ? '#7788cc' : '#333355';
-    ctx.lineWidth = leftActive ? 2 : 1;
-    ctx.strokeRect(leftArrow.x, leftArrow.y, leftArrow.w, leftArrow.h);
-    ctx.fillStyle = leftActive ? '#dde8ff' : '#777799';
-    ctx.fillText('<', cx-110, y+18);
-    ctx.fillStyle = rightActive ? '#1a2240' : '#0f1020';
-    ctx.fillRect(rightArrow.x, rightArrow.y, rightArrow.w, rightArrow.h);
-    ctx.strokeStyle = rightActive ? '#7788cc' : '#333355';
-    ctx.lineWidth = rightActive ? 2 : 1;
-    ctx.strokeRect(rightArrow.x, rightArrow.y, rightArrow.w, rightArrow.h);
-    ctx.fillStyle = rightActive ? '#dde8ff' : '#777799';
-    ctx.fillText('>', cx+110, y+18);
-
+    // Right hint
+    ctx.textAlign='right';
+    ctx.fillStyle = sel ? '#ffe066' : '#445566';
+    ctx.fillText(row.right, cx+rowW/2-12, y+rowH-8);
   });
 
-  // Save button
-  const saveY = 185 + items.length*80 + 20;
-  const saveSel = MENU_STATE.optSel===1;
-  const saveHov = MENU_STATE._optHover === 'save';
-  ctx.fillStyle = (saveSel||saveHov) ? '#16160c' : '#0e0e1a';
-  ctx.fillRect(cx-220, saveY, 440, 40);
-  ctx.strokeStyle = saveSel ? '#ffcc55' : saveHov ? '#eebb44' : '#665533';
-  ctx.lineWidth = (saveSel||saveHov) ? 2 : 1;
-  ctx.strokeRect(cx-220, saveY, 440, 40);
-  ctx.font='bold 15px Courier New'; ctx.fillStyle= (saveSel||saveHov) ? '#ffcc55' : '#ccaa44'; ctx.textAlign='center';
-  ctx.fillText('[ S ]  Save Game', cx, saveY+25);
-  MENU_STATE._saveBtnY = saveY;
-
-  // Feedback button
-  const fbY = saveY + 50;
-  const fbSel = MENU_STATE.optSel===2;
-  const fbHov = MENU_STATE._optHover === 'fb';
-  ctx.fillStyle = (fbSel||fbHov) ? '#0e1a0e' : '#0e0e1a';
-  ctx.fillRect(cx-220, fbY, 440, 40);
-  ctx.strokeStyle = fbSel ? '#55dd88' : fbHov ? '#44cc77' : '#336644';
-  ctx.lineWidth = (fbSel||fbHov) ? 2 : 1;
-  ctx.strokeRect(cx-220, fbY, 440, 40);
-  ctx.font='bold 15px Courier New'; ctx.fillStyle= (fbSel||fbHov) ? '#55dd88' : '#44bb77'; ctx.textAlign='center';
-  ctx.fillText('[ F ]  Send Feedback', cx, fbY+25);
-  MENU_STATE._feedbackBtnY = fbY;
+  // Render Mode arrow hints below its row (only when selected)
+  if(MENU_STATE.optSel===0){
+    ctx.font='12px Courier New'; ctx.fillStyle='#445566'; ctx.textAlign='center';
+    ctx.fillText('◄ / ► or Enter to toggle', cx, startY+rowH+8);
+  }
 
   // Footer
-  ctx.font='15px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('[ ESC ]  Back to main menu', cx, canvas.height-16);
+  ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+  ctx.fillText('↑/↓ select    Enter activate    ESC back', cx, ch-16);
+  ctx.textAlign='left';
+}
+
+function drawKeybindingsScreen(cx){
+  const cw = canvas.width, ch = canvas.height;
+  const kb = OPTIONS.keybinds || DEFAULT_KEYBINDS;
+  const rebinding = MENU_STATE._rebinding;
+  const sel = MENU_STATE._kbSel || 0;
+
+  ctx.font='bold 28px Courier New'; ctx.fillStyle='#cccccc'; ctx.textAlign='center';
+  ctx.fillText('MOVEMENT KEYBINDINGS', cx, 70);
+  ctx.fillStyle='#2a2a4a'; ctx.fillRect(cx-280, 84, 560, 1);
+  ctx.font='13px Courier New'; ctx.fillStyle='#445566'; ctx.textAlign='center';
+  ctx.fillText('Physical key position — layout-independent. Arrows and Numpad always work.', cx, 102);
+
+  // List of bindings in order
+  const BIND_LIST = [
+    { id:'nw',   label:'Move NW       (diagonal)' },
+    { id:'n',    label:'Move N        (up)' },
+    { id:'ne',   label:'Move NE       (diagonal)' },
+    { id:'w',    label:'Move W        (left)' },
+    { id:'e',    label:'Move E        (right)' },
+    { id:'sw',   label:'Move SW       (diagonal)' },
+    { id:'s',    label:'Move S        (down)' },
+    { id:'se',   label:'Move SE       (diagonal)' },
+    { id:'wait', label:'Wait / skip turn' },
+  ];
+
+  const rowH = 32, startY = 110, colLabel = cx-240, colKey = cx+120;
+  MENU_STATE._kbRowRects = [];
+
+  BIND_LIST.forEach((bind, i)=>{
+    const y = startY + i*rowH;
+    const isSel = sel === i;
+    const isRebinding = rebinding === bind.id;
+
+    ctx.fillStyle = isRebinding ? '#0e1e0e' : isSel ? '#14142a' : '#0e0e1a';
+    ctx.fillRect(cx-260, y-2, 520, rowH-2);
+    ctx.strokeStyle = isRebinding ? '#44ff88' : isSel ? '#6655cc' : '#2a2a4a';
+    ctx.lineWidth = (isRebinding||isSel) ? 2 : 1;
+    ctx.strokeRect(cx-260, y-2, 520, rowH-2);
+
+    // Action label
+    ctx.font = 'bold 19px Courier New';
+    if(isSel && !isRebinding){ ctx.fillStyle='#ffe066'; ctx.textAlign='left'; ctx.fillText('▶', cx-260+8, y+22); }
+    ctx.fillStyle = isRebinding ? '#44ff88' : isSel ? '#ffffff' : '#cccccc';
+    ctx.textAlign = 'left';
+    ctx.fillText(bind.label, cx-260+32, y+22);
+
+    // Key label
+    const hasConflict = !isRebinding && kb[bind.id] && KEYBIND_CONFLICTS[kb[bind.id]];
+    const keyText = isRebinding ? '[ press a key... ]' : ('[ ' + codeLabel(kb[bind.id]) + ' ]');
+    ctx.font = isRebinding ? '14px Courier New' : 'bold 19px Courier New';
+    ctx.fillStyle = isRebinding ? '#44ff88' : hasConflict ? '#ffe066' : isSel ? '#ffe066' : '#445566';
+    ctx.textAlign = 'right';
+    ctx.fillText(keyText, cx+260-12, y+22);
+
+    // Conflict indicator — "!" to the right of the row box
+    if(hasConflict){
+      ctx.font = 'bold 14px Courier New';
+      ctx.fillStyle = '#ffe066';
+      ctx.textAlign = 'left';
+      ctx.fillText('!', cx+260+8, y+22);
+    }
+
+    MENU_STATE._kbRowRects.push({ i, id: bind.id, x: cx-260, y: y-2, w: 520, h: rowH-2 });
+  });
+
+  // Reset defaults row
+  const resetY = startY + BIND_LIST.length*rowH + 10;
+  const isResetSel = sel === BIND_LIST.length;
+  ctx.fillStyle = isResetSel ? '#14142a' : '#0e0e1a';
+  ctx.fillRect(cx-260, resetY, 520, 34);
+  ctx.strokeStyle = isResetSel ? '#6655cc' : '#2a2a4a';
+  ctx.lineWidth = isResetSel ? 2 : 1;
+  ctx.strokeRect(cx-260, resetY, 520, 34);
+  ctx.font='bold 19px Courier New';
+  if(isResetSel){ ctx.fillStyle='#ffe066'; ctx.textAlign='left'; ctx.fillText('▶', cx-260+8, resetY+24); }
+  ctx.fillStyle = isResetSel ? '#ffffff' : '#cccccc'; ctx.textAlign='left';
+  ctx.fillText('Reset all to defaults', cx-260+32, resetY+24);
+  MENU_STATE._kbResetRow = { y: resetY, h: 34 };
+
+  ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+  ctx.fillText('↑/↓ navigate    Enter to remap    ESC back', cx, ch-16);
   ctx.textAlign='left';
 }
 
@@ -27589,13 +27891,29 @@ function drawChangelogScreen(cx){
 // ─────────────────────────────────────────────────────────────────
 // ── Menu mouse click support ──────────────────────────────────
 canvas.addEventListener('click', e => {
-  if(G !== null && !(G.showOptions) && G.mode !== 'shipcombat') return; // allow clicks for options and ship combat
+  if(G !== null && !(G.showOptions) && G.mode !== 'shipcombat' && !(G.mode==='inventory' && G._viewTab==='log')) return; // allow clicks for options, ship combat, and log tab filters
 
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width  / rect.width;
   const scaleY = canvas.height / rect.height;
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top)  * scaleY;
+
+  // Log tab — filter button clicks
+  if(G !== null && G.mode==='inventory' && G._viewTab==='log'){
+    const FILTERS=['all','mission','combat','crew','critical'];
+    const fBtnW=90, fBtnH=22, fBtnGap=6;
+    const fTotalW=FILTERS.length*(fBtnW+fBtnGap)-fBtnGap;
+    const fStartX=Math.round((canvas.width-fTotalW)/2);
+    const fY=52;
+    FILTERS.forEach((f,i)=>{
+      const fx=fStartX+i*(fBtnW+fBtnGap);
+      if(mx>=fx && mx<=fx+fBtnW && my>=fY && my<=fY+fBtnH){
+        G._logFilter=f; G._logScroll=0; renderAll();
+      }
+    });
+    return;
+  }
 
   // Ship combat — log font size buttons
   if(G !== null && G.mode === 'shipcombat' && G.shipCombat?._logFontBtnRects){
@@ -27614,6 +27932,22 @@ canvas.addEventListener('click', e => {
 
   // In-game options — feedback button click
   if(G !== null && G.showOptions){
+    // Keybindings sub-screen click
+    if(G._kbScreen){
+      const BIND_LIST = ['nw','n','ne','w','e','sw','s','se','wait'];
+      (MENU_STATE._kbRowRects||[]).forEach(r=>{
+        if(mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h){
+          MENU_STATE._kbSel = r.i;
+          MENU_STATE._rebinding = r.id;
+          renderAll();
+        }
+      });
+      const rr = MENU_STATE._kbResetRow;
+      if(rr && my>=rr.y && my<=rr.y+rr.h){
+        OPTIONS.keybinds=Object.assign({},DEFAULT_KEYBINDS); saveOptions(OPTIONS); renderAll();
+      }
+      return;
+    }
     let handled = false;
     (MENU_STATE._optArrowRects||[]).forEach(r => {
       if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
@@ -27981,8 +28315,9 @@ function handleMenuKey(e){
     if(e.key==='Escape'){ MENU_STATE.screen='main'; MENU_STATE._optHover=null; drawMenuScreen(); return; }
     if(e.key==='f'||e.key==='F'){ openFeedback(); return; }
     if(e.key==='s'||e.key==='S'){ saveToFile(); return; }
+    if(e.key==='k'||e.key==='K'){ MENU_STATE.screen='keybindings'; MENU_STATE._kbSel=0; MENU_STATE._rebinding=null; drawMenuScreen(); return; }
     if(e.key==='ArrowUp'||e.key==='ArrowDown'){
-      const maxOpt = 2;
+      const maxOpt = 3;
       MENU_STATE.optSel = Number.isInteger(MENU_STATE.optSel) ? MENU_STATE.optSel : 0;
       MENU_STATE.optSel = e.key==='ArrowUp'
         ? (MENU_STATE.optSel + maxOpt) % (maxOpt + 1)
@@ -27992,25 +28327,52 @@ function handleMenuKey(e){
       return;
     }
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
-      if(MENU_STATE.optSel===0){
-        OPTIONS.asciiMode=!OPTIONS.asciiMode;
-        saveOptions(OPTIONS);
-        drawMenuScreen();
-      }
+      if(MENU_STATE.optSel===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); drawMenuScreen(); }
       return;
     }
     if(e.key===' '||e.key==='Enter'){
-      if(MENU_STATE.optSel===0){
-        OPTIONS.asciiMode=!OPTIONS.asciiMode;
-        saveOptions(OPTIONS);
-      } else if(MENU_STATE.optSel===1){
-        saveToFile();
-        return;
-      } else {
-        openFeedback();
-        return;
-      }
+      if(MENU_STATE.optSel===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
+      else if(MENU_STATE.optSel===1){ MENU_STATE.screen='keybindings'; MENU_STATE._kbSel=0; MENU_STATE._rebinding=null; }
+      else if(MENU_STATE.optSel===2){ saveToFile(); return; }
+      else { openFeedback(); return; }
       drawMenuScreen();
+    }
+    return;
+  }
+
+  if(MENU_STATE.screen==='keybindings'){
+    const BIND_LIST = ['nw','n','ne','w','e','sw','s','se','wait'];
+    const totalRows = BIND_LIST.length + 1; // +1 for reset row
+    if(MENU_STATE._rebinding){
+      if(e.key==='Escape'){ MENU_STATE._rebinding=null; drawMenuScreen(); return; }
+      const blocked=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','Enter','F5','Tab'];
+      if(blocked.includes(e.key)){ return; }
+      if(!OPTIONS.keybinds) OPTIONS.keybinds = Object.assign({}, DEFAULT_KEYBINDS);
+      // Clear this code from any other slot
+      Object.keys(OPTIONS.keybinds).forEach(k=>{ if(OPTIONS.keybinds[k]===e.code) OPTIONS.keybinds[k]=null; });
+      OPTIONS.keybinds[MENU_STATE._rebinding] = e.code;
+      saveOptions(OPTIONS);
+      MENU_STATE._rebinding = null;
+      drawMenuScreen(); return;
+    }
+    if(e.key==='Escape'){ MENU_STATE.screen='options'; MENU_STATE._kbSel=0; drawMenuScreen(); return; }
+    if(e.key==='ArrowUp'){
+      MENU_STATE._kbSel = ((MENU_STATE._kbSel||0) - 1 + totalRows) % totalRows;
+      drawMenuScreen(); return;
+    }
+    if(e.key==='ArrowDown'){
+      MENU_STATE._kbSel = ((MENU_STATE._kbSel||0) + 1) % totalRows;
+      drawMenuScreen(); return;
+    }
+    if(e.key==='Enter'||e.key===' '){
+      const sel = MENU_STATE._kbSel || 0;
+      if(sel === BIND_LIST.length){
+        OPTIONS.keybinds = Object.assign({}, DEFAULT_KEYBINDS);
+        saveOptions(OPTIONS);
+      } else {
+        MENU_STATE._rebinding = BIND_LIST[sel];
+      }
+      drawMenuScreen(); return;
     }
     return;
   }
