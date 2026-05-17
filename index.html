@@ -14969,6 +14969,166 @@ function debugToggleCurrentCivHostile(){
   renderAll();
 }
 
+function cycleArrayIndex(current, len, dir, allowRandom=false){
+  const min = allowRandom ? -1 : 0;
+  const span = len + (allowRandom ? 1 : 0);
+  let next = (current ?? min) + dir;
+  if(next < min) next = min + span - 1;
+  if(next >= len) next = min;
+  return next;
+}
+
+function cycleStringChoice(current, values, dir){
+  const opts = ['', ...values];
+  const idx = Math.max(0, opts.indexOf(current ?? ''));
+  return opts[(idx + dir + opts.length) % opts.length];
+}
+
+function debugPinnedCivTraits(tier){
+  if(tier === 'primitive'){
+    return {
+      diet: DEBUG.civPrimDiet >= 0 ? PRIM_DIETS[DEBUG.civPrimDiet % PRIM_DIETS.length] : null,
+      social: DEBUG.civPrimSocial >= 0 ? PRIM_SOCIAL[DEBUG.civPrimSocial % PRIM_SOCIAL.length] : null,
+      curiosity: DEBUG.civPrimCuriosity >= 0 ? PRIM_CURIOSITY[DEBUG.civPrimCuriosity % PRIM_CURIOSITY.length] : null,
+      honor: DEBUG.civPrimHonor >= 0 ? PRIM_HONOR[DEBUG.civPrimHonor % PRIM_HONOR.length] : null,
+    };
+  }
+  const axes = CIVI_TRAITS[tier] || {};
+  const keys = Object.keys(axes);
+  const out = {};
+  keys.forEach(key=>{
+    const debugKey = 'civTrait'+key[0].toUpperCase()+key.slice(1);
+    if(DEBUG[debugKey]) out[key] = DEBUG[debugKey];
+  });
+  return out;
+}
+
+function debugCivSubMenuRows(){
+  const tierPick = DEBUG_CIV_TIERS[(DEBUG.debugCivTier||0) % DEBUG_CIV_TIERS.length];
+  const tier = tierPick?.id || 'primitive';
+  const speciesValue = DEBUG.debugCivSpecies < 0 ? 'Random' : CIV_SPECIES_TYPES[DEBUG.debugCivSpecies % CIV_SPECIES_TYPES.length];
+  const rows = [
+    { key:'tier', label:'Tier', value:tierPick?.label || 'Primitive' },
+    { key:'species', label:'Species', value:speciesValue },
+    { key:'aggression', label:'Aggression', value:CIV_AGGRESSION[(DEBUG.debugCivAggression||0) % CIV_AGGRESSION.length] },
+  ];
+  if(tier === 'primitive'){
+    rows.push(
+      { key:'primDiet', label:'Diet', value:DEBUG.civPrimDiet < 0 ? 'Random' : PRIM_DIETS[DEBUG.civPrimDiet] },
+      { key:'primSocial', label:'Social', value:DEBUG.civPrimSocial < 0 ? 'Random' : PRIM_SOCIAL[DEBUG.civPrimSocial] },
+      { key:'primCuriosity', label:'Curiosity', value:DEBUG.civPrimCuriosity < 0 ? 'Random' : PRIM_CURIOSITY[DEBUG.civPrimCuriosity] },
+      { key:'primHonor', label:'Honor', value:DEBUG.civPrimHonor < 0 ? 'Random' : PRIM_HONOR[DEBUG.civPrimHonor] },
+    );
+  } else {
+    Object.entries(CIVI_TRAITS[tier] || {}).forEach(([axis, values])=>{
+      const debugKey = 'civTrait'+axis[0].toUpperCase()+axis.slice(1);
+      rows.push({ key:'trait:'+debugKey, label:axis, value:DEBUG[debugKey] || 'Random', values });
+    });
+  }
+  rows.push({ key:'spawn', label:'Spawn civilization', value:'Enter / Space' });
+  rows.push({ key:'close', label:'Close submenu', value:'Esc / C' });
+  return rows;
+}
+
+function debugCivSubMenuApplyRow(row, dir){
+  if(!row) return;
+  if(row.key === 'tier') DEBUG.debugCivTier = cycleArrayIndex(DEBUG.debugCivTier || 0, DEBUG_CIV_TIERS.length, dir);
+  else if(row.key === 'species') DEBUG.debugCivSpecies = cycleArrayIndex(DEBUG.debugCivSpecies ?? -1, CIV_SPECIES_TYPES.length, dir, true);
+  else if(row.key === 'aggression') DEBUG.debugCivAggression = cycleArrayIndex(DEBUG.debugCivAggression || 0, CIV_AGGRESSION.length, dir);
+  else if(row.key === 'primDiet') DEBUG.civPrimDiet = cycleArrayIndex(DEBUG.civPrimDiet ?? -1, PRIM_DIETS.length, dir, true);
+  else if(row.key === 'primSocial') DEBUG.civPrimSocial = cycleArrayIndex(DEBUG.civPrimSocial ?? -1, PRIM_SOCIAL.length, dir, true);
+  else if(row.key === 'primCuriosity') DEBUG.civPrimCuriosity = cycleArrayIndex(DEBUG.civPrimCuriosity ?? -1, PRIM_CURIOSITY.length, dir, true);
+  else if(row.key === 'primHonor') DEBUG.civPrimHonor = cycleArrayIndex(DEBUG.civPrimHonor ?? -1, PRIM_HONOR.length, dir, true);
+  else if(row.key?.startsWith('trait:')) DEBUG[row.key.slice(6)] = cycleStringChoice(DEBUG[row.key.slice(6)], row.values || [], dir);
+}
+
+function drawDebugCivSubMenu(){
+  const rows = debugCivSubMenuRows();
+  const pad = 10, lh = 22, w = 520;
+  const x = canvas.width - w - 8, y = 8;
+  const h = pad*2 + (rows.length + 3)*lh;
+  ctx.fillStyle='rgba(0,0,0,0.9)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle='#88ffcc'; ctx.lineWidth=1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.font='bold 15px Courier New'; ctx.textAlign='left';
+  ctx.fillStyle='#88ffcc';
+  ctx.fillText('CIV DEBUG SUBMENU', x+pad, y+pad+lh);
+  ctx.font='14px Courier New';
+  ctx.fillStyle='#aaaacc';
+  ctx.fillText('Up/Down select   Left/Right change   Enter spawn   Esc/C close', x+pad, y+pad+lh*2);
+  rows.forEach((row, i)=>{
+    const yy = y + pad + lh*(i+3);
+    const sel = i === (DEBUG.civSubSel || 0);
+    ctx.fillStyle = sel ? '#ffe066' : row.key === 'spawn' ? '#90f0a0' : row.key === 'close' ? '#ff8888' : '#cccccc';
+    ctx.fillText((sel?'> ':'  ')+row.label+': '+row.value, x+pad, yy);
+  });
+}
+
+function debugItemRowsFromCatalog(catalog, type){
+  const rows = [];
+  catalog.forEach(group=>{
+    rows.push({ type:'header', label:group.cat });
+    group.items.forEach(item=>rows.push({ type, label:type === 'cargo' ? (COMMODITIES[item]?.name || item) : item.name, item }));
+  });
+  rows.push({ type:'close', label:'Close submenu' });
+  return rows;
+}
+
+function drawDebugItemSubMenu(){
+  const leftRows = debugItemRowsFromCatalog(DEBUG_ITEM_CATALOG, 'inventory');
+  const rightRows = debugItemRowsFromCatalog(DEBUG_CARGO_CATALOG, 'cargo');
+  drawDebugItemSubMenu._leftRows = leftRows;
+  drawDebugItemSubMenu._rightRows = rightRows;
+  const pad = 10, lh = 18, w = 700;
+  const x = canvas.width - w - 8, y = 8;
+  const h = pad*2 + Math.max(leftRows.length, rightRows.length, 18)*lh + lh*3;
+  ctx.fillStyle='rgba(0,0,0,0.9)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle='#ffe066'; ctx.lineWidth=1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.font='bold 15px Courier New'; ctx.textAlign='left';
+  ctx.fillStyle='#ffe066';
+  ctx.fillText('DEBUG ITEM SUBMENU', x+pad, y+pad+lh);
+  ctx.font='13px Courier New';
+  ctx.fillStyle='#aaaacc';
+  ctx.fillText('Left/Right column   Up/Down select   Enter spawn   Esc/I close', x+pad, y+pad+lh*2);
+  const drawCol = (rows, colName, cx, selected)=>{
+    ctx.fillStyle = colName === DEBUG.itemSubCol ? '#88ccff' : '#667788';
+    ctx.fillText(colName === 'left' ? 'Inventory' : 'Cargo', cx, y+pad+lh*3);
+    rows.forEach((row, i)=>{
+      const yy = y + pad + lh*(i+4);
+      if(yy > y + h - pad) return;
+      const sel = selected === i && colName === DEBUG.itemSubCol;
+      if(row.type === 'header') ctx.fillStyle = '#ffaa44';
+      else if(row.type === 'close') ctx.fillStyle = sel ? '#ffaaaa' : '#ff7777';
+      else ctx.fillStyle = sel ? '#ffe066' : '#cccccc';
+      ctx.fillText((sel?'> ':'  ')+row.label, cx, yy);
+    });
+  };
+  drawCol(leftRows, 'left', x+pad, DEBUG.itemSubSel || 0);
+  drawCol(rightRows, 'right', x+pad+350, DEBUG.itemSubSelR || 0);
+}
+
+function debugItemSubMenuSpawn(){
+  if(!G) return;
+  const col = DEBUG.itemSubCol || 'left';
+  drawDebugItemSubMenu();
+  const rows = col === 'right' ? drawDebugItemSubMenu._rightRows : drawDebugItemSubMenu._leftRows;
+  const selKey = col === 'right' ? 'itemSubSelR' : 'itemSubSel';
+  const row = rows[Math.max(0, Math.min(DEBUG[selKey] || 0, rows.length - 1))];
+  if(!row || row.type === 'header') return;
+  if(row.type === 'close'){ DEBUG.itemSubMenu = false; renderAll(); return; }
+  if(row.type === 'cargo'){
+    const commodityId = row.item;
+    if(addCargo(makeCommodityItem(commodityId, 'debug', 0))) addLog('DEBUG: Cargo added: '+(COMMODITIES[commodityId]?.name || commodityId)+'.','lg');
+  } else {
+    G.inventory.push({ ...row.item });
+    addLog('DEBUG: Item added: '+row.item.name+'.','lg');
+  }
+  renderAll();
+}
+
 function debugSpawnCivilizationOnCurrentPlanet(){
   if(G.mode !== 'planet'){
     addLog('DEBUG: Civilization spawn only works on planet surface.','lw');
@@ -14984,8 +15144,13 @@ function debugSpawnCivilizationOnCurrentPlanet(){
   const tierPick = DEBUG_CIV_TIERS[(DEBUG.debugCivTier||0) % DEBUG_CIV_TIERS.length];
   const tierDef = CIV_TIERS.find(x=>x.id===tierPick.id);
   const aggression = CIV_AGGRESSION[(DEBUG.debugCivAggression||0) % CIV_AGGRESSION.length];
-  const species = CIV_SPECIES_TYPES[Math.floor(Math.random()*CIV_SPECIES_TYPES.length)];
+  const species = DEBUG.debugCivSpecies >= 0
+    ? CIV_SPECIES_TYPES[DEBUG.debugCivSpecies % CIV_SPECIES_TYPES.length]
+    : CIV_SPECIES_TYPES[Math.floor(Math.random()*CIV_SPECIES_TYPES.length)];
   const count = tierDef ? tierDef.count[0]+Math.floor(Math.random()*(tierDef.count[1]-tierDef.count[0]+1)) : 4;
+  let traits = tierPick.id === 'primitive' ? generatePrimitiveTraits(Math.random) : generateCivilizationTraits(tierPick.id, Math.random);
+  const pinnedTraits = debugPinnedCivTraits(tierPick.id);
+  if(traits && pinnedTraits) Object.entries(pinnedTraits).forEach(([key, val])=>{ if(val) traits[key] = val; });
   pd.civilization = {
     tier:tierPick.id,
     tierLabel:tierPick.label,
@@ -14993,6 +15158,7 @@ function debugSpawnCivilizationOnCurrentPlanet(){
     aggression,
     count,
     tiles:tierDef?.tiles || ['civ_hut'],
+    traits,
   };
   debugResetCivilizationState(pd.civilization);
   const B2 = BIOMES[pd.biome] || {};
@@ -15024,6 +15190,14 @@ function debugSpawnCivilizationOnCurrentPlanet(){
 }
 
 function drawDebugOverlay(){
+  if(DEBUG.civSubMenu){
+    drawDebugCivSubMenu();
+    return;
+  }
+  if(DEBUG.itemSubMenu){
+    drawDebugItemSubMenu();
+    return;
+  }
   const pad = 10, lh = 22, w = 430;
   const x = canvas.width - w - 8, y = 8;
 
@@ -15079,7 +15253,7 @@ function drawDebugOverlay(){
   ctx.fillText('[6] Spawn Civ: '+civTierLabel+' / '+civAgg+'  (current: '+civState+')', x+pad, ly());
 
   ctx.fillStyle = '#88ccff';
-  ctx.fillText('[T] Civ Tier   [A] Aggression   [Shift+A] Apply Aggression', x+pad, ly());
+  ctx.fillText('[C] Civ Menu   [T] Tier   [A] Aggression   [Shift+A] Apply', x+pad, ly());
 
   ctx.fillStyle = '#ff8888';
   ctx.fillText('[K] Toggle Current Civ Hostile/Clear Hostility', x+pad, ly());
@@ -23202,6 +23376,7 @@ document.addEventListener('keydown', e=>{
         e.preventDefault();
         const rows = debugCivSubMenuRows();
         const numRows = rows.length;
+        DEBUG.civSubSel = Math.max(0, Math.min(DEBUG.civSubSel || 0, numRows - 1));
         if(e.key==='Escape'||e.key==='c'||e.key==='C'){ DEBUG.civSubMenu=false; renderAll(); return; }
         if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){
           DEBUG.civSubSel = (DEBUG.civSubSel - 1 + numRows) % numRows;
@@ -23277,6 +23452,13 @@ document.addEventListener('keydown', e=>{
       if(e.key==='d'||e.key==='D'){ e.preventDefault(); debugApplyCrewStatus('disease'); return; }
       if(e.key==='h'||e.key==='H'){ e.preventDefault(); debugApplyCrewStatus('hallucination'); return; }
       if(e.key==='m'||e.key==='M'){ e.preventDefault(); G.credits+=1000; addLog('DEBUG: +1000 cr (total: '+G.credits+')','lw'); renderAll(); return; }
+      if(e.key==='t'||e.key==='T'){ e.preventDefault(); DEBUG.debugCivTier = cycleArrayIndex(DEBUG.debugCivTier || 0, DEBUG_CIV_TIERS.length, 1); renderAll(); return; }
+      if(e.key==='a'||e.key==='A'){
+        e.preventDefault();
+        if(e.shiftKey) debugApplySelectedCivAggression();
+        else { DEBUG.debugCivAggression = cycleArrayIndex(DEBUG.debugCivAggression || 0, CIV_AGGRESSION.length, 1); renderAll(); }
+        return;
+      }
       if(e.key==='c'||e.key==='C'){ e.preventDefault(); DEBUG.civSubMenu=true; DEBUG.civSubSel=0; renderAll(); return; }
       if(e.key==='i'||e.key==='I'){ e.preventDefault(); DEBUG.itemSubMenu=true; DEBUG.itemSubSel=0; renderAll(); return; }
       if(e.key==='k'||e.key==='K'){ e.preventDefault(); debugToggleCurrentCivHostile(); return; }
