@@ -767,14 +767,21 @@
      the map — there is nothing to loot through a dialogue menu. Apply this gate
      to both root's hostile branch AND hostile_menu. Both must stay in sync.
 
+  6. NON-ROOT NODES DO NOT REPEAT ROOT MENU ACTIONS
+     Once the player enters a topic from root, that branch should resolve its
+     immediate beat, continue deeper inside that beat, close a true dead end, or
+     route Back/Continue to root. Do not offer sibling root options from inside
+     the branch (for example, stock from merchant news, ship assessment from
+     crew morale, or trade from a civilization outcome). Root is the hub.
+
   -- CONTENT / SEQUENCING RULES ------------------------------------------------
 
-  6. OPTION LABELS REFLECT WHAT THE PLAYER DOES, NOT WHAT THEY WANT
+  7. OPTION LABELS REFLECT WHAT THE PLAYER DOES, NOT WHAT THEY WANT
      "Move toward them — open hands" not "Try to be friendly".
      "Stand tall — hold eye contact" not "Assert dominance".
      Labels describe the physical/social action. The outcome is unknown.
 
-  7. TEXT MUST REFLECT CURRENT STATE, NOT INITIAL STATE
+  8. TEXT MUST REFLECT CURRENT STATE, NOT INITIAL STATE
      Subtitle disposition words (e.g. "watching the crew closely") should read
      the current contact state, not the static trait value. Once the player has
      interacted, the trait is context — what matters is where the relationship is.
@@ -782,7 +789,7 @@
        hostile ? subdued ? on the edge (alert=4) ? tense (alert=3)
        ? relation-based (contacted) ? territorial ? trait-based (first contact)
 
-  8. LOG MESSAGES ARE SUMMARIES, NOT DIALOGUE ECHOES
+  9. LOG MESSAGES ARE SUMMARIES, NOT DIALOGUE ECHOES
      Never addLog() the same string shown in the dialogue text panel.
      Log messages should be short confirmations of what happened:
        "Dr. Chen — language analysis complete. Comprehension: fragmentary."
@@ -790,21 +797,21 @@
      Functions that generate dialogue text (e.g. civCustomsStudyText) must NOT
      call addLog() internally — the calling node controls logging.
 
-  9. DEAD CODE AUDIT
+  10. DEAD CODE AUDIT
      civFirstContactText() is defined but never called (~line 17038). It contains
      the old "pressure block" stat-dump. Do not revive it. If refactoring the
      scene text system, delete it entirely.
 
   -- ARCHITECTURE NOTES --------------------------------------------------------
 
-  10. DIALOGUE CACHING
+  11. DIALOGUE CACHING
       enterDialogueNode() caches node text in G.dialogue.nodeText[nodeId] on first
       visit. Text only re-evaluates if node.repeatable === true or the node has
       never been visited. Nodes whose text depends on live state (relation, alert,
       language, memories) must be repeatable. Static outcome text (e.g. "the gift
       was received") does not need to be repeatable.
 
-  11. CONTACT KIND GATES
+  12. CONTACT KIND GATES
       isLocalContact() — player is adjacent to a civ NPC on the map
       isSettlementContact() — player is adjacent to a civ building tile
       isDelegationContact() — a delegation has formally approached the crew
@@ -812,13 +819,13 @@
       Non-primitive tiers can have local contacts too (workers, guards, officials)
       — the gate applies to all tiers, not just primitives.
 
-  12. civCustomsStudyText() SIDE EFFECTS
+  13. civCustomsStudyText() SIDE EFFECTS
       This function gives sci XP, increments languageProgress, and returns prose.
       It is called from both scientist_analyse (dialogue node) and study_customs.
       It must NOT call addLog() — that is the caller's responsibility.
       If you add new text-generating functions with side effects, follow this rule.
 
-  13. civCanAnalyzeLanguage() GATES
+  14. civCanAnalyzeLanguage() GATES
       Returns false if: hostile, languageAnalysisDone this visit, 4 lifetime studies used, or progress >= 10.
       Do NOT add a 'contacted' gate — analysis should be available on return visits
       until the natural caps are reached. The contacted gate was removed because it
@@ -16718,9 +16725,7 @@ const DIALOGUE_DEFS = {
           wrap.state.languageProgress = Math.min(5, (wrap.state.languageProgress||0) + 1);
         },
         options: [
-          { label:'Offer gifts', disabled:ctx=>!canOfferAlienGift(), disabledReason:'nothing suitable', next:'gift_select' },
-          { label:'Ask about their civilization', next:'ask_civilization' },
-          { label:'Attack delegation', action:'attack_civ' },
+          { label:'Continue', next:'root' },
         ],
       },
       settlement_greet_success: {
@@ -16739,7 +16744,6 @@ const DIALOGUE_DEFS = {
         },
         options: [
           { label:'Continue', next:'root' },
-          { label:'End contact', action:'close' },
         ],
       },
       first_greet_fail: {
@@ -16860,11 +16864,7 @@ const DIALOGUE_DEFS = {
       ask_civilization: {
         text: ctx => civAskAboutCivilizationText(dialogueCivilization()),
         options: ctx => {
-          const opts = [];
-          if(isSettlementContact()) opts.push({ label:'Continue', next:'root' });
-          else opts.push({ label:'Offer gifts', disabled:!canOfferAlienGift(), disabledReason:'nothing suitable', next:'gift_select' });
-          opts.push({ label:civilizationCloseLabel(), action:'close', disabled:!dialogueAllowsEscape(), disabledReason:'resolve the delegation first' });
-          return opts;
+          return [{ label:'Continue', next:'root' }];
         },
       },
       hostile_menu: {
@@ -16996,8 +16996,7 @@ const DIALOGUE_DEFS = {
           return 'This is one individual, not the whole civilization. Their posture says more than their words: fear, curiosity, status, and whether they expect help nearby.\n\nThey seem '+prof.tone+'. '+prof.localFailure;
         },
         options: [
-          { label:'Greet the local', check:{ skill:'soc', dc:6 }, success:'local_greet_success', fail:'local_greet_fail' },
-          { label:'Back away', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
       local_greet_success: {
@@ -17012,9 +17011,7 @@ const DIALOGUE_DEFS = {
           wrap.state.languageProgress = Math.min(5, (wrap.state.languageProgress||0) + 1);
         },
         options: [
-          { label:'Ask about the area', next:'local_ask' },
-          { label:'Offer a gift', disabled:ctx=>!canOfferAlienGift(), disabledReason:'nothing suitable', next:'gift_select' },
-          { label:'Back away', action:'close' },
+          { label:'Continue', next:'root' },
         ],
       },
       local_greet_fail: {
@@ -17041,8 +17038,7 @@ const DIALOGUE_DEFS = {
           return 'The local answers in fragments: paths, danger signs, where not to step, who watches from the settlement. It is not diplomacy, but it is useful.';
         },
         options: [
-          { label:'Offer a gift', disabled:ctx=>!canOfferAlienGift(), disabledReason:'nothing suitable', next:'gift_select' },
-          { label:'Back away', action:'close' },
+          { label:'Continue', next:'root' },
         ],
       },
       greet_success: {
@@ -17076,10 +17072,7 @@ const DIALOGUE_DEFS = {
           if(cap) giveSkillXP(cap, 'soc', 2);
         },
         options: ctx => {
-          const opts = [{ label:isDelegationContact() ? 'Hear the delegation' : 'Ask what they want', next:'intent' }];
-          opts.push({ label:civilizationCloseLabel(), action:'close', disabled:!dialogueAllowsEscape(), disabledReason:'resolve the delegation first' });
-          opts.push({ label:'Continue', next:'root' });
-          return opts;
+          return [{ label:'Continue', next:'root' }];
         },
       },
       greet_fail: {
@@ -17203,7 +17196,6 @@ const DIALOGUE_DEFS = {
         },
         options: [
           { label:'Continue', next:'root' },
-          { label:'End contact', action:'close' },
         ],
       },
       intent: {
@@ -17255,7 +17247,6 @@ const DIALOGUE_DEFS = {
           if(wrap && !vs?.tierRouteDone && !isLocalContact() && (vs?.studyCustomsDone || vs?.observeDone || (vs?.askIntentCount||0) > 0)){
             opts.push({ label:civTierRouteLabel(wrap.civ), check:{ skill:'soc', dc:civTierRouteDc(wrap.civ) }, success:'tier_route_success', fail:'tier_route_fail' });
           }
-          opts.push({ label:'Offer a gift', disabled:ctx=>!canOfferAlienGift(), disabledReason:'nothing suitable', next:'gift_select' });
           opts.push({ label:'Back', next:'root' });
           return opts;
         },
@@ -17327,14 +17318,7 @@ const DIALOGUE_DEFS = {
           if(cap) giveSkillXP(cap, 'soc', 3);
         },
         options: ctx => {
-          const opts = [];
-          if(isSettlementContact()){
-            const wrap = dialogueCivilization();
-            if(wrap?.state?.tradeUnlocked) opts.push({ label:'Ask to trade', disabled:ctx=>!hasScientist(), disabledReason:'no scientist to facilitate', next:'trade' });
-          }
-          opts.push({ label:civilizationCloseLabel(), action:'close' });
-          opts.push({ label:'Continue', next:'root' });
-          return opts;
+          return [{ label:'Continue', next:'root' }];
         },
       },
       tier_route_fail: {
@@ -17396,14 +17380,7 @@ const DIALOGUE_DEFS = {
           if(cap) giveSkillXP(cap, 'soc', 3);
         },
         options: ctx => {
-          const opts = [];
-          if(isSettlementContact()){
-            const wrap = dialogueCivilization();
-            if(wrap?.state?.tradeUnlocked) opts.push({ label:'Ask to trade', disabled:ctx=>!hasScientist(), disabledReason:'no scientist to facilitate', next:'trade' });
-          }
-          opts.push({ label:civilizationCloseLabel(), action:'close' });
-          opts.push({ label:'Continue', next:'root' });
-          return opts;
+          return [{ label:'Continue', next:'root' }];
         },
       },
       scientist_analyse: {
@@ -17442,13 +17419,7 @@ const DIALOGUE_DEFS = {
           return name+' is received, examined, and accepted without ceremony.';
         },
         options: ctx => {
-          const wrap = dialogueCivilization();
-          const vs = civVisitState(wrap);
-          const opts = [];
-          if(!vs?.pressureDone && !wrap?.state?.hostile) opts.push({ label:'Ask what they want', next:'intent' });
-          if(!vs?.pressureDone && !wrap?.state?.hostile && isSettlementContact() && (wrap.state.relation||0) >= 2) opts.push({ label:'Ask to trade', disabled:!hasScientist(), disabledReason:'no scientist to facilitate', next:'trade' });
-          opts.push({ label:civilizationCloseLabel(), action:'close', disabled:!dialogueAllowsEscape(), disabledReason:'resolve the delegation first' });
-          return opts;
+          return [{ label:'Continue', next:'root' }];
         },
       },
       trade: {
@@ -17490,7 +17461,6 @@ const DIALOGUE_DEFS = {
         },
         options: [
           { label:'Continue', next:'root' },
-          { label:'End contact', action:'close' },
         ],
       },
       pressure: {
@@ -17800,8 +17770,7 @@ const DIALOGUE_DEFS = {
           }
         },
         options: [
-          { label:'Ask what it wants', next:'intent' },
-          { label:'End contact', action:'close' },
+          { label:'Continue', next:'root' },
         ],
       },
       greet_fail: {
@@ -17822,15 +17791,13 @@ const DIALOGUE_DEFS = {
         },
         options: [
           { label:'Offer no threat', next:'peace' },
-          { label:'Try to barter', next:'barter' },
-          { label:'End contact', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
       barter: {
         text: ctx => '"Trade shape unclear. Credits not recognized. Object exchange possible."',
         options: [
           { label:'Offer a gift', disabled:ctx=>!canOfferAlienGift(), disabledReason:'nothing suitable', next:'gift_select' },
-          { label:'Ask what it wants', next:'intent' },
           { label:'Back', next:'root' },
         ],
       },
@@ -17841,8 +17808,7 @@ const DIALOGUE_DEFS = {
       gift_given: {
         text: ctx => '"Object received. Threat pattern reduced. Exchange remembered."',
         options: [
-          { label:'Ask what it wants', next:'intent' },
-          { label:'End contact', action:'close' },
+          { label:'Continue', next:'root' },
         ],
       },
       peace: {
@@ -17918,7 +17884,6 @@ const DIALOGUE_DEFS = {
           return '"Crew morale is stable. Continued pressure may change that quickly."';
         },
         options: [
-          { label:'Review ship readiness', next:'ship' },
           { label:'Back', next:'root' },
         ],
       },
@@ -17931,7 +17896,6 @@ const DIALOGUE_DEFS = {
           return '"Ship readiness acceptable. No immediate command warning beyond normal operating risk."';
         },
         options: [
-          { label:'Review crew morale', next:'morale' },
           { label:'Back', next:'root' },
         ],
       },
@@ -17961,8 +17925,6 @@ const DIALOGUE_DEFS = {
       checkin: {
         text: ctx => dialogueTextFromTopic(dialogueCrew() || ctx.crew, 'checkin'),
         options: [
-          { label:'Check morale', next:'morale' },
-          { label:'Request ship assessment', next:'ship' },
           { label:'Back', next:'root' },
         ],
       },
@@ -18013,7 +17975,6 @@ const DIALOGUE_DEFS = {
         },
         options: [
           { label:'Continue', next:'root' },
-          { label:'Close channel', action:'close' },
         ],
       },
       encourage_fail: {
@@ -18044,15 +18005,13 @@ const DIALOGUE_DEFS = {
       sector: {
         text: ctx => '"Running this lane a while now. Fuel prices are unpredictable near the outer rim. Watch your reserves."',
         options: [
-          { label:'Ask about news', next:'news' },
           { label:'Back', next:'root' },
         ],
       },
       news: {
         text: ctx => '"Nothing that would interest a working captain. Stations are busy, patrols are frequent. Business as usual."',
         options: [
-          { label:'Browse stock', action:'radio_trade' },
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
     },
@@ -18074,21 +18033,20 @@ const DIALOGUE_DEFS = {
       study: {
         text: ctx => '"Deep-field density variance and subspace resonance patterns. The kind of data nobody funds until it becomes critical."',
         options: [
-          { label:'Ask about hazards', next:'hazards' },
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
       hazards: {
         text: ctx => '"Our charts flag elevated debris density two sectors east. Nothing catastrophic — but keep shields warm."',
         options: [
           { label:'Thank them', next:'thanks' },
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
       thanks: {
         text: ctx => '"Safe flying. And stay off our sampling lane."',
         options: [
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
     },
@@ -18111,21 +18069,19 @@ const DIALOGUE_DEFS = {
       clear: {
         text: ctx => '"Good to hear. Stay on your filed flight plan and signal if anything changes."',
         options: [
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
       threats: {
         text: ctx => '"Elevated pirate intercept reports two sectors out. We are tracking but cannot guarantee a response window. Keep your combat systems ready."',
         options: [
-          { label:'Request escort', next:'escort' },
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
       escort: {
         text: ctx => '"We are on station patrol and cannot leave our circuit. If you are in active distress, signal SOS and we will reroute. Otherwise — safe travels."',
         options: [
-          { label:'Understood', next:'clear' },
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
     },
@@ -18147,14 +18103,13 @@ const DIALOGUE_DEFS = {
       fuel: {
         text: ctx => '"Not set up for mid-run transfers. Hit a station — they will have what you need."',
         options: [
-          { label:'Ask about the cargo', next:'cargo' },
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
       cargo: {
         text: ctx => '"Sealed manifest. You know how it is — ask the station quartermaster when we dock, if that is your business."',
         options: [
-          { label:'Close channel', action:'close' },
+          { label:'Back', next:'root' },
         ],
       },
     },
