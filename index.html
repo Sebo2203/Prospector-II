@@ -3628,6 +3628,15 @@ const DEBUG = {
   itemSubSel:  0,
 };
 
+function resetDebugSubMenus(){
+  DEBUG.civSubMenu = false;
+  DEBUG.civSubSel = 0;
+  DEBUG.itemSubMenu = false;
+  DEBUG.itemSubSel = 0;
+  DEBUG.itemSubSelR = 0;
+  DEBUG.itemSubCol = 'left';
+}
+
 // -- Debug item spawn catalog -------------------------------------------------
 // Grouped by category. Each item has the full inventory object to push.
 // LEFT column: inventory items (consumables, weapons, armor, field samples, botanicals, special)
@@ -23182,6 +23191,7 @@ document.addEventListener('keydown', e=>{
     // Shift+B — toggle debug menu
     if(e.key==='B' && e.shiftKey){
       DEBUG.on = !DEBUG.on;
+      resetDebugSubMenus();
       renderAll();
       return;
     }
@@ -23249,32 +23259,34 @@ document.addEventListener('keydown', e=>{
         }
         renderAll(); return;
       }
-      if(e.key==='1'){ DEBUG.infiniteFuel = !DEBUG.infiniteFuel; renderAll(); return; }
-      if(e.key==='2'){ DEBUG.infiniteHull = !DEBUG.infiniteHull; renderAll(); return; }
+      if(e.key==='1'){ e.preventDefault(); DEBUG.infiniteFuel = !DEBUG.infiniteFuel; renderAll(); return; }
+      if(e.key==='2'){ e.preventDefault(); DEBUG.infiniteHull = !DEBUG.infiniteHull; renderAll(); return; }
       if(e.key==='3'){
+        e.preventDefault();
         DEBUG.fullVision = !DEBUG.fullVision;
         if(DEBUG.fullVision) G.visited.fill(true);
         renderAll(); return;
       }
-      if(e.key==='4'){ DEBUG.infiniteOxy = !DEBUG.infiniteOxy; renderAll(); return; }
-      if(e.key==='7'){ DEBUG.infiniteCrewHp = !DEBUG.infiniteCrewHp; debugRestoreCrewHp(); addLog('DEBUG: Infinite crew HP '+(DEBUG.infiniteCrewHp?'ON':'OFF')+'.','lw'); renderAll(); return; }
-      if(e.key==='9'){ DEBUG.preScan = !DEBUG.preScan; addLog('DEBUG: Pre-Scan spawned planets '+(DEBUG.preScan?'ON':'OFF')+'.','lw'); renderAll(); return; }
-      if(e.key==='0'){ DEBUG.showFPS = !DEBUG.showFPS; renderAll(); return; }
-      if(e.key==='8'){ grantDebugFloodlight(); renderAll(); return; }
-      if(e.key==='g'||e.key==='G'){ debugSpawnGunnerAlien(); return; }
-      if(e.key==='r'||e.key==='R'){ debugApplyCrewStatus('radiation'); return; }
-      if(e.key==='d'||e.key==='D'){ debugApplyCrewStatus('disease'); return; }
-      if(e.key==='h'||e.key==='H'){ debugApplyCrewStatus('hallucination'); return; }
-      if(e.key==='m'||e.key==='M'){ G.credits+=1000; addLog('DEBUG: +1000 cr (total: '+G.credits+')','lw'); renderAll(); return; }
-      if(e.key==='c'||e.key==='C'){ DEBUG.civSubMenu=true; DEBUG.civSubSel=0; renderAll(); return; }
-      if(e.key==='i'||e.key==='I'){ DEBUG.itemSubMenu=true; DEBUG.itemSubSel=0; renderAll(); return; }
-      if(e.key==='k'||e.key==='K'){ debugToggleCurrentCivHostile(); return; }
+      if(e.key==='4'){ e.preventDefault(); DEBUG.infiniteOxy = !DEBUG.infiniteOxy; renderAll(); return; }
+      if(e.key==='7'){ e.preventDefault(); DEBUG.infiniteCrewHp = !DEBUG.infiniteCrewHp; debugRestoreCrewHp(); addLog('DEBUG: Infinite crew HP '+(DEBUG.infiniteCrewHp?'ON':'OFF')+'.','lw'); renderAll(); return; }
+      if(e.key==='9'){ e.preventDefault(); DEBUG.preScan = !DEBUG.preScan; addLog('DEBUG: Pre-Scan spawned planets '+(DEBUG.preScan?'ON':'OFF')+'.','lw'); renderAll(); return; }
+      if(e.key==='0'){ e.preventDefault(); DEBUG.showFPS = !DEBUG.showFPS; renderAll(); return; }
+      if(e.key==='8'){ e.preventDefault(); grantDebugFloodlight(); renderAll(); return; }
+      if(e.key==='g'||e.key==='G'){ e.preventDefault(); debugSpawnGunnerAlien(); return; }
+      if(e.key==='r'||e.key==='R'){ e.preventDefault(); debugApplyCrewStatus('radiation'); return; }
+      if(e.key==='d'||e.key==='D'){ e.preventDefault(); debugApplyCrewStatus('disease'); return; }
+      if(e.key==='h'||e.key==='H'){ e.preventDefault(); debugApplyCrewStatus('hallucination'); return; }
+      if(e.key==='m'||e.key==='M'){ e.preventDefault(); G.credits+=1000; addLog('DEBUG: +1000 cr (total: '+G.credits+')','lw'); renderAll(); return; }
+      if(e.key==='c'||e.key==='C'){ e.preventDefault(); DEBUG.civSubMenu=true; DEBUG.civSubSel=0; renderAll(); return; }
+      if(e.key==='i'||e.key==='I'){ e.preventDefault(); DEBUG.itemSubMenu=true; DEBUG.itemSubSel=0; renderAll(); return; }
+      if(e.key==='k'||e.key==='K'){ e.preventDefault(); debugToggleCurrentCivHostile(); return; }
       // Cycle biome for spawn
       const biomeCount = Object.keys(BIOMES).length;
-      if(e.key==='ArrowLeft'){  DEBUG.spawnBiome=(DEBUG.spawnBiome-1+biomeCount)%biomeCount; renderAll(); return; }
-      if(e.key==='ArrowRight'){ DEBUG.spawnBiome=(DEBUG.spawnBiome+1)%biomeCount; renderAll(); return; }
-      if(e.key==='Enter' && G.mode==='galaxy'){ debugSpawnSystem(); return; }
+      if(e.key==='ArrowLeft'){ e.preventDefault(); DEBUG.spawnBiome=(DEBUG.spawnBiome-1+biomeCount)%biomeCount; renderAll(); return; }
+      if(e.key==='ArrowRight'){ e.preventDefault(); DEBUG.spawnBiome=(DEBUG.spawnBiome+1)%biomeCount; renderAll(); return; }
+      if(e.key==='Enter' && G.mode==='galaxy'){ e.preventDefault(); debugSpawnSystem(); return; }
       if(e.key==='6'){
+        e.preventDefault();
         debugSpawnCivilizationOnCurrentPlanet();
         return;
       }
