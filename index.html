@@ -16024,6 +16024,92 @@ function offerAlienGift(ctx, giftIdx){
   addLog('You offer '+ctx.offeredItemName+' to '+e.name+'.','li');
 }
 
+function civClassifyGift(item){
+  const name = item?.name || '';
+  const usable = item?.usable || '';
+  const base = item?.value || 0;
+  const comDef = item?.commodityId ? COMMODITIES[item.commodityId] : null;
+  const giftCat = comDef?.giftCat || null;
+  const isTech = giftCat === 'tech' || (!giftCat && (/module|device|data|drive|instrument|canister|coupling|gearwork|circuit|component|cell|scanner|alloy|metal|structural|refined|precision|encrypted|survey|production|datacore/i.test(name) || ['fuel_canister','oxytank','medikit'].includes(usable)));
+  const isAlienBio = !isTech && (giftCat === 'bio' || (!giftCat && (/hide|pelt|tissue|fang|organ|carcass|trophy|kill/i.test(name) || (/\bcore\b/i.test(name) && !/carved|charm|ornament|bead/i.test(name)) || (/\bsample\b/i.test(name) && !/mineral|biodata|survey/i.test(name)) || (/\bbone\b/i.test(name) && !/carved|charm/i.test(name)))));
+  const isOrnament = giftCat === 'ornament' || (!giftCat && /charm|bead|talisman|brooch|pendant|carved|polished|fetish|seal|totem|relic|flower/i.test(name));
+  const isWeapon = giftCat === 'weapon' || (!giftCat && (/gun|blade|knife|weapon|ammo/i.test(name) || ['gun','gun_sniper','knife'].includes(usable)));
+  const isFood = giftCat === 'food' || (!giftCat && /food|ration|fruit|seed|plant|water|herb|brew|medicine/i.test(name));
+  const isMedical = /medikit|medicine|antibiotic|trauma|herb|pills/i.test(name) || ['medikit','trauma_kit','antibiotics','iodine_pills'].includes(usable);
+  const isSurvival = /oxygen|fuel|floodlight|canister|tank/i.test(name) || ['oxytank','fuel_canister','floodlight'].includes(usable);
+  const isArmor = /suit|armour|armor|plate/i.test(name) || ['armor_flight','armor_reinforced'].includes(usable);
+  const isMoodDrug = ['morale_drug','morale_drug_civ','mild_antidepressants'].includes(usable);
+  const hasKnownMeaning = !!(isAlienBio || isTech || isOrnament || isWeapon || isFood || isMedical || isSurvival || isArmor || isMoodDrug || giftCat);
+  return { isAlienBio, isTech, isOrnament, isWeapon, isFood, isMedical, isSurvival, isArmor, isMoodDrug, hasKnownMeaning, val:base };
+}
+
+function civOfferValueForBarter(civ, item){
+  if(!item) return 0;
+  const base = Math.max(0, item.value || item.boughtPrice || 0);
+  let value = base;
+  const tier = civ?.tier || 'primitive';
+  const traits = civ?.traits || {};
+  const g = civClassifyGift(item);
+  if(!g.hasKnownMeaning && base <= 0) return 0;
+  if(!g.hasKnownMeaning){
+    if(tier === 'primitive') return Math.floor(base * (traits.curiosity === 'curious' ? 0.35 : 0.1));
+    if(tier === 'tribal') return Math.floor(base * 0.35);
+    if(tier === 'medieval') return Math.floor(base * 0.65);
+    return Math.floor(base * 0.8);
+  }
+  if(g.isWeapon){
+    value = Math.max(value, tier === 'primitive' ? 120 : tier === 'tribal' ? 140 : tier === 'medieval' ? 130 : tier === 'industrial' ? 90 : 55);
+    if(tier === 'primitive' && traits.diet === 'herbivore') value = Math.floor(value * 0.35);
+    if(tier === 'primitive' && traits.diet === 'carnivore') value = Math.floor(value * 1.35);
+    if(tier === 'tribal' && traits.structure === 'chieftain') value = Math.floor(value * 1.25);
+    if(tier === 'information') value = Math.floor(value * 0.45);
+  }
+  if(g.isTech){
+    value = Math.max(value, tier === 'primitive' ? 35 : tier === 'tribal' ? 75 : tier === 'medieval' ? 180 : tier === 'industrial' ? 150 : 120);
+    if(tier === 'primitive' && traits.curiosity === 'curious') value = Math.floor(value * 1.8);
+    if(tier === 'primitive' && traits.curiosity === 'isolated') value = Math.floor(value * 0.25);
+    if(tier === 'tribal' && traits.structure === 'council') value = Math.floor(value * 1.25);
+    if(tier === 'industrial' && traits.economy === 'corporate') value = Math.floor(value * 1.25);
+  }
+  if(g.isFood){
+    value = Math.max(value, tier === 'primitive' ? 70 : tier === 'tribal' ? 80 : 40);
+    if(tier === 'tribal' && traits.ritual === 'animist') value = Math.floor(value * 1.3);
+  }
+  if(g.isAlienBio){
+    value = Math.max(value, tier === 'primitive' ? 70 : tier === 'tribal' ? 90 : tier === 'medieval' ? 80 : 20);
+    if(tier === 'primitive' && traits.diet === 'carnivore') value = Math.floor(value * 1.5);
+    if(tier === 'primitive' && traits.diet === 'herbivore') value = Math.floor(value * 0.2);
+    if(tier === 'tribal' && (traits.ritual === 'totem' || traits.ritual === 'animist')) value = Math.floor(value * 1.4);
+    if(tier === 'information') value = Math.floor(value * 0.15);
+  }
+  if(g.isOrnament){
+    value = Math.max(value, tier === 'primitive' ? 55 : tier === 'tribal' ? 90 : tier === 'medieval' ? 80 : 35);
+    if(tier === 'tribal' && traits.ritual === 'totem') value = Math.floor(value * 1.25);
+    if(tier === 'medieval' && traits.governance === 'mercantile') value = Math.floor(value * 1.2);
+  }
+  if(g.isMedical){
+    value = Math.max(value, tier === 'primitive' ? 20 : tier === 'tribal' ? 85 : tier === 'medieval' ? 110 : tier === 'industrial' ? 125 : 80);
+    if(tier === 'primitive' && traits.curiosity !== 'curious') value = Math.floor(value * 0.35);
+    if(tier === 'tribal' && traits.ritual === 'animist') value = Math.floor(value * 1.25);
+    if(tier === 'information') value = Math.floor(value * 0.7);
+  }
+  if(g.isSurvival){
+    value = Math.max(value, tier === 'primitive' ? 10 : tier === 'tribal' ? 25 : tier === 'medieval' ? 70 : tier === 'industrial' ? 115 : 80);
+    if(tier === 'primitive' && traits.curiosity !== 'curious') value = Math.floor(value * 0.2);
+    if(tier === 'information') value = Math.floor(value * 0.55);
+  }
+  if(g.isArmor){
+    value = Math.max(value, tier === 'primitive' ? 35 : tier === 'tribal' ? 75 : tier === 'medieval' ? 120 : tier === 'industrial' ? 100 : 60);
+    if(tier === 'tribal' && traits.structure === 'chieftain') value = Math.floor(value * 1.15);
+  }
+  if(g.isMoodDrug){
+    value = Math.max(value, tier === 'primitive' ? 0 : tier === 'tribal' ? 35 : tier === 'medieval' ? 45 : tier === 'industrial' ? 50 : 20);
+    if(tier === 'primitive') value = 0;
+    if(tier === 'information') value = Math.floor(value * 0.4);
+  }
+  return Math.max(0, Math.floor(value));
+}
+
 function isLocalContact(){
   return !!(G?.dialogue?.context?.isLocal);
 }
@@ -16779,6 +16865,30 @@ function civTakeTributeFromCrew(wrap, reason){
   wrap.state.relation = Math.max(-5, (wrap.state.relation||0) - 1);
   addLog('No suitable tribute is available. The locals read the empty hands as refusal.','lw');
   return null;
+}
+
+function maybeCivReport(wrap){
+  if(!wrap?.civ || !wrap?.state || wrap.state.civReportGenerated) return;
+  const state = wrap.state;
+  const vs = civVisitState(wrap);
+  const knowledgeCount = [
+    vs?.observeDone,
+    vs?.studyCustomsDone,
+    vs?.shareKnowledgeDone,
+    vs?.languageAnalysisDone,
+    (vs?.askIntentCount || 0) > 0,
+    (state.languageProgress || 0) >= 3,
+  ].filter(Boolean).length;
+  if(!state.contacted || (state.languageProgress || 0) < 2 || knowledgeCount < 2) return;
+  state.civReportGenerated = true;
+  const value = ({ primitive:60, tribal:80, medieval:100, industrial:120, information:140 })[wrap.civ.tier] || 80;
+  G.inventory.push({
+    name: wrap.civ.species+' Civilization Report',
+    col: '#88ffcc',
+    desc: 'Field notes on '+wrap.civ.tierLabel.toLowerCase()+' '+wrap.civ.species.toLowerCase()+' culture, language, and behaviour. The Science Office pays for these.',
+    value,
+  });
+  addLog('Enough data gathered - compiled a civilization report on the '+wrap.civ.species.toLowerCase()+'.','ll');
 }
 
 function civAskAboutCivilizationText(wrap){
