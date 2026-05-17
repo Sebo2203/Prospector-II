@@ -15080,34 +15080,79 @@ function drawDebugItemSubMenu(){
   const rightRows = debugItemRowsFromCatalog(DEBUG_CARGO_CATALOG, 'cargo');
   drawDebugItemSubMenu._leftRows = leftRows;
   drawDebugItemSubMenu._rightRows = rightRows;
-  const pad = 10, lh = 18, w = 700;
-  const x = canvas.width - w - 8, y = 8;
-  const h = pad*2 + Math.max(leftRows.length, rightRows.length, 18)*lh + lh*3;
+  const pad = 10, lh = 18, headerH = 54, footerH = 18;
+  const maxVisible = 16, colW = 300, gap = 10;
+  const w = colW * 2 + gap + pad * 2;
+  const h = headerH + maxVisible * lh + footerH + pad;
+  const x = Math.round((canvas.width - w) / 2);
+  const y = Math.max(4, Math.round((canvas.height - h) / 2));
   ctx.fillStyle='rgba(0,0,0,0.9)';
   ctx.fillRect(x, y, w, h);
   ctx.strokeStyle='#ffe066'; ctx.lineWidth=1;
-  ctx.strokeRect(x, y, w, h);
+  ctx.strokeRect(x+0.5, y+0.5, w-1, h-1);
   ctx.font='bold 15px Courier New'; ctx.textAlign='left';
   ctx.fillStyle='#ffe066';
   ctx.fillText('DEBUG ITEM SUBMENU', x+pad, y+pad+lh);
   ctx.font='13px Courier New';
   ctx.fillStyle='#aaaacc';
   ctx.fillText('Left/Right column   Up/Down select   Enter spawn   Esc/I close', x+pad, y+pad+lh*2);
+
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x+4, y+headerH-4, w-8, 1);
+  ctx.fillStyle = '#1a2030';
+  ctx.fillRect(x + pad + colW + Math.round(gap/2), y + headerH, 1, maxVisible * lh);
+
   const drawCol = (rows, colName, cx, selected)=>{
-    ctx.fillStyle = colName === DEBUG.itemSubCol ? '#88ccff' : '#667788';
-    ctx.fillText(colName === 'left' ? 'Inventory' : 'Cargo', cx, y+pad+lh*3);
-    rows.forEach((row, i)=>{
-      const yy = y + pad + lh*(i+4);
-      if(yy > y + h - pad) return;
-      const sel = selected === i && colName === DEBUG.itemSubCol;
-      if(row.type === 'header') ctx.fillStyle = '#ffaa44';
-      else if(row.type === 'close') ctx.fillStyle = sel ? '#ffaaaa' : '#ff7777';
-      else ctx.fillStyle = sel ? '#ffe066' : '#cccccc';
-      ctx.fillText((sel?'> ':'  ')+row.label, cx, yy);
+    const active = colName === (DEBUG.itemSubCol || 'left');
+    let scrollTop = Math.max(0, selected - Math.floor(maxVisible / 2));
+    scrollTop = Math.min(scrollTop, Math.max(0, rows.length - maxVisible));
+    const visible = rows.slice(scrollTop, scrollTop + maxVisible);
+
+    ctx.font = 'bold 11px Courier New';
+    ctx.fillStyle = active ? '#88ccff' : '#667788';
+    ctx.fillText(colName === 'left' ? 'INVENTORY' : 'CARGO HOLD', cx, y + headerH - 8);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cx, y + headerH, colW, maxVisible * lh);
+    ctx.clip();
+
+    visible.forEach((row, vi)=>{
+      const i = scrollTop + vi;
+      const yy = y + headerH + vi * lh + lh - 4;
+      const sel = selected === i && active;
+      if(sel){
+        ctx.fillStyle = 'rgba(70,58,0,0.85)';
+        ctx.fillRect(cx, y + headerH + vi * lh, colW, lh);
+      }
+      if(row.type === 'header'){
+        ctx.font = 'bold 10px Courier New';
+        ctx.fillStyle = sel ? '#ffe066' : '#556633';
+        ctx.fillText('-- '+String(row.label || '').toUpperCase()+' --', cx+4, yy);
+      } else if(row.type === 'close'){
+        ctx.font = sel ? 'bold 10px Courier New' : '10px Courier New';
+        ctx.fillStyle = sel ? '#ffaaaa' : '#ff7777';
+        ctx.fillText(row.label, cx+4, yy);
+      } else {
+        ctx.fillStyle = row.type === 'cargo' ? (COMMODITIES[row.item]?.col || '#aaa') : (row.item.col || '#aaa');
+        ctx.fillRect(cx+6, yy-8, 6, 6);
+        ctx.font = sel ? 'bold 10px Courier New' : '10px Courier New';
+        ctx.fillStyle = sel ? '#ffffff' : '#cccccc';
+        const label = String(row.label || '');
+        ctx.fillText(label.length > 30 ? label.slice(0, 29)+'...' : label, cx+16, yy);
+      }
     });
+    ctx.restore();
+
+    ctx.font = '9px Courier New';
+    ctx.fillStyle = '#445566';
+    ctx.textAlign = 'center';
+    if(scrollTop > 0) ctx.fillText('▲', cx + colW/2, y + headerH - 1);
+    if(scrollTop + maxVisible < rows.length) ctx.fillText('▼', cx + colW/2, y + headerH + maxVisible*lh + 10);
+    ctx.textAlign = 'left';
   };
   drawCol(leftRows, 'left', x+pad, DEBUG.itemSubSel || 0);
-  drawCol(rightRows, 'right', x+pad+350, DEBUG.itemSubSelR || 0);
+  drawCol(rightRows, 'right', x+pad+colW+gap, DEBUG.itemSubSelR || 0);
 }
 
 function debugItemSubMenuSpawn(){
