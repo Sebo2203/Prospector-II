@@ -28537,7 +28537,7 @@ function drawChangelogScreen(cx){
   ];
   // ── END OF CHANGELOG ENTRIES ───────────────────────────────────
 
-  const contentTop = 124;
+  const contentTop = 136;
   const contentBottom = canvas.height - 44;
   const viewH = contentBottom - contentTop;
   const contentH = entries.reduce((sum, entry) => sum + 26 + 10 + entry.changes.length * 22 + 14, 0);
@@ -28547,7 +28547,7 @@ function drawChangelogScreen(cx){
 
   ctx.save();
   ctx.beginPath();
-  ctx.rect(cx-292, contentTop-8, 572, viewH+10);
+  ctx.rect(cx-292, contentTop-26, 572, viewH+28);
   ctx.clip();
 
   let y = contentTop - MENU_STATE.changelogScroll;
