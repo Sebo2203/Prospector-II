@@ -1430,7 +1430,6 @@ canvas {
       <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
       <div><span class="ck">ESC</span> back / close</div>
       <div><span class="ck">.</span> wait / repair (galaxy)</div>
-      <div><span class="ck">F11</span> toggle fullscreen</div>
       <div><button id="pwa-install-btn" style="display:none;background:#1a1a2e;border:1px solid #445566;color:#70d8ff;font-family:'Courier New',monospace;font-size:11px;padding:2px 8px;cursor:pointer;" title="Install as desktop app">⬇ Install App</button></div>
     </div>
     <div id="hud-tools">
@@ -31406,24 +31405,7 @@ function doWaitPlanet(){
   });
 })();
 
-// ─────────────────────────────────────────────────────────────────
-//  FULLSCREEN HELPER
-// ─────────────────────────────────────────────────────────────────
-function toggleFullscreen(){
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen().catch(()=>{});
-  } else {
-    document.exitFullscreen().catch(()=>{});
-  }
-}
-
 document.addEventListener('keydown', e=>{
-  // ── F11: toggle fullscreen ──
-  if(e.key === 'F11'){
-    e.preventDefault();
-    toggleFullscreen();
-    return;
-  }
   // ── Debug item search mode — must intercept before ANY other routing ──
   if(DEBUG?.itemSubSearch !== undefined){
     e.preventDefault();
@@ -32898,9 +32880,6 @@ document.addEventListener('keyup', e=>{
         if(!(MENU_STATE.shipName||'').trim())
           MENU_STATE.shipName = SHIP_NAMES[Math.floor(Math.random()*SHIP_NAMES.length)];
         initGame(MENU_STATE.chosenClass, MENU_STATE.captainName.trim(), MENU_STATE.shipName.trim());
-        if(!document.fullscreenElement){
-          document.documentElement.requestFullscreen().catch(()=>{});
-        }
       }
     } else if(e.key.length===1 && !e.ctrlKey && !e.metaKey){
       const f = MENU_STATE.namingField;
