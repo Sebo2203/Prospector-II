@@ -9,7 +9,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Prospector II">
-<link id="pwa-manifest" rel="manifest">
+<link rel="manifest" href="/Prospector-II/manifest.json">
+<script>
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/Prospector-II/sw.js').catch(()=>{});
+  }
+</script>
+
 
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -1313,103 +1319,6 @@ canvas {
   overflow: hidden;
 }
 </style>
-
-<script>
-// ─────────────────────────────────────────────────────────────────
-//  PWA SETUP — inline manifest + install prompt
-//  No separate files needed; everything lives in this single HTML.
-// ─────────────────────────────────────────────────────────────────
-(function(){
-  // 1. Generate a 512×512 icon on a canvas and export as PNG data URI
-  const ic = document.createElement('canvas');
-  ic.width = ic.height = 512;
-  const cx = ic.getContext('2d');
-  // Background
-  cx.fillStyle = '#08080f';
-  cx.fillRect(0,0,512,512);
-  // Outer ring
-  cx.strokeStyle = '#ffe066';
-  cx.lineWidth = 18;
-  cx.beginPath(); cx.arc(256,256,220,0,Math.PI*2); cx.stroke();
-  // Star body
-  cx.fillStyle = '#ffcc33';
-  cx.beginPath(); cx.arc(256,200,60,0,Math.PI*2); cx.fill();
-  // Planet glow
-  cx.shadowColor = '#ffcc33'; cx.shadowBlur = 40;
-  cx.fillStyle = '#ffaa00';
-  cx.beginPath(); cx.arc(256,200,52,0,Math.PI*2); cx.fill();
-  cx.shadowBlur = 0;
-  // Ship silhouette
-  cx.fillStyle = '#70d8ff';
-  cx.beginPath();
-  cx.moveTo(256,340); cx.lineTo(232,400); cx.lineTo(256,385); cx.lineTo(280,400); cx.closePath();
-  cx.fill();
-  // Ship cockpit
-  cx.fillStyle = '#ffffff';
-  cx.beginPath(); cx.arc(256,345,10,0,Math.PI*2); cx.fill();
-  // Stars
-  cx.fillStyle = '#ffffff';
-  [[100,100],[400,80],[80,350],[430,320],[160,430],[370,440],[310,120],[190,290]].forEach(([x,y])=>{
-    cx.beginPath(); cx.arc(x,y,3,0,Math.PI*2); cx.fill();
-  });
-  // Text label
-  cx.fillStyle = '#ffe066';
-  cx.font = 'bold 46px monospace';
-  cx.textAlign = 'center';
-  cx.fillText('PROSPECTOR II', 256, 480);
-  const iconDataUrl = ic.toDataURL('image/png');
-
-  // 2. Build the manifest object and inject as a data URI
-  const manifest = {
-    name: 'Prospector II',
-    short_name: 'Prospector II',
-    description: 'Turn-based space exploration roguelite',
-    start_url: '/Prospector-II/',
-    scope: '/Prospector-II/',
-    display: 'fullscreen',
-    orientation: 'landscape',
-    background_color: '#08080f',
-    theme_color: '#08080f',
-    icons: [
-      { src: iconDataUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-    ]
-  };
-  const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-  const manifestUrl  = URL.createObjectURL(manifestBlob);
-  document.getElementById('pwa-manifest').href = manifestUrl;
-
-  // 3. Capture the beforeinstallprompt event and show the Install button
-  let _deferredPrompt = null;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    _deferredPrompt = e;
-    const btn = document.getElementById('pwa-install-btn');
-    if(btn) btn.style.display = '';
-  });
-
-  // 4. Wire up the Install button
-  window.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('pwa-install-btn');
-    if(!btn) return;
-    btn.addEventListener('click', async () => {
-      if(!_deferredPrompt) return;
-      _deferredPrompt.prompt();
-      const { outcome } = await _deferredPrompt.userChoice;
-      if(outcome === 'accepted') btn.style.display = 'none';
-      _deferredPrompt = null;
-    });
-  });
-
-  // 5. Hide Install button if already running as installed PWA
-  if(window.matchMedia('(display-mode: fullscreen)').matches ||
-     window.navigator.standalone === true){
-    window.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('pwa-install-btn');
-      if(btn) btn.style.display = 'none';
-    });
-  }
-})();
-</script>
 </head>
 <body>
 <div id="root">
@@ -31467,6 +31376,36 @@ function doWaitPlanet(){
 //  All branches are wrapped in try-catch so a JS error in one
 //  action can never silently break the event listener.
 // ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+//  PWA INSTALL PROMPT
+// ─────────────────────────────────────────────────────────────────
+(function(){
+  let _prompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _prompt = e;
+    const btn = document.getElementById('pwa-install-btn');
+    if(btn) btn.style.display = '';
+  });
+  window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('pwa-install-btn');
+    if(!btn) return;
+    // Hide if already running as installed PWA
+    if(window.matchMedia('(display-mode: fullscreen)').matches ||
+       window.navigator.standalone === true){
+      btn.style.display = 'none';
+      return;
+    }
+    btn.addEventListener('click', async () => {
+      if(!_prompt) return;
+      _prompt.prompt();
+      const { outcome } = await _prompt.userChoice;
+      if(outcome === 'accepted') btn.style.display = 'none';
+      _prompt = null;
+    });
+  });
+})();
+
 // ─────────────────────────────────────────────────────────────────
 //  FULLSCREEN HELPER
 // ─────────────────────────────────────────────────────────────────
