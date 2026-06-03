@@ -33255,7 +33255,17 @@ async function quitGame(){
 }
 
 function downloadDesktopApp(){
+  try { localStorage.setItem('prospector_desktop_download_clicked', '1'); } catch(e) {}
   window.open('https://sebo2203.github.io/Prospector-II/downloads/Prospector-II-v0.25-portable.exe', '_blank');
+  drawMenuScreen();
+}
+
+function shouldShowDesktopDownload(){
+  try {
+    if(window.__TAURI__?.core || window.__TAURI__?.invoke) return false;
+    if(localStorage.getItem('prospector_desktop_download_clicked') === '1') return false;
+  } catch(e) {}
+  return true;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -33589,7 +33599,7 @@ function drawMenuScreen(){
   opts.push({key:'O', label:'Options',        col:'#ffaa44'});
   opts.push({key:'V', label:'Change Log',     col:'#aa88ff'});
   opts.push({key:'X', label:'Credits',        col:'#ffdd88'});
-  opts.push({key:'D', label:'Download Desktop App', col:'#70f0d0'});
+  if(shouldShowDesktopDownload()) opts.push({key:'D', label:'Download Desktop App', col:'#70f0d0'});
   opts.push({key:'Q', label:'Quit',           col:'#ff7777'});
 
   // Clamp selection in case Continue disappeared
@@ -34024,7 +34034,7 @@ canvas.addEventListener('click', e => {
   mainOpts.push('o');
   mainOpts.push('v');
   mainOpts.push('x');
-  mainOpts.push('d');
+  if(shouldShowDesktopDownload()) mainOpts.push('d');
   mainOpts.push('q');
 
   function activateMainOpt(sel){
@@ -34346,7 +34356,7 @@ function handleMenuKey(e){
   mainOpts.push('o');
   mainOpts.push('v');
   mainOpts.push('x');
-  mainOpts.push('d');
+  if(shouldShowDesktopDownload()) mainOpts.push('d');
   mainOpts.push('q');
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
 
