@@ -5,16 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector II v0.25</title>
 <meta name="theme-color" content="#08080f">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Prospector II">
-<link rel="manifest" href="/Prospector-II/manifest.json">
-<script>
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/Prospector-II/sw.js').catch(()=>{});
-  }
-</script>
 
 
 <!--
@@ -1430,7 +1420,6 @@ canvas {
       <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
       <div><span class="ck">ESC</span> back / close</div>
       <div><span class="ck">.</span> wait / repair (galaxy)</div>
-      <div><button id="pwa-install-btn" style="display:none;background:#1a1a2e;border:1px solid #445566;color:#70d8ff;font-family:'Courier New',monospace;font-size:11px;padding:2px 8px;cursor:pointer;" title="Install as desktop app">⬇ Install App</button></div>
     </div>
     <div id="hud-tools">
       <!-- 8-dir compass — always visible, functional in galaxy/planet modes -->
@@ -4810,8 +4799,8 @@ const CREW_FIRST_NAMES = [
   'Yael','Idris','Mira','Søren','Niko','Adaeze','Flynn','Keiko',
   'Arash','Bex','Casimir','Dalila','Ezra','Greta','Hamid','Ife',
   'Juno','Kael','Lior','Maren','Njord','Ola','Petra','Quinlan',
-  'Rowena','Silas','Thea','Ugo','Vesna','Wren','Xiu','Yusuf',
-  'Zola','Alinta','Bram','Celine','Dayo','Emeka','Fiona','Gus',
+  'Rowena','Silas','Thea','Ugo','Vesna','Wren','Xiu','Yusuf','Chris',
+  'Zola','Alinta','Bram','Celine','Dayo','Emeka','Fiona','Gus','Lara',
 ];
 const CREW_LAST_NAMES = [
   'Vasquez','Petrov','Okafor','Nakamura','Singh','Reeves','Müller',
@@ -4821,7 +4810,7 @@ const CREW_LAST_NAMES = [
   'Nkosi','Larsson','Guerrero','Fujita','Dimitriou','Abramov','Chukwu',
   'Svensson','Ramos','Watanabe','Eriksson','Diallo','Papadopoulos','Mensah',
   'Holmberg','Andrade','Chowdhury','Magnusson','Igwe','Blanchet','Ogawa',
-  'Volkov','Camacho','Ikechi','Strand','Yuen','Kaczmarek','Adichie',
+  'Volkov','Camacho','Ikechi','Strand','Yuen','Kaczmarek','Adichie','Brown',
   'Moreau','Takahashi','Balogun','Patel','Kurosawa','Dembélé','Hoffmann',
   'Araujo','Yamamoto','Ndiaye','Hernandez','Okoro','Lund','Castillo',
 ];
@@ -4854,7 +4843,7 @@ const RUMOURS = [
   'The Company is offering bonuses for mineral surveys in the outer ring.',
   'Someone clocked an uncharted system near the galactic edge. Unconfirmed.',
   'Watch the toxic worlds — the gas eats through standard suits faster than rated.',
-  'Retirement at 10,000 cr? My father needed 50,000. Inflation\'s brutal.',
+  'Retirement at 10,000 cr? My father needed 5,000. Inflation\'s brutal.',
   'A scout came in last week — said she saw lights on a supposedly dead world.',
   'The ancient ruins pay well if you survive them. Big if.',
   'Pirate activity is up near the nebulae. They use the clouds for cover.',
@@ -15569,7 +15558,7 @@ function completeScienceJob(){
   } else {
     addLog('Science Office says that was the last open field contract in this sector.','li');
   }
-  if(G.credits>=10000) addLog('10,000 cr reached — visit the Science Office to retire.','lg');
+  if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
   return true;
 }
 
@@ -30743,7 +30732,7 @@ function executeBaseAction(actionId){
       }
       const totalSold = sold + surveySold + (missionCompleted ? 1 : 0);
       if(totalSold>0){
-        if(G.credits>=10000) addLog('10,000 cr reached — visit the Science Office to retire.','lg');
+        if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       } else {
         addLog('Nothing to sell here. Take bulk cargo to the Market.','');
       }
@@ -30822,7 +30811,7 @@ function executeBaseAction(actionId){
       G.cargo=G.cargo.filter(i=>!i.isCommodity);
       G.credits+=mGrand;
       addLog('Total received: '+mGrand+' cr.','lg');
-      if(G.credits>=10000) addLog('10,000 cr reached — visit the Science Office to retire.','lg');
+      if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       break;}
     case 'drink':{
       if(G.credits>=5){
@@ -31091,7 +31080,7 @@ function executeBaseAction(actionId){
         G.cargo = G.cargo.filter(i=>{ if(!removed && i===item){ removed=true; return false; } return true; });
         earnCredits(rev);
         addLog('Sold '+item.name+': '+rev+' cr '+(prof>=0?'(+'+prof+' profit)':'('+prof+' loss)'),prof>=0?'lg':'lw');
-        if(G.credits>=10000) addLog('10,000 cr reached — visit the Science Office to retire.','lg');
+        if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       }
   }
   renderAll();
@@ -31375,36 +31364,6 @@ function doWaitPlanet(){
 //  All branches are wrapped in try-catch so a JS error in one
 //  action can never silently break the event listener.
 // ─────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────
-//  PWA INSTALL PROMPT
-// ─────────────────────────────────────────────────────────────────
-(function(){
-  let _prompt = null;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    _prompt = e;
-    const btn = document.getElementById('pwa-install-btn');
-    if(btn) btn.style.display = '';
-  });
-  window.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('pwa-install-btn');
-    if(!btn) return;
-    // Hide if already running as installed PWA
-    if(window.matchMedia('(display-mode: fullscreen)').matches ||
-       window.navigator.standalone === true){
-      btn.style.display = 'none';
-      return;
-    }
-    btn.addEventListener('click', async () => {
-      if(!_prompt) return;
-      _prompt.prompt();
-      const { outcome } = await _prompt.userChoice;
-      if(outcome === 'accepted') btn.style.display = 'none';
-      _prompt = null;
-    });
-  });
-})();
-
 document.addEventListener('keydown', e=>{
   // ── Debug item search mode — must intercept before ANY other routing ──
   if(DEBUG?.itemSubSearch !== undefined){
@@ -32141,7 +32100,7 @@ document.addEventListener('keydown', e=>{
       if(G.mode==='inventory' && G._crewExamine){ G._crewExamine=false; renderAll(); return; }
       if(G.mode==='inventory' && G._inventoryExamine){ G._inventoryExamine=false; renderAll(); return; }
       if(G.mode==='inventory'){ G.mode=G._prevMode; G._equipGunIdx=undefined; G._equipArmorIdx=undefined; G._equipImplantIdx=undefined; G._equipStimIdx=undefined; G._jettisonConfirm=false; G._inventoryExamine=false; G._cargoExamine=false; G._crewExamine=false; renderAll(); return; }
-      if(G.mode==='planet'){ addLog('Return to ship (>) then press L to lift off.','li'); renderAll(); return; }
+      if(G.mode==='galaxy' || G.mode==='planet'){ returnToMainMenuFromGame(); return; }
       return;
     }
 
@@ -33278,6 +33237,27 @@ function loadAndRender(loadFn){
   return ok;
 }
 
+async function quitGame(){
+  try {
+    const invoke = window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke;
+    if(invoke){
+      await invoke('quit_app');
+      return;
+    }
+  } catch(e) {}
+
+  try { window.close(); } catch(e) {}
+  setTimeout(() => {
+    if(document.visibilityState !== 'hidden'){
+      alert('Your browser blocked automatic tab closing. You can close this tab now.');
+    }
+  }, 150);
+}
+
+function downloadDesktopApp(){
+  window.open('https://sebo2203.github.io/Prospector-II/downloads/Prospector-II-v0.25-portable.exe', '_blank');
+}
+
 // ─────────────────────────────────────────────────────────────────
 //  MAIN MENU
 // ─────────────────────────────────────────────────────────────────
@@ -33318,7 +33298,56 @@ function saveOptions(opts){
 }
 let OPTIONS = loadOptions();
 
+function setMenuCanvasMode(){
+  const main = document.getElementById('main');
+  const wrap = document.getElementById('canvas-wrap');
+  if(main){
+    main.style.height = '720px';
+    main.style.minHeight = '720px';
+    main.style.maxHeight = '720px';
+  }
+  if(wrap){
+    wrap.style.width = '1400px';
+    wrap.style.height = '720px';
+    wrap.style.minWidth = '1400px';
+    wrap.style.minHeight = '720px';
+    wrap.style.maxWidth = '1400px';
+    wrap.style.maxHeight = '720px';
+  }
+  canvas.width = 1400;
+  canvas.height = 720;
+  canvas.style.width = '1400px';
+  canvas.style.height = '720px';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+}
+
+function setGameCanvasMode(){
+  const main = document.getElementById('main');
+  const wrap = document.getElementById('canvas-wrap');
+  if(main){
+    main.style.height = '';
+    main.style.minHeight = '';
+    main.style.maxHeight = '';
+  }
+  if(wrap){
+    wrap.style.width = '';
+    wrap.style.height = '';
+    wrap.style.minWidth = '';
+    wrap.style.minHeight = '';
+    wrap.style.maxWidth = '';
+    wrap.style.maxHeight = '';
+  }
+  canvas.width = VIEW_W * TS;
+  canvas.height = VIEW_H * TS;
+  canvas.style.width = '';
+  canvas.style.height = '';
+  canvas.style.top = '';
+  canvas.style.left = '';
+}
+
 function showMenu(){
+  setMenuCanvasMode();
   MENU_STATE.hasAutosave = hasSave();
   MENU_STATE.screen = 'main';
   MENU_STATE.optSel = 0;
@@ -33328,8 +33357,10 @@ function showMenu(){
   document.getElementById('hud').style.display         = 'none';
   document.getElementById('gauge-panel').style.display = 'none';
   document.getElementById('sidebar').style.display     = 'none';
+  document.getElementById('msg-bar').style.display     = 'none';
   document.getElementById('ctx-bar').style.display     = 'none';
   document.getElementById('persist-bar').style.display = 'none';
+  document.getElementById('version-tag').style.display = 'none';
   hideMsg();
   document.getElementById('ctx-bar').innerHTML = '';
   drawMenuScreen();
@@ -33358,11 +33389,19 @@ function showMenu(){
 }
 
 function restoreGameUI(){
+  setGameCanvasMode();
   document.getElementById('hud').style.display         = '';
   document.getElementById('gauge-panel').style.display = '';
   document.getElementById('sidebar').style.display     = '';
+  document.getElementById('msg-bar').style.display     = '';
   document.getElementById('ctx-bar').style.display     = '';
   document.getElementById('persist-bar').style.display = '';
+  document.getElementById('version-tag').style.display = '';
+}
+
+function returnToMainMenuFromGame(){
+  if(G && !G.dead && !G.retired) autoSave();
+  showMenu();
 }
 
 function drawMenuScreen(){
@@ -33544,12 +33583,14 @@ function drawMenuScreen(){
   ctx.fillStyle='#223344'; ctx.fillRect(cx-200,148,400,1);
 
   const opts=[];
-  opts.push({key:'N', label:'New Game',       col:'#70f090'});
   if(MENU_STATE.hasAutosave) opts.push({key:'C', label:'Continue', col:'#70d8ff'});
+  opts.push({key:'N', label:'New Game',       col:'#70f090'});
   opts.push({key:'L', label:'Load Save File', col:'#aaaaff'});
   opts.push({key:'O', label:'Options',        col:'#ffaa44'});
   opts.push({key:'V', label:'Change Log',     col:'#aa88ff'});
   opts.push({key:'X', label:'Credits',        col:'#ffdd88'});
+  opts.push({key:'D', label:'Download Desktop App', col:'#70f0d0'});
+  opts.push({key:'Q', label:'Quit',           col:'#ff7777'});
 
   // Clamp selection in case Continue disappeared
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
@@ -33559,19 +33600,27 @@ function drawMenuScreen(){
   const _menuBtnRects = [];
   opts.forEach((o,i)=>{
     const sel = i===MENU_STATE.mainSel;
-    const y=185+i*44;
-    _menuBtnRects.push({i, x:cx-160, y:y-20, w:320, h:34});
+    const btnW = 420;
+    const btnH = 38;
+    const gapY = 12;
+    const x = cx - btnW/2;
+    const y = 178 + i * (btnH + gapY);
+    _menuBtnRects.push({i, x, y, w:btnW, h:btnH});
     ctx.fillStyle= sel ? '#14142a' : '#0e0e1a';
-    ctx.fillRect(cx-160,y-20,320,34);
+    ctx.fillRect(x,y,btnW,btnH);
     ctx.strokeStyle= sel ? '#6655cc' : '#2a2a4a';
     ctx.lineWidth= sel ? 2 : 1;
-    ctx.strokeRect(cx-160,y-20,320,34);
+    ctx.strokeRect(x,y,btnW,btnH);
     // Cursor arrow
     ctx.fillStyle= sel ? '#ffe066' : 'transparent';
     ctx.textAlign='left';
-    if(sel) ctx.fillText('▶', cx-152, y+2);
+    if(sel) ctx.fillText('▶', x+10, y+25);
     ctx.fillStyle= sel ? '#ffffff' : '#cccccc';
-    ctx.fillText(o.label, cx-128, y+2);
+    ctx.fillText(o.label, x+36, y+25);
+    ctx.textAlign='right';
+    ctx.fillStyle= sel ? o.col : '#445566';
+    ctx.fillText('['+o.key+']', x+btnW-14, y+25);
+    ctx.textAlign='left';
   });
   MENU_STATE._btnRects = _menuBtnRects;
   MENU_STATE._opts = opts;
@@ -33969,12 +34018,14 @@ canvas.addEventListener('click', e => {
 
   // Build activate function (mirrors handleMenuKey logic)
   const mainOpts = [];
-  mainOpts.push('n');
   if(MENU_STATE.hasAutosave) mainOpts.push('c');
+  mainOpts.push('n');
   mainOpts.push('l');
   mainOpts.push('o');
   mainOpts.push('v');
   mainOpts.push('x');
+  mainOpts.push('d');
+  mainOpts.push('q');
 
   function activateMainOpt(sel){
     if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=false; drawMenuScreen(); }
@@ -33983,6 +34034,8 @@ canvas.addEventListener('click', e => {
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
     else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
+    else if(sel==='d'){ downloadDesktopApp(); }
+    else if(sel==='q'){ quitGame(); }
   }
 
   MENU_STATE._btnRects.forEach(btn => {
@@ -34287,12 +34340,14 @@ function handleMenuKey(e){
 
   // Main menu — build option list to match what's drawn
   const mainOpts=[];
-  mainOpts.push('n');
   if(MENU_STATE.hasAutosave) mainOpts.push('c');
+  mainOpts.push('n');
   mainOpts.push('l');
   mainOpts.push('o');
   mainOpts.push('v');
   mainOpts.push('x');
+  mainOpts.push('d');
+  mainOpts.push('q');
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
 
   function activateMainOpt(sel){
@@ -34302,6 +34357,8 @@ function handleMenuKey(e){
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
     else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
+    else if(sel==='d'){ downloadDesktopApp(); }
+    else if(sel==='q'){ quitGame(); }
   }
 
   if(e.key==='ArrowUp'){
@@ -34322,6 +34379,8 @@ function handleMenuKey(e){
   else if(k==='o') activateMainOpt('o');
   else if(k==='v') activateMainOpt('v');
   else if(k==='x') activateMainOpt('x');
+  else if(k==='d') activateMainOpt('d');
+  else if(k==='q') activateMainOpt('q');
 }
 
 // ─────────────────────────────────────────────────────────────────
