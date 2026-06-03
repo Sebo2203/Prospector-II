@@ -18766,7 +18766,7 @@ function debugSpawnSystem(){
 
     // Reveal it
     G.visited[ty*MAP_W+tx]=true;
-    addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press E to land.','lg');
+    addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press Enter to land.','lg');
     placed=true;
     break;
   }
@@ -26026,7 +26026,7 @@ function renderContextBar(){
       } else if(cell.type==='BLACK_HOLE'){
         btns.push(btn('!','WARNING: Singularity — entry is fatal','danger'));
       } else if(cell.type==='SYSTEM'){
-        btns.push(btn('E','Enter orbit — '+cell.name,'info'));
+        btns.push(btn('Enter','Enter orbit — '+cell.name,'info'));
       }
       const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
       if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
@@ -26049,11 +26049,11 @@ function renderContextBar(){
       const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
   if(npcStrandedHere){
     if(npcStrandedHere.type==='alive')
-      btns.push(btn('E','Hail '+npcStrandedHere.name+' (stranded — needs fuel)','good'));
+      btns.push(btn('Enter','Hail '+npcStrandedHere.name+' (stranded — needs fuel)','good'));
     else if(npcStrandedHere.type==='research')
-      btns.push(btn('E','Board '+npcStrandedHere.name+' (silent research vessel)','info'));
+      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (silent research vessel)','info'));
     else
-      btns.push(btn('E','Board '+npcStrandedHere.name+' (derelict)','info'));
+      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (derelict)','info'));
     // Tractor beam — tow dead derelict ships
     const hasTractor = (G.installedModules||[]).includes('tractor_beam');
     if(hasTractor && npcStrandedHere.type==='dead' && !G.towedShip){
@@ -29709,7 +29709,7 @@ function doInteract(){
       G.selPlanet = 0;
       G.selMoon = -1;
       G.examine = null;
-      addLog(cell.name+' — entering orbit. No star, no warmth. Press S to scan, E to land.','li');
+      addLog(cell.name+' — entering orbit. No star, no warmth. Press S to scan, Enter to land.','li');
       renderAll(); return;
     }
     if(cell.type==='BASE'){
@@ -32190,8 +32190,8 @@ document.addEventListener('keydown', e=>{
       }
       if(G._viewTab==='log'){
         const FILTER_IDS = ['all','mission','combat','crew','critical'];
-        if(e.key==='ArrowUp')  { G._logScroll = (G._logScroll||0)+(e.shiftKey?10:1); renderAll(); return; }
-        if(e.key==='ArrowDown'){ G._logScroll = Math.max(0,(G._logScroll||0)-(e.shiftKey?10:1)); renderAll(); return; }
+        if(e.key==='ArrowUp')  { G._logScroll = Math.max(0,(G._logScroll||0)-(e.shiftKey?10:1)); renderAll(); return; }
+        if(e.key==='ArrowDown'){ G._logScroll = (G._logScroll||0)+(e.shiftKey?10:1); renderAll(); return; }
         if(e.key>='1'&&e.key<='5'){ G._logFilter=FILTER_IDS[parseInt(e.key)-1]; G._logScroll=Infinity; renderAll(); return; }
         renderAll(); return;
       }
@@ -33599,7 +33599,7 @@ function drawMenuScreen(){
   opts.push({key:'O', label:'Options',        col:'#ffaa44'});
   opts.push({key:'V', label:'Change Log',     col:'#aa88ff'});
   opts.push({key:'X', label:'Credits',        col:'#ffdd88'});
-  if(shouldShowDesktopDownload()) opts.push({key:'D', label:'Download Desktop App', col:'#70f0d0'});
+
   opts.push({key:'Q', label:'Quit',           col:'#ff7777'});
 
   // Clamp selection in case Continue disappeared
@@ -33655,6 +33655,26 @@ function drawMenuScreen(){
   } else if(MENU_STATE.lastUpdateText === null){
     ctx.fillStyle='#223333'; ctx.font='13px Courier New';
     ctx.fillText('Checking for updates...', cx, canvas.height-12);
+  }
+  if(shouldShowDesktopDownload()){
+    const _dlBtnW = 240, _dlBtnH = 34;
+    const _dlX = 14, _dlY = canvas.height - 14 - _dlBtnH;
+    ctx.fillStyle = '#0e0e1a';
+    ctx.fillRect(_dlX, _dlY, _dlBtnW, _dlBtnH);
+    ctx.strokeStyle = '#2a2a4a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(_dlX, _dlY, _dlBtnW, _dlBtnH);
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillStyle = '#cccccc';
+    ctx.fillText('\u2b07 Download Desktop App', _dlX + 10, _dlY + 22);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#445566';
+    ctx.fillText('[D]', _dlX + _dlBtnW - 10, _dlY + 22);
+    ctx.textAlign = 'left';
+    MENU_STATE._dlBtnRect = { x:_dlX, y:_dlY, w:_dlBtnW, h:_dlBtnH };
+  } else {
+    MENU_STATE._dlBtnRect = null;
   }
   ctx.textAlign='left';
 }
@@ -34026,6 +34046,14 @@ canvas.addEventListener('click', e => {
   if(MENU_STATE.screen !== 'main') return;
   if(!MENU_STATE._btnRects || !MENU_STATE._opts) return;
 
+  // Corner download button hit-test
+  if(MENU_STATE._dlBtnRect){
+    const r = MENU_STATE._dlBtnRect;
+    if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
+      downloadDesktopApp(); return;
+    }
+  }
+
   // Build activate function (mirrors handleMenuKey logic)
   const mainOpts = [];
   if(MENU_STATE.hasAutosave) mainOpts.push('c');
@@ -34034,7 +34062,6 @@ canvas.addEventListener('click', e => {
   mainOpts.push('o');
   mainOpts.push('v');
   mainOpts.push('x');
-  if(shouldShowDesktopDownload()) mainOpts.push('d');
   mainOpts.push('q');
 
   function activateMainOpt(sel){
@@ -34044,7 +34071,6 @@ canvas.addEventListener('click', e => {
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
     else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
-    else if(sel==='d'){ downloadDesktopApp(); }
     else if(sel==='q'){ quitGame(); }
   }
 
@@ -34174,6 +34200,10 @@ canvas.addEventListener('mousemove', e => {
       if(MENU_STATE.mainSel !== btn.i){ MENU_STATE.mainSel = btn.i; changed = true; }
     }
   });
+  if(!hovering && MENU_STATE._dlBtnRect){
+    const r = MENU_STATE._dlBtnRect;
+    if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h) hovering = true;
+  }
   canvas.style.cursor = hovering ? 'pointer' : 'default';
   if(changed) drawMenuScreen();
 });
@@ -34356,7 +34386,6 @@ function handleMenuKey(e){
   mainOpts.push('o');
   mainOpts.push('v');
   mainOpts.push('x');
-  if(shouldShowDesktopDownload()) mainOpts.push('d');
   mainOpts.push('q');
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
 
@@ -34367,7 +34396,6 @@ function handleMenuKey(e){
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
     else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
-    else if(sel==='d'){ downloadDesktopApp(); }
     else if(sel==='q'){ quitGame(); }
   }
 
@@ -34389,7 +34417,7 @@ function handleMenuKey(e){
   else if(k==='o') activateMainOpt('o');
   else if(k==='v') activateMainOpt('v');
   else if(k==='x') activateMainOpt('x');
-  else if(k==='d') activateMainOpt('d');
+  else if(k==='d' && shouldShowDesktopDownload()) downloadDesktopApp();
   else if(k==='q') activateMainOpt('q');
 }
 
