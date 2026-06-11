@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prospector II v0.25</title>
+<title>Prospector II v0.26</title>
 <meta name="theme-color" content="#08080f">
 
 
@@ -13,7 +13,7 @@
 ║              For   future contributors                                       ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
-  VERSION: 0.25  (file: index_civB_4_1_.html)
+  VERSION: 0.26  (file: index_civB_4_1_.html)
   STACK: Single self-contained HTML file. No build step, no bundler, no npm.
          Everything — CSS, JS, sprites, game logic — lives in this one file.
          This is a deliberate choice: easy to share, host on any static server.
@@ -1442,7 +1442,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag">v0.25</div>
+  <div id="version-tag">v0.26</div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -1504,7 +1504,7 @@ const _FILE_HASH = (()=>{
 function getFileHash(){ return _FILE_HASH; }
 
 // ═══════════════════════════════════════════════════════════════════
-//  PROSPECTOR  v0.25
+//  PROSPECTOR  v0.26
 //
 //  Changes from v0.25:
 //  - FIXED: layout no longer uses fixed height on #root or #main,
@@ -25928,8 +25928,19 @@ function renderSidebar(){
       const cl=avgHpPct<0.3?'cr':avgHpPct<0.6?'co':'cg';
       const label = members.length>1 ? roleData.label+' ×'+members.length : roleData.label;
       const hpStr = members.length>1 ? members.map(c=>c.hp).join('/') : members[0].hp+'/'+members[0].maxHp;
-      const statusCount = members.filter(c=>visibleCrewStatusList(c).length).length;
-      const st = statusCount ? ' <span style="color:#d488ff">STATUS '+statusCount+'</span>' : '';
+      const groupedStatuses = new Map();
+      members.forEach(c=>{
+        visibleCrewStatusList(c).forEach(s=>{
+          const def = CREW_STATUS_DEFS[s.id] || { short:(s.id||'?').slice(0,3).toUpperCase() };
+          const val = s.intensity ?? s.severity ?? 1;
+          const text = def.short + (val > 1 ? val : '');
+          groupedStatuses.set(text, (groupedStatuses.get(text)||0) + 1);
+        });
+      });
+      const statusSummary = [...groupedStatuses.entries()]
+        .map(([text,count])=>text+(count>1?'×'+count:''))
+        .join(' ');
+      const st = statusSummary ? ' <span style="color:#d488ff">'+statusSummary+'</span>' : '';
       html+=`<div class="crew-row"><span style="color:${roleData.col}">${label}${st}</span><span class="${cl}" style="font-size: 13px">${hpStr}</span></div>`;
     });
     document.getElementById('crew-list').innerHTML = html;
@@ -27667,58 +27678,14 @@ function tryMove(dx,dy,confirmed){
     revealPlanet(G.curPlanet, G.player.x, G.player.y); // radius from planetVisionRadius()
     tickOreScanner();
     // Oxygen drain depends on the current map's atmosphere; caves inherit their surface biome.
+    // Recover/drain, suit-breach penalty, and underwater drain+warning are
+    // handled by the shared applyOxygenDrain() (also used by doWaitPlanet()/doCombat()).
     const biomeKey = G.planets[G.curPlanet]?.biome;
     const biome    = atmosphereBiome(G.curPlanet);
-    const onShipTile = pdata.grid[G.player.y]?.[G.player.x]?.type === 'SHIP';
-    if(DEBUG.infiniteOxy){
-      G.oxygen = 100;
-      G._oxyWarnedLow=false; G._oxyWarnedCrit=false;
-      G._alarmOxyWarn=false; G._alarmOxyCrit=false;
-    }
-    // Habitable surface with breathable air and not submerged — passively recover O2
-    // Also recover when standing on the ship tile (sealed environment)
-    if((biome.oxyDrain === 0 && !G.underwater) || onShipTile){
-      if(G.oxygen < 100){
-        G.oxygen = Math.min(100, G.oxygen + 8);
-        if(G.oxygen >= 100) addLog('Oxygen fully recovered.','lg');
-      }
-    } else {
-      G.oxygen=Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - biome.oxyDrain);
-    }
+    if(applyOxygenDrain()){ renderAll(); return; }
     applyCrewMovementInjuryCosts();
-    // Naked crew on uninhabitable planets take suit-breach damage every move
-    if(biome.oxyDrain > 0){
-      const nakedCrew = G.crew.filter(c=>c.hp>0 && !c.armorUsable);
-      if(nakedCrew.length){
-        nakedCrew.forEach(c=>{ c.hp = Math.max(0, c.hp - 3); });
-        G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - biome.oxyDrain*2);
-        SFX.suffocate();
-        addLog('Unprotected crew exposed to hostile atmosphere! -3 HP, O2 draining fast!','lc');
-        checkDeath(); if(G.dead){ renderAll(); return; }
-      }
-    }
-    // Underwater O2 drain — only when actually submerged (G.underwater).
-    // Standing on EARTH_WATER is surface wading: no extra drain.
-    // Dive toggle [Z] sets G.underwater; player must be on EARTH_WATER.
-    // Flight/reinforced suits give no protection from water pressure — only armor_diving helps.
+    // Auto-surface / wading extras (movement-specific only)
     if(G.underwater){
-      const aliveCrew = G.crew.filter(c => c.hp > 0);
-      const unsuitedCrew = aliveCrew.filter(c => c.armorUsable !== 'armor_diving');
-      const allSuited = unsuitedCrew.length === 0;
-      // Base drain: 2 per move if all suited, 0 if all suited (handled below per-crew)
-      // Each unsuited crew member adds 8 drain; each suited adds 2
-      const waterDrain = aliveCrew.reduce((sum, c) => sum + (c.armorUsable === 'armor_diving' ? 2 : 8), 0);
-      G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - waterDrain);
-      if(!G._underwaterWarned){
-        if(allSuited){
-          addLog('Diving suit active — O2 draining slowly.','lw');
-        } else if(unsuitedCrew.length === aliveCrew.length){
-          addLog('Water pressure crushes the flight suit seals — O2 draining fast! Need a diving suit.','lc');
-        } else {
-          addLog(unsuitedCrew.map(c=>c.name).join(', ')+' lack a diving suit — O2 draining fast for them!','lc');
-        }
-        G._underwaterWarned = true;
-      }
       // Auto-surface if no longer on water tile (surface map only)
       if(!pdata.isUnderwater && pdata.grid[G.player.y][G.player.x].type !== 'EARTH_WATER'){
         G.underwater = false;
@@ -28054,42 +28021,8 @@ function tryMove(dx,dy,confirmed){
     tickJetTrail(pdata);
     maybeCrewPlanetTalk(pdata);
 
-    // Oxygen warnings — fire once per threshold crossing
-    const _inWaterNow = G.underwater;
-    if(biome.oxyDrain>0 || _inWaterNow){
-      if(DEBUG.infiniteOxy){
-        G.oxygen = 100;
-        G._oxyWarnedLow=false; G._oxyWarnedCrit=false;
-        G._alarmOxyWarn=false; G._alarmOxyCrit=false;
-      } else {
-      if(G.oxygen<=50&&G.oxygen>25&&!G._oxyWarnedLow){
-        addLog(_inWaterNow ? 'O2 dropping — surface soon!' : 'Oxygen below 50% — head back to ship.','lw');
-        G._oxyWarnedLow=true;
-      }
-      if(G.oxygen<=25&&G.oxygen>0&&!G._oxyWarnedCrit){
-        addLog(_inWaterNow ? 'OXYGEN CRITICAL — surface now!' : 'OXYGEN CRITICAL — get back to the ship now!','lc');
-        G._oxyWarnedCrit=true;
-      }
-      if(G.oxygen<=0&&!G._oxyWarnedCrit){
-        addLog(_inWaterNow ? 'OXYGEN GONE — drowning!' : 'OXYGEN DEPLETED — suffocating!','lc');
-        G._oxyWarnedCrit=true;
-      }
-      if(G.oxygen<=0){
-        G.crew.filter(c=>c.hp>0).forEach(c=>{
-          c.hp = Math.max(0, c.hp - 5);
-          if(c.hp<=0) addLog(crewDisplayName(c)+(_inWaterNow ? ' has drowned!' : ' has suffocated!'),'lc');
-        });
-        SFX.suffocate();
-        if(!G.deathCause) G.deathCause = _inWaterNow
-          ? 'The crew drowned — oxygen ran out underwater.'
-          : 'The crew suffocated — oxygen ran out on the surface.';
-      }
-      }
-    }
-    // Reset O2 warning flags when back on surface with breathable air
-    if(biome.oxyDrain===0 && !G.underwater){
-      G._oxyWarnedLow=false; G._oxyWarnedCrit=false;
-    }
+    // Oxygen warnings — fire once per threshold crossing (shared with doWaitPlanet()/doCombat())
+    applyOxygenWarnings();
 
     if(maybeCivilizationInitiatesContact(pdata)){
       return;
@@ -28108,6 +28041,98 @@ function tryMove(dx,dy,confirmed){
 // -----------------------------------------------------------------
 //  COMBAT
 // -----------------------------------------------------------------
+// Per-turn oxygen recover/drain core, shared by tryMove(), doWaitPlanet(), and
+// doCombat() so every turn-consuming action (move, wait, or fight) handles
+// oxygen identically: recover on breathable surfaces/the ship tile, drain on
+// hostile atmospheres, apply the unprotected-crew suit-breach penalty, and
+// drain heavily while submerged (with a one-time diving-suit warning).
+// Returns true if this killed the crew — caller should renderAll(); return.
+function applyOxygenDrain(){
+  const pdata = G.planets[G.curPlanet];
+  const biome = atmosphereBiome(G.curPlanet);
+  const onShipTile = pdata?.grid[G.player.y]?.[G.player.x]?.type === 'SHIP';
+  if(DEBUG.infiniteOxy){
+    G.oxygen = 100;
+    G._oxyWarnedLow=false; G._oxyWarnedCrit=false;
+    G._alarmOxyWarn=false; G._alarmOxyCrit=false;
+  } else if((biome.oxyDrain === 0 && !G.underwater) || onShipTile){
+    if(G.oxygen < 100){
+      G.oxygen = Math.min(100, G.oxygen + 8);
+      if(G.oxygen >= 100) addLog('Oxygen fully recovered.','lg');
+    }
+  } else {
+    G.oxygen = Math.max(0, G.oxygen - biome.oxyDrain);
+  }
+  // Naked crew on uninhabitable planets take suit-breach damage every turn
+  if(biome.oxyDrain > 0){
+    const nakedCrew = G.crew.filter(c=>c.hp>0 && !c.armorUsable);
+    if(nakedCrew.length){
+      nakedCrew.forEach(c=>{ c.hp = Math.max(0, c.hp - 3); });
+      G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - biome.oxyDrain*2);
+      SFX.suffocate();
+      addLog('Unprotected crew exposed to hostile atmosphere! -3 HP, O₂ draining fast!','lc');
+      checkDeath();
+      if(G.dead) return true;
+    }
+  }
+  // Underwater O2 drain — only when actually submerged (G.underwater).
+  if(G.underwater){
+    const aliveCrew = G.crew.filter(c => c.hp > 0);
+    const unsuitedCrew = aliveCrew.filter(c => c.armorUsable !== 'armor_diving');
+    const allSuited = unsuitedCrew.length === 0;
+    const waterDrain = aliveCrew.reduce((sum, c) => sum + (c.armorUsable === 'armor_diving' ? 2 : 8), 0);
+    G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - waterDrain);
+    if(!G._underwaterWarned){
+      if(allSuited){
+        addLog('Diving suit active — O2 draining slowly.','lw');
+      } else if(unsuitedCrew.length === aliveCrew.length){
+        addLog('Water pressure crushes the flight suit seals — O2 draining fast! Need a diving suit.','lc');
+      } else {
+        addLog(unsuitedCrew.map(c=>c.name).join(', ')+' lack a diving suit — O2 draining fast for them!','lc');
+      }
+      G._underwaterWarned = true;
+    }
+  }
+  return false;
+}
+
+// Low/critical/depleted oxygen warnings + suffocation/drowning damage,
+// shared by tryMove(), doWaitPlanet(), and doCombat(). Fires each message
+// once per threshold crossing and resets the warning flags once oxygen is
+// no longer in danger. Does NOT call checkDeath() — callers already do that
+// at their existing call sites (preserving each function's control flow).
+function applyOxygenWarnings(){
+  const biome = atmosphereBiome(G.curPlanet);
+  const oxygenDanger = biome.oxyDrain > 0 || G.underwater;
+  if(oxygenDanger && !DEBUG.infiniteOxy){
+    if(G.oxygen<=50&&G.oxygen>25&&!G._oxyWarnedLow){
+      addLog(G.underwater ? 'O2 dropping — surface soon!' : 'Oxygen below 50% — head back to ship.','lw');
+      G._oxyWarnedLow=true;
+    }
+    if(G.oxygen<=25&&G.oxygen>0&&!G._oxyWarnedCrit){
+      addLog(G.underwater ? 'OXYGEN CRITICAL — surface now!' : 'OXYGEN CRITICAL — get back to the ship now!','lc');
+      G._oxyWarnedCrit=true;
+    }
+    if(G.oxygen<=0){
+      if(!G._oxyWarnedCrit){
+        addLog(G.underwater ? 'OXYGEN GONE — drowning!' : 'OXYGEN DEPLETED — suffocating!','lc');
+        G._oxyWarnedCrit=true;
+      }
+      G.crew.filter(c=>c.hp>0).forEach(c=>{
+        c.hp = Math.max(0, c.hp - 5);
+        if(c.hp<=0) addLog(crewDisplayName(c)+(G.underwater ? ' has drowned!' : ' has suffocated!'),'lc');
+      });
+      SFX.suffocate();
+      if(!G.deathCause) G.deathCause = G.underwater
+        ? 'The crew drowned — oxygen ran out underwater.'
+        : 'The crew suffocated — oxygen ran out on the surface.';
+    }
+  }
+  if(biome.oxyDrain===0 && !G.underwater){
+    G._oxyWarnedLow=false; G._oxyWarnedCrit=false;
+  }
+}
+
 function doCombat(enemy){
   if(!crewAlive()) return;
   if(enemy?.civLocal){
@@ -28121,6 +28146,8 @@ function doCombat(enemy){
   if(livingAttackers.length && !attackers.length){
     addLog('All crew are stunned — enemies seize the opening!','lc');
     G.turn++;
+    if(applyOxygenDrain()){ renderAll(); return; }
+    applyOxygenWarnings();
     moveEnemies();
     moveEnemies();
     processPlanetHazards();
@@ -28172,6 +28199,8 @@ function doCombat(enemy){
   // Combined attack log
   debugCombatLog('CREW_ATTACK', { target: enemy.name, dmg: totalDmg, enemyHp: enemy.hp, hitters: hitters.map(c=>c.name) });
   G.turn++;
+  if(applyOxygenDrain()){ renderAll(); return; }
+  applyOxygenWarnings();
   if(enemy.hp > 0){
     const stunNote = stunBatonHit ? ' '+enemy.name+' is stunned!' : '';
     addLog('Your crew strikes '+enemy.name+' for '+totalDmg+' damage.'+stunNote,'lc');
@@ -31215,79 +31244,14 @@ function doWaitPlanet(){
     _checkPhaseMessages(_vrBeforeW, _vrAfterW, pdata.biome);
   }
 
-  // Oxygen drain, including underwater maps. Keep this in sync with movement.
-  const biomeKey = G.planets[G.curPlanet]?.biome;
+  // Oxygen drain, including underwater maps. Shared with tryMove()/doCombat() —
+  // keep this in sync with movement via applyOxygenDrain()/applyOxygenWarnings().
   const biome = atmosphereBiome(G.curPlanet);
-  const waitOnShipTile = G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x]?.type === 'SHIP';
-  if(DEBUG.infiniteOxy){
-    G.oxygen = 100;
-    G._oxyWarnedLow=false; G._oxyWarnedCrit=false;
-    G._alarmOxyWarn=false; G._alarmOxyCrit=false;
-  } else if((biome.oxyDrain === 0 && !G.underwater) || waitOnShipTile){
-    if(G.oxygen < 100){
-      G.oxygen = Math.min(100, G.oxygen + 8);
-      if(G.oxygen >= 100) addLog('Oxygen fully recovered.','lg');
-    }
-  } else {
-    G.oxygen = Math.max(0, G.oxygen - biome.oxyDrain);
-  }
-  // Naked crew on uninhabitable planets
-  if(biome.oxyDrain > 0){
-    const nakedCrew = G.crew.filter(c=>c.hp>0 && !c.armorUsable);
-    if(nakedCrew.length){
-      nakedCrew.forEach(c=>{ c.hp = Math.max(0, c.hp - 3); });
-      G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - biome.oxyDrain*2);
-      SFX.suffocate();
-      addLog('Unprotected crew exposed to hostile atmosphere! -3 HP, O₂ draining fast!','lc');
-      checkDeath(); if(G.dead){ renderAll(); return; }
-    }
-  }
-  if(G.underwater){
-    const aliveCrew2 = G.crew.filter(c => c.hp > 0);
-    const unsuitedCrew2 = aliveCrew2.filter(c => c.armorUsable !== 'armor_diving');
-    const allSuited2 = unsuitedCrew2.length === 0;
-    const waterDrain = aliveCrew2.reduce((sum, c) => sum + (c.armorUsable === 'armor_diving' ? 2 : 8), 0);
-    G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - waterDrain);
-    if(!G._underwaterWarned){
-      if(allSuited2){
-        addLog('Diving suit active — O2 draining slowly.','lw');
-      } else if(unsuitedCrew2.length === aliveCrew2.length){
-        addLog('Water pressure crushes the flight suit seals — O2 draining fast! Need a diving suit.','lc');
-      } else {
-        addLog(unsuitedCrew2.map(c=>c.name).join(', ')+' lack a diving suit — O2 draining fast for them!','lc');
-      }
-      G._underwaterWarned = true;
-    }
-  }
-  const oxygenDanger = biome.oxyDrain > 0 || G.underwater;
-  if(oxygenDanger && !DEBUG.infiniteOxy){
-    if(G.oxygen<=50&&G.oxygen>25&&!G._oxyWarnedLow){
-      addLog(G.underwater ? 'O2 dropping — surface soon!' : 'Oxygen below 50% — head back to ship.','lw');
-      G._oxyWarnedLow=true;
-    }
-    if(G.oxygen<=25&&G.oxygen>0&&!G._oxyWarnedCrit){
-      addLog(G.underwater ? 'OXYGEN CRITICAL — surface now!' : 'OXYGEN CRITICAL — get back to the ship now!','lc');
-      G._oxyWarnedCrit=true;
-    }
-    if(G.oxygen<=0){
-      if(!G._oxyWarnedCrit){
-        addLog(G.underwater ? 'OXYGEN GONE — drowning!' : 'OXYGEN DEPLETED — suffocating!','lc');
-        G._oxyWarnedCrit=true;
-      }
-      G.crew.filter(c=>c.hp>0).forEach(c=>{
-        c.hp = Math.max(0, c.hp - 5);
-        if(c.hp<=0) addLog(crewDisplayName(c)+(G.underwater ? ' has drowned!' : ' has suffocated!'),'lc');
-      });
-      SFX.suffocate();
-      if(!G.deathCause) G.deathCause = G.underwater
-        ? 'The crew drowned — oxygen ran out underwater.'
-        : 'The crew suffocated — oxygen ran out on the surface.';
-      checkDeath();
-      if(G.dead){ renderAll(); return; }
-    }
-  }
-  if(biome.oxyDrain===0 && !G.underwater){
-    G._oxyWarnedLow=false; G._oxyWarnedCrit=false;
+  if(applyOxygenDrain()){ renderAll(); return; }
+  applyOxygenWarnings();
+  if((biome.oxyDrain > 0 || G.underwater) && G.oxygen<=0 && !DEBUG.infiniteOxy){
+    checkDeath();
+    if(G.dead){ renderAll(); return; }
   }
 
   // Standing on hazard tiles
@@ -33636,7 +33600,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.25  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.26  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {
