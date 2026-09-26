@@ -24,6 +24,7 @@ npm test
 Edit `src/`, then rebuild and commit `index.html` with your source changes. The build
 order is explicit in `src/build-manifest.json`. Start with the
 [architecture guide](docs/architecture.md) and [source map](docs/source-map.md).
+The proposed feature sequence is in the [feature roadmap](docs/roadmap.md).
 
 The first extraction preserves the original HTML byte-for-byte. Run
 `npm run verify:migration` to audit this initial equivalence; intentional future game
