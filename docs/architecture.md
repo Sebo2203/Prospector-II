@@ -9,14 +9,14 @@ Use Node.js 22 or newer. There are no npm dependencies and no installation step.
 1. Find the relevant subsystem in [the source map](source-map.md), then search for callers and related state.
 2. Edit source under `src/`. For a new file, add it to the appropriate ordered list in `src/build-manifest.json`.
 3. Run `npm run build`, then `npm test`.
-4. Run `npm run playtest` for the existing local playtest server, or open the built HTML directly. Exercise the behavior you changed.
+4. Open the built HTML in a browser and exercise the behavior you changed.
 5. Commit the source and rebuilt `index.html` together.
 
 The build injects source text into `src/index.template.html`. It preserves source order and whitespace, checks individual and combined JavaScript syntax, and rejects duplicate, omitted or incorrectly configured inputs. `npm run check` detects an out-of-date generated HTML without rewriting it. CI runs the same checks.
 
 ## Runtime model
 
-This is a source organization step, not a conversion to ES modules. The main game still executes in one classic inline script with shared lexical bindings and global functions. The separate analytics and feedback/barter script blocks remain in their original positions. This preserves inline HTML handlers, declaration visibility, registration order, and the existing playtest agent's access to game state.
+This is a source organization step, not a conversion to ES modules. The main game still executes in one classic inline script with shared lexical bindings and global functions. The separate analytics and feedback/barter script blocks remain in their original positions. This preserves inline HTML handlers, declaration visibility and registration order.
 
 `G` is the mutable game state, initialized in `src/core/new-game.js`. Keyboard routing lives in `src/input/keyboard.js`. Actions update state and request rendering; `src/rendering/dispatch.js` selects views, while HUD/sidebar/context controls live under `src/ui/`. Persistent saves and loading are in `src/persistence/save-load.js`. Startup waits for embedded sprites, generates procedural sprites, and displays the menu in `src/core/startup.js`.
 

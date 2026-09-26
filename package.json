@@ -8,7 +8,6 @@
     "build": "node tools/build-single-file.js",
     "check": "node tools/build-single-file.js --check",
     "test": "node --test tests/build.test.js && npm run check",
-    "verify:migration": "node tools/verify-migration.js",
-    "playtest": "node tools/playtest-server.js"
+    "verify:migration": "node tools/verify-migration.js"
   }
 }

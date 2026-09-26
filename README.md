@@ -19,7 +19,6 @@ Use Node.js 22 or newer. No npm dependencies need to be installed.
 ```sh
 npm run build
 npm test
-npm run playtest
 ```
 
 Edit `src/`, then rebuild and commit `index.html` with your source changes. The build
