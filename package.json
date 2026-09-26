@@ -1,0 +1,13 @@
+{
+  "name": "prospector-ii",
+  "version": "0.26.0",
+  "private": true,
+  "description": "Modular source experiment with a single HTML release artifact.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node tools/build-single-file.js",
+    "check": "node tools/build-single-file.js --check",
+    "test": "node --test tests/build.test.js && npm run check",
+    "verify:migration": "node tools/verify-migration.js"
+  }
+}
