@@ -1,6 +1,6 @@
 function downloadDesktopApp(){
   try { localStorage.setItem('prospector_desktop_download_clicked', '1'); } catch(e) {}
-  window.open('https://sebo2203.github.io/Prospector-II/downloads/Prospector-II-v0.25-portable.exe', '_blank');
+  window.open('https://sebo2203.github.io/Prospector-II/downloads/Prospector-II-v0.26-portable.exe', '_blank');
   drawMenuScreen();
 }
 
