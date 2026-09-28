@@ -7,8 +7,10 @@
 function applyPawnItem(item){
   if(!item) return;
   if(item.usable === 'supplies'){
+    const hullDamaged = G.ship.hp < G.ship.maxHp;
     G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10));
     G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10);
+    if(hullDamaged) SFX.repair();
     addLog('Supplies bought. Crew and hull patched up.','lg');
   } else if(item.usable === 'medikit'){
     G.inventory.push({name:'Medikit',col:'#ff6688',desc:'A medikit.',value:0,usable:'medikit'});
@@ -53,7 +55,9 @@ function applyPawnItem(item){
     G.inventory.push({name:item.name,col:'#ff8833',desc:'+3 DEF when equipped. Heavy combat plating.',value:0,usable:'armor_exosuit'});
     addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
   } else if(item.usable === 'repair_kit'){
+    const hullDamaged = G.ship.hp < G.ship.maxHp;
     G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 15);
+    if(hullDamaged) SFX.repair();
     addLog('Repair Kit applied. Ship hull +15 HP.','lg');
   } else if(item.usable === 'jetpack'){
     G.inventory.push({name:'Jetpack',col:'#ff9922',desc:'Leap 2 tiles over any terrain. Use from inventory — enter target mode to aim. Fuel: 15 charges.',value:0,usable:'jetpack',fuel:15});
@@ -109,14 +113,15 @@ function executeBaseAction(actionId){
   switch(actionId){
     case 'refuel':
       if(G.fuel>=G.maxFuel){ addLog('Fuel already full.','li'); }
-      else if(fuelCost===0){ G.fuel=G.maxFuel; addLog('Tank topped off (free).','lg'); }
-      else if(G.credits>=fuelCost){ G.credits-=fuelCost; G.fuel=G.maxFuel; G._alarmFuelWarn=false; G._alarmFuelCrit=false; addLog('Refueled. Spent '+fuelCost+' cr.','lg'); }
+      else if(fuelCost===0){ G.fuel=G.maxFuel; SFX.refuel(); addLog('Tank topped off (free).','lg'); }
+      else if(G.credits>=fuelCost){ G.credits-=fuelCost; G.fuel=G.maxFuel; G._alarmFuelWarn=false; G._alarmFuelCrit=false; SFX.refuel(); addLog('Refueled. Spent '+fuelCost+' cr.','lg'); }
       else addLog('Need '+fuelCost+' cr to refuel.','lw');
       break;
     case 'repair':{
       if(G.ship.hp>=G.ship.maxHp){ addLog('Hull already at full integrity.','li'); }
       else if(G.credits>=50){
         G.credits-=50; G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10);
+        SFX.repair();
         addLog('Hull patched. Ship +10 HP.','lg');
         const _engR = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
         if(_engR) giveSkillXP(_engR, 'eng', 2);
@@ -499,7 +504,7 @@ function executeBaseAction(actionId){
         const crewFull = G.crew.filter(c=>c.hp>0).every(c=>c.hp>=c.maxHp);
         const hullFull = G.ship.hp>=G.ship.maxHp;
         if(crewFull && hullFull){ addLog('Nothing to patch up — hull and crew are at full health.','li'); }
-        else { G.credits-=50; G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10)); G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10); addLog('Supplies bought. Crew and hull patched up.','lg'); }
+        else { G.credits-=50; G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10)); G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10); if(!hullFull) SFX.repair(); addLog('Supplies bought. Crew and hull patched up.','lg'); }
       }
       else addLog('Need 50 cr for supplies.','lw');
       break;}

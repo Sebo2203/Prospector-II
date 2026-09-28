@@ -55,6 +55,7 @@ function planetPhase(key){
 function planetVisionRadius(key){
   const pdata = G.planets[key];
   if(!pdata) return 10;
+  if(pdata.isCasino) return 10;
   // Rogue planet: no star, perpetual night — only suit lights and floodlight
   if(pdata.isRoguePlanet){
     const flood = G && (G.inventory||[]).some(i=>i.usable==='floodlight') ? 2 : 0;

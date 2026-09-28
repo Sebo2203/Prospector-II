@@ -7,6 +7,7 @@ const DEBUG = {
   fullVision:   false,
   infiniteOxy:  false,
   infiniteCrewHp: false,
+  shipInvisible: false, // enemy ships cannot detect or intercept the player on the galaxy map
   preScan:      0,
   showFPS:      false,
   spawnBiome:   0,

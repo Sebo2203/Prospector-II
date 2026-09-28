@@ -372,9 +372,10 @@ function generateStrandedShipMap(key){
   }
 
   // Feature placement
+  const spawnX = spineX1+2, spawnY = spineY;
   const floorTiles=[];
   for(let y=0;y<H;y++) for(let x=0;x<W;x++)
-    if(grid[y][x].type==='station_floor') floorTiles.push({x,y});
+    if(grid[y][x].type==='station_floor' && (x!==spawnX || y!==spawnY)) floorTiles.push({x,y});
 
   function placeRnd(type,count,extra){
     for(let i=0;i<count&&floorTiles.length;i++){
@@ -386,7 +387,7 @@ function generateStrandedShipMap(key){
 
   placeRnd('station_crack',   5+rnd(5));
   placeRnd('station_console', 2+rnd(2));
-  placeRnd('MINERAL',         1+rnd(2), {revealed:false, oreType: pickOreForBiome('_default')});
+  placeRnd('station_locker',  1+rnd(2));
 
   const numCorpses=2+rnd(3);
   for(let i=0;i<numCorpses&&floorTiles.length;i++){
@@ -398,7 +399,6 @@ function generateStrandedShipMap(key){
   }
 
   // Guaranteed spawn on spine near bow
-  const spawnX = spineX1+2, spawnY = spineY;
   grid[spawnY][spawnX] = {type:'SHIP'};
 
   G.planets[key]={

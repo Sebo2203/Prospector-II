@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node tools/build-single-file.js",
     "check": "node tools/build-single-file.js --check",
-    "test": "node --test tests/build.test.js && npm run check",
+    "test": "node --test tests/build.test.js tests/interior-resources.test.js tests/casino-interior.test.js && npm run check",
     "verify:migration": "node tools/verify-migration.js"
   }
 }

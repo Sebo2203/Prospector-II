@@ -108,6 +108,12 @@ const BIOMES = {
     oxyDrain:0, rockDensity:0, minerals:0, mineralSamples:0, aliens:0, alienChance:0, biodata:0,
     hazards:[], bossAlways:false,
   },
+  CASINO: {
+    name:'The Void Royale', floor:'casino_floor', rock:'casino_wall', rock2:'casino_wall', special:null,
+    oxyDrain:0, rockDensity:0, minerals:0, mineralSamples:0, aliens:0, alienChance:0, biodata:0,
+    hazards:[], bossAlways:false, tidalLock:'day', dayLength:100,
+    tempLabel:'Pressurized entertainment deck.', scanDifficulty:0,
+  },
   CAVE: {
     name:'Cave System',
     floor:'cave_floor', rock:'cave_wall', rock2:'cave_stalagtite', special:null,

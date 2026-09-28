@@ -43,7 +43,7 @@ function moveNeutralShips(){
       if(ns.hostile){
         const chaseDist = Math.abs(ns.x - G.ship.x) + Math.abs(ns.y - G.ship.y);
         const PATROL_GIVE_UP = 12;
-        if(chaseDist > PATROL_GIVE_UP){
+        if(DEBUG.shipInvisible || chaseDist > PATROL_GIVE_UP){
           const route = ns.patrolRoute;
           if(route && route.length > 0){
             const wp = route[ns.patrolIdx % route.length];

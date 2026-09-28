@@ -49,7 +49,7 @@ function renderHUD(){
   document.getElementById('h-turn').textContent=G.turn;
 
   const mn={galaxy:'GALAXY MAP', system:'SYSTEM VIEW', planet:'PLANET SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
-  document.getElementById('h-mode').textContent=mn[G.mode]||G.mode.toUpperCase();
+  document.getElementById('h-mode').textContent=G.mode==='planet'&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':mn[G.mode]||G.mode.toUpperCase();
 
   let loc='Deep Space';
   if(G.mode==='base'){
@@ -60,12 +60,15 @@ function renderHUD(){
     const cell=G.galaxy[G.ship.y]?.[G.ship.x];
     loc = cell?.type==='ROGUE_PLANET' ? (cell?.name||'Rogue Planet')+' (Rogue)' : (cell?.name||'Unknown')+' System';
   } else if(G.mode==='planet'){
+    if(G.planets[G.curPlanet]?.isCasino) loc='The Void Royale';
+    else {
     const cell=G.galaxy[G.ship.y]?.[G.ship.x];
     {
       const pDesc=cell?.planets?.[G.selPlanet];
       const bKey=G.planets[G.curPlanet]?.biome;
       const bName=BIOMES[bKey]?.name||'';
       loc=(pDesc?.name||'Unknown')+(bName?' ['+bName+']':'');
+    }
     }
   } else {
     const c=G.galaxy[G.ship.y][G.ship.x];

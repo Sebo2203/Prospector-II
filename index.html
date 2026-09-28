@@ -1834,6 +1834,18 @@ const ASCII = {
   uw_exit:        { ch:'↑', bg:'#021828', fg:'#44aadd' },
   // Derelict station tiles
   station_floor:  { ch:'·', bg:'#0a0f15', fg:'#2a3d50' },
+  casino_floor:   { ch:'·', bg:'#170b22', fg:'#63416d' },
+  casino_wall:    { ch:'▓', bg:'#130818', fg:'#8c487e' },
+  casino_door:    { ch:'╬', bg:'#170b22', fg:'#e8b856' },
+  casino_host:    { ch:'H', bg:'#170b22', fg:'#f8ca65' },
+  casino_info:    { ch:'?', bg:'#170b22', fg:'#5bdfe6' },
+  casino_poker:   { ch:'♠', bg:'#170b22', fg:'#f8cb58' },
+  casino_bar:     { ch:'♫', bg:'#170b22', fg:'#ff8abe' },
+  casino_arena:   { ch:'A', bg:'#170b22', fg:'#fa605f' },
+  casino_wrestle: { ch:'W', bg:'#170b22', fg:'#e88750' },
+  casino_slots:   { ch:'$', bg:'#170b22', fg:'#6ff39d' },
+  casino_locker:  { ch:'L', bg:'#170b22', fg:'#7089a5' },
+  casino_console: { ch:'i', bg:'#170b22', fg:'#67d3fb' },
   station_wall:   { ch:'¦', bg:'#04080c', fg:'#6688aa' },
   station_door:   { ch:'+',  bg:'#0a0f15', fg:'#88aacc' },
   station_console:{ ch:'?', bg:'#0a0f15', fg:'#22aadd' },
@@ -2858,6 +2870,40 @@ const DRAW = {
   },
 
   // -- Derelict station tiles --------------------------------------
+  casino_floor(c,x,y){
+    c.fillStyle='#10071c';c.fillRect(x,y,TS,TS);
+    c.fillStyle='#20102b';c.fillRect(x+1,y+1,TS-2,TS-2);
+    c.fillStyle='#3c1a4a';c.fillRect(x+2,y+2,TS-4,1);
+    c.fillStyle='#5d315e';c.fillRect(x+11,y+11,2,2);
+  },
+  casino_wall(c,x,y){
+    c.fillStyle='#0d0712';c.fillRect(x,y,TS,TS);
+    c.fillStyle='#321530';c.fillRect(x+1,y+1,TS-2,TS-2);
+    c.fillStyle='#6d2d6f';c.fillRect(x+2,y+3,TS-4,2);
+    c.fillStyle='#c39149';c.fillRect(x+2,y+18,TS-4,2);
+    c.fillStyle='#a765ae';c.fillRect(x+5,y+8,14,7);
+  },
+  casino_door(c,x,y){
+    DRAW.casino_floor(c,x,y);
+    c.fillStyle='#b27a39';c.fillRect(x+1,y+1,2,TS-2);c.fillRect(x+TS-3,y+1,2,TS-2);
+    c.fillStyle='#ffcf73';c.fillRect(x+3,y+2,TS-6,2);
+  },
+  casinoFixture(c,x,y,label,color){
+    DRAW.casino_floor(c,x,y);
+    c.fillStyle='#080810';c.fillRect(x+3,y+3,TS-6,TS-6);
+    c.strokeStyle=color;c.lineWidth=2;c.strokeRect(x+4,y+4,TS-8,TS-8);
+    c.fillStyle=color;c.font='bold 14px Courier New';c.textAlign='center';c.textBaseline='middle';
+    c.fillText(label,x+TS/2,y+TS/2+1);
+  },
+  casino_host(c,x,y){DRAW.casinoFixture(c,x,y,'H','#ffd36e');},
+  casino_info(c,x,y){DRAW.casinoFixture(c,x,y,'?','#69dcea');},
+  casino_poker(c,x,y){DRAW.casinoFixture(c,x,y,'♠','#eecd62');},
+  casino_bar(c,x,y){DRAW.casinoFixture(c,x,y,'B','#fa8ac4');},
+  casino_arena(c,x,y){DRAW.casinoFixture(c,x,y,'A','#f36d6d');},
+  casino_wrestle(c,x,y){DRAW.casinoFixture(c,x,y,'W','#e99b5d');},
+  casino_slots(c,x,y){DRAW.casinoFixture(c,x,y,'7','#74f09c');},
+  casino_locker(c,x,y){DRAW.casinoFixture(c,x,y,'L','#88a1b8');},
+  casino_console(c,x,y){DRAW.casinoFixture(c,x,y,'i','#69baf0');},
   station_floor(c,x,y){
     // Dark metal plating — slight grid texture from seeded variation
     c.fillStyle='#080d12'; c.fillRect(x,y,TS,TS);
@@ -4492,6 +4538,18 @@ const TILE = {
   uw_exit:         { pass:true,  sprite:null, drawFn:'uw_exit'      },
   // Derelict station tiles
   station_floor:   { pass:true,  sprite:null, drawFn:'station_floor'   },
+  casino_floor:    { pass:true,  sprite:null, drawFn:'casino_floor'    },
+  casino_wall:     { pass:false, sprite:null, drawFn:'casino_wall'     },
+  casino_door:     { pass:true,  sprite:null, drawFn:'casino_door'     },
+  casino_host:     { pass:true,  sprite:null, drawFn:'casino_host'     },
+  casino_info:     { pass:true,  sprite:null, drawFn:'casino_info'     },
+  casino_poker:    { pass:true,  sprite:null, drawFn:'casino_poker'    },
+  casino_bar:      { pass:true,  sprite:null, drawFn:'casino_bar'      },
+  casino_arena:    { pass:true,  sprite:null, drawFn:'casino_arena'    },
+  casino_wrestle:  { pass:true,  sprite:null, drawFn:'casino_wrestle'  },
+  casino_slots:    { pass:true,  sprite:null, drawFn:'casino_slots'    },
+  casino_locker:   { pass:true,  sprite:null, drawFn:'casino_locker'   },
+  casino_console:  { pass:true,  sprite:null, drawFn:'casino_console'  },
   station_crack:   { pass:true,  sprite:null, drawFn:'station_crack'   },
   station_wall:    { pass:false, sprite:null, drawFn:'station_wall'    },
   station_door:    { pass:true,  sprite:null, drawFn:'station_door'    },
@@ -4555,6 +4613,7 @@ const DEBUG = {
   fullVision:   false,
   infiniteOxy:  false,
   infiniteCrewHp: false,
+  shipInvisible: false, // enemy ships cannot detect or intercept the player on the galaxy map
   preScan:      0,
   showFPS:      false,
   spawnBiome:   0,
@@ -5422,9 +5481,10 @@ function generateStrandedShipMap(key){
   }
 
   // Feature placement
+  const spawnX = spineX1+2, spawnY = spineY;
   const floorTiles=[];
   for(let y=0;y<H;y++) for(let x=0;x<W;x++)
-    if(grid[y][x].type==='station_floor') floorTiles.push({x,y});
+    if(grid[y][x].type==='station_floor' && (x!==spawnX || y!==spawnY)) floorTiles.push({x,y});
 
   function placeRnd(type,count,extra){
     for(let i=0;i<count&&floorTiles.length;i++){
@@ -5436,7 +5496,7 @@ function generateStrandedShipMap(key){
 
   placeRnd('station_crack',   5+rnd(5));
   placeRnd('station_console', 2+rnd(2));
-  placeRnd('MINERAL',         1+rnd(2), {revealed:false, oreType: pickOreForBiome('_default')});
+  placeRnd('station_locker',  1+rnd(2));
 
   const numCorpses=2+rnd(3);
   for(let i=0;i<numCorpses&&floorTiles.length;i++){
@@ -5448,7 +5508,6 @@ function generateStrandedShipMap(key){
   }
 
   // Guaranteed spawn on spine near bow
-  const spawnX = spineX1+2, spawnY = spineY;
   grid[spawnY][spawnX] = {type:'SHIP'};
 
   G.planets[key]={
@@ -10005,6 +10064,12 @@ const BIOMES = {
     oxyDrain:0, rockDensity:0, minerals:0, mineralSamples:0, aliens:0, alienChance:0, biodata:0,
     hazards:[], bossAlways:false,
   },
+  CASINO: {
+    name:'The Void Royale', floor:'casino_floor', rock:'casino_wall', rock2:'casino_wall', special:null,
+    oxyDrain:0, rockDensity:0, minerals:0, mineralSamples:0, aliens:0, alienChance:0, biodata:0,
+    hazards:[], bossAlways:false, tidalLock:'day', dayLength:100,
+    tempLabel:'Pressurized entertainment deck.', scanDifficulty:0,
+  },
   CAVE: {
     name:'Cave System',
     floor:'cave_floor', rock:'cave_wall', rock2:'cave_stalagtite', special:null,
@@ -11348,9 +11413,11 @@ function generateDerelict(key){
   }
 
   // ── Collect all floor tiles for item placement ───────────────
+  const room0=rooms[0];
+  const sx=room0.cx, sy=room0.cy;
   const floorTiles=[];
   for(let y=0;y<H;y++) for(let x=0;x<W;x++)
-    if(grid[y][x].type==='station_floor') floorTiles.push({x,y});
+    if(grid[y][x].type==='station_floor' && (x!==sx || y!==sy)) floorTiles.push({x,y});
 
   function placeRandom(type,count,extra){
     for(let i=0;i<count;i++){
@@ -11362,9 +11429,8 @@ function generateDerelict(key){
   }
 
   placeRandom('station_console',2+rnd(3));
-  placeRandom('station_locker', 2+rnd(3));
+  placeRandom('station_locker', 3+rnd(3));
   placeRandom('station_door',   2+rnd(2));
-  placeRandom('MINERAL',        2+rnd(2), {oreType:pickOreForBiome('ANCIENT')});
   placeRandom('BIODATA',        1+rnd(2));
 
   // Corpses with death causes
@@ -11379,8 +11445,6 @@ function generateDerelict(key){
   }
 
   // Ship spawn — centre of first room
-  const room0=rooms[0];
-  const sx=room0.cx, sy=room0.cy;
   grid[sy][sx]={type:'SHIP'};
 
   G.planets[key]={
@@ -11391,6 +11455,19 @@ function generateDerelict(key){
     planetTurn:0, surveySoldValue:0, spawnedAliens:0,
   };
   G.enemies[key]=[];
+}
+
+// Old saves can contain ore placed on metal floors by earlier interior generators.
+function removeInteriorOreDeposits(planets){
+  if(!planets) return;
+  Object.values(planets).forEach(pdata=>{
+    if(!pdata || !(pdata.isDerelict || pdata.isStrandedShip || pdata.isAncientStation ||
+      pdata.biome==='DERELICT' || pdata.biome==='ANCIENT_STATION')) return;
+    const floor = pdata.isAncientStation || pdata.biome==='ANCIENT_STATION' ? 'ancient_st_floor' : 'station_floor';
+    (pdata.grid||[]).forEach(row=>row?.forEach((cell,x)=>{
+      if(cell?.type==='MINERAL' || cell?.type==='MINERAL_SAMPLE') row[x]={type:cell._underFloor||floor};
+    }));
+  });
 }
 
 
@@ -11524,6 +11601,35 @@ function placeAncientRuinsOnPlanet(grid, W, H, key, floorType){
   }
 }
 
+// A staffed, pressurized station deck. Every attraction is reached on foot.
+function generateCasinoStationMap(key){
+  const W=40, H=21;
+  const grid=Array.from({length:H},()=>Array.from({length:W},()=>({type:'casino_wall'})));
+  function floor(x1,y1,x2,y2){
+    for(let y=y1;y<=y2;y++) for(let x=x1;x<=x2;x++) grid[y][x]={type:'casino_floor'};
+  }
+  // Central promenade and five connected rooms.
+  floor(2,8,37,12);
+  floor(2,4,9,16);       // arrival lounge
+  floor(12,2,21,8);      // poker room
+  floor(12,12,21,18);    // bar
+  floor(24,2,37,8);      // beast arena
+  floor(24,12,37,18);    // wrestling pit
+  for(const [x,y] of [[16,8],[16,12],[30,8],[30,12]]) grid[y][x]={type:'casino_door'};
+  const fixtures=[
+    [5,10,'SHIP'],[5,6,'casino_host'],[8,10,'casino_info'],
+    [16,5,'casino_poker'],[18,5,'casino_poker'],
+    [16,15,'casino_bar'],[19,15,'casino_bar'],
+    [30,5,'casino_arena'],[30,15,'casino_wrestle'],
+    [10,10,'casino_slots'],[23,10,'casino_slots'],[35,10,'casino_slots'],
+    [4,14,'casino_locker'],[8,14,'casino_console']
+  ];
+  for(const [x,y,type] of fixtures) grid[y][x]={type,...(type==='SHIP'?{_underFloor:'casino_floor'}:{})};
+  G.planets[key]={grid,width:W,height:H,biome:'CASINO',isCasino:true,spawnX:5,spawnY:10,
+    explored:new Array(W*H).fill(false),visited:new Array(W*H).fill(false),
+    planetTurn:0,spawnedAliens:0,surveySoldValue:0};
+  G.enemies[key]=[];
+}
 function generatePlanet(key, biomeKey){
   const B = BIOMES[biomeKey] || BIOMES.DESERT;
   const W = PLANET_W, H = PLANET_H;
@@ -11918,6 +12024,7 @@ function planetPhase(key){
 function planetVisionRadius(key){
   const pdata = G.planets[key];
   if(!pdata) return 10;
+  if(pdata.isCasino) return 10;
   // Rogue planet: no star, perpetual night — only suit lights and floodlight
   if(pdata.isRoguePlanet){
     const flood = G && (G.inventory||[]).some(i=>i.usable==='floodlight') ? 2 : 0;
@@ -12274,7 +12381,7 @@ function drawCanvas(){
     drawGalaxy();
     drawShipCombatOverlay();
   } else if(G.mode==='casino'){
-    drawGalaxy();
+    if(G.planets[G.curPlanet]?.isCasino) drawPlanet(); else drawGalaxy();
     drawCasinoOverlay();
   } else if(G.mode==='radio'){
     drawGalaxy();
@@ -13814,7 +13921,7 @@ function drawPlanet(){
   const B=BIOMES[pdata.biome]||{floor:'EARTH_FLOOR'};
   const floorTileType=B.floor || 'EARTH_FLOOR';
   const floorSprite=TILE[floorTileType]?.sprite||'earth_floor';
-  const floorAscii=ASCII[floorSprite]||{bg:'#0a1a08',fg:'#2a5a1a'};
+  const floorAscii=ASCII[floorTileType]||ASCII[floorSprite]||{bg:'#0a1a08',fg:'#2a5a1a'};
   // bgFloor / bgAscii depend only on map type — hoist to function scope so
   // both the tile loop and the enemy overlay loop can reference them.
   const _isAncientSt  = !!pdata.isAncientStation;
@@ -13920,7 +14027,7 @@ function drawPlanet(){
       const isRingworld = !!pdata.isRingworld;
       const isDRW = !!pdata.isDestroyedRingworld;
       const isNukeWar = !!pdata.isNuclearWar;
-      const isSpecialMap = isDerelict || isAncientSt || isCave || isRingworld || isDRW || isNukeWar;
+      const isSpecialMap = isDerelict || isAncientSt || isCave || isRingworld || isDRW || isNukeWar || !!pdata.isCasino;
       const bgFloor    = isAncientSt ? 'ancient_st_floor' : isDerelict ? 'station_floor' : isCave ? 'cave_floor' : (isRingworld||isDRW) ? 'rw_floor' : isNukeWar ? 'nuke_dirt' : floorTileType;
       const bgAscii    = isAncientSt ? (ASCII['ancient_st_floor']||floorAscii) : isDerelict ? (ASCII['station_floor']||floorAscii) : isCave ? (ASCII['cave_floor']||floorAscii) : isNukeWar ? (ASCII['nuke_dirt']||floorAscii) : floorAscii;
 
@@ -14005,7 +14112,7 @@ function drawPlanet(){
             ctx.fillRect(sx+(x*13+y*7)%TS, sy+(x*5+y*11)%TS, 1, 1);
           }
         } else if(OPTIONS.asciiMode){
-          drawAsciiTile(sp, sx, sy, bgAscii.bg);
+          drawAsciiTile(pdata.isCasino ? cell.type : sp, sx, sy, bgAscii.bg);
         } else if(cell.type === 'EARTH_FOREST' && tileInfo?.sprite){
           drawBaseFloor(floorTileType, sx, sy, floorAscii.bg);
           drawSpriteDarkMatteKeyed(tileInfo.sprite, sx, sy, '#224422');
@@ -16811,6 +16918,35 @@ function ensureCasinoState(){
   if(!c.npcLine) c.npcLine = pick(CASINO_NPC_LINES);
   return c;
 }
+function casinoInteractAtPlayer(){
+  const tile=G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x]?.type;
+  const screens={casino_poker:'poker',casino_bar:'drink',casino_arena:'arena',casino_wrestle:'wrestle'};
+  if(screens[tile]){
+    const c=ensureCasinoState();
+    c.screen=screens[tile]; c.lastResult=null;
+    if(tile==='casino_arena'){c.arena=null;c.arenaPhase='choose';}
+    G.mode='casino'; return;
+  }
+  if(tile==='casino_slots'){
+    const stake=25;
+    if(!casinoSpend(stake)){addLog('Slots cost 25 cr. You need more credits.','lw');return;}
+    const symbols=['7','7','STAR','STAR','BELL','BELL','BELL','VOID','VOID','VOID'];
+    const roll=Array.from({length:3},()=>symbols[rnd(symbols.length)]);
+    const match=roll[0]===roll[1]&&roll[1]===roll[2];
+    const pair=roll[0]===roll[1]||roll[0]===roll[2]||roll[1]===roll[2];
+    const payout=match ? (roll[0]==='7'?500:roll[0]==='STAR'?200:roll[0]==='BELL'?100:75) : pair?25:0;
+    casinoLose(stake);
+    if(payout) casinoPay(payout);
+    addLog('Slots: '+roll.join(' | ')+' — '+(payout?'won '+payout+' cr!':'no payout.'),payout?'lg':'li');
+    return;
+  }
+  if(tile==='casino_host'){addLog('Host: "Welcome to The Void Royale. The tables are open all cycle."','li');return;}
+  if(tile==='casino_info'){addLog('Directory: poker north, bar south, arena northeast, wrestling southeast. Slots on the promenade.','li');return;}
+  if(tile==='casino_console'){addLog('House terminal: all tables operating. No outstanding alerts.','li');return;}
+  if(tile==='casino_locker'){addLog('Staff locker: access reserved for casino personnel.','li');return;}
+  if(tile==='SHIP'){addLog('Your ship is docked here. Press L to undock.','li');return;}
+  addLog('Music and voices carry through the station. Walk to a table and press Enter.','li');
+}
 function casinoCrew(){ return (G.crew||[]).filter(c=>c.hp>0); }
 function casinoBest(skill){
   const crew = casinoCrew();
@@ -17017,6 +17153,13 @@ function drawCasinoOverlay(){
 
 function handleCasinoKey(e){
   const c=ensureCasinoState();
+  if(e.key==='Escape' && G.planets[G.curPlanet]?.isCasino){
+    if(c.arena && !c.arena.result) return;
+    if(c.contest) casinoQuitContest();
+    if(c.poker?.phase==='hold') casinoLose(c.poker.stake);
+    c.poker=null;c.contest=null;c.arena=null;c.arenaPhase=null;c.screen='main';
+    G.mode='planet'; renderAll(); return;
+  }
   if(c.screen==='main'){ if(e.key==='ArrowUp'){c.sel=Math.max(0,c.sel-1);renderAll();return;} if(e.key==='ArrowDown'){c.sel=Math.min(CASINO_GAMES.length-1,c.sel+1);renderAll();return;} if(e.key==='Enter'){c.lastResult=null;if(c.sel===0){c.screen='poker';c.betSel=0;c.poker=null;} if(c.sel===1){c.screen='wrestle';c.wrestleSel=0;} if(c.sel===2){c.screen='drink';c.drinkSel=0;} if(c.sel===3){c.screen='arena';c.beastSel=0;c.arena=null;c.arenaPhase='choose';} renderAll();return;} if(e.key==='Escape'){G.mode='galaxy';addLog('Left The Void Royale. Session: +'+(c.sessionWon||0)+' / -'+(c.sessionLost||0)+' cr.','li');renderAll();return;} return; }
   if(c.screen==='poker'){ if(!c.poker){ if(e.key==='ArrowUp'){c.betSel=Math.max(0,c.betSel-1);renderAll();return;} if(e.key==='ArrowDown'){c.betSel=Math.min(CASINO_POKER_STAKES.length-1,c.betSel+1);renderAll();return;} if(e.key==='Enter'){casinoStartPoker();renderAll();return;} if(e.key==='Escape'){c.screen='main';c.sel=0;renderAll();return;} return; } if(c.poker.phase==='hold'){ if(['1','2','3','4','5'].includes(e.key)){const i=Number(e.key)-1;c.poker.hold[i]=!c.poker.hold[i];renderAll();return;} if(e.key==='Enter'){casinoFinishPoker();renderAll();return;} if(e.key==='Escape'){casinoLose(c.poker.stake);c.poker=null;c.screen='main';renderAll();return;} return; } if(e.key==='Enter'||e.key==='Escape'){c.poker=null;renderAll();return;} }
   if(c.screen==='wrestle'||c.screen==='drink'){
@@ -17093,7 +17236,7 @@ function moveNeutralShips(){
       if(ns.hostile){
         const chaseDist = Math.abs(ns.x - G.ship.x) + Math.abs(ns.y - G.ship.y);
         const PATROL_GIVE_UP = 12;
-        if(chaseDist > PATROL_GIVE_UP){
+        if(DEBUG.shipInvisible || chaseDist > PATROL_GIVE_UP){
           const route = ns.patrolRoute;
           if(route && route.length > 0){
             const wp = route[ns.patrolIdx % route.length];
@@ -17200,7 +17343,7 @@ function doStrandedWait(){
   tickNpcStranded();
 
   // SOS makes pirates in range more aggressive (treat as if distance halved)
-  if(st.sos){
+  if(st.sos && !DEBUG.shipInvisible){
     const aggressivePirate = G.pirates.find(p=>{
       if(!p.alive) return false;
       const dist = Math.abs(p.x-G.ship.x)+Math.abs(p.y-G.ship.y);
@@ -17216,7 +17359,7 @@ function doStrandedWait(){
 
   // Check if any pirate has reached our tile → combat even stranded
   const pirateArrived = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-  if(pirateArrived){
+  if(pirateArrived && !DEBUG.shipInvisible){
     addLog(pirateArrived.name+' closes in on your disabled ship!','lc');
     G.stranded = null;
     startShipCombat(pirateArrived);
@@ -18547,6 +18690,7 @@ function drawDebugOverlay(){
     { key:'3', label:'Full Vision',             val: DEBUG.fullVision      },
     { key:'4', label:'Infinite O2',             val: DEBUG.infiniteOxy     },
     { key:'7', label:'Infinite Crew HP',        val: DEBUG.infiniteCrewHp  },
+    { key:'8', label:'Invisible to enemy ships', val: DEBUG.shipInvisible   },
     { key:'9', label:['Pre-scan debug planets','Pre-scan all planets','Scan no planets'][DEBUG.preScan||0], val: DEBUG.preScan !== 2 },
     { key:'0', label:'FPS Counter',             val: DEBUG.showFPS         },
   ];
@@ -18924,7 +19068,7 @@ function renderHUD(){
   document.getElementById('h-turn').textContent=G.turn;
 
   const mn={galaxy:'GALAXY MAP', system:'SYSTEM VIEW', planet:'PLANET SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
-  document.getElementById('h-mode').textContent=mn[G.mode]||G.mode.toUpperCase();
+  document.getElementById('h-mode').textContent=G.mode==='planet'&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':mn[G.mode]||G.mode.toUpperCase();
 
   let loc='Deep Space';
   if(G.mode==='base'){
@@ -18935,12 +19079,15 @@ function renderHUD(){
     const cell=G.galaxy[G.ship.y]?.[G.ship.x];
     loc = cell?.type==='ROGUE_PLANET' ? (cell?.name||'Rogue Planet')+' (Rogue)' : (cell?.name||'Unknown')+' System';
   } else if(G.mode==='planet'){
+    if(G.planets[G.curPlanet]?.isCasino) loc='The Void Royale';
+    else {
     const cell=G.galaxy[G.ship.y]?.[G.ship.x];
     {
       const pDesc=cell?.planets?.[G.selPlanet];
       const bKey=G.planets[G.curPlanet]?.biome;
       const bName=BIOMES[bKey]?.name||'';
       loc=(pDesc?.name||'Unknown')+(bName?' ['+bName+']':'');
+    }
     }
   } else {
     const c=G.galaxy[G.ship.y][G.ship.x];
@@ -26133,6 +26280,12 @@ function renderContextBar(){
     const pdata = G.planets[G.curPlanet];
     const cell  = pdata?.grid[G.player.y][G.player.x];
     const atShip = cell?.type==='SHIP';
+    if(pdata?.isCasino){
+      const labels={casino_host:'Talk to host',casino_info:'Read directory',casino_poker:'Play Void Poker',
+        casino_bar:'Drinking contest',casino_arena:'Enter beast arena',casino_wrestle:'Arm wrestle',
+        casino_slots:'Spin slots (25 cr)',casino_locker:'Inspect locker',casino_console:'Use terminal'};
+      if(labels[cell?.type]) btns.push(btn('Enter',labels[cell.type],'good'));
+    }
     const civContact = civilizationContactTargetAtPlayer();
 
     if(atShip){
@@ -26185,7 +26338,7 @@ function renderContextBar(){
     if(cas.screen==='main'){
       btns.push(btn('Up/Down','Select','info'));
       btns.push(btn('Enter','Enter','good'));
-      btns.push(btn('ESC','Undock','info'));
+      btns.push(btn('ESC',G.planets[G.curPlanet]?.isCasino?'Return to floor':'Undock','info'));
     } else if(cas.screen==='poker'){
       if(cas.poker && cas.poker.phase==='hold') btns.push(btn('1-5','Hold cards','info'));
       btns.push(btn('Up/Down','Select','info'));
@@ -27319,12 +27472,12 @@ function tryMove(dx,dy,confirmed){
 
     // Check if we moved onto a pirate tile ? forced combat
     const pirateHere = G.pirates.find(p=>p.alive&&p.x===nx&&p.y===ny);
-    if(pirateHere){
+    if(pirateHere && !DEBUG.shipInvisible){
       startShipCombat(pirateHere);
       return;
     }
     const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===nx&&ns.y===ny);
-    if(hostilePatrolHere){
+    if(hostilePatrolHere && !DEBUG.shipInvisible){
       startShipCombat(ensureNeutralCombatStats(hostilePatrolHere));
       return;
     }
@@ -27334,7 +27487,7 @@ function tryMove(dx,dy,confirmed){
 
     // Warn if pirate adjacent
     const pirateNear = G.pirates.find(p=>p.alive && Math.abs(p.x-nx)<=1 && Math.abs(p.y-ny)<=1);
-    if(pirateNear) addLog('WARNING: Pirate vessel nearby — '+pirateNear.name+'!','lw');
+    if(pirateNear && !DEBUG.shipInvisible) addLog('WARNING: Pirate vessel nearby — '+pirateNear.name+'!','lw');
   }
 
   // -- Planet --------------------------------------------------
@@ -28793,7 +28946,7 @@ function movePirates(){
       })();
 
       // Pursuit cap: roamers give up after 10 consecutive chase turns
-      if(distToPlayer<=10 && !nearBase){
+      if(!DEBUG.shipInvisible && distToPlayer<=10 && !nearBase){
         p._chaseTurns = (p._chaseTurns||0) + 1;
         if(p._chaseTurns <= 10){
           tx=G.ship.x; ty=G.ship.y;
@@ -28816,7 +28969,7 @@ function movePirates(){
     } else {
       // Guard: patrol near home base, chase if player gets close
       const distToHome = Math.abs(p.x-p.homeX)+Math.abs(p.y-p.homeY);
-      if(distToPlayer<=6 && distToHome<=10){
+      if(!DEBUG.shipInvisible && distToPlayer<=6 && distToHome<=10){
         tx=G.ship.x; ty=G.ship.y;
         isChasing = true;
       } else {
@@ -29714,6 +29867,9 @@ function drawRadioOverlay(){
 // ─────────────────────────────────────────────────────────────────
 function doInteract(){
   if(G.dead||G.retired) return;
+  if(G.mode==='planet' && G.planets[G.curPlanet]?.isCasino){
+    casinoInteractAtPlayer(); renderAll(); return;
+  }
 
   // ── Galaxy → enter system or dock at base ──
   if(G.mode==='galaxy'){
@@ -29821,10 +29977,16 @@ function doInteract(){
       }
 
     } else if(cell.type==='CASINO'){
-      G.mode='casino';
+      const key='casino:'+G.ship.x+','+G.ship.y;
+      if(!G.planets[key]) generateCasinoStationMap(key);
+      G.mode='planet'; G.curPlanet=key; G.curSystem='';
+      G.player={x:5,y:10,hp:G.crew.filter(c=>c.hp>0)[0]?.hp||10};
       G.casino = { screen:'main', sel:0, arenaPhase:null, arenaEnemy:null, arenaLog:[], betSel:0 };
+      ensureCasinoState();
+      G.casinoStats.visits++;
+      revealPlanet(key,5,10);
       SFX.dock();
-      addLog('Docked at '+cell.name+'. Welcome to The Void Royale!','li');
+      addLog('Docked at '+cell.name+'. Walk the deck; Enter uses a table or machine.','li');
 
     } else if((G.npcStranded||[]).some(s=>s.x===G.ship.x&&s.y===G.ship.y)){
       const ns2 = G.npcStranded.find(s=>s.x===G.ship.x&&s.y===G.ship.y);
@@ -30440,6 +30602,7 @@ function doUnderwaterSurface(){
 function doRefillOxygen(){
   if(G.mode!=='planet') return;
   const cell=G.planets[G.curPlanet]?.grid[G.player.y][G.player.x];
+  const leavingCasino=!!G.planets[G.curPlanet]?.isCasino;
   if(cell?.type==='SHIP'){
     G.oxygen=100;
     G._oxyWarnedLow=false;
@@ -30477,7 +30640,7 @@ function doLiftOff(){
     G.rangeTarget = null;
     G._itemAimMode = null;
     SFX.liftoff();
-    addLog('Lifted off. Back in orbit.','lg');
+    addLog(leavingCasino ? 'Undocked from The Void Royale.' : 'Lifted off. Back in orbit.','lg');
   } else {
     addLog('Must return to ship (>) to lift off!','lw');
   }
@@ -30493,8 +30656,10 @@ function doLiftOff(){
 function applyPawnItem(item){
   if(!item) return;
   if(item.usable === 'supplies'){
+    const hullDamaged = G.ship.hp < G.ship.maxHp;
     G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10));
     G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10);
+    if(hullDamaged) SFX.repair();
     addLog('Supplies bought. Crew and hull patched up.','lg');
   } else if(item.usable === 'medikit'){
     G.inventory.push({name:'Medikit',col:'#ff6688',desc:'A medikit.',value:0,usable:'medikit'});
@@ -30539,7 +30704,9 @@ function applyPawnItem(item){
     G.inventory.push({name:item.name,col:'#ff8833',desc:'+3 DEF when equipped. Heavy combat plating.',value:0,usable:'armor_exosuit'});
     addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
   } else if(item.usable === 'repair_kit'){
+    const hullDamaged = G.ship.hp < G.ship.maxHp;
     G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 15);
+    if(hullDamaged) SFX.repair();
     addLog('Repair Kit applied. Ship hull +15 HP.','lg');
   } else if(item.usable === 'jetpack'){
     G.inventory.push({name:'Jetpack',col:'#ff9922',desc:'Leap 2 tiles over any terrain. Use from inventory — enter target mode to aim. Fuel: 15 charges.',value:0,usable:'jetpack',fuel:15});
@@ -30595,14 +30762,15 @@ function executeBaseAction(actionId){
   switch(actionId){
     case 'refuel':
       if(G.fuel>=G.maxFuel){ addLog('Fuel already full.','li'); }
-      else if(fuelCost===0){ G.fuel=G.maxFuel; addLog('Tank topped off (free).','lg'); }
-      else if(G.credits>=fuelCost){ G.credits-=fuelCost; G.fuel=G.maxFuel; G._alarmFuelWarn=false; G._alarmFuelCrit=false; addLog('Refueled. Spent '+fuelCost+' cr.','lg'); }
+      else if(fuelCost===0){ G.fuel=G.maxFuel; SFX.refuel(); addLog('Tank topped off (free).','lg'); }
+      else if(G.credits>=fuelCost){ G.credits-=fuelCost; G.fuel=G.maxFuel; G._alarmFuelWarn=false; G._alarmFuelCrit=false; SFX.refuel(); addLog('Refueled. Spent '+fuelCost+' cr.','lg'); }
       else addLog('Need '+fuelCost+' cr to refuel.','lw');
       break;
     case 'repair':{
       if(G.ship.hp>=G.ship.maxHp){ addLog('Hull already at full integrity.','li'); }
       else if(G.credits>=50){
         G.credits-=50; G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10);
+        SFX.repair();
         addLog('Hull patched. Ship +10 HP.','lg');
         const _engR = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
         if(_engR) giveSkillXP(_engR, 'eng', 2);
@@ -30985,7 +31153,7 @@ function executeBaseAction(actionId){
         const crewFull = G.crew.filter(c=>c.hp>0).every(c=>c.hp>=c.maxHp);
         const hullFull = G.ship.hp>=G.ship.maxHp;
         if(crewFull && hullFull){ addLog('Nothing to patch up — hull and crew are at full health.','li'); }
-        else { G.credits-=50; G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10)); G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10); addLog('Supplies bought. Crew and hull patched up.','lg'); }
+        else { G.credits-=50; G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10)); G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10); if(!hullFull) SFX.repair(); addLog('Supplies bought. Crew and hull patched up.','lg'); }
       }
       else addLog('Need 50 cr for supplies.','lw');
       break;}
@@ -31142,6 +31310,7 @@ function doFuelScoop(context){
     if(Math.random() < 0.55){
       const gained = 5 + rnd(10);
       G.fuel = Math.min(G.maxFuel, G.fuel + gained);
+      SFX.refuel();
       addLog('Fuel Scoop harvests '+gained+' units of hydrogen from nebula gas.','lg');
     } else {
       addLog('Fuel Scoop cycling — not enough hydrogen density here. Try again.','li');
@@ -31155,6 +31324,7 @@ function doFuelScoop(context){
     if(Math.random() < 0.80){
       const gained = 15 + rnd(20);
       G.fuel = Math.min(G.maxFuel, G.fuel + gained);
+      SFX.refuel();
       addLog('Fuel Scoop skims the upper atmosphere. +'+gained+' fuel harvested.','lg');
     } else {
       addLog('Atmospheric turbulence — scoop aborted.','lw');
@@ -31216,9 +31386,9 @@ function doWaitGalaxy(){
   moveGasEntities();
   tickNpcStranded();
   const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-  if(pirateHere){ startShipCombat(pirateHere); return; }
+  if(pirateHere && !DEBUG.shipInvisible){ startShipCombat(pirateHere); return; }
   const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===G.ship.x&&ns.y===G.ship.y);
-  if(hostilePatrolHere){ startShipCombat(ensureNeutralCombatStats(hostilePatrolHere)); return; }
+  if(hostilePatrolHere && !DEBUG.shipInvisible){ startShipCombat(ensureNeutralCombatStats(hostilePatrolHere)); return; }
   renderAll();
 }
 
@@ -31615,6 +31785,7 @@ document.addEventListener('keydown', e=>{
       }
       if(e.key==='4'){ DEBUG.infiniteOxy = !DEBUG.infiniteOxy; renderAll(); return; }
       if(e.key==='7'){ DEBUG.infiniteCrewHp = !DEBUG.infiniteCrewHp; debugRestoreCrewHp(); addLog('DEBUG: Infinite crew HP '+(DEBUG.infiniteCrewHp?'ON':'OFF')+'.','lw'); renderAll(); return; }
+      if(e.key==='8'){ DEBUG.shipInvisible = !DEBUG.shipInvisible; addLog('DEBUG: Invisible to enemy ships '+(DEBUG.shipInvisible?'ON':'OFF')+'.','lw'); renderAll(); return; }
       if(e.key==='9'){
         DEBUG.preScan = ((DEBUG.preScan||0) + 1) % 3;
         const _scanLabels = ['Pre-scan debug spawned planets','Pre-scan all planets (even non-debug)','Scan no planets'];
@@ -32567,6 +32738,7 @@ document.addEventListener('keydown', e=>{
           if(item?.usable==='repair_kit'){
             if(G.ship.hp >= G.ship.maxHp){ addLog('Ship hull is already at full integrity.','li'); renderAll(); return; }
             G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 15);
+            SFX.repair();
             G.inventory.splice(G._viewInvSel||0, 1);
             G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
             addLog('Repair Kit applied. Ship hull +15 HP.','lg');
@@ -32821,10 +32993,7 @@ document.addEventListener('keyup', e=>{
 // ─────────────────────────────────────────────────────────────────
 //  SOUND ENGINE  (Web Audio API — no files, fully offline)
 //
-//  Three sounds:
-//    SFX.land()   — landing on a planet (descending thud + rumble)
-//    SFX.liftoff()— lifting off        (rising engine roar)
-//    SFX.dock()   — docking at base    (soft chime sequence)
+//  Short synthesized cues for ship actions, hazards, and crew damage.
 //
 //  AudioContext is created on first user interaction to comply with
 //  browser autoplay policy — it will silently skip until then.
@@ -32908,6 +33077,32 @@ const SFX = (() => {
         osc('sine', 523, 0.22, 0,    t,        0.4);   // C5
         osc('sine', 784, 0.18, 0,    t + 0.22, 0.5);   // G5
         osc('sine', 261, 0.12, 0,    t + 0.5,  0.6);   // C4
+      } catch(e) {}
+    },
+
+    // Refueling: valve click, a rising pump, then a full-tank confirmation.
+    refuel() {
+      try {
+        const c = ctx();
+        const t = c.currentTime;
+        oscRamp('square', 240, 110, 0.08, t, 0.07);
+        oscRamp('sawtooth', 75, 180, 0.10, t + 0.07, 0.48);
+        oscRamp('sine', 95, 150, 0.14, t + 0.10, 0.48);
+        osc('sine', 660, 0.12, 0, t + 0.53, 0.17);
+        osc('sine', 880, 0.10, 0, t + 0.66, 0.22);
+      } catch(e) {}
+    },
+
+    // Hull repair: brief tool taps and welding buzz, resolved by a low chime.
+    repair() {
+      try {
+        const c = ctx();
+        const t = c.currentTime;
+        oscRamp('square', 540, 190, 0.11, t, 0.08);
+        oscRamp('sawtooth', 310, 150, 0.09, t + 0.10, 0.18);
+        oscRamp('square', 480, 170, 0.09, t + 0.32, 0.07);
+        oscRamp('sawtooth', 290, 130, 0.08, t + 0.41, 0.17);
+        osc('sine', 392, 0.13, 0, t + 0.56, 0.30);
       } catch(e) {}
     },
 
@@ -33102,6 +33297,7 @@ function loadFromFile(){
         // Basic sanity check
         if(!loaded.galaxy || !loaded.crew) throw new Error('Invalid save');
         G = loaded;
+        removeInteriorOreDeposits(G.planets);
         ensureCrewStatusState();
         addLog('Save file loaded. Welcome back, Captain.','lg');
         loadSprites().then(()=>{ restoreGameUI(); renderAll(); autoSave(); });
@@ -33121,6 +33317,7 @@ function loadFromStorage(){
     const loaded = JSON.parse(raw);
     if(!loaded.galaxy || !loaded.crew) return false;
     G = loaded;
+    removeInteriorOreDeposits(G.planets);
     // Back-compat: old saves won't have shipStats or cargo
     if(!G.shipStats) G.shipStats = buildShipStats('LIGHT_SCOUT');
     if(!G.cargo)     G.cargo = [];

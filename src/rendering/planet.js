@@ -6,7 +6,7 @@ function drawPlanet(){
   const B=BIOMES[pdata.biome]||{floor:'EARTH_FLOOR'};
   const floorTileType=B.floor || 'EARTH_FLOOR';
   const floorSprite=TILE[floorTileType]?.sprite||'earth_floor';
-  const floorAscii=ASCII[floorSprite]||{bg:'#0a1a08',fg:'#2a5a1a'};
+  const floorAscii=ASCII[floorTileType]||ASCII[floorSprite]||{bg:'#0a1a08',fg:'#2a5a1a'};
   // bgFloor / bgAscii depend only on map type — hoist to function scope so
   // both the tile loop and the enemy overlay loop can reference them.
   const _isAncientSt  = !!pdata.isAncientStation;
@@ -112,7 +112,7 @@ function drawPlanet(){
       const isRingworld = !!pdata.isRingworld;
       const isDRW = !!pdata.isDestroyedRingworld;
       const isNukeWar = !!pdata.isNuclearWar;
-      const isSpecialMap = isDerelict || isAncientSt || isCave || isRingworld || isDRW || isNukeWar;
+      const isSpecialMap = isDerelict || isAncientSt || isCave || isRingworld || isDRW || isNukeWar || !!pdata.isCasino;
       const bgFloor    = isAncientSt ? 'ancient_st_floor' : isDerelict ? 'station_floor' : isCave ? 'cave_floor' : (isRingworld||isDRW) ? 'rw_floor' : isNukeWar ? 'nuke_dirt' : floorTileType;
       const bgAscii    = isAncientSt ? (ASCII['ancient_st_floor']||floorAscii) : isDerelict ? (ASCII['station_floor']||floorAscii) : isCave ? (ASCII['cave_floor']||floorAscii) : isNukeWar ? (ASCII['nuke_dirt']||floorAscii) : floorAscii;
 
@@ -197,7 +197,7 @@ function drawPlanet(){
             ctx.fillRect(sx+(x*13+y*7)%TS, sy+(x*5+y*11)%TS, 1, 1);
           }
         } else if(OPTIONS.asciiMode){
-          drawAsciiTile(sp, sx, sy, bgAscii.bg);
+          drawAsciiTile(pdata.isCasino ? cell.type : sp, sx, sy, bgAscii.bg);
         } else if(cell.type === 'EARTH_FOREST' && tileInfo?.sprite){
           drawBaseFloor(floorTileType, sx, sy, floorAscii.bg);
           drawSpriteDarkMatteKeyed(tileInfo.sprite, sx, sy, '#224422');

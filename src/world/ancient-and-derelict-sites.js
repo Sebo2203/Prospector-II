@@ -305,9 +305,11 @@ function generateDerelict(key){
   }
 
   // ── Collect all floor tiles for item placement ───────────────
+  const room0=rooms[0];
+  const sx=room0.cx, sy=room0.cy;
   const floorTiles=[];
   for(let y=0;y<H;y++) for(let x=0;x<W;x++)
-    if(grid[y][x].type==='station_floor') floorTiles.push({x,y});
+    if(grid[y][x].type==='station_floor' && (x!==sx || y!==sy)) floorTiles.push({x,y});
 
   function placeRandom(type,count,extra){
     for(let i=0;i<count;i++){
@@ -319,9 +321,8 @@ function generateDerelict(key){
   }
 
   placeRandom('station_console',2+rnd(3));
-  placeRandom('station_locker', 2+rnd(3));
+  placeRandom('station_locker', 3+rnd(3));
   placeRandom('station_door',   2+rnd(2));
-  placeRandom('MINERAL',        2+rnd(2), {oreType:pickOreForBiome('ANCIENT')});
   placeRandom('BIODATA',        1+rnd(2));
 
   // Corpses with death causes
@@ -336,8 +337,6 @@ function generateDerelict(key){
   }
 
   // Ship spawn — centre of first room
-  const room0=rooms[0];
-  const sx=room0.cx, sy=room0.cy;
   grid[sy][sx]={type:'SHIP'};
 
   G.planets[key]={
@@ -348,6 +347,19 @@ function generateDerelict(key){
     planetTurn:0, surveySoldValue:0, spawnedAliens:0,
   };
   G.enemies[key]=[];
+}
+
+// Old saves can contain ore placed on metal floors by earlier interior generators.
+function removeInteriorOreDeposits(planets){
+  if(!planets) return;
+  Object.values(planets).forEach(pdata=>{
+    if(!pdata || !(pdata.isDerelict || pdata.isStrandedShip || pdata.isAncientStation ||
+      pdata.biome==='DERELICT' || pdata.biome==='ANCIENT_STATION')) return;
+    const floor = pdata.isAncientStation || pdata.biome==='ANCIENT_STATION' ? 'ancient_st_floor' : 'station_floor';
+    (pdata.grid||[]).forEach(row=>row?.forEach((cell,x)=>{
+      if(cell?.type==='MINERAL' || cell?.type==='MINERAL_SAMPLE') row[x]={type:cell._underFloor||floor};
+    }));
+  });
 }
 
 

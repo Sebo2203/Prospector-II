@@ -827,6 +827,40 @@ const DRAW = {
   },
 
   // -- Derelict station tiles --------------------------------------
+  casino_floor(c,x,y){
+    c.fillStyle='#10071c';c.fillRect(x,y,TS,TS);
+    c.fillStyle='#20102b';c.fillRect(x+1,y+1,TS-2,TS-2);
+    c.fillStyle='#3c1a4a';c.fillRect(x+2,y+2,TS-4,1);
+    c.fillStyle='#5d315e';c.fillRect(x+11,y+11,2,2);
+  },
+  casino_wall(c,x,y){
+    c.fillStyle='#0d0712';c.fillRect(x,y,TS,TS);
+    c.fillStyle='#321530';c.fillRect(x+1,y+1,TS-2,TS-2);
+    c.fillStyle='#6d2d6f';c.fillRect(x+2,y+3,TS-4,2);
+    c.fillStyle='#c39149';c.fillRect(x+2,y+18,TS-4,2);
+    c.fillStyle='#a765ae';c.fillRect(x+5,y+8,14,7);
+  },
+  casino_door(c,x,y){
+    DRAW.casino_floor(c,x,y);
+    c.fillStyle='#b27a39';c.fillRect(x+1,y+1,2,TS-2);c.fillRect(x+TS-3,y+1,2,TS-2);
+    c.fillStyle='#ffcf73';c.fillRect(x+3,y+2,TS-6,2);
+  },
+  casinoFixture(c,x,y,label,color){
+    DRAW.casino_floor(c,x,y);
+    c.fillStyle='#080810';c.fillRect(x+3,y+3,TS-6,TS-6);
+    c.strokeStyle=color;c.lineWidth=2;c.strokeRect(x+4,y+4,TS-8,TS-8);
+    c.fillStyle=color;c.font='bold 14px Courier New';c.textAlign='center';c.textBaseline='middle';
+    c.fillText(label,x+TS/2,y+TS/2+1);
+  },
+  casino_host(c,x,y){DRAW.casinoFixture(c,x,y,'H','#ffd36e');},
+  casino_info(c,x,y){DRAW.casinoFixture(c,x,y,'?','#69dcea');},
+  casino_poker(c,x,y){DRAW.casinoFixture(c,x,y,'♠','#eecd62');},
+  casino_bar(c,x,y){DRAW.casinoFixture(c,x,y,'B','#fa8ac4');},
+  casino_arena(c,x,y){DRAW.casinoFixture(c,x,y,'A','#f36d6d');},
+  casino_wrestle(c,x,y){DRAW.casinoFixture(c,x,y,'W','#e99b5d');},
+  casino_slots(c,x,y){DRAW.casinoFixture(c,x,y,'7','#74f09c');},
+  casino_locker(c,x,y){DRAW.casinoFixture(c,x,y,'L','#88a1b8');},
+  casino_console(c,x,y){DRAW.casinoFixture(c,x,y,'i','#69baf0');},
   station_floor(c,x,y){
     // Dark metal plating — slight grid texture from seeded variation
     c.fillStyle='#080d12'; c.fillRect(x,y,TS,TS);

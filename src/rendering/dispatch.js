@@ -55,7 +55,7 @@ function drawCanvas(){
     drawGalaxy();
     drawShipCombatOverlay();
   } else if(G.mode==='casino'){
-    drawGalaxy();
+    if(G.planets[G.curPlanet]?.isCasino) drawPlanet(); else drawGalaxy();
     drawCasinoOverlay();
   } else if(G.mode==='radio'){
     drawGalaxy();

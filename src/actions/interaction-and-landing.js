@@ -3,6 +3,9 @@
 // ─────────────────────────────────────────────────────────────────
 function doInteract(){
   if(G.dead||G.retired) return;
+  if(G.mode==='planet' && G.planets[G.curPlanet]?.isCasino){
+    casinoInteractAtPlayer(); renderAll(); return;
+  }
 
   // ── Galaxy → enter system or dock at base ──
   if(G.mode==='galaxy'){
@@ -110,10 +113,16 @@ function doInteract(){
       }
 
     } else if(cell.type==='CASINO'){
-      G.mode='casino';
+      const key='casino:'+G.ship.x+','+G.ship.y;
+      if(!G.planets[key]) generateCasinoStationMap(key);
+      G.mode='planet'; G.curPlanet=key; G.curSystem='';
+      G.player={x:5,y:10,hp:G.crew.filter(c=>c.hp>0)[0]?.hp||10};
       G.casino = { screen:'main', sel:0, arenaPhase:null, arenaEnemy:null, arenaLog:[], betSel:0 };
+      ensureCasinoState();
+      G.casinoStats.visits++;
+      revealPlanet(key,5,10);
       SFX.dock();
-      addLog('Docked at '+cell.name+'. Welcome to The Void Royale!','li');
+      addLog('Docked at '+cell.name+'. Walk the deck; Enter uses a table or machine.','li');
 
     } else if((G.npcStranded||[]).some(s=>s.x===G.ship.x&&s.y===G.ship.y)){
       const ns2 = G.npcStranded.find(s=>s.x===G.ship.x&&s.y===G.ship.y);

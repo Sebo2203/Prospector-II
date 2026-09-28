@@ -175,6 +175,12 @@ function renderContextBar(){
     const pdata = G.planets[G.curPlanet];
     const cell  = pdata?.grid[G.player.y][G.player.x];
     const atShip = cell?.type==='SHIP';
+    if(pdata?.isCasino){
+      const labels={casino_host:'Talk to host',casino_info:'Read directory',casino_poker:'Play Void Poker',
+        casino_bar:'Drinking contest',casino_arena:'Enter beast arena',casino_wrestle:'Arm wrestle',
+        casino_slots:'Spin slots (25 cr)',casino_locker:'Inspect locker',casino_console:'Use terminal'};
+      if(labels[cell?.type]) btns.push(btn('Enter',labels[cell.type],'good'));
+    }
     const civContact = civilizationContactTargetAtPlayer();
 
     if(atShip){
@@ -227,7 +233,7 @@ function renderContextBar(){
     if(cas.screen==='main'){
       btns.push(btn('Up/Down','Select','info'));
       btns.push(btn('Enter','Enter','good'));
-      btns.push(btn('ESC','Undock','info'));
+      btns.push(btn('ESC',G.planets[G.curPlanet]?.isCasino?'Return to floor':'Undock','info'));
     } else if(cas.screen==='poker'){
       if(cas.poker && cas.poker.phase==='hold') btns.push(btn('1-5','Hold cards','info'));
       btns.push(btn('Up/Down','Select','info'));

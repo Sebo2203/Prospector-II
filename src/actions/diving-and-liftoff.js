@@ -85,6 +85,7 @@ function doUnderwaterSurface(){
 function doRefillOxygen(){
   if(G.mode!=='planet') return;
   const cell=G.planets[G.curPlanet]?.grid[G.player.y][G.player.x];
+  const leavingCasino=!!G.planets[G.curPlanet]?.isCasino;
   if(cell?.type==='SHIP'){
     G.oxygen=100;
     G._oxyWarnedLow=false;
@@ -122,7 +123,7 @@ function doLiftOff(){
     G.rangeTarget = null;
     G._itemAimMode = null;
     SFX.liftoff();
-    addLog('Lifted off. Back in orbit.','lg');
+    addLog(leavingCasino ? 'Undocked from The Void Royale.' : 'Lifted off. Back in orbit.','lg');
   } else {
     addLog('Must return to ship (>) to lift off!','lw');
   }

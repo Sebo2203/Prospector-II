@@ -51,6 +51,35 @@ function ensureCasinoState(){
   if(!c.npcLine) c.npcLine = pick(CASINO_NPC_LINES);
   return c;
 }
+function casinoInteractAtPlayer(){
+  const tile=G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x]?.type;
+  const screens={casino_poker:'poker',casino_bar:'drink',casino_arena:'arena',casino_wrestle:'wrestle'};
+  if(screens[tile]){
+    const c=ensureCasinoState();
+    c.screen=screens[tile]; c.lastResult=null;
+    if(tile==='casino_arena'){c.arena=null;c.arenaPhase='choose';}
+    G.mode='casino'; return;
+  }
+  if(tile==='casino_slots'){
+    const stake=25;
+    if(!casinoSpend(stake)){addLog('Slots cost 25 cr. You need more credits.','lw');return;}
+    const symbols=['7','7','STAR','STAR','BELL','BELL','BELL','VOID','VOID','VOID'];
+    const roll=Array.from({length:3},()=>symbols[rnd(symbols.length)]);
+    const match=roll[0]===roll[1]&&roll[1]===roll[2];
+    const pair=roll[0]===roll[1]||roll[0]===roll[2]||roll[1]===roll[2];
+    const payout=match ? (roll[0]==='7'?500:roll[0]==='STAR'?200:roll[0]==='BELL'?100:75) : pair?25:0;
+    casinoLose(stake);
+    if(payout) casinoPay(payout);
+    addLog('Slots: '+roll.join(' | ')+' — '+(payout?'won '+payout+' cr!':'no payout.'),payout?'lg':'li');
+    return;
+  }
+  if(tile==='casino_host'){addLog('Host: "Welcome to The Void Royale. The tables are open all cycle."','li');return;}
+  if(tile==='casino_info'){addLog('Directory: poker north, bar south, arena northeast, wrestling southeast. Slots on the promenade.','li');return;}
+  if(tile==='casino_console'){addLog('House terminal: all tables operating. No outstanding alerts.','li');return;}
+  if(tile==='casino_locker'){addLog('Staff locker: access reserved for casino personnel.','li');return;}
+  if(tile==='SHIP'){addLog('Your ship is docked here. Press L to undock.','li');return;}
+  addLog('Music and voices carry through the station. Walk to a table and press Enter.','li');
+}
 function casinoCrew(){ return (G.crew||[]).filter(c=>c.hp>0); }
 function casinoBest(skill){
   const crew = casinoCrew();
@@ -257,6 +286,13 @@ function drawCasinoOverlay(){
 
 function handleCasinoKey(e){
   const c=ensureCasinoState();
+  if(e.key==='Escape' && G.planets[G.curPlanet]?.isCasino){
+    if(c.arena && !c.arena.result) return;
+    if(c.contest) casinoQuitContest();
+    if(c.poker?.phase==='hold') casinoLose(c.poker.stake);
+    c.poker=null;c.contest=null;c.arena=null;c.arenaPhase=null;c.screen='main';
+    G.mode='planet'; renderAll(); return;
+  }
   if(c.screen==='main'){ if(e.key==='ArrowUp'){c.sel=Math.max(0,c.sel-1);renderAll();return;} if(e.key==='ArrowDown'){c.sel=Math.min(CASINO_GAMES.length-1,c.sel+1);renderAll();return;} if(e.key==='Enter'){c.lastResult=null;if(c.sel===0){c.screen='poker';c.betSel=0;c.poker=null;} if(c.sel===1){c.screen='wrestle';c.wrestleSel=0;} if(c.sel===2){c.screen='drink';c.drinkSel=0;} if(c.sel===3){c.screen='arena';c.beastSel=0;c.arena=null;c.arenaPhase='choose';} renderAll();return;} if(e.key==='Escape'){G.mode='galaxy';addLog('Left The Void Royale. Session: +'+(c.sessionWon||0)+' / -'+(c.sessionLost||0)+' cr.','li');renderAll();return;} return; }
   if(c.screen==='poker'){ if(!c.poker){ if(e.key==='ArrowUp'){c.betSel=Math.max(0,c.betSel-1);renderAll();return;} if(e.key==='ArrowDown'){c.betSel=Math.min(CASINO_POKER_STAKES.length-1,c.betSel+1);renderAll();return;} if(e.key==='Enter'){casinoStartPoker();renderAll();return;} if(e.key==='Escape'){c.screen='main';c.sel=0;renderAll();return;} return; } if(c.poker.phase==='hold'){ if(['1','2','3','4','5'].includes(e.key)){const i=Number(e.key)-1;c.poker.hold[i]=!c.poker.hold[i];renderAll();return;} if(e.key==='Enter'){casinoFinishPoker();renderAll();return;} if(e.key==='Escape'){casinoLose(c.poker.stake);c.poker=null;c.screen='main';renderAll();return;} return; } if(e.key==='Enter'||e.key==='Escape'){c.poker=null;renderAll();return;} }
   if(c.screen==='wrestle'||c.screen==='drink'){

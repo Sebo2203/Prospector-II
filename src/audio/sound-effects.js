@@ -1,10 +1,7 @@
 // ─────────────────────────────────────────────────────────────────
 //  SOUND ENGINE  (Web Audio API — no files, fully offline)
 //
-//  Three sounds:
-//    SFX.land()   — landing on a planet (descending thud + rumble)
-//    SFX.liftoff()— lifting off        (rising engine roar)
-//    SFX.dock()   — docking at base    (soft chime sequence)
+//  Short synthesized cues for ship actions, hazards, and crew damage.
 //
 //  AudioContext is created on first user interaction to comply with
 //  browser autoplay policy — it will silently skip until then.
@@ -88,6 +85,32 @@ const SFX = (() => {
         osc('sine', 523, 0.22, 0,    t,        0.4);   // C5
         osc('sine', 784, 0.18, 0,    t + 0.22, 0.5);   // G5
         osc('sine', 261, 0.12, 0,    t + 0.5,  0.6);   // C4
+      } catch(e) {}
+    },
+
+    // Refueling: valve click, a rising pump, then a full-tank confirmation.
+    refuel() {
+      try {
+        const c = ctx();
+        const t = c.currentTime;
+        oscRamp('square', 240, 110, 0.08, t, 0.07);
+        oscRamp('sawtooth', 75, 180, 0.10, t + 0.07, 0.48);
+        oscRamp('sine', 95, 150, 0.14, t + 0.10, 0.48);
+        osc('sine', 660, 0.12, 0, t + 0.53, 0.17);
+        osc('sine', 880, 0.10, 0, t + 0.66, 0.22);
+      } catch(e) {}
+    },
+
+    // Hull repair: brief tool taps and welding buzz, resolved by a low chime.
+    repair() {
+      try {
+        const c = ctx();
+        const t = c.currentTime;
+        oscRamp('square', 540, 190, 0.11, t, 0.08);
+        oscRamp('sawtooth', 310, 150, 0.09, t + 0.10, 0.18);
+        oscRamp('square', 480, 170, 0.09, t + 0.32, 0.07);
+        oscRamp('sawtooth', 290, 130, 0.08, t + 0.41, 0.17);
+        osc('sine', 392, 0.13, 0, t + 0.56, 0.30);
       } catch(e) {}
     },
 

@@ -41,7 +41,7 @@ function doStrandedWait(){
   tickNpcStranded();
 
   // SOS makes pirates in range more aggressive (treat as if distance halved)
-  if(st.sos){
+  if(st.sos && !DEBUG.shipInvisible){
     const aggressivePirate = G.pirates.find(p=>{
       if(!p.alive) return false;
       const dist = Math.abs(p.x-G.ship.x)+Math.abs(p.y-G.ship.y);
@@ -57,7 +57,7 @@ function doStrandedWait(){
 
   // Check if any pirate has reached our tile → combat even stranded
   const pirateArrived = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-  if(pirateArrived){
+  if(pirateArrived && !DEBUG.shipInvisible){
     addLog(pirateArrived.name+' closes in on your disabled ship!','lc');
     G.stranded = null;
     startShipCombat(pirateArrived);

@@ -47,6 +47,7 @@
     "src/world/hostile-creatures.js",
     "src/world/special-planets.js",
     "src/world/ancient-and-derelict-sites.js",
+    "src/world/casino-station.js",
     "src/world/planet-generation.js",
     "src/world/visibility-and-daylight.js",
     "src/world/exploration-and-trails.js",

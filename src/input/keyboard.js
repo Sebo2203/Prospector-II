@@ -290,6 +290,7 @@ document.addEventListener('keydown', e=>{
       }
       if(e.key==='4'){ DEBUG.infiniteOxy = !DEBUG.infiniteOxy; renderAll(); return; }
       if(e.key==='7'){ DEBUG.infiniteCrewHp = !DEBUG.infiniteCrewHp; debugRestoreCrewHp(); addLog('DEBUG: Infinite crew HP '+(DEBUG.infiniteCrewHp?'ON':'OFF')+'.','lw'); renderAll(); return; }
+      if(e.key==='8'){ DEBUG.shipInvisible = !DEBUG.shipInvisible; addLog('DEBUG: Invisible to enemy ships '+(DEBUG.shipInvisible?'ON':'OFF')+'.','lw'); renderAll(); return; }
       if(e.key==='9'){
         DEBUG.preScan = ((DEBUG.preScan||0) + 1) % 3;
         const _scanLabels = ['Pre-scan debug spawned planets','Pre-scan all planets (even non-debug)','Scan no planets'];
@@ -1242,6 +1243,7 @@ document.addEventListener('keydown', e=>{
           if(item?.usable==='repair_kit'){
             if(G.ship.hp >= G.ship.maxHp){ addLog('Ship hull is already at full integrity.','li'); renderAll(); return; }
             G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 15);
+            SFX.repair();
             G.inventory.splice(G._viewInvSel||0, 1);
             G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
             addLog('Repair Kit applied. Ship hull +15 HP.','lg');

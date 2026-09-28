@@ -224,7 +224,7 @@ function movePirates(){
       })();
 
       // Pursuit cap: roamers give up after 10 consecutive chase turns
-      if(distToPlayer<=10 && !nearBase){
+      if(!DEBUG.shipInvisible && distToPlayer<=10 && !nearBase){
         p._chaseTurns = (p._chaseTurns||0) + 1;
         if(p._chaseTurns <= 10){
           tx=G.ship.x; ty=G.ship.y;
@@ -247,7 +247,7 @@ function movePirates(){
     } else {
       // Guard: patrol near home base, chase if player gets close
       const distToHome = Math.abs(p.x-p.homeX)+Math.abs(p.y-p.homeY);
-      if(distToPlayer<=6 && distToHome<=10){
+      if(!DEBUG.shipInvisible && distToPlayer<=6 && distToHome<=10){
         tx=G.ship.x; ty=G.ship.y;
         isChasing = true;
       } else {

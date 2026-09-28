@@ -452,6 +452,7 @@ function drawDebugOverlay(){
     { key:'3', label:'Full Vision',             val: DEBUG.fullVision      },
     { key:'4', label:'Infinite O2',             val: DEBUG.infiniteOxy     },
     { key:'7', label:'Infinite Crew HP',        val: DEBUG.infiniteCrewHp  },
+    { key:'8', label:'Invisible to enemy ships', val: DEBUG.shipInvisible   },
     { key:'9', label:['Pre-scan debug planets','Pre-scan all planets','Scan no planets'][DEBUG.preScan||0], val: DEBUG.preScan !== 2 },
     { key:'0', label:'FPS Counter',             val: DEBUG.showFPS         },
   ];

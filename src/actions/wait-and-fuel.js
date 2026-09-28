@@ -25,6 +25,7 @@ function doFuelScoop(context){
     if(Math.random() < 0.55){
       const gained = 5 + rnd(10);
       G.fuel = Math.min(G.maxFuel, G.fuel + gained);
+      SFX.refuel();
       addLog('Fuel Scoop harvests '+gained+' units of hydrogen from nebula gas.','lg');
     } else {
       addLog('Fuel Scoop cycling — not enough hydrogen density here. Try again.','li');
@@ -38,6 +39,7 @@ function doFuelScoop(context){
     if(Math.random() < 0.80){
       const gained = 15 + rnd(20);
       G.fuel = Math.min(G.maxFuel, G.fuel + gained);
+      SFX.refuel();
       addLog('Fuel Scoop skims the upper atmosphere. +'+gained+' fuel harvested.','lg');
     } else {
       addLog('Atmospheric turbulence — scoop aborted.','lw');
@@ -99,9 +101,9 @@ function doWaitGalaxy(){
   moveGasEntities();
   tickNpcStranded();
   const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-  if(pirateHere){ startShipCombat(pirateHere); return; }
+  if(pirateHere && !DEBUG.shipInvisible){ startShipCombat(pirateHere); return; }
   const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===G.ship.x&&ns.y===G.ship.y);
-  if(hostilePatrolHere){ startShipCombat(ensureNeutralCombatStats(hostilePatrolHere)); return; }
+  if(hostilePatrolHere && !DEBUG.shipInvisible){ startShipCombat(ensureNeutralCombatStats(hostilePatrolHere)); return; }
   renderAll();
 }
 

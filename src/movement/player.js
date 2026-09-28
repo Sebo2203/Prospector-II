@@ -213,12 +213,12 @@ function tryMove(dx,dy,confirmed){
 
     // Check if we moved onto a pirate tile ? forced combat
     const pirateHere = G.pirates.find(p=>p.alive&&p.x===nx&&p.y===ny);
-    if(pirateHere){
+    if(pirateHere && !DEBUG.shipInvisible){
       startShipCombat(pirateHere);
       return;
     }
     const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===nx&&ns.y===ny);
-    if(hostilePatrolHere){
+    if(hostilePatrolHere && !DEBUG.shipInvisible){
       startShipCombat(ensureNeutralCombatStats(hostilePatrolHere));
       return;
     }
@@ -228,7 +228,7 @@ function tryMove(dx,dy,confirmed){
 
     // Warn if pirate adjacent
     const pirateNear = G.pirates.find(p=>p.alive && Math.abs(p.x-nx)<=1 && Math.abs(p.y-ny)<=1);
-    if(pirateNear) addLog('WARNING: Pirate vessel nearby — '+pirateNear.name+'!','lw');
+    if(pirateNear && !DEBUG.shipInvisible) addLog('WARNING: Pirate vessel nearby — '+pirateNear.name+'!','lw');
   }
 
   // -- Planet --------------------------------------------------
