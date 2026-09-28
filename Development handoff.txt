@@ -1,0 +1,15 @@
+Prospector II — development handoff
+28 September 2026
+
+Use the dev-build branch for ongoing work. The public main branch and its download are separate. The current game is built from the modular files in src/; index.html is generated from them.
+
+Recent work is recorded in Changelog Prospector II.txt. The casino is now a walkable station with poker, drinking, wrestling, a beast arena, and slot machines. A visibility bug that initially made its floor and walls black has been fixed and passes an automated reveal test. That last fix still needs a fresh-run playtest.
+
+To continue on another Windows computer:
+1. Clone the repository and check out dev-build.
+2. Install Node.js 22 or newer. From the repository folder, run npm run build and npm test.
+3. Open index.html to play the browser build. For a desktop build, install Rust and the Tauri Windows prerequisites, then run npm install and npm run build from desktop/. The portable executable is desktop/src-tauri/target/release/prospector-ii-desktop.exe.
+
+The desktop wrapper source is in desktop/. Generated files, dependencies, installers, and local playtest executables are not part of this branch. The version label in the personal changelog is 0.27.1; package and desktop build metadata still say 0.26.0.
+
+Next: playtest the casino's visibility, room access, games, and return to the ship on a fresh run. Keep later gameplay changes local until they have been playtested and cleared for upload.

@@ -1,0 +1,16 @@
+[package]
+name = "prospector-ii-desktop"
+version = "0.26.0"
+description = "Fullscreen desktop wrapper for Prospector II"
+authors = ["Sebastian"]
+edition = "2021"
+
+[lib]
+name = "prospector_ii_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
