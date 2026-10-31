@@ -104,6 +104,8 @@ function doInteract(){
           }));
           addLog('Secured data box delivered to '+cell.name+'. +' + reward + ' cr.','lg');
           if(!(sj.completedTypes||[]).includes(sj.active.type)) sj.completedTypes.push(sj.active.type);
+          sj.lastType=sj.active.type;
+          recordExpeditionEvent((sj.active.id||'science:legacy:'+sj.completed)+':complete','contract','Delivered secured data to '+cell.name+'. Earned '+reward+' cr.');
           sj.active = null;
           sj.cooldownUntil = G.turn + rollScienceJobCooldown();
           sj.completed = (sj.completed||0) + 1;

@@ -1442,7 +1442,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag">v0.28 experimental.3</div>
+  <div id="version-tag">v0.28 experimental.4</div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -5186,6 +5186,19 @@ function currentLogRecords(){
   const state=ensureExpeditionState(),rows=[];
   const add=msg=>rows.push({msg,turn:G.turn,cls:'li'});
   add('CURRENT RECORDS — Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
+  const science=ensureScienceJobState();
+  if(science.active){
+    const job=science.active;
+    add('SCIENCE CONTRACT: '+scienceJobDetail()+'.');
+    if(job.target?.reportedX!==undefined) add('Last reported sector: '+(job.target.reportedX+1)+','+(job.target.reportedY+1)+'. Position may have drifted.');
+    if(job.targetStation) add('Delivery destination: '+job.targetStation+'.');
+    if(job.target?.planetName) add('Reported world: '+job.target.planetName+' in '+job.target.systemName+'.');
+    if(job.required){
+      const name=job.type==='biodata'?'Biodata Sample':'Alien Corpse';
+      add('Required specimens: '+countInventoryByName(name)+' / '+job.required+'.');
+    }
+    add('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
+  } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
   const incident=state.quarantine;
   if(incident){
     add('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
@@ -5622,6 +5635,15 @@ function spawnNpcStrandedShip(){
   G.npcStranded.push(ship);
   // Mark galaxy tile with a special flag so it draws
   G.galaxy[sy][sx]._npcStranded = ship;
+}
+
+function restoreStrandedShipMarkers(){
+  if(!G?.galaxy) return;
+  for(const row of G.galaxy) for(const cell of row) if(cell._npcStranded) delete cell._npcStranded;
+  for(const ship of G.npcStranded||[]){
+    const cell=G.galaxy[ship.y]?.[ship.x];
+    if(cell) cell._npcStranded=ship;
+  }
 }
 
 function tickNpcStranded(){
@@ -15441,7 +15463,7 @@ const STATION_BUILDINGS = [
     desc: 'Sell samples, pick up missions',
     col: '#88ffaa',
     actions: () => {
-      const cargo = G.inventory.filter(i=>i.value>0 && !i.isCapturedCreature);
+      const cargo = scienceSaleItems();
       const total = cargo.reduce((s,i)=>s+(i.value||0),0);
       const surveyTotal = getPendingSurveySaleValue();
       const grandTotal = total + surveyTotal;
@@ -15516,6 +15538,7 @@ const STATION_BUILDINGS = [
         { label: 'Browse '+(corp?.name||'Corp')+' Store', detail: 'exclusive equipment & tech', id:'science_corp_sub' },
         { label: 'File for retirement', detail: G.credits+' cr — end your career here', id:'retire' },
       ];
+      if(jobState.active) actions.splice(2,0,{label:'Relinquish research contract',detail:'No reward; returned cargo and normal cooldown apply',id:'science_abandon'});
       if(isMargo && capturedSpecimens.length > 0){
         actions.splice(1, 0, { label: 'Sell captured specimens ('+capturedSpecimens.length+')', detail: capturedSpecimens.reduce((s,c)=>s+c.bounty,0)+' cr total — live specimen bounties', id:'sell_specimens' });
       } else if(isMargo && capturedSpecimens.length === 0){
@@ -15956,13 +15979,22 @@ function ensureScienceJobState(){
   if(G.scienceJob.nextIndex === undefined) G.scienceJob.nextIndex = 0;
   if(G.scienceJob.completed === undefined) G.scienceJob.completed = 0;
   if(!Array.isArray(G.scienceJob.completedTypes)) G.scienceJob.completedTypes = [];
+  if(!Array.isArray(G.scienceJob.reportedCivilizations)) G.scienceJob.reportedCivilizations = [];
+  if(!G.scienceJob.serial) G.scienceJob.serial = 0;
   return G.scienceJob;
 }
 
 function remainingScienceJobTypes(){
   const state = ensureScienceJobState();
   const done = new Set(state.completedTypes || []);
-  return SCIENCE_JOB_TYPES.filter(type => !done.has(type));
+  const eligible=SCIENCE_JOB_TYPES.filter(type=>{
+    if(type==='data_box') return (G.shipStats?.cargoCapacity||0)>(G.cargo||[]).length;
+    if(type==='artifact') return G.galaxy?.some(row=>row.some(cell=>cell.type==='SYSTEM' && cell.planets?.some(p=>p.biome==='ANCIENT')));
+    return true;
+  });
+  const different=eligible.filter(type=>type!==state.lastType);
+  const pool=different.length?different:eligible;
+  return [...pool.filter(type=>!done.has(type)),...pool.filter(type=>done.has(type))];
 }
 
 function scienceJobName(job){
@@ -16009,24 +16041,25 @@ function findScienceJobPlanet(filterFn){
 }
 
 function findScienceJobVoidTile(){
-  let sx, sy, t=0;
-  do {
-    sx = 5+rnd(MAP_W-10); sy = 3+rnd(MAP_H-8); t++;
-  } while(t<500 && (
-    G.galaxy[sy][sx].type !== 'VOID' ||
-    Math.abs(sx-G.ship.x)+Math.abs(sy-G.ship.y) < 10 ||
-    (G.npcStranded||[]).some(s=>Math.abs(s.x-sx)+Math.abs(s.y-sy)<5)
-  ));
-  return t>=500 ? null : { x:sx, y:sy };
+  const candidates=[],range=Math.min(30,Math.max(10,Math.floor(G.maxFuel/3)));
+  for(let y=Math.max(1,G.ship.y-range);y<Math.min(MAP_H-1,G.ship.y+range+1);y++){
+    for(let x=Math.max(1,G.ship.x-range);x<Math.min(MAP_W-1,G.ship.x+range+1);x++){
+      const distance=Math.abs(x-G.ship.x)+Math.abs(y-G.ship.y);
+      if(distance<8 || distance>range || G.galaxy[y][x].type!=='VOID' || G.galaxy[y][x]._npcStranded) continue;
+      if((G.npcStranded||[]).some(s=>Math.abs(s.x-x)+Math.abs(s.y-y)<5)) continue;
+      candidates.push({x,y});
+    }
+  }
+  return candidates.length?candidates[rnd(candidates.length)]:null;
 }
 
 function scienceJobDetail(){
   const state = ensureScienceJobState();
   const job = state.active;
-  if(job) return scienceJobName(job)+' — '+(job.status || 'in progress');
+  if(job) return scienceJobName(job)+' — '+(job.status || 'in progress')+' — '+job.reward+' cr';
   const remaining = remainingScienceJobTypes();
   if(!remaining.length) return 'No remaining field contracts';
-  if(G.turn < state.cooldownUntil) return 'No field work available right now';
+  if(G.turn < state.cooldownUntil) return 'New field work in '+(state.cooldownUntil-G.turn)+' turns';
   const nextType = remaining[state.nextIndex % remaining.length];
   return 'Available: '+scienceJobName({type:nextType});
 }
@@ -16047,7 +16080,7 @@ function startScienceJob(){
     return false;
   }
   const type = remaining[state.nextIndex % remaining.length];
-  let job = { type, startedTurn:G.turn, reward:0, status:'in progress' };
+  let job = { type, id:'science:'+(state.serial+1), startedTurn:G.turn, reward:0, status:'in progress' };
 
   if(type === 'artifact'){
     // Artifact contracts must point at a real ancient world: normal planet generation
@@ -16067,7 +16100,7 @@ function startScienceJob(){
     const spot = findScienceJobVoidTile();
     if(!spot){ addLog('No suitable search area found for a lost research ship. Try later.','lw'); return false; }
     const name = 'RSV '+pick(['Kepler','Aster','Tsiolkovsky','Curie','Mendel','Sagan']);
-    const mapKey = spot.x+','+spot.y+':research';
+    const mapKey = spot.x+','+spot.y+':research:'+job.id;
     const ship = { x:spot.x, y:spot.y, type:'research', name, mapKey, age:0, noSos:true, scienceJob:true };
     if(!G.npcStranded) G.npcStranded = [];
     G.npcStranded.push(ship);
@@ -16087,12 +16120,12 @@ function startScienceJob(){
     job.status = 'retrieve research data';
     addLog('Science contract accepted: find the lost research ship '+name+'.','lg');
     if(driftMag === 0){
-      addLog('Last fix: sector '+reportedX+','+reportedY+'. Signal was clean — position should be reliable. No SOS beacon detected.','li');
+      addLog('Last fix: sector '+(reportedX+1)+','+(reportedY+1)+'. Signal was clean — position should be reliable. No SOS beacon detected.','li');
     } else if(driftMag <= 2){
-      addLog('Last fix: sector '+reportedX+','+reportedY+' — ship was underway when signal cut out. Drift likely minor.','li');
+      addLog('Last fix: sector '+(reportedX+1)+','+(reportedY+1)+' — ship was underway when signal cut out. Drift likely minor.','li');
       addLog('No SOS beacon detected. Check the reported sector and nearby tiles.','lw');
     } else {
-      addLog('Last fix: sector '+reportedX+','+reportedY+' — but the beacon died mid-transit. Position confidence is low.','li');
+      addLog('Last fix: sector '+(reportedX+1)+','+(reportedY+1)+' — but the beacon died mid-transit. Position confidence is low.','li');
       addLog('No SOS beacon detected. Conduct a wider search around the reported coordinates.','lw');
     }
   } else if(type === 'civilization'){
@@ -16124,7 +16157,9 @@ function startScienceJob(){
   }
 
   state.active = job;
+  state.serial++;
   state.nextIndex = remaining.length > 1 ? rnd(remaining.length) : 0;
+  recordExpeditionEvent(job.id+':accepted','contract','Accepted '+scienceJobName(job)+'. '+job.reward+' cr on completion.');
   trackEvent('science_job_taken', analyticsBaseParams({
     job_type: job.type,
     reward: job.reward || 0,
@@ -16134,6 +16169,29 @@ function startScienceJob(){
 
 function countInventoryByName(name){
   return (G.inventory||[]).filter(i=>i.name === name).length;
+}
+
+function scienceSaleItems(){
+  const reserved=scienceJobReservedItemNames(ensureScienceJobState().active);
+  return (G.inventory||[]).filter(item=>(item.value||0)>0 && !item.usable && !item.questItem &&
+    !item.isCapturedCreature && !reserved.has(item.name));
+}
+
+function closeResearchShipContract(job){
+  if(job?.type!=='research_ship') return;
+  const ship=(G.npcStranded||[]).find(s=>s.mapKey===job.target?.mapKey);
+  if(ship){ship.type='dead';ship.boarded=true;ship.boardedAge=0;ship.scienceJob=false;}
+}
+
+function abandonScienceJob(){
+  const state=ensureScienceJobState(),job=state.active;
+  if(!job) return false;
+  closeResearchShipContract(job);
+  if(job.type==='data_box') G.cargo=G.cargo.filter(item=>item.questItem!=='science_data_box');
+  state.active=null;state.lastType=job.type;state.cooldownUntil=G.turn+rollScienceJobCooldown();
+  recordExpeditionEvent((job.id||'science:legacy:'+state.completed)+':abandoned','contract','Relinquished '+scienceJobName(job)+' at the Science Office. No payment received.');
+  addLog('Contract relinquished. No payment received; replacement work follows the usual cooldown.','li');
+  return true;
 }
 
 function removeInventoryByName(name, count){
@@ -16165,15 +16223,17 @@ function completeScienceJob(){
     done = removeInventoryByName('Ancient Artifact', 1);
     if(!done) addLog('Science Office still needs an ancient artifact.','li');
   } else if(job.type === 'research_ship'){
-    done = removeInventoryByName('Research Ship Data', 1);
+    const index=G.inventory.findIndex(item=>item.name==='Research Ship Data' && (!job.id || item.scienceJobId===job.id));
+    if(index>=0){G.inventory.splice(index,1);done=true;}
     if(!done) addLog('Science Office still needs the lost ship data.','li');
   } else if(job.type === 'civilization'){
-    const civSurvey = Object.values(G.planets||{}).find(p=>p.civilization && p.visited?.some(Boolean) && getSurveySaleValue(p) > (p.surveySoldValue||0));
+    const civSurvey = Object.entries(G.planets||{}).find(([key,p])=>p.civilization &&
+      !state.reportedCivilizations.includes(key) && p.visited?.some(Boolean) && getSurveySaleValue(p)>0);
     if(civSurvey){
-      civSurvey.surveySoldValue = getSurveySaleValue(civSurvey);
+      state.reportedCivilizations.push(civSurvey[0]);
       done = true;
     } else {
-      addLog('Science Office needs unsold survey data from an intelligent civilization.','li');
+      addLog('Science Office needs documented survey data from a civilization not already reported under a contract.','li');
     }
   } else if(job.type === 'alien_corpses'){
     done = removeInventoryByName('Alien Corpse', job.required || 5);
@@ -16195,6 +16255,9 @@ function completeScienceJob(){
     mission_turns: Math.max(0, (G.turn || 0) - (job.startedTurn || 0)),
   }));
   if(!(state.completedTypes||[]).includes(job.type)) state.completedTypes.push(job.type);
+  state.lastType=job.type;
+  closeResearchShipContract(job);
+  recordExpeditionEvent((job.id||'science:legacy:'+state.completed)+':complete','contract','Completed '+scienceJobName(job)+'. Earned '+(job.reward||0)+' cr.');
   state.active = null;
   state.cooldownUntil = G.turn + rollScienceJobCooldown();
   state.completed = (state.completed||0) + 1;
@@ -16239,7 +16302,7 @@ function seedResearchShipJobMap(mapKey){
   }
   const consoleTile = takeFloor();
   if(consoleTile){
-    pdata.grid[consoleTile.y][consoleTile.x] = { type:'station_console', scienceJobData:true };
+    pdata.grid[consoleTile.y][consoleTile.x] = { type:'station_console', scienceJobData:true, scienceJobId:job.id };
   }
   G.enemies[mapKey] = G.enemies[mapKey] || [];
   for(let i=0;i<3 && floors.length;i++){
@@ -28600,7 +28663,7 @@ function tryMove(dx,dy,confirmed){
         cell.looted = true;
         const isRingworldConsole = !!G.planets[G.curPlanet]?.isRingworld;
         if(cell.scienceJobData){
-          G.inventory.push({name:'Research Ship Data',col:'#66ccff',desc:'Lost Science Office field data',value:0});
+          G.inventory.push({name:'Research Ship Data',col:'#66ccff',desc:'Lost Science Office field data',value:0,scienceJobId:cell.scienceJobId});
           trackPlanetDiscoveryOnce(G.curPlanet, 'research_data', 'research_ship_data_found', {
             biome: biomeKey || 'DERELICT',
           });
@@ -30527,6 +30590,8 @@ function doInteract(){
           }));
           addLog('Secured data box delivered to '+cell.name+'. +' + reward + ' cr.','lg');
           if(!(sj.completedTypes||[]).includes(sj.active.type)) sj.completedTypes.push(sj.active.type);
+          sj.lastType=sj.active.type;
+          recordExpeditionEvent((sj.active.id||'science:legacy:'+sj.completed)+':complete','contract','Delivered secured data to '+cell.name+'. Earned '+reward+' cr.');
           sj.active = null;
           sj.cooldownUntil = G.turn + rollScienceJobCooldown();
           sj.completed = (sj.completed||0) + 1;
@@ -30800,14 +30865,15 @@ function getScanCoverage(mask){
 }
 
 function getSurveySaleValue(pdata){
-  if(!pdata) return 0;
+  if(!pdata || pdata.isDerelict || pdata.isAncientStation || pdata.isCasino || pdata.isQuarantine ||
+    ['DERELICT','ANCIENT_STATION','CASINO'].includes(pdata.biome)) return 0;
   const scanMask = pdata.scanMask || [];
   const explored = pdata.explored || [];
   let scannedTiles = 0;
   let exploredTiles = 0;
   const len = Math.max(scanMask.length, explored.length);
   for(let i=0;i<len;i++){
-    if(scanMask[i]) scannedTiles++;
+    if(scanMask[i] || explored[i]) scannedTiles++;
     if(explored[i]) exploredTiles++;
   }
   const scanOnlyTiles = Math.max(0, scannedTiles - exploredTiles);
@@ -30826,16 +30892,14 @@ function getSurveyPayoutBreakdown(){
     let exploredTiles = 0;
     const len = Math.max(scanMask.length, explored.length);
     for(let i=0;i<len;i++){
-      if(scanMask[i]) scannedTiles++;
+      if(scanMask[i] || explored[i]) scannedTiles++;
       if(explored[i]) exploredTiles++;
     }
-    const scanOnlyTiles = Math.max(0, scannedTiles - exploredTiles);
-    const baseValue = Math.floor(scanOnlyTiles * SURVEY_SCAN_TILE_VALUE + exploredTiles * SURVEY_EXPLORE_TILE_VALUE);
     const full = scannedTiles >= PW(pdata) * PH(pdata);
-    const currentValue = full ? baseValue + SURVEY_FULL_SCAN_BONUS : baseValue;
+    const currentValue = getSurveySaleValue(pdata);
     const soldValue = pdata.surveySoldValue || 0;
     if(currentValue > soldValue) pending += currentValue - soldValue;
-    if(full && soldValue < currentValue){
+    if(full && currentValue>0 && soldValue < currentValue){
       const bodyName = findBodyNameByKey(pKey);
       if(bodyName) fullBonusBodies.push(bodyName);
     }
@@ -31463,12 +31527,11 @@ function executeBaseAction(actionId){
     case 'sell':{
       // Science Office: samples and survey data only — bulk cargo goes to Market
       const activeScienceJob = ensureScienceJobState().active;
-      const reservedNames = scienceJobReservedItemNames(activeScienceJob);
+      const sellableItems = scienceSaleItems();
       let missionCompleted = false;
       if(activeScienceJob && activeScienceJob.type !== 'data_box'){
         missionCompleted = completeScienceJob();
       }
-      const sellableItems = (G.inventory||[]).filter(i=>!reservedNames.has(i.name) && (i.value||0) > 0 && !i.isCapturedCreature);
       const sold=sellableItems.reduce((s,i)=>s+(i.value||0),0);
       const surveyInfo = getSurveyPayoutBreakdown();
       const surveySold = surveyInfo.pending;
@@ -31476,7 +31539,7 @@ function executeBaseAction(actionId){
         Object.values(G.planets || {}).forEach(pdata=>{
           pdata.surveySoldValue = getSurveySaleValue(pdata);
         });
-        G.credits+=surveySold;
+        earnCredits(surveySold);
         trackEvent('survey_data_sold', analyticsBaseParams({
           survey_value: surveySold,
           full_survey_bodies: surveyInfo.fullBonusBodies.length,
@@ -31489,7 +31552,7 @@ function executeBaseAction(actionId){
         }
       }
       if(sold>0){
-        G.credits+=sold;
+        earnCredits(sold);
         const soldSet = new Set(sellableItems);
         G.inventory = (G.inventory||[]).filter(i=>!soldSet.has(i));
         addLog('Sold samples for '+sold+' cr.','ll');
@@ -31512,6 +31575,9 @@ function executeBaseAction(actionId){
       break;}
     case 'science_job':
       startScienceJob();
+      break;
+    case 'science_abandon':
+      abandonScienceJob();
       break;
     case 'retire':
       G.base.confirm = 'retire';
@@ -31573,7 +31639,7 @@ function executeBaseAction(actionId){
         mGrand+=rev;
       });
       G.cargo=G.cargo.filter(i=>!i.isCommodity);
-      G.credits+=mGrand;
+      earnCredits(mGrand);
       addLog('Total received: '+mGrand+' cr.','lg');
       if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       break;}
@@ -33872,6 +33938,7 @@ function loadFromFile(){
         G = loaded;
         delete G._expeditionPanel; // retire the obsolete standalone UI flag
         ensureExpeditionState();
+        restoreStrandedShipMarkers();
         removeInteriorOreDeposits(G.planets);
         ensureCrewStatusState();
         addLog('Save file loaded. Welcome back, Captain.','lg');
@@ -33894,6 +33961,7 @@ function loadFromStorage(){
     G = loaded;
     delete G._expeditionPanel;
     ensureExpeditionState();
+    restoreStrandedShipMarkers();
     removeInteriorOreDeposits(G.planets);
     // Back-compat: old saves won't have shipStats or cargo
     if(!G.shipStats) G.shipStats = buildShipStats('LIGHT_SCOUT');
@@ -34374,7 +34442,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.28 experimental.3  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental.4  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {

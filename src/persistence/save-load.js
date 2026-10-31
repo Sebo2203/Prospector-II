@@ -67,6 +67,7 @@ function loadFromFile(){
         G = loaded;
         delete G._expeditionPanel; // retire the obsolete standalone UI flag
         ensureExpeditionState();
+        restoreStrandedShipMarkers();
         removeInteriorOreDeposits(G.planets);
         ensureCrewStatusState();
         addLog('Save file loaded. Welcome back, Captain.','lg');
@@ -89,6 +90,7 @@ function loadFromStorage(){
     G = loaded;
     delete G._expeditionPanel;
     ensureExpeditionState();
+    restoreStrandedShipMarkers();
     removeInteriorOreDeposits(G.planets);
     // Back-compat: old saves won't have shipStats or cargo
     if(!G.shipStats) G.shipStats = buildShipStats('LIGHT_SCOUT');

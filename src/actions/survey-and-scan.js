@@ -52,14 +52,15 @@ function getScanCoverage(mask){
 }
 
 function getSurveySaleValue(pdata){
-  if(!pdata) return 0;
+  if(!pdata || pdata.isDerelict || pdata.isAncientStation || pdata.isCasino || pdata.isQuarantine ||
+    ['DERELICT','ANCIENT_STATION','CASINO'].includes(pdata.biome)) return 0;
   const scanMask = pdata.scanMask || [];
   const explored = pdata.explored || [];
   let scannedTiles = 0;
   let exploredTiles = 0;
   const len = Math.max(scanMask.length, explored.length);
   for(let i=0;i<len;i++){
-    if(scanMask[i]) scannedTiles++;
+    if(scanMask[i] || explored[i]) scannedTiles++;
     if(explored[i]) exploredTiles++;
   }
   const scanOnlyTiles = Math.max(0, scannedTiles - exploredTiles);
@@ -78,16 +79,14 @@ function getSurveyPayoutBreakdown(){
     let exploredTiles = 0;
     const len = Math.max(scanMask.length, explored.length);
     for(let i=0;i<len;i++){
-      if(scanMask[i]) scannedTiles++;
+      if(scanMask[i] || explored[i]) scannedTiles++;
       if(explored[i]) exploredTiles++;
     }
-    const scanOnlyTiles = Math.max(0, scannedTiles - exploredTiles);
-    const baseValue = Math.floor(scanOnlyTiles * SURVEY_SCAN_TILE_VALUE + exploredTiles * SURVEY_EXPLORE_TILE_VALUE);
     const full = scannedTiles >= PW(pdata) * PH(pdata);
-    const currentValue = full ? baseValue + SURVEY_FULL_SCAN_BONUS : baseValue;
+    const currentValue = getSurveySaleValue(pdata);
     const soldValue = pdata.surveySoldValue || 0;
     if(currentValue > soldValue) pending += currentValue - soldValue;
-    if(full && soldValue < currentValue){
+    if(full && currentValue>0 && soldValue < currentValue){
       const bodyName = findBodyNameByKey(pKey);
       if(bodyName) fullBonusBodies.push(bodyName);
     }

@@ -35,6 +35,15 @@ function spawnNpcStrandedShip(){
   G.galaxy[sy][sx]._npcStranded = ship;
 }
 
+function restoreStrandedShipMarkers(){
+  if(!G?.galaxy) return;
+  for(const row of G.galaxy) for(const cell of row) if(cell._npcStranded) delete cell._npcStranded;
+  for(const ship of G.npcStranded||[]){
+    const cell=G.galaxy[ship.y]?.[ship.x];
+    if(cell) cell._npcStranded=ship;
+  }
+}
+
 function tickNpcStranded(){
   if(!G.npcStranded) return;
   G.npcStranded = G.npcStranded.filter(s=>{

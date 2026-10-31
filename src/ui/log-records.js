@@ -16,6 +16,19 @@ function currentLogRecords(){
   const state=ensureExpeditionState(),rows=[];
   const add=msg=>rows.push({msg,turn:G.turn,cls:'li'});
   add('CURRENT RECORDS — Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
+  const science=ensureScienceJobState();
+  if(science.active){
+    const job=science.active;
+    add('SCIENCE CONTRACT: '+scienceJobDetail()+'.');
+    if(job.target?.reportedX!==undefined) add('Last reported sector: '+(job.target.reportedX+1)+','+(job.target.reportedY+1)+'. Position may have drifted.');
+    if(job.targetStation) add('Delivery destination: '+job.targetStation+'.');
+    if(job.target?.planetName) add('Reported world: '+job.target.planetName+' in '+job.target.systemName+'.');
+    if(job.required){
+      const name=job.type==='biodata'?'Biodata Sample':'Alien Corpse';
+      add('Required specimens: '+countInventoryByName(name)+' / '+job.required+'.');
+    }
+    add('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
+  } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
   const incident=state.quarantine;
   if(incident){
     add('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?

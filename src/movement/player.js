@@ -782,7 +782,7 @@ function tryMove(dx,dy,confirmed){
         cell.looted = true;
         const isRingworldConsole = !!G.planets[G.curPlanet]?.isRingworld;
         if(cell.scienceJobData){
-          G.inventory.push({name:'Research Ship Data',col:'#66ccff',desc:'Lost Science Office field data',value:0});
+          G.inventory.push({name:'Research Ship Data',col:'#66ccff',desc:'Lost Science Office field data',value:0,scienceJobId:cell.scienceJobId});
           trackPlanetDiscoveryOnce(G.curPlanet, 'research_data', 'research_ship_data_found', {
             biome: biomeKey || 'DERELICT',
           });

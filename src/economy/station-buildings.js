@@ -150,7 +150,7 @@ const STATION_BUILDINGS = [
     desc: 'Sell samples, pick up missions',
     col: '#88ffaa',
     actions: () => {
-      const cargo = G.inventory.filter(i=>i.value>0 && !i.isCapturedCreature);
+      const cargo = scienceSaleItems();
       const total = cargo.reduce((s,i)=>s+(i.value||0),0);
       const surveyTotal = getPendingSurveySaleValue();
       const grandTotal = total + surveyTotal;
@@ -225,6 +225,7 @@ const STATION_BUILDINGS = [
         { label: 'Browse '+(corp?.name||'Corp')+' Store', detail: 'exclusive equipment & tech', id:'science_corp_sub' },
         { label: 'File for retirement', detail: G.credits+' cr — end your career here', id:'retire' },
       ];
+      if(jobState.active) actions.splice(2,0,{label:'Relinquish research contract',detail:'No reward; returned cargo and normal cooldown apply',id:'science_abandon'});
       if(isMargo && capturedSpecimens.length > 0){
         actions.splice(1, 0, { label: 'Sell captured specimens ('+capturedSpecimens.length+')', detail: capturedSpecimens.reduce((s,c)=>s+c.bounty,0)+' cr total — live specimen bounties', id:'sell_specimens' });
       } else if(isMargo && capturedSpecimens.length === 0){

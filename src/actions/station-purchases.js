@@ -248,12 +248,11 @@ function executeBaseAction(actionId){
     case 'sell':{
       // Science Office: samples and survey data only — bulk cargo goes to Market
       const activeScienceJob = ensureScienceJobState().active;
-      const reservedNames = scienceJobReservedItemNames(activeScienceJob);
+      const sellableItems = scienceSaleItems();
       let missionCompleted = false;
       if(activeScienceJob && activeScienceJob.type !== 'data_box'){
         missionCompleted = completeScienceJob();
       }
-      const sellableItems = (G.inventory||[]).filter(i=>!reservedNames.has(i.name) && (i.value||0) > 0 && !i.isCapturedCreature);
       const sold=sellableItems.reduce((s,i)=>s+(i.value||0),0);
       const surveyInfo = getSurveyPayoutBreakdown();
       const surveySold = surveyInfo.pending;
@@ -261,7 +260,7 @@ function executeBaseAction(actionId){
         Object.values(G.planets || {}).forEach(pdata=>{
           pdata.surveySoldValue = getSurveySaleValue(pdata);
         });
-        G.credits+=surveySold;
+        earnCredits(surveySold);
         trackEvent('survey_data_sold', analyticsBaseParams({
           survey_value: surveySold,
           full_survey_bodies: surveyInfo.fullBonusBodies.length,
@@ -274,7 +273,7 @@ function executeBaseAction(actionId){
         }
       }
       if(sold>0){
-        G.credits+=sold;
+        earnCredits(sold);
         const soldSet = new Set(sellableItems);
         G.inventory = (G.inventory||[]).filter(i=>!soldSet.has(i));
         addLog('Sold samples for '+sold+' cr.','ll');
@@ -297,6 +296,9 @@ function executeBaseAction(actionId){
       break;}
     case 'science_job':
       startScienceJob();
+      break;
+    case 'science_abandon':
+      abandonScienceJob();
       break;
     case 'retire':
       G.base.confirm = 'retire';
@@ -358,7 +360,7 @@ function executeBaseAction(actionId){
         mGrand+=rev;
       });
       G.cargo=G.cargo.filter(i=>!i.isCommodity);
-      G.credits+=mGrand;
+      earnCredits(mGrand);
       addLog('Total received: '+mGrand+' cr.','lg');
       if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       break;}

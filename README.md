@@ -2,9 +2,11 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.3
+## Active experiment — 0.28 experimental.4
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
+The latest pass strengthens the existing expedition economy and repeat research
+work; see [career-loop polish](docs/development-pass.md) for changes and validation.
 Download **this branch's ZIP**, extract it and open `index.html` to play the experiment.
 Open **I → LOG → RECORDS** for discoveries, survey progress and survivor records.
 A fresh run receives the Mercy of Dawn distress
