@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-10-31 — 0.28 experimental.9: optional Mercy discovery, no opening signal
+
+Branch: `experiment/expedition-legacy`; main unchanged.
+
+- Removed the guaranteed galaxy-generation placement and startup coordinates/marker from experimental.8. Normal movement now rolls a 1-in-1,000 encounter chance for each newly charted eligible empty sector in the actual sensor reveal. A hit creates one nearby wreck and records its distress signal. There is no guaranteed travel/turn threshold; known sectors cannot be farmed by backtracking. Initial station reveal, remote drones and debug worlds do not roll. The palette retains its explicit, boardable Mercy sample.
+- Kept occupied cells, objects and borders protected, the first-boarding air clock unchanged and existing incidents unique. No other gameplay balance, combat or dialogue changes were made for testing.
+- Completed a [second retirement attempt](docs/retirement-attempt-2-2026-10-31.md): Mercy was first discovered on turn 290; the Scout reached turn 5067 and 3842 credits before its remaining crew died on a territorial world. It did not retire. The private pilot used earlier ship retreats, but mishandled surface warnings, bleeding and crew replacement. One checkpoint continuation corrected a repeated dialogue-selection loop without reversing losses; inflated input counts and the test limits are disclosed.
+- Validation: all 40 tests and build checks passed. Headless checks covered 12 clean openings, losing/winning discovery rolls, actual movement/sensor range, repeat-visit suppression, one signal and durable save/load. Palette coverage, interactions and restoration passed; 15 rescue regressions traversed 869 real steps. Neither these scenarios nor the career captured JavaScript errors. No manual desktop playthrough is claimed.
+- Saves: schema unchanged; already-created incidents and historical messages remain in older saves. Fresh careers have no startup Mercy encounter. Previously charted areas are not rerolled. Remaining: wider encounter-frequency playtesting, a more competent full-game pilot and the existing foundation findings; successful wealthy retirement remains unproven.
+
 ## 2026-10-31 — 0.28 experimental.8: random Mercy location and a long career
 
 Branch: `experiment/expedition-legacy`; main unchanged.

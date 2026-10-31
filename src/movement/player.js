@@ -44,7 +44,7 @@ function tryMove(dx,dy,confirmed){
     const bestNavSkill = Math.max(0, ...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
     const baseRange  = G.shipStats?.sensorRange ?? 3;
     const floodBonus = (G.inventory||[]).some(i=>i.usable==='floodlight') ? 2 : 0;
-    revealAround(nx, ny, baseRange + (bestNavSkill >= 2 ? 1 : 0) + floodBonus);
+    revealAround(nx, ny, baseRange + (bestNavSkill >= 2 ? 1 : 0) + floodBonus, true);
     const cell=G.galaxy[ny][nx];
     // NPC stranded ship proximity log — fires regardless of cell type
       const _strandedHere=(G.npcStranded||[]).find(s=>s.x===nx&&s.y===ny);

@@ -1,21 +1,24 @@
 // Mercy of Dawn is a persistent interior. Actions use position, ordinary items,
 // crew skills, cargo space, line of sight and the existing planet turn loop.
-function placeQuarantineShip(){
+function maybeDiscoverQuarantineShip(newSectors){
   const state=ensureExpeditionState();
-  if(state.quarantine) return;
-  const candidates=[];
+  if(!state || state.quarantine || G.mode!=='galaxy' || G.dead || G.retired ||
+    G.debugPalette || DEBUG.on || !newSectors?.length) return false;
   const occupied=new Set([G.ship,...(G.pirates||[]),...(G.neutralShips||[]),
     ...(G.npcStranded||[]),...(G.nebulaLoot||[])].map(object=>object.x+','+object.y));
-  for(let y=1;y<MAP_H-1;y++) for(let x=1;x<MAP_W-1;x++){
-    if(G.galaxy[y]?.[x]?.type==='VOID'&&!occupied.has(x+','+y))candidates.push({x,y});
+  for(const {x,y} of newSectors){
+    if(x<1 || x>=MAP_W-1 || y<1 || y>=MAP_H-1 ||
+      G.galaxy[y]?.[x]?.type!=='VOID' || occupied.has(x+','+y)) continue;
+    // One roll per newly charted empty sector; revisiting or waiting cannot reroll it.
+    if(rnd(1000)!==0) continue;
+    state.quarantine={x,y,version:2,status:'unvisited',survivors:[],repaired:false,air:180,lastTick:null};
+    G.galaxy[y][x]={type:'DERELICT',name:'Mercy of Dawn'};
+    const text='Nearby distress transmission: Mercy of Dawn at '+(x+1)+','+(y+1)+'. The caller mentions a sealed ward before the signal cuts out.';
+    recordExpeditionEvent('quarantine:signal','lead',text);
+    addLog(text+' Coordinates recorded in LOG.','lw');
+    return true;
   }
-  const pos=candidates[rnd(candidates.length)];
-  if(!pos) return;
-  state.quarantine={...pos,version:2,status:'unvisited',survivors:[],repaired:false,air:180,lastTick:null};
-  G.galaxy[pos.y][pos.x]={type:'DERELICT',name:'Mercy of Dawn'};
-  G.visited[pos.y*MAP_W+pos.x]=true;
-  recordExpeditionEvent('quarantine:signal','lead','Broken distress transmission from Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. The caller mentions a sealed ward before the signal cuts out.');
-  addLog('Broken distress call: Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. Coordinates recorded in LOG.','lw');
+  return false;
 }
 
 function quarantineAtShip(){

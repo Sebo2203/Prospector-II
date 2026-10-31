@@ -101,3 +101,7 @@ The old comments have enough ideas for years of additions: a prison planet that 
 ## How to build it
 
 Deliver each release through small, reviewable vertical slices. For an authored encounter, the slice includes discovery, choice, response, departure, save/reload, and any promised later consequence. Document the new state before adding it to saves, keep older saves readable, and test the actual player path in a browser. Edit `src/`, rebuild `index.html`, and run the build checks for gameplay changes. Preserve the current classic-script/shared-global order and turn rules unless a feature explicitly changes them. Keep private playtester material out of the public repository.
+
+## Encounter availability — experimental.9
+
+Mercy of Dawn now occurs through a chance discovery while ordinary galaxy movement charts new empty sectors; it is no longer a guaranteed opening mission. Its full debug palette scenario remains available. The second retirement attempt is recorded in [the career report](retirement-attempt-2-2026-10-31.md); successful wealthy retirement and broader balance remain unproven.

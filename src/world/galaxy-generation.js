@@ -583,12 +583,17 @@ function generateGalaxy() {
 
   revealAround(bx, by, 5);
   revealAround(b2x, b2y, 1);
-  placeQuarantineShip();
   addLog('Docked at '+grid[by][bx].name+'. Ready for departure.','li');
   addLog('Fly to a star system and press Enter to enter orbit.','li');
 }
 
-function revealAround(cx,cy,r){
+function revealAround(cx,cy,r,discoverEncounters=false){
+  const newSectors=[];
+  function revealTile(x,y){
+    const index=y*MAP_W+x;
+    if(discoverEncounters && !G.visited[index]) newSectors.push({x,y});
+    G.visited[index]=true;
+  }
   // Nebula tiles are visible (border shows) but block vision behind them
   function isNebula(x,y){
     if(x<0||x>=MAP_W||y<0||y>=MAP_H) return false;
@@ -596,7 +601,7 @@ function revealAround(cx,cy,r){
   }
 
   // Always reveal the origin tile
-  G.visited[cy*MAP_W+cx]=true;
+  revealTile(cx,cy);
 
   // Shadowcasting — 8 octants
   function castLight(row,start,end,radius,xx,xy,yx,yy){
@@ -613,7 +618,7 @@ function revealAround(cx,cy,r){
         const ax=cx+dx*xx+dy*xy;
         const ay=cy+dx*yx+dy*yy;
         if(dx*dx+dy*dy<=r2){
-          if(ax>=0&&ax<MAP_W&&ay>=0&&ay<MAP_H) G.visited[ay*MAP_W+ax]=true;
+          if(ax>=0&&ax<MAP_W&&ay>=0&&ay<MAP_H) revealTile(ax,ay);
         }
         if(blocked){
           if(isNebula(ax,ay)){ newStart=rSlope; continue; }
@@ -632,5 +637,6 @@ function revealAround(cx,cy,r){
   const mult=[[1,0,0,-1,-1,0,0,1],[0,1,-1,0,0,-1,1,0],[0,1,1,0,0,-1,-1,0],[1,0,0,1,-1,0,0,-1]];
   for(let oct=0;oct<8;oct++)
     castLight(1,1.0,0.0,r,mult[0][oct],mult[1][oct],mult[2][oct],mult[3][oct]);
+  if(discoverEncounters) maybeDiscoverQuarantineShip(newSectors);
 }
 

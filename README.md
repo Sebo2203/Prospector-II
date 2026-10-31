@@ -2,7 +2,7 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.8
+## Active experiment — 0.28 experimental.9
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
 The [development changelog](CHANGELOG.md) records each meaningful change, its reason,
@@ -10,16 +10,17 @@ validation, save impact and remaining work. It is updated with the code.
 For reusable testing, open **Shift+B → F2** (galaxy palette) or **F3** (surface
 gallery). **F6** searches the samples; **F4** restores your career. See the
 [debug playground guide](docs/debug-playground.md).
-Mercy of Dawn now spawns at a random free location across the galaxy. Use its
-galaxy palette sample for repeatable testing. The [long career report](docs/long-career-2026-10-31.md)
-records the latest retirement attempt. Durable autosaves, recovery and failure/export
-controls remain available; see the [autosave guide](docs/autosave.md).
+Mercy of Dawn is an optional discovery while charting new space, with no wreck or
+coordinates message at startup. Its galaxy palette sample remains available for
+repeatable testing. See the [second retirement attempt](docs/retirement-attempt-2-2026-10-31.md).
+Durable autosaves, recovery and failure/export controls remain available; see the
+[autosave guide](docs/autosave.md).
 Earlier expedition economy and repeat research work is detailed in
 [career-loop polish](docs/development-pass.md).
 Download **this branch's ZIP**, extract it and open `index.html` to play the experiment.
 Open **I → LOG → RECORDS** for discoveries, survey progress and survivor records.
-A fresh run receives the Mercy of Dawn distress
-lead; fly to its recorded coordinates and press **Enter** to board the ship. Explore
+If you discover a Mercy of Dawn distress
+signal, fly to its recorded coordinates and press **Enter** to board the ship. Explore
 its rooms, repair life support, find and assist survivors, then physically bring them
 back to your airlock. **T** treats a nearby survivor, **P** deploys an isolation pod,
 and **L** departs only from your ship. Deliver passengers to a major station.
