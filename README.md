@@ -2,7 +2,7 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.5
+## Active experiment — 0.28 experimental.6
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
 For reusable testing, open **Shift+B → F2** (galaxy palette) or **F3** (surface

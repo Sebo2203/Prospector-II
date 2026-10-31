@@ -96,7 +96,7 @@ function debugReturnFromPalette(render=true){
 
 function debugBuildGalaxyPalette(){
   let index=0;
-  const slot=()=>{const cols=Math.floor((MAP_W-8)/10),x=8+(index%cols)*10,y=8+Math.floor(index++/cols)*8;
+  const slot=()=>{const cols=Math.floor((MAP_W-8)/5),x=8+(index%cols)*5,y=8+Math.floor(index++/cols)*4;
     if(y>=MAP_H-3)throw Error('Galaxy palette is full; extend its layout before adding exhibits');return{x,y};};
   G.galaxy[3][3]={type:'BASE',name:'Palette arrival'};
   DEBUG_GALAXY_OBJ_TYPES.forEach((definition,i)=>{
@@ -147,14 +147,14 @@ function debugSurfaceSampleDefinitions(){
 }
 
 function debugBuildSurfacePalette(){
-  const rows=debugSurfaceSampleDefinitions(),W=62,H=Math.ceil(rows.length/12)*5+6,key=G.debugPalette.surfaceKey;
+  const rows=debugSurfaceSampleDefinitions(),W=40,H=Math.ceil(rows.length/12)*3+6,key=G.debugPalette.surfaceKey;
   const grid=Array.from({length:H},()=>Array.from({length:W},()=>({type:'station_floor'})));
   grid[2][2]={type:'SHIP'};
   const pd={grid,width:W,height:H,biome:'DERELICT',isDerelict:true,isDebugPalette:true,spawnX:2,spawnY:2,
     visited:new Array(W*H).fill(true),explored:new Array(W*H).fill(false),planetTurn:0};
   G.planets[key]=pd;G.enemies[key]=[];
   rows.forEach((sample,index)=>{
-    const x=5+(index%12)*5,y=5+Math.floor(index/12)*5,entry={...sample,x,y,key};
+    const x=4+(index%12)*3,y=4+Math.floor(index/12)*3,entry={...sample,x,y,key};
     if(sample.kind==='tile') grid[y][x]={type:sample.type,revealed:true,oreType:'fe',_underFloor:'station_floor'};
     else if(sample.kind==='item') grid[y][x].drops=[JSON.parse(JSON.stringify(sample.item))];
     else if(sample.kind==='cargo') grid[y][x].debugCommodity=sample.commodity;
@@ -270,7 +270,13 @@ function drawDebugPaletteLabels(){
     if(world?!!entry.key:entry.key!==G.curPlanet)continue;
     const vx=entry.x-camX,vy=entry.y-camY;
     if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H)continue;
-    ctx.fillStyle='#d0e4ef';ctx.fillText(entry.label,(vx+.5)*TS,vy*TS-3,world?200:110);
+    const labelWidth=(world?5:3)*TS-6;
+    let label=entry.label;
+    if(ctx.measureText(label).width>labelWidth){
+      while(label.length && ctx.measureText(label+'…').width>labelWidth)label=label.slice(0,-1);
+      label+='…';
+    }
+    ctx.fillStyle='#d0e4ef';ctx.fillText(label,(vx+.5)*TS,vy*TS-3);
   }
   ctx.textAlign='left';ctx.fillStyle='#ffe066';ctx.font='12px Courier New';
   ctx.fillText('TEST WORLD — F4 return · Shift+B / F6 directory',8,canvas.height-8);

@@ -23,6 +23,8 @@ Civilization examples are actual generated inhabited maps, including an underwat
 
 The large walkable gallery contains each terrain/building tile, debug/store equipment, implants, commodities, creature body archetypes, hostile body archetypes and a gunner alien. Samples are labeled; X gives the existing examination view. Gear is real dropped inventory: step onto it to collect it and equip/use it normally. Commodity stations load a real cargo unit on Enter. Creature samples use actual combat and communication rules. Procedural names, randomized stat rolls and every possible trait combination are not separate exhibits.
 
+Galaxy samples are spaced five tiles horizontally and four vertically. Surface samples are three tiles apart, leaving two clear tiles between them. Long map labels are abbreviated to fit; the directory keeps their full names.
+
 Raw building tiles are useful for visual and collision inspection; some require a world-specific state machine to function. Use the matching casino, civilization, biome or quarantine scenario in the same directory for their full interaction. For example, use Mercy of Dawn for its pump, treatment and survivor transport rather than expecting an isolated pump tile to create an entire rescue incident.
 
 ## Career isolation
