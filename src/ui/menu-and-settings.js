@@ -233,7 +233,7 @@ function drawMenuScreen(){
     ctx.fillText('CHOOSE YOUR VESSEL', cx, 56);
     ctx.fillStyle='#223344'; ctx.fillRect(cx-340,68,680,1);
 
-    const cardW=290, cardH=210, cardGap=20;
+    const cardW=290, cardH=232, cardGap=20;
     const totalW = ships.length*cardW + (ships.length-1)*cardGap;
     const startX = cx - totalW/2;
 
@@ -250,7 +250,7 @@ function drawMenuScreen(){
       const spriteImg = IMG[s.sprite];
       if(spriteImg && spriteImg.complete && spriteImg.naturalWidth > 0){
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(spriteImg, bx+cardW/2-36, by+14, 72, 72);
+        ctx.drawImage(spriteImg, bx+cardW/2-36, by+10, 72, 72);
       } else {
         ctx.font='bold 44px Courier New'; ctx.fillStyle=s.col; ctx.textAlign='center';
         ctx.fillText('?', bx+cardW/2, by+56);
@@ -258,14 +258,24 @@ function drawMenuScreen(){
 
       // Label
       ctx.font='bold 17px Courier New'; ctx.fillStyle= isSel ? '#ffffff' : s.col;
-      ctx.fillText(s.label, bx+cardW/2, by+84);
+      ctx.fillText(s.label, bx+cardW/2, by+100);
 
       // Divider
-      ctx.fillStyle=s.col+'44'; ctx.fillRect(bx+20, by+94, cardW-40, 1);
+      ctx.fillStyle=s.col+'44'; ctx.fillRect(bx+20, by+110, cardW-40, 1);
 
       // Description lines
-      ctx.font='13px Courier New'; ctx.fillStyle= isSel ? '#99bbcc' : '#445566';
-      s.lines.forEach((l,li)=> ctx.fillText(l, bx+cardW/2, by+114+li*22));
+      ctx.font='12px Courier New'; ctx.fillStyle= isSel ? '#99bbcc' : '#445566';
+      let descriptionY=by+132;
+      for(const paragraph of s.lines){
+        let line='';
+        for(const word of paragraph.split(' ')){
+          const candidate=line?line+' '+word:word;
+          if(line&&ctx.measureText(candidate).width>cardW-28){
+            ctx.fillText(line,bx+cardW/2,descriptionY);descriptionY+=17;line=word;
+          }else line=candidate;
+        }
+        if(line){ctx.fillText(line,bx+cardW/2,descriptionY);descriptionY+=17;}
+      }
 
       if(isSel){
         ctx.font='bold 13px Courier New'; ctx.fillStyle='#ffe066';
@@ -371,7 +381,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.28 experimental.9  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental.10  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {

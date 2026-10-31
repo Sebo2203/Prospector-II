@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-01 — 0.28 experimental.10: original ship art and seamless compositing
+
+Branch: `experiment/expedition-legacy`; main unchanged.
+
+- Reimported eight hulls and their original eight-way frames from Prospector R197's ship sheets, credited to David Gervais and Deon. Preserved the original BMPs and notice with a reproducible Node importer. Removed the magenta matte, corrected contaminated boundary pixels and isolated tiny atlas spill. Native frames replace rotating the player sprite. [Art direction, provenance and maintenance](docs/art-direction.md).
+- Trader, cargo, science and patrol vessels now have separate silhouettes and restrained role colors. Stranded research vessels and neutral-target combat use the matching role art. Player ship selection, hull-change cards and combat portraits share the refreshed hull images. Selection cards now reserve space for taller hulls and wrap descriptions; hangar statistics clear the larger freighter's exhaust. ASCII civilian keys use T/C/S/P.
+- Fixed tinted sprites replacing the background with an opaque dark tile. Tinting now preserves source alpha on a cached offscreen image; original shading and engine colors remain legible. Existing opacity arguments now work. Unknown radio contacts still hide their silhouette outside sensors.
+- Validation: 44 tests/build checks passed. Headless checks covered 384 hull/direction/background/opacity cases and 152064 unchanged background pixel positions, partial alpha, black hull details and drawing-state restoration. Native galaxy, civilian combat, sensor concealment, ASCII and full palette interaction/reset/save-isolation/return checks passed without JavaScript errors. Inspected the rendered previews and screenshots. No manual desktop playthrough is claimed.
+- Saves: no changes or migration. This pass changes presentation and asset tooling, not ship statistics or gameplay rules. Remaining: human feedback on recognition at native scale; planetary art, terrain transitions, creatures, buildings and other galaxy assets need later consistency passes.
+
 ## 2026-10-31 — 0.28 experimental.9: optional Mercy discovery, no opening signal
 
 Branch: `experiment/expedition-legacy`; main unchanged.

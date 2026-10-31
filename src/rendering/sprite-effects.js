@@ -119,27 +119,40 @@ function drawSpriteDarkMatteKeyed(key, x, y, fallbackColor){
   }
 }
 
-// Draw a sprite with a colour tint — multiply blend keeps darks black, shifts lights
-function drawSpriteTinted(key, x, y, tintColor){
+// Tint source pixels in an isolated cache, preserving the source alpha exactly.
+// Multiplying on the map canvas would also tint/replace the terrain behind a ship.
+const TINTED_SPRITE_CACHE = new WeakMap();
+function tintedSpriteImage(source,tintColor){
+  let colors=TINTED_SPRITE_CACHE.get(source);
+  if(!colors){colors=new Map();TINTED_SPRITE_CACHE.set(source,colors);}
+  if(colors.has(tintColor))return colors.get(tintColor);
+  const off=document.createElement('canvas');
+  off.width=source.naturalWidth||source.width;off.height=source.naturalHeight||source.height;
+  const paint=off.getContext('2d');
+  paint.fillStyle=tintColor;paint.fillRect(0,0,1,1);
+  const tint=paint.getImageData(0,0,1,1).data;
+  paint.clearRect(0,0,off.width,off.height);paint.drawImage(source,0,0);
+  const data=paint.getImageData(0,0,off.width,off.height),pixels=data.data;
+  for(let i=0;i<pixels.length;i+=4)for(let channel=0;channel<3;channel++){
+    // A restrained tint retains metallic hull shading and warm engine colors.
+    pixels[i+channel]=Math.round(pixels[i+channel]*(0.65+0.35*tint[channel]/255));
+  }
+  paint.putImageData(data,0,0);colors.set(tintColor,off);return off;
+}
+function drawSpriteTinted(key, x, y, tintColor, opacity=1){
   if(OPTIONS.asciiMode){
     drawAsciiTile(key, x, y, null, tintColor);
     return;
   }
-  if(IMG[key] && IMG[key].complete && IMG[key].naturalWidth>0){
-    // Black background so dark sprite pixels stay dark
-    ctx.fillStyle = '#04040c';
-    ctx.fillRect(x, y, TS, TS);
-    // Draw sprite normally first
-    ctx.drawImage(IMG[key], x, y, TS, TS);
-    // Multiply blend: black stays black, white becomes tint color, mid tones shift
+  const source=IMG[key];
+  if(source instanceof HTMLCanvasElement || source?.complete && source.naturalWidth>0){
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = tintColor;
-    ctx.fillRect(x, y, TS, TS);
+    ctx.globalAlpha*=opacity;
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(tintedSpriteImage(source,tintColor),Math.round(x),Math.round(y),TS,TS);
     ctx.restore();
   } else {
-    ctx.fillStyle = tintColor;
-    ctx.fillRect(x, y, TS, TS);
+    drawAsciiTile(key,x,y,null,tintColor);
   }
 }
 

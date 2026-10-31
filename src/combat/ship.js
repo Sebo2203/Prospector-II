@@ -649,7 +649,10 @@ function drawShipCombatOverlay(){
   if(!isDevourer){
     ctx.font='12px Courier New'; ctx.fillStyle='#aa8877';
     ctx.fillText('Hull: '+pirate.hp+' / '+pirate.maxHp, rx+PAD, ry);
-    drawSprite('pirate_ship', rx+PANEL_W-32, PANEL_Y+PANEL_H-32, '#882200');
+    if(sc.isNeutralTarget){
+      const art=neutralShipArt(pirate);
+      drawSpriteTinted(art.sprite,rx+PANEL_W-32,PANEL_Y+PANEL_H-32,art.tint);
+    }else drawSprite('pirate_ship', rx+PANEL_W-32, PANEL_Y+PANEL_H-32, '#882200');
   } else {
     // Draw the procedural devourer sprite in the panel corner
     DRAW.nebula_devourer(ctx, rx+PANEL_W-28, PANEL_Y+PANEL_H-28);

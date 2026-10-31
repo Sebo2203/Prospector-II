@@ -140,7 +140,7 @@ function drawGalaxy(){
       drawSpriteTinted('ship_freighter',spx,spy,'#ffcc00',0.9);
     } else {
       // Dead stranded — dim, no glow, dark tint
-      drawSpriteTinted('ship_freighter',spx,spy,'#445566',0.6);
+      drawSpriteTinted(ss.type==='research'?'ship_science':'ship_freighter',spx,spy,'#667b8e',0.6);
       // Static SOS flicker — skip for research/science-job ships whose beacon is off
       if(!ss.noSos && ss.type!=='research' && Math.floor(Date.now()/500)%2===0){
         ctx.globalAlpha=0.5; ctx.strokeStyle='#ff4400'; ctx.lineWidth=1;
@@ -168,12 +168,8 @@ function drawGalaxy(){
       return;
     }
     if(!DEBUG.fullVision && !G.visited[ns.y*MAP_W+ns.x]) return;
-    const tintCol =
-      ns.type==='patrol'  ? '#0044ff' :
-      ns.type==='trader'  ? '#ffcc00' :
-      ns.type==='cargo'   ? '#888888' :
-                            '#44ddff';
-    drawSpriteTinted('pirate_ship', px2, py2, tintCol, 0.78);
+    const art=neutralShipArt(ns);
+    drawSpriteTinted(art.sprite,px2,py2,art.tint);
   });
 
   // Draw gas entities — visible within sensor range when player is in/near a nebula
@@ -243,26 +239,11 @@ function drawGalaxy(){
   const shipPos = getAnimatedShipMapPosition();
   const shipVx = shipPos.x - camX;
   const shipVy = shipPos.y - camY;
-  // Draw player ship with directional rotation
+  // Original direction frames keep diagonal pixel shapes crisp and inside the tile.
   (function drawPlayerShipDirectional(){
     const f = G.ship.facing || {dx:0, dy:-1};
-    const angle = Math.atan2(f.dy, f.dx) + Math.PI/2;
-    const cx = shipVx*TS + TS/2;
-    const cy = shipVy*TS + TS/2;
     const spriteKey = G.shipStats?.sprite || 'player_ship';
-    if(OPTIONS.asciiMode){
-      drawAsciiTile(spriteKey, Math.round(shipVx*TS), Math.round(shipVy*TS), null);
-    } else if(IMG[spriteKey] && IMG[spriteKey].complete && IMG[spriteKey].naturalWidth>0){
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(angle);
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(IMG[spriteKey], -TS/2, -TS/2, TS, TS);
-      ctx.restore();
-    } else {
-      ctx.fillStyle='#aaaaff';
-      ctx.fillRect(shipVx*TS, shipVy*TS, TS, TS);
-    }
+    drawDirectionalShip(spriteKey,shipVx*TS,shipVy*TS,f.dx,f.dy);
   })();
 
   // SOS pulse ring — drawn AFTER player ship so shipVx/shipVy are defined

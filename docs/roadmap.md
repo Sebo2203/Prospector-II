@@ -105,3 +105,7 @@ Deliver each release through small, reviewable vertical slices. For an authored 
 ## Encounter availability — experimental.9
 
 Mercy of Dawn now occurs through a chance discovery while ordinary galaxy movement charts new empty sectors; it is no longer a guaranteed opening mission. Its full debug palette scenario remains available. The second retirement attempt is recorded in [the career report](retirement-attempt-2-2026-10-31.md); successful wealthy retirement and broader balance remain unproven.
+
+## Art direction — experimental.10
+
+The first ship pass imports original Prospector hulls, fixes transparent compositing, adds separate civilian silhouettes and uses native player direction frames. See [art direction](art-direction.md) for sources, maintenance and checks. Planetary biome cohesion, terrain transitions and wider visual consistency remain future work.

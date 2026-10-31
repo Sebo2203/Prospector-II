@@ -368,7 +368,7 @@ function drawBaseOverlay(){
       ];
       ctx.textAlign='left';
       stats.forEach((s, si)=>{
-        const sy = by + (isCurrent ? 82 : 74) + si*16;
+        const sy = by + (isCurrent ? 92 : 84) + si*16;
         ctx.font='11px Courier New'; ctx.fillStyle='#334455';
         ctx.fillText(s[0], bx+10, sy);
         ctx.fillStyle= isSel ? '#8899bb' : '#445566';

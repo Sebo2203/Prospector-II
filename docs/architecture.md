@@ -39,6 +39,8 @@ Global coupling still exists. A file boundary does not guarantee an independent 
 
 Embedded Base64 sprites are isolated in `src/assets/sprites.js` so they need not be read for ordinary logic edits. The build still embeds them into HTML. Google Analytics and Formspree remain external network integrations; this extraction makes no new offline guarantees. The tracked Windows executable is unchanged and is not rebuilt by the HTML build command.
 
+The experimental ship-art pass adds generated overrides in `src/assets/ship-sprites.js`, shared role/frame selection in `src/rendering/ship-art.js` and reproducible import tooling. See [art direction and provenance](art-direction.md). Original source BMPs are retained separately; the release still embeds the derived PNGs and needs no external image files.
+
 ## Migration audit
 
 Run `npm run verify:migration` to compare assembled output with the SHA-256 and byte count of the original committed HTML. This catches any altered or missing byte, including code, CSS, markup and assets. It is a one-time migration invariant, not an ongoing gameplay test: intentional later changes will make it fail. The historical design comment is retained in `src/html/legacy-design-notes.html` solely to preserve that exact output; use this document for the current development workflow.

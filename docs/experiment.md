@@ -12,7 +12,9 @@ The project vision recovered from earlier development discussions adds a living 
 
 Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
 
-## Playable now: 0.28 experimental.9
+## Playable now: 0.28 experimental.10
+
+**Ship art:** original Prospector hulls now have clean transparency and native eight-way player frames. Trader, cargo, science and patrol silhouettes are distinct; tints preserve the background, and role hulls match combat portraits. The original sheet sources, credits and visual conventions are documented in [art direction](art-direction.md). This pass establishes the ship style; planetary art is still a separate future pass.
 
 **Optional encounter:** Mercy of Dawn is no longer created at galaxy generation, and there is no starting signal or marker. Ordinary galaxy movement rolls a 1-in-1,000 discovery chance for each newly charted eligible empty sector in the ship's actual sensor reveal. A successful roll creates one nearby wreck and records its distress transmission. This is not guaranteed by a turn count, travel distance or career milestone; revisiting known space cannot reroll it. Initial station reveal, remote drones, debug vision and the palette do not trigger random encounters. The debug palette still provides its guaranteed test sample. The [second retirement attempt](retirement-attempt-2-2026-10-31.md) records another long career and its actual ending.
 

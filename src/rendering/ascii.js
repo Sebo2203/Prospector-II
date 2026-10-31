@@ -4,6 +4,10 @@ const ASCII = {
   ship_corvette:  { ch:'?', bg:'#04040c', fg:'#ff8866' },
   ship_freighter: { ch:'?', bg:'#04040c', fg:'#ffdd88' },
   pirate_ship:    { ch:'?', bg:'#04040c', fg:'#ff4422' },
+  ship_trader:    { ch:'T', bg:'#04040c', fg:'#e8be73' },
+  ship_cargo:     { ch:'C', bg:'#04040c', fg:'#a8b7c6' },
+  ship_science:   { ch:'S', bg:'#04040c', fg:'#80dce4' },
+  ship_patrol:    { ch:'P', bg:'#04040c', fg:'#829fe8' },
   starbase:       { ch:'B', bg:'#04040c', fg:'#ffe066' },
   black_hole:     { ch:'●', bg:'#000000', fg:'#ff8800' },
 
