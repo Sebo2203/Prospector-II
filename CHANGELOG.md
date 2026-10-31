@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-10-31 — Foundation and roadmap review
+
+Branch: `experiment/expedition-legacy`. Reviewed gameplay commit `616d819`; game version remains `0.28.0-experimental.6`.
+
+- Added a [foundation review](docs/foundation-review-2026-10-31.md) distinguishing current strengths, reproduced defects, architectural risks, feature readiness and recommended work order. Findings are open; this pass does not fix gameplay.
+- Reproduced silent autosave quota failure during generated-world growth, detached combat/dialogue entities after reload, divergent file/storage migrations, an invalid import replacing the active state, inconsistent action/oxygen/status clocks, dry aquatic civilizations and zero-morale defaulting to 55.
+- Validation: all 31 repository tests/build checks passed. Existing headless palette/log scenarios, 54 fixture-assisted contract completions and 15 rescue scenarios with 858 surface steps passed. New controlled review scenarios and a seeded 40-world aquatic generation matrix supplied the defect evidence. Human whole-career balance and native desktop playtesting were not performed.
+- Recommended persistence/identity repairs, shared turn progression and ordinary generation invariants before more connected content. Added a roadmap reference to the review; recommendations are not completed milestones.
+- Saves: no format or gameplay changes in this documentation-only pass. The review records existing save defects that require subsequent fixes.
+
 ## 2026-10-31 — Establish the development record
 
 Branch: `experiment/expedition-legacy`. Game version remains `0.28.0-experimental.6`.

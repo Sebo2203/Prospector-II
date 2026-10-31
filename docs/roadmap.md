@@ -17,6 +17,8 @@ For example, a surveyor could answer a quarantine ship's call, carry a sick pass
 
 ## The foundation already in the game
 
+The [October 31 foundation review](foundation-review-2026-10-31.md) records reproduced save, turn-progression and generation defects, feature readiness and recommended prerequisites for the larger arcs below. Its proposed fixes are not yet implemented.
+
 The modular `src/` tree already contains a generated galaxy, planets and civilizations, surface exploration, ship and ground combat, crew conditions and morale, stations, science work, saves, and several authored encounter types. Ringworlds, ruined ringworlds, bloom worlds, nuclear-war worlds, and talking trees have code now, despite older comments describing them as plans. The roadmap should deepen and connect these systems before adding another long list of isolated encounters.
 
 | Existing piece | What still prevents it from carrying a full run |
