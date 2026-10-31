@@ -2,11 +2,12 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.2
+## Active experiment — 0.28 experimental.3
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
 Download **this branch's ZIP**, extract it and open `index.html` to play the experiment.
-Press **J** for the expedition journal. A fresh run receives the Mercy of Dawn distress
+Open **I → LOG → RECORDS** for discoveries, survey progress and survivor records.
+A fresh run receives the Mercy of Dawn distress
 lead; fly to its recorded coordinates and press **Enter** to board the ship. Explore
 its rooms, repair life support, find and assist survivors, then physically bring them
 back to your airlock. **T** treats a nearby survivor, **P** deploys an isolation pod,

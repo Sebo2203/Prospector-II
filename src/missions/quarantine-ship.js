@@ -14,7 +14,7 @@ function placeQuarantineShip(){
   G.galaxy[pos.y][pos.x]={type:'DERELICT',name:'Mercy of Dawn'};
   G.visited[pos.y*MAP_W+pos.x]=true;
   recordExpeditionEvent('quarantine:signal','lead','Broken distress transmission from Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. The caller mentions a sealed ward before the signal cuts out.');
-  addLog('Broken distress call: Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. Coordinates recorded in [J].','lw');
+  addLog('Broken distress call: Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. Coordinates recorded in LOG.','lw');
 }
 
 function quarantineAtShip(){
@@ -60,7 +60,7 @@ function boardQuarantineShip(){
   if(q.choice){ addLog('This incident belongs to an earlier expedition record and is already resolved.','li'); renderAll(); return; }
   const pdata=G.planets[q.mapKey] || generateQuarantineShip(q);
   G.mode='planet'; G.curSystem=''; G.curPlanet=q.mapKey;
-  G.examine=null; G.rangeTarget=null; G._expeditionPanel=null;
+  G.examine=null; G.rangeTarget=null;
   G.player={x:pdata.spawnX,y:pdata.spawnY};
   revealPlanet(q.mapKey,G.player.x,G.player.y);
   recordExpeditionEvent('quarantine:boarding','discovery','Boarded Mercy of Dawn. Emergency lights illuminate an empty passage; a sealed ward lies somewhere beyond.');

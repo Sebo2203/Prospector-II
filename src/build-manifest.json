@@ -24,7 +24,7 @@
     "src/missions/expedition.js",
     "src/missions/quarantine-ship.js",
     "src/rendering/quarantine.js",
-    "src/ui/expedition-journal.js",
+    "src/ui/log-records.js",
     "src/world/minerals.js",
     "src/debug/item-catalog.js",
     "src/crew/names-and-traits.js",

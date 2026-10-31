@@ -12,9 +12,9 @@ The project vision recovered from earlier development discussions adds a living 
 
 Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
 
-## Playable now: 0.28 experimental.2
+## Playable now: 0.28 experimental.3
 
-Press **J** in space, orbit, on a planet or at a station for the expedition journal. It shows survey progress, unsold survey value, established civilization relationships, active follow-up and a structured career history. Records live in the save; repeated scans update a finding without repeating the first-discovery entry. A generated but unobserved map is excluded. Legacy saves receive empty history without fabricated past events.
+Use the existing **I → LOG** menu for history. Major discoveries and rescue events appear in ALL and MISSION; **6 / RECORDS** adds current survey progress, unsold survey value, known civilization relationships and survivor records. Existing scrolling, keyboard navigation and mouse filter controls apply. Long messages wrap instead of being cut off. Records live in the save; repeated scans update a finding without repeating the first-discovery entry. Generated but unobserved places remain excluded. The separate popup, J shortcut, context button and popup styling have been removed. J still performs the game's existing cargo jettison action in the ship inventory tab.
 
 A fresh run receives an incomplete distress transmission from **Mercy of Dawn**, on an empty tile near the starting station. The transmitted coordinates use the same one-based display as the galaxy HUD. Fly there and press **Enter** to board a persistent 32 by 20 deck. The earlier four-choice resolution menu has been removed.
 
@@ -30,7 +30,7 @@ The bridge, medical stores, cargo hold, engineering compartment and sealed isola
 
 **Transport:** assisted survivors path through open, passable tiles one cardinal step per turn. Carried survivors remain with the away team. They enter your ship only at the airlock. Normal passenger capacity equals unused crew bunks plus one emergency berth, with a minimum of one. Pods occupy real cargo slots and protect occupants from shared-air exposure. A small hull may require return trips; repairing life support makes that practical. Full holds or berths leave people physically aboard the wreck. Jettisoning an occupied pod records the passenger as lost, not delivered. Departure leaves untransported followers and carried casualties at their actual deck positions.
 
-**Aftermath:** docking at a major station transfers only actual onboard passengers to medical care, pays 100 cr per person and improves standing once per delivery. Loading a save or redocking cannot repeat a payment. Recovered instruments are a normal cargo commodity, sold through the existing station market, not an incident button that creates credits. There is no automatic salvage fine or omniscient station inquiry. The journal records observations and actions; it does not disclose predetermined outcome prices. Deaths out of sight remain unconfirmed until observed. The retirement record counts delivered and still-onboard survivors.
+**Aftermath:** docking at a major station transfers only actual onboard passengers to medical care, pays 100 cr per person and improves standing once per delivery. Loading a save or redocking cannot repeat a payment. Recovered instruments are a normal cargo commodity, sold through the existing station market, not an incident button that creates credits. There is no automatic salvage fine or omniscient station inquiry. The log records observations and actions; it does not disclose predetermined outcome prices. Deaths out of sight remain unconfirmed until observed. The retirement record counts delivered and still-onboard survivors.
 
 **Saves:** all deck, door, supply, repair, survivor and passenger state persists in ordinary saves. Older saves without this encounter remain playable. Resolved incidents from experimental.1 retain their history and cannot be replayed for new rewards. Start fresh to experience the new ship. The Windows experiment has a separate app identifier from the regular game.
 
@@ -39,7 +39,7 @@ Two existing defects surfaced while exercising the encounter: planet waiting fai
 ## What follows
 
 1. Human playtesting of the spatial incident: clarity of local actions, lighting, time pressure, ferry trips and medical tradeoffs. Tune those observations before adding another encounter.
-2. Connect journal leads to the sealed ringworld, robot factory and Apollo's Sanctuary; each gets a return visit and a persistent aftermath.
+2. Connect log leads to the sealed ringworld, robot factory and Apollo's Sanctuary; each gets a return visit and a persistent aftermath.
 3. Add renewable career work, faction news and first contact beyond a single planet.
 4. Develop opt-in sector crises and a fact-driven final sector account. Existing random humanity outcomes are not yet wired to this history.
 

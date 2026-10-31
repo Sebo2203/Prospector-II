@@ -65,7 +65,7 @@ function loadFromFile(){
         // Basic sanity check
         if(!loaded.galaxy || !loaded.crew) throw new Error('Invalid save');
         G = loaded;
-        G._expeditionPanel = null;
+        delete G._expeditionPanel; // retire the obsolete standalone UI flag
         ensureExpeditionState();
         removeInteriorOreDeposits(G.planets);
         ensureCrewStatusState();
@@ -87,7 +87,7 @@ function loadFromStorage(){
     const loaded = JSON.parse(raw);
     if(!loaded.galaxy || !loaded.crew) return false;
     G = loaded;
-    G._expeditionPanel = null;
+    delete G._expeditionPanel;
     ensureExpeditionState();
     removeInteriorOreDeposits(G.planets);
     // Back-compat: old saves won't have shipStats or cargo

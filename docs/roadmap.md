@@ -11,7 +11,7 @@ This is a destination and an order of work, not a promise to put every idea from
 3. **Change the sector.** The player makes choices that affect a world, faction, route, or crew member. Those effects appear later through news, encounters, prices, access, or danger rather than only in the immediate dialogue.
 4. **Decide when to leave.** Retirement is available before the grand stories are complete. Staying creates chances for a richer legacy and exposes the crew to growing risk. A run closes with a personal career account and a sector outcome based on what actually happened.
 
-The game needs four promises to make this work. **Knowledge matters:** scans, examination, rumors, and the journal help the player make informed choices. **The crew matters:** wounds, illness, morale, and expertise affect expeditions and recovery. **The sector remembers:** sites, civilizations, factions, and crises persist through saves and respond to decisions. **Careers differ:** the starting hull and chosen livelihood create useful approaches, not mandatory story locks.
+The game needs four promises to make this work. **Knowledge matters:** scans, examination, rumors, and the log help the player make informed choices. **The crew matters:** wounds, illness, morale, and expertise affect expeditions and recovery. **The sector remembers:** sites, civilizations, factions, and crises persist through saves and respond to decisions. **Careers differ:** the starting hull and chosen livelihood create useful approaches, not mandatory story locks.
 
 For example, a surveyor could answer a quarantine ship's call, carry a sick passenger to a station, and later find the station refusing incoming ships. The same run might discover the robot factory responsible for raids, negotiate help from an alien colony, and divert a planet-killing vessel. The final account would mention those linked events. Another captain could sell the quarantine ship for parts, never meet the colony, and retire early with a very different story.
 
@@ -30,11 +30,11 @@ The modular `src/` tree already contains a generated galaxy, planets and civiliz
 
 ## Release 0.27 — The expedition remembers
 
-Make the sector legible before making it bigger. Add a saved **captain's journal** with discovered systems and bodies, scan findings, civilization notes, unsold survey work, active leads, and a compact history of major decisions. The journal should distinguish a rumor from something confirmed. Unknown places remain unknown. A separate event history lets later encounters and endings react to facts without parsing prose from the log.
+Make the sector legible before making it bigger. Add a saved **captain's log** with discovered systems and bodies, scan findings, civilization notes, unsold survey work, active leads, and a compact history of major decisions. The log should distinguish a rumor from something confirmed. Unknown places remain unknown. A separate event history lets later encounters and endings react to facts without parsing prose from the log.
 
-Build one complete incident on that foundation: the **Quarantine Ship**. A distress signal leads to a drifting vessel with an illness and a valuable cargo. The captain can rescue survivors, isolate them, strip the ship, or leave. The crew's health and morale, the next station's response, and the journal should reflect the choice. The ship is a small enough story to establish the pattern for every later authored encounter: lead → discovery → informed choice → immediate cost → delayed response.
+Build one complete incident on that foundation: the **Quarantine Ship**. A distress signal leads to a drifting vessel with an illness and a valuable cargo. The captain can rescue survivors, isolate them, strip the ship, or leave. The crew's health and morale, the next station's response, and the log should reflect the choice. The ship is a small enough story to establish the pattern for every later authored encounter: lead → discovery → informed choice → immediate cost → delayed response.
 
-**Exit:** Leave the incident, save and reload, then encounter a later consequence that agrees with the journal. The first implementation slice is the shared journal/history data and view; the second is this incident.
+**Exit:** Leave the incident, save and reload, then encounter a later consequence that agrees with the log. The first implementation slice is the shared log/history data and view; the second is this incident.
 
 ## Release 0.32 — A ship and crew worth bringing home
 
@@ -52,13 +52,13 @@ Build three substantial planet arcs from the old design notes, each with clues, 
 - **The robot factory:** descend into an automated industrial world. Destroy, reprogram, or abandon its surviving core. A neglected or mishandled core can send robot ships into nearby systems later.
 - **Apollo's Sanctuary:** a temple world with a guardian that can be fought, studied, or approached through a discovered ritual. The peaceful path rewards preparation rather than guessing dialogue options.
 
-Make leads appear through surveys, rumors, and the journal. Use the game's visual language—surface tiles, examination text, and strong ASCII moments—to make each place recognizable. Add smaller rare hazards, such as a sandworm or crystal minefield, only after the three arcs can be played from first clue to consequence.
+Make leads appear through surveys, rumors, and the log. Use the game's visual language—surface tiles, examination text, and strong ASCII moments—to make each place recognizable. Add smaller rare hazards, such as a sandworm or crystal minefield, only after the three arcs can be played from first clue to consequence.
 
 **Exit:** Every arc can be completed through at least two distinct approaches, and the resulting world state is visible on a return visit or elsewhere in the sector.
 
 ## Release 0.50 — A living sector
 
-Make stations, pirates, research groups, and local civilizations react to what the captain does. Keep standing understandable: players should see who trusts or fears them and why. Add sector news at stations and in the journal to report changes the player could reasonably learn. Contact with a nonspacefaring civilization should allow observation, trade, interference, or protection with consequences for that society and for interested factions.
+Make stations, pirates, research groups, and local civilizations react to what the captain does. Keep standing understandable: players should see who trusts or fears them and why. Add sector news at stations and in the log to report changes the player could reasonably learn. Contact with a nonspacefaring civilization should allow observation, trade, interference, or protection with consequences for that society and for interested factions.
 
 Give pirates and patrols interactions besides instant combat: demands, bargains, pursuit, assistance, and consequences for attacking neutral vessels. Refresh science contracts after a cooldown, with targets known to be reachable; add a few multi-step research expeditions that point toward the world arcs. Let trading and salvage remain viable ways to fund a run as the sector changes.
 
@@ -88,13 +88,13 @@ Wire the existing personal retirement story, humanity/sector outcome screen, and
 
 ## Release 0.95 → 1.0 — Finish the game
 
-Play complete runs with each starting hull and with at least one trade, science, and combat-focused career. Balance earnings, repairs, encounter frequency, travel time, and crisis pacing around those runs. Keep rare stories surprising without making progress depend on them. Audit keyboard controls, ASCII readability, encounter exits, save migration, and the generated `index.html` build. Give new players an opening contract and clear explanations for the journal, ship condition, and retirement choice.
+Play complete runs with each starting hull and with at least one trade, science, and combat-focused career. Balance earnings, repairs, encounter frequency, travel time, and crisis pacing around those runs. Keep rare stories surprising without making progress depend on them. Audit keyboard controls, ASCII readability, encounter exits, save migration, and the generated `index.html` build. Give new players an opening contract and clear explanations for the log, ship condition, and retirement choice.
 
 **1.0 means:** a new player can begin, learn, earn, make consequential choices, and reach a coherent ending without developer intervention; major paths do not trap the player; saves restore those paths; the built single-file distribution plays the same game as the modular source.
 
 ## After 1.0: expansions, not prerequisites
 
-The old comments have enough ideas for years of additions: a prison planet that can release a monster, a stellar gun, a dying sun, a space whale, the nebula devourer, a human seed ship, a maze, more predators, invasions, troop transport, and nuclear weapons. Colony and station construction are especially large systems and deserve their own expansion. These should attach to the journal, faction, crisis, and ending framework above so they become new stories within the same game, rather than isolated scenes. None is required to call the core game complete.
+The old comments have enough ideas for years of additions: a prison planet that can release a monster, a stellar gun, a dying sun, a space whale, the nebula devourer, a human seed ship, a maze, more predators, invasions, troop transport, and nuclear weapons. Colony and station construction are especially large systems and deserve their own expansion. These should attach to the log, faction, crisis, and ending framework above so they become new stories within the same game, rather than isolated scenes. None is required to call the core game complete.
 
 ## How to build it
 

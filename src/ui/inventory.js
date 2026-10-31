@@ -524,14 +524,8 @@ function drawInventoryOverlay(){
   } else if(tab==='log'){
     // ── LOG tab ──────────────────────────────────────────────────────
     // Filter buttons
-    const FILTERS = [
-      { id:'all',     label:'ALL' },
-      { id:'mission', label:'MISSION' },
-      { id:'combat',  label:'COMBAT' },
-      { id:'crew',    label:'CREW' },
-      { id:'critical',label:'CRITICAL' },
-    ];
-    if(!G._logFilter) G._logFilter = 'all';
+    const FILTERS = LOG_FILTERS;
+    if(!FILTERS.some(filter=>filter.id===G._logFilter)) G._logFilter = 'all';
 
     // Draw filter buttons
     const fBtnW = 90, fBtnH = 22, fBtnGap = 6;
@@ -600,7 +594,7 @@ function drawInventoryOverlay(){
                m.includes('weapons fire detected') || m.includes('hostile transponder');
       }
       if(fid==='mission'){
-        return m.includes('contract') || m.includes('science office') ||
+        return entry.category==='mission' || m.includes('contract') || m.includes('science office') ||
                m.includes('survey bonus') || m.includes('survey data') ||
                m.includes('mission') || m.includes('debrief') ||
                m.includes('retired') || m.includes('10,000 cr') ||
@@ -619,8 +613,10 @@ function drawInventoryOverlay(){
       return true;
     }
 
-    const allEntries = G.log || [];
-    const filtered = allEntries.filter(e=>logMatchesFilter(e, G._logFilter));
+    const allEntries = gameLogEntries(G._logFilter);
+    ctx.font='12px Courier New';
+    const filtered = wrapGameLog(allEntries.filter(e=>logMatchesFilter(e, G._logFilter)).slice().reverse(),
+      cw-48-62-16,text=>ctx.measureText(text).width);
 
     // Scrollable list
     const listTop = fY + fBtnH + 12;
@@ -639,9 +635,9 @@ function drawInventoryOverlay(){
     } else {
       // Colour map matching sidebar log colours
       const logColors = { lc:'#ff4444', ll:'#ffcc44', lw:'#ff9955', lg:'#44ff88', li:'#7788aa', '':'#99aaaa' };
-      // Reverse so oldest entries are at index 0, newest at the end — matches sidebar order
-      const reversed = filtered.slice().reverse();
-      const slice = reversed.slice(G._logScroll, G._logScroll+visRows);
+      // Entries were ordered chronologically before wrapping so continuation
+      // lines stay below the first line of their message.
+      const slice = filtered.slice(G._logScroll, G._logScroll+visRows);
       slice.forEach((entry, i)=>{
         const ey = listTop + i*rowH;
         const col = logColors[entry.cls||''] || '#99aaaa';
@@ -649,19 +645,11 @@ function drawInventoryOverlay(){
         const turnStr = '[T'+String(entry.turn||1).padStart(4,' ')+']';
         ctx.font = '11px Courier New';
         ctx.fillStyle = '#334455';
-        ctx.fillText(turnStr, 48, ey+14);
+        if(!entry.continuation) ctx.fillText(turnStr, 48, ey+14);
         // Message
         ctx.font = '12px Courier New';
         ctx.fillStyle = col;
-        const countSuffix = entry.count > 1 ? ' (×'+entry.count+')' : '';
-        const maxW = cw - 48 - 62 - 16; // leave room for turn stamp
-        let txt = entry.msg + countSuffix;
-        // Truncate if too long
-        ctx.save();
-        ctx.font = '12px Courier New';
-        while(txt.length>2 && ctx.measureText(txt).width > maxW) txt = txt.slice(0,-4)+'…';
-        ctx.restore();
-        ctx.fillText(txt, 48+62, ey+14);
+        ctx.fillText(entry.msg, 48+62, ey+14);
       });
       // Scroll indicator — thumb at bottom when showing newest
       if(filtered.length > visRows){
@@ -678,7 +666,7 @@ function drawInventoryOverlay(){
   // Footer hint
   if(tab==='log'){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    ctx.fillText('←/→ switch tab    ↑/↓ scroll    Shift+↑/↓ fast scroll    [1-5] filter    ESC close', cw/2, ch-14);
+    ctx.fillText('←/→ tabs   ↑/↓ scroll   Shift+↑/↓ fast   [1-6] filter   ESC close', cw/2, ch-14);
     ctx.textAlign='left';
   } else if(tab !== 'ship'){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';

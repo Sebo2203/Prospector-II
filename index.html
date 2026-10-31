@@ -1308,25 +1308,6 @@ canvas {
   max-height: 18px;
   overflow: hidden;
 }
-/* Expedition records and incident choices share the existing scaled root. */
-#expedition-overlay {
-  position:absolute; inset:0; z-index:100; background:rgba(0,5,12,.94);
-  align-items:center; justify-content:center; color:#b5c9dd;
-  font:16px/1.5 'Courier New',monospace;
-}
-.expedition-panel {
-  width:1050px; max-height:640px; overflow-y:auto; padding:24px 32px;
-  border:1px solid #406078; background:#08121c; box-sizing:border-box;
-}
-.expedition-panel h2 { color:#ffe066; margin:0 0 16px; font-size:22px; }
-.expedition-panel h3 { color:#70d8ff; font-size:16px; border-top:1px solid #243748; padding-top:12px; }
-.expedition-panel p { margin:10px 0; }
-.expedition-panel button {
-  display:block; width:100%; text-align:left; margin:10px 0; padding:12px;
-  font:inherit; color:#b9e5f8; background:#122536; border:1px solid #48708a; cursor:pointer;
-}
-.expedition-panel button:hover,.expedition-panel button:focus-visible { border-color:#ffe066; color:#ffe066; }
-.expedition-panel button:disabled { opacity:.4; cursor:default; }
 </style>
 </head>
 <body>
@@ -1461,7 +1442,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag">v0.28 experimental.2</div>
+  <div id="version-tag">v0.28 experimental.3</div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -4765,7 +4746,7 @@ function placeQuarantineShip(){
   G.galaxy[pos.y][pos.x]={type:'DERELICT',name:'Mercy of Dawn'};
   G.visited[pos.y*MAP_W+pos.x]=true;
   recordExpeditionEvent('quarantine:signal','lead','Broken distress transmission from Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. The caller mentions a sealed ward before the signal cuts out.');
-  addLog('Broken distress call: Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. Coordinates recorded in [J].','lw');
+  addLog('Broken distress call: Mercy of Dawn at '+(pos.x+1)+','+(pos.y+1)+'. Coordinates recorded in LOG.','lw');
 }
 
 function quarantineAtShip(){
@@ -4811,7 +4792,7 @@ function boardQuarantineShip(){
   if(q.choice){ addLog('This incident belongs to an earlier expedition record and is already resolved.','li'); renderAll(); return; }
   const pdata=G.planets[q.mapKey] || generateQuarantineShip(q);
   G.mode='planet'; G.curSystem=''; G.curPlanet=q.mapKey;
-  G.examine=null; G.rangeTarget=null; G._expeditionPanel=null;
+  G.examine=null; G.rangeTarget=null;
   G.player={x:pdata.spawnX,y:pdata.spawnY};
   revealPlanet(q.mapKey,G.player.x,G.player.y);
   recordExpeditionEvent('quarantine:boarding','discovery','Boarded Mercy of Dawn. Emergency lights illuminate an empty passage; a sealed ward lies somewhere beyond.');
@@ -5187,98 +5168,85 @@ function drawQuarantinePeople(pd,camX,camY){
     }
   }
 }
-function closeExpeditionPanel(){
-  if(!G) return;
-  G._expeditionPanel = null;
-  renderAll();
+// The existing LOG tab owns all history and reference records. Saved encounter
+// facts remain separate from transient messages, then join them for display.
+const LOG_FILTERS=[
+  {id:'all',label:'ALL'},{id:'mission',label:'MISSION'},{id:'combat',label:'COMBAT'},
+  {id:'crew',label:'CREW'},{id:'critical',label:'CRITICAL'},{id:'records',label:'RECORDS'},
+];
+
+function careerLogEntries(){
+  return (G?.expedition?.events||[]).slice().reverse().map(event=>({
+    msg:event.text,turn:event.turn,cls:event.kind==='consequence'?'lg':'li',
+    category:'mission',recordId:event.id,
+  }));
 }
 
-function toggleExpeditionJournal(){
-  if(!G || G.dead || G.retired) return;
-  G._expeditionPanel = G._expeditionPanel ? null : 'journal';
-  renderAll();
-}
-
-function renderExpeditionPanel(){
-  let overlay = document.getElementById('expedition-overlay');
-  if(!overlay){
-    overlay = document.createElement('section');
-    overlay.id = 'expedition-overlay';
-    overlay.setAttribute('role','dialog');
-    overlay.setAttribute('aria-label','Expedition journal');
-    document.getElementById('root').appendChild(overlay);
+function currentLogRecords(){
+  const state=ensureExpeditionState(),rows=[];
+  const add=msg=>rows.push({msg,turn:G.turn,cls:'li'});
+  add('CURRENT RECORDS — Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
+  const incident=state.quarantine;
+  if(incident){
+    add('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
+      incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.':
+      'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));
+    if(incident.version===2) for(const person of incident.survivors){
+      if(!person.met && !incident.rosterKnown) continue;
+      const known=['onboard','delivered','lost'].includes(person.status)?person.status:
+        person.seenCondition || (person.met?'last seen aboard the wreck':'listed in the bridge roster; not located');
+      add(person.name+' — '+known+(person.status==='onboard'&&person.pod?' — isolated in cargo':''));
+    }
   }
-  overlay.replaceChildren();
-  overlay.style.display = G?._expeditionPanel ? 'flex' : 'none';
-  if(!G?._expeditionPanel) return;
-  const panel = document.createElement('div');
-  panel.className = 'expedition-panel';
-  overlay.appendChild(panel);
-  const append = (tag,text,className) => {
-    const element = document.createElement(tag);
-    element.textContent = text;
-    if(className) element.className = className;
-    panel.appendChild(element);
-    return element;
-  };
-  const button = (text,action,disabled=false) => {
-    const element = append('button',text);
-    element.type = 'button';
-    element.disabled = disabled;
-    element.onclick = action;
-    return element;
-  };
-  const state = ensureExpeditionState();
-    append('h2',"CAPTAIN'S EXPEDITION JOURNAL");
-    append('p','Turn '+G.turn+' · '+G.shipName+' · Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr');
-    append('h3','LEADS & FOLLOW-UP');
-    const incident = state.quarantine;
-    append('p',!incident ? 'No distress lead recorded for this expedition.' :
-      'Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn ?
-        'Boarding route charted. '+(incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.') :
-        'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));
-    if(incident?.version===2){
-      for(const person of incident.survivors){
-        if(!person.met && !incident.rosterKnown) continue;
-        const known=['onboard','delivered','lost'].includes(person.status) ? person.status :
-          person.seenCondition || (person.met?'last seen aboard the wreck':'listed in the bridge roster; not located');
-        append('p',person.name+' · '+known+(person.status==='onboard'&&person.pod?' · isolated in cargo':''));
-      }
+  const keys=new Set([...Object.keys(state.surveys),...Object.keys(G.planets||{})]);
+  for(const key of keys){
+    const finding=state.surveys[key],pd=G.planets?.[key];
+    const coverage=pd?getScanCoverage(pd.scanMask):finding?.coverage||0;
+    const explored=(pd?.explored||[]).filter(Boolean).length;
+    if(!finding && !coverage && !explored) continue;
+    if(pd?.isDerelict || pd?.isCasino || pd?.isAncientStation || key.includes(':stranded')) continue;
+    const biome=finding?.biome||pd?.biome;
+    add('SURVEY: '+(finding?.name||findBodyNameByKey(key))+' — '+(BIOMES[biome]?.name||biome||'Unclassified')+
+      ' — '+Math.round(coverage*100)+'% scanned; '+explored+' surface tiles explored'+
+      (finding?.civilization?'; recorded civilization: '+finding.civilization:'.'));
+  }
+  for(const [key,pd] of Object.entries(G.planets||{})){
+    const civ=pd.civilization;
+    if(!civ?.state?.contacted) continue;
+    add('CONTACT: '+findBodyNameByKey(key)+' — '+civ.tierLabel+' '+civ.species+' — '+
+      civRelationLabel(civ.state)+' ('+civ.state.relation+'); '+civAlertLabel(civ.state)+'.');
+  }
+  // Newest-first, as expected by the existing log renderer. The current
+  // reference summary follows chronological history at the bottom of the view.
+  return [...rows.reverse(),...careerLogEntries()];
+}
+
+function gameLogEntries(filter){
+  if(filter==='records') return currentLogRecords();
+  const messages=(G.log||[]).map(entry=>typeof entry==='string'?{msg:entry,turn:1}:entry);
+  const present=new Set(messages.map(entry=>entry.turn+'\n'+entry.msg));
+  return [...messages,...careerLogEntries().filter(entry=>!present.has(entry.turn+'\n'+entry.msg))]
+    .sort((a,b)=>(b.turn||1)-(a.turn||1));
+}
+
+function wrapGameLog(entries,maxWidth,measure){
+  const rows=[];
+  for(const entry of entries){
+    const text=String(entry.msg||'')+(entry.count>1?' (×'+entry.count+')':'');
+    let line='',first=true;
+    const push=()=>{rows.push({...entry,msg:line,continuation:!first});first=false;line='';};
+    for(const word of text.split(/\s+/)){
+      if(line && measure(line+' '+word)>maxWidth) push();
+      if(measure(word)>maxWidth){
+        for(const character of Array.from(word)){
+          if(line && measure(line+character)>maxWidth) push();
+          line+=character;
+        }
+      } else line+=(line?' ':'')+word;
     }
-    append('h3','SURVEY REGISTER');
-    let count = 0;
-    // Old saves can reconstruct only actual scanned/explored terrain. Generation
-    // alone is not evidence: never list hidden worlds or unobserved civilizations.
-    const keys = new Set([...Object.keys(state.surveys),...Object.keys(G.planets||{})]);
-    for(const key of keys){
-      const finding = state.surveys[key];
-      const pdata = G.planets?.[key];
-      const coverage = pdata ? getScanCoverage(pdata.scanMask) : finding?.coverage || 0;
-      const explored = (pdata?.explored||[]).filter(Boolean).length;
-      if(!finding && !coverage && !explored) continue;
-      if(pdata?.isDerelict || pdata?.isCasino || pdata?.isAncientStation || key.includes(':stranded')) continue;
-      count++;
-      const name = finding?.name || findBodyNameByKey(key);
-      const biome = finding?.biome || pdata?.biome;
-      append('p',name+' ['+key+'] · '+(BIOMES[biome]?.name || biome || 'Unclassified')+
-        ' · '+Math.round(coverage*100)+'% scanned · '+explored+' surface tiles explored'+
-        (finding?.civilization ? ' · Recorded civilization: '+finding.civilization : ''));
-    }
-    if(!count) append('p','No survey findings yet. Enter a system and scan a body to begin.');
-    append('h3','CIVILIZATION CONTACTS');
-    let contacts = 0;
-    for(const [key,pdata] of Object.entries(G.planets||{})){
-      const civ = pdata.civilization;
-      if(!civ?.state?.contacted) continue;
-      contacts++;
-      append('p',findBodyNameByKey(key)+' · '+civ.tierLabel+' '+civ.species+
-        ' · '+civRelationLabel(civ.state)+' ('+civ.state.relation+') · '+civAlertLabel(civ.state));
-    }
-    if(!contacts) append('p','No established contacts yet. Orbital detections appear in the survey register.');
-    append('h3','CAREER HISTORY');
-    if(!state.events.length) append('p','No major events recorded yet.');
-    state.events.slice().reverse().forEach(event=>append('p','T'+event.turn+' · '+event.kind.toUpperCase()+' · '+event.text));
-  button('Close [Esc]',closeExpeditionPanel);
+    if(line || first) push();
+  }
+  return rows;
 }
 const MINERAL_SAMPLE_TYPES = [
   // ── Geological / geochemical samples (indices 0-7) ──────────────────────
@@ -12916,7 +12884,6 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderGalaxyMinimap();
-  renderExpeditionPanel();
   // Persistent danger status overrides normal msg when relevant
   if(G && !G.dead && !G.retired){
     if(G.stranded){
@@ -17285,14 +17252,8 @@ function drawInventoryOverlay(){
   } else if(tab==='log'){
     // ── LOG tab ──────────────────────────────────────────────────────
     // Filter buttons
-    const FILTERS = [
-      { id:'all',     label:'ALL' },
-      { id:'mission', label:'MISSION' },
-      { id:'combat',  label:'COMBAT' },
-      { id:'crew',    label:'CREW' },
-      { id:'critical',label:'CRITICAL' },
-    ];
-    if(!G._logFilter) G._logFilter = 'all';
+    const FILTERS = LOG_FILTERS;
+    if(!FILTERS.some(filter=>filter.id===G._logFilter)) G._logFilter = 'all';
 
     // Draw filter buttons
     const fBtnW = 90, fBtnH = 22, fBtnGap = 6;
@@ -17361,7 +17322,7 @@ function drawInventoryOverlay(){
                m.includes('weapons fire detected') || m.includes('hostile transponder');
       }
       if(fid==='mission'){
-        return m.includes('contract') || m.includes('science office') ||
+        return entry.category==='mission' || m.includes('contract') || m.includes('science office') ||
                m.includes('survey bonus') || m.includes('survey data') ||
                m.includes('mission') || m.includes('debrief') ||
                m.includes('retired') || m.includes('10,000 cr') ||
@@ -17380,8 +17341,10 @@ function drawInventoryOverlay(){
       return true;
     }
 
-    const allEntries = G.log || [];
-    const filtered = allEntries.filter(e=>logMatchesFilter(e, G._logFilter));
+    const allEntries = gameLogEntries(G._logFilter);
+    ctx.font='12px Courier New';
+    const filtered = wrapGameLog(allEntries.filter(e=>logMatchesFilter(e, G._logFilter)).slice().reverse(),
+      cw-48-62-16,text=>ctx.measureText(text).width);
 
     // Scrollable list
     const listTop = fY + fBtnH + 12;
@@ -17400,9 +17363,9 @@ function drawInventoryOverlay(){
     } else {
       // Colour map matching sidebar log colours
       const logColors = { lc:'#ff4444', ll:'#ffcc44', lw:'#ff9955', lg:'#44ff88', li:'#7788aa', '':'#99aaaa' };
-      // Reverse so oldest entries are at index 0, newest at the end — matches sidebar order
-      const reversed = filtered.slice().reverse();
-      const slice = reversed.slice(G._logScroll, G._logScroll+visRows);
+      // Entries were ordered chronologically before wrapping so continuation
+      // lines stay below the first line of their message.
+      const slice = filtered.slice(G._logScroll, G._logScroll+visRows);
       slice.forEach((entry, i)=>{
         const ey = listTop + i*rowH;
         const col = logColors[entry.cls||''] || '#99aaaa';
@@ -17410,19 +17373,11 @@ function drawInventoryOverlay(){
         const turnStr = '[T'+String(entry.turn||1).padStart(4,' ')+']';
         ctx.font = '11px Courier New';
         ctx.fillStyle = '#334455';
-        ctx.fillText(turnStr, 48, ey+14);
+        if(!entry.continuation) ctx.fillText(turnStr, 48, ey+14);
         // Message
         ctx.font = '12px Courier New';
         ctx.fillStyle = col;
-        const countSuffix = entry.count > 1 ? ' (×'+entry.count+')' : '';
-        const maxW = cw - 48 - 62 - 16; // leave room for turn stamp
-        let txt = entry.msg + countSuffix;
-        // Truncate if too long
-        ctx.save();
-        ctx.font = '12px Courier New';
-        while(txt.length>2 && ctx.measureText(txt).width > maxW) txt = txt.slice(0,-4)+'…';
-        ctx.restore();
-        ctx.fillText(txt, 48+62, ey+14);
+        ctx.fillText(entry.msg, 48+62, ey+14);
       });
       // Scroll indicator — thumb at bottom when showing newest
       if(filtered.length > visRows){
@@ -17439,7 +17394,7 @@ function drawInventoryOverlay(){
   // Footer hint
   if(tab==='log'){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    ctx.fillText('←/→ switch tab    ↑/↓ scroll    Shift+↑/↓ fast scroll    [1-5] filter    ESC close', cw/2, ch-14);
+    ctx.fillText('←/→ tabs   ↑/↓ scroll   Shift+↑/↓ fast   [1-6] filter   ESC close', cw/2, ch-14);
     ctx.textAlign='left';
   } else if(tab !== 'ship'){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
@@ -27030,8 +26985,6 @@ function renderContextBar(){
     btns.push(btn('ESC','Close','info'));
   }
 
-  if(!G.dead && !G.retired && !G.dialogue && !G.showOptions && !DEBUG.on &&
-     ['galaxy','system','planet','base','scanview'].includes(G.mode)) btns.push(btn('J','Expedition journal','info'));
   bar.innerHTML = btns.join('');
 }
 
@@ -32167,24 +32120,6 @@ document.addEventListener('keydown', e=>{
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
 
-  // The expedition panel owns input; no travel or combat occurs underneath it.
-  if(G._expeditionPanel){
-    if(e.key==='F5'){ e.preventDefault(); saveToFile(); return; }
-    if(e.key==='Escape' || e.key==='j' || e.key==='J'){
-      e.preventDefault(); closeExpeditionPanel(); return;
-    }
-    if(['ArrowUp','ArrowDown','PageUp','PageDown'].includes(e.key)){
-      e.preventDefault();
-      document.querySelector('#expedition-overlay .expedition-panel')?.scrollBy(0,
-        (e.key==='ArrowUp'||e.key==='PageUp'?-1:1)*(e.key.startsWith('Page')?240:40));
-    }
-    return;
-  }
-  if((e.key==='j'||e.key==='J') && ['galaxy','system','planet','base','scanview'].includes(G.mode) &&
-     !G.dead && !G.retired && !G.dialogue && !G.showOptions && !DEBUG.on && !G.forcedMove?.active){
-    e.preventDefault(); toggleExpeditionJournal(); return;
-  }
-
   if(G.forcedMove?.active){
     e.preventDefault();
     renderAll();
@@ -32958,10 +32893,9 @@ document.addEventListener('keydown', e=>{
         }
       }
       if(G._viewTab==='log'){
-        const FILTER_IDS = ['all','mission','combat','crew','critical'];
         if(e.key==='ArrowUp')  { G._logScroll = Math.max(0,(G._logScroll||0)-(e.shiftKey?10:1)); renderAll(); return; }
         if(e.key==='ArrowDown'){ G._logScroll = (G._logScroll||0)+(e.shiftKey?10:1); renderAll(); return; }
-        if(e.key>='1'&&e.key<='5'){ G._logFilter=FILTER_IDS[parseInt(e.key)-1]; G._logScroll=Infinity; renderAll(); return; }
+        if(e.key>='1'&&Number(e.key)<=LOG_FILTERS.length){ G._logFilter=LOG_FILTERS[Number(e.key)-1].id; G._logScroll=Infinity; renderAll(); return; }
         renderAll(); return;
       }
       if(G._viewTab==='crew'){
@@ -33936,7 +33870,7 @@ function loadFromFile(){
         // Basic sanity check
         if(!loaded.galaxy || !loaded.crew) throw new Error('Invalid save');
         G = loaded;
-        G._expeditionPanel = null;
+        delete G._expeditionPanel; // retire the obsolete standalone UI flag
         ensureExpeditionState();
         removeInteriorOreDeposits(G.planets);
         ensureCrewStatusState();
@@ -33958,7 +33892,7 @@ function loadFromStorage(){
     const loaded = JSON.parse(raw);
     if(!loaded.galaxy || !loaded.crew) return false;
     G = loaded;
-    G._expeditionPanel = null;
+    delete G._expeditionPanel;
     ensureExpeditionState();
     removeInteriorOreDeposits(G.planets);
     // Back-compat: old saves won't have shipStats or cargo
@@ -34440,7 +34374,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.28 experimental.2  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental.3  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {
@@ -34719,7 +34653,7 @@ canvas.addEventListener('click', e => {
 
   // Log tab — filter button clicks
   if(G !== null && G.mode==='inventory' && G._viewTab==='log'){
-    const FILTERS=['all','mission','combat','crew','critical'];
+    const FILTERS=LOG_FILTERS;
     const fBtnW=90, fBtnH=22, fBtnGap=6;
     const fTotalW=FILTERS.length*(fBtnW+fBtnGap)-fBtnGap;
     const fStartX=Math.round((canvas.width-fTotalW)/2);
@@ -34727,7 +34661,7 @@ canvas.addEventListener('click', e => {
     FILTERS.forEach((f,i)=>{
       const fx=fStartX+i*(fBtnW+fBtnGap);
       if(mx>=fx && mx<=fx+fBtnW && my>=fY && my<=fY+fBtnH){
-        G._logFilter=f; G._logScroll=Infinity; renderAll();
+        G._logFilter=f.id; G._logScroll=Infinity; renderAll();
       }
     });
     return;

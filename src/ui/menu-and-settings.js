@@ -366,7 +366,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.28 experimental.2  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental.3  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {
@@ -645,7 +645,7 @@ canvas.addEventListener('click', e => {
 
   // Log tab — filter button clicks
   if(G !== null && G.mode==='inventory' && G._viewTab==='log'){
-    const FILTERS=['all','mission','combat','crew','critical'];
+    const FILTERS=LOG_FILTERS;
     const fBtnW=90, fBtnH=22, fBtnGap=6;
     const fTotalW=FILTERS.length*(fBtnW+fBtnGap)-fBtnGap;
     const fStartX=Math.round((canvas.width-fTotalW)/2);
@@ -653,7 +653,7 @@ canvas.addEventListener('click', e => {
     FILTERS.forEach((f,i)=>{
       const fx=fStartX+i*(fBtnW+fBtnGap);
       if(mx>=fx && mx<=fx+fBtnW && my>=fY && my<=fY+fBtnH){
-        G._logFilter=f; G._logScroll=Infinity; renderAll();
+        G._logFilter=f.id; G._logScroll=Infinity; renderAll();
       }
     });
     return;

@@ -499,22 +499,3 @@ canvas {
   max-height: 18px;
   overflow: hidden;
 }
-/* Expedition records and incident choices share the existing scaled root. */
-#expedition-overlay {
-  position:absolute; inset:0; z-index:100; background:rgba(0,5,12,.94);
-  align-items:center; justify-content:center; color:#b5c9dd;
-  font:16px/1.5 'Courier New',monospace;
-}
-.expedition-panel {
-  width:1050px; max-height:640px; overflow-y:auto; padding:24px 32px;
-  border:1px solid #406078; background:#08121c; box-sizing:border-box;
-}
-.expedition-panel h2 { color:#ffe066; margin:0 0 16px; font-size:22px; }
-.expedition-panel h3 { color:#70d8ff; font-size:16px; border-top:1px solid #243748; padding-top:12px; }
-.expedition-panel p { margin:10px 0; }
-.expedition-panel button {
-  display:block; width:100%; text-align:left; margin:10px 0; padding:12px;
-  font:inherit; color:#b9e5f8; background:#122536; border:1px solid #48708a; cursor:pointer;
-}
-.expedition-panel button:hover,.expedition-panel button:focus-visible { border-color:#ffe066; color:#ffe066; }
-.expedition-panel button:disabled { opacity:.4; cursor:default; }
