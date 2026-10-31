@@ -26,6 +26,29 @@ test('aquatic maps without spawn coordinates use a finite passable landing point
   pd.grid[1][1].type='wall';assert.throws(()=>c.debugPaletteLandingPoint(pd),/no landing point/);
 });
 
+test('palette biome stations keep their native object types and boarding map keys',()=>{
+  const c=vm.createContext({MAP_W:120,MAP_H:70,DEBUG:{},DEBUG_GALAXY_OBJ_TYPES:[],STAR_TYPES:{},
+    BIOMES:{CASINO:{name:'The Void Royale'},DERELICT:{name:'Derelict Station'},HABITABLE:{name:'Habitable'},GAS_GIANT:{name:'Gas Giant'}},
+    CIV_TIERS:[],CIV_AGGRESSION:[],CIV_SPECIES_TYPES:[],
+    G:{galaxy:Array.from({length:70},()=>Array.from({length:120},()=>({type:'VOID'}))),planets:{},debugPalette:{entries:[]}},
+  });
+  c.generateCasinoStationMap=key=>{c.G.planets[key]={isCasino:true};};
+  c.generateDerelict=key=>{c.G.planets[key]={isDerelict:true};};
+  c.getOrCreateScanPlanetData=(key,biome)=>{c.G.planets[key]={biome};};
+  vm.runInContext(read('debug/playground.js'),c);c.debugBuildGalaxyPalette();
+  for(const [biome,type,prefix]of [['CASINO','CASINO','casino:'],['DERELICT','DERELICT','']]){
+    const entry=c.G.debugPalette.entries.find(e=>e.biome===biome),cell=c.G.galaxy[entry.y][entry.x];
+    assert.equal(cell.type,type);assert.equal(cell.name,c.BIOMES[biome].name);
+    assert.ok(c.G.planets[prefix+entry.x+','+entry.y]);
+    assert.equal(c.G.planets[entry.x+','+entry.y+':0'],undefined);
+  }
+  const world=c.G.debugPalette.entries.find(e=>e.biome==='HABITABLE');
+  assert.equal(c.G.galaxy[world.y][world.x].type,'SYSTEM');
+  assert.equal(c.G.galaxy[world.y][world.x].planets[0].biome,'HABITABLE');
+  const giant=c.G.debugPalette.entries.find(e=>e.biome==='GAS_GIANT');
+  assert.equal(c.G.galaxy[giant.y][giant.x].planets[0].moons.length,2);
+});
+
 test('aquatic contact fixture provides water even on a completely dry generated planet',()=>{
   const c=vm.createContext({PW:p=>p.width,PH:p=>p.height});
   vm.runInContext(read('debug/playground.js'),c);

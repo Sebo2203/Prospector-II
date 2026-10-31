@@ -19,6 +19,12 @@ The map lays out labeled samples of every registered galaxy object, each star ty
 
 Civilization examples are actual generated inhabited maps, including an underwater map for aquatic contact. Creatures, locals and galaxy ships stay still while simulation is off, making them easy to inspect. Turning simulation on allows their normal movement and behavior. Terrain hazards and deliberate combat/interaction still use the existing game rules.
 
+From experimental.11, biome and civilization exhibits show body previews rather than the yellow stars of their underlying test systems. Previews reuse orbital-view artwork, including planet colors/continents, gas-giant bands, asteroid shapes and intact/broken ringworlds. Ancient-station and cave exhibits use existing station/entrance drawings. The star-type exhibits still show stars. This applies only to the test palette; ordinary galaxy systems keep their star icons.
+
+The Void Royale and Derelict Station biome entries are native casino/derelict objects with their normal artwork and boarding behavior. Void Royale no longer appears as a sun, and Enter boards its walkable deck directly. Both its galaxy-object and biome entries remain available in the directory. Other planetary biomes retain their normal orbit and landing controls; civilization directory entries still enter the prepared contact map. ASCII mode has matching body symbols and casino/derelict glyphs.
+
+If a test palette is already open from an older build, use **Shift+B → Shift+F2** to rebuild it, or return to the career with F4 and enter it again. Rebuilding resets only the disposable test worlds.
+
 ## Surface
 
 The large walkable gallery contains each terrain/building tile, debug/store equipment, implants, commodities, creature body archetypes, hostile body archetypes and a gunner alien. Samples are labeled; X gives the existing examination view. Gear is real dropped inventory: step onto it to collect it and equip/use it normally. Commodity stations load a real cargo unit on Enter. Creature samples use actual combat and communication rules. Procedural names, randomized stat rolls and every possible trait combination are not separate exhibits.

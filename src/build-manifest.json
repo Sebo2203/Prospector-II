@@ -61,6 +61,7 @@
     "src/rendering/dispatch.js",
     "src/rendering/minimap.js",
     "src/rendering/dialogue-overlays.js",
+    "src/rendering/system-body-icons.js",
     "src/rendering/galaxy.js",
     "src/rendering/system.js",
     "src/world/line-of-sight-and-loot.js",

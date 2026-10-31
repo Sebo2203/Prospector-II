@@ -2,6 +2,9 @@ function drawGalaxy(){
   // Camera: centre the viewport on the ship, clamped to map edges
   const camX = Math.max(0, Math.min(MAP_W - VIEW_W, G.ship.x - Math.floor(VIEW_W/2)));
   const camY = Math.max(0, Math.min(MAP_H - VIEW_H, G.ship.y - Math.floor(VIEW_H/2)));
+  const paletteBodies=G.debugPalette?new Set(G.debugPalette.entries
+    .filter(entry=>entry.kind==='biome'||entry.kind==='civilization')
+    .map(entry=>entry.x+','+entry.y)):null;
 
   for(let vy=0; vy<VIEW_H; vy++){
     for(let vx=0; vx<VIEW_W; vx++){
@@ -15,6 +18,10 @@ function drawGalaxy(){
         continue;
       }
       const cell=G.galaxy[my][mx];
+      if(cell.type==='SYSTEM'&&paletteBodies?.has(mx+','+my)){
+        drawDebugPaletteBodyIcon(cell.planets[0],px,py);
+        continue;
+      }
       if(OPTIONS.asciiMode){
         ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
         ctx.font='bold '+(TS-1)+'px Courier New';
@@ -39,6 +46,10 @@ function drawGalaxy(){
         } else if(cell.type==='PULSAR'){
           ctx.fillStyle='#000000'; ctx.fillRect(px,py,TS,TS);
           ctx.fillStyle='#00ddaa'; ctx.fillText('※',px+TS/2,py+TS/2+1);
+        } else if(cell.type==='CASINO'){
+          ctx.fillStyle='#cc44ff';ctx.fillText('$',px+TS/2,py+TS/2+1);
+        } else if(cell.type==='DERELICT'){
+          ctx.fillStyle='#6688aa';ctx.fillText('†',px+TS/2,py+TS/2+1);
         }
         ctx.textBaseline='alphabetic'; ctx.textAlign='left';
       } else {

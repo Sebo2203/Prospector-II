@@ -41,6 +41,8 @@ Embedded Base64 sprites are isolated in `src/assets/sprites.js` so they need not
 
 The experimental ship-art pass adds generated overrides in `src/assets/ship-sprites.js`, shared role/frame selection in `src/rendering/ship-art.js` and reproducible import tooling. See [art direction and provenance](art-direction.md). Original source BMPs are retained separately; the release still embeds the derived PNGs and needs no external image files.
 
+Orbital-body colors and drawing helpers live in `src/rendering/system-body-icons.js`. The system view and disposable debug palette reuse them. The palette uses native object cells for casinos and derelicts; planetary/civilization fixture previews change only its presentation, while ordinary galaxy systems retain their stars.
+
 ## Migration audit
 
 Run `npm run verify:migration` to compare assembled output with the SHA-256 and byte count of the original committed HTML. This catches any altered or missing byte, including code, CSS, markup and assets. It is a one-time migration invariant, not an ongoing gameplay test: intentional later changes will make it fail. The historical design comment is retained in `src/html/legacy-design-notes.html` solely to preserve that exact output; use this document for the current development workflow.

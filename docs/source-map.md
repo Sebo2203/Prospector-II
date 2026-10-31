@@ -7,6 +7,7 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/missions/expedition.js](../src/missions/expedition.js) | Added later: saved log facts and survey register |
 | [src/assets/ship-sprites.js](../src/assets/ship-sprites.js) | Added later: generated original ship frames; see art-direction.md |
 | [src/rendering/ship-art.js](../src/rendering/ship-art.js) | Added later: civilian role silhouettes and compass frame selection |
+| [src/rendering/system-body-icons.js](../src/rendering/system-body-icons.js) | Shared existing orbital-body art for the system view and debug previews |
 | [src/missions/quarantine-ship.js](../src/missions/quarantine-ship.js) | Added later: spatial rescue, survivor state, atmosphere and transport |
 | [src/rendering/quarantine.js](../src/rendering/quarantine.js) | Added later: deck fixtures and visible survivors |
 | [src/ui/log-records.js](../src/ui/log-records.js) | Added later: integrated LOG records, history and wrapping |

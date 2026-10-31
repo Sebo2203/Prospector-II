@@ -12,7 +12,9 @@ The project vision recovered from earlier development discussions adds a living 
 
 Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
 
-## Playable now: 0.28 experimental.10
+## Playable now: 0.28 experimental.11
+
+**Palette previews:** The Void Royale and derelict samples now use their actual galaxy-object art and boarding paths. Planetary and civilization exhibits show body previews from the orbital renderer, with station/cave art for those contexts. Dedicated star samples retain their stars. Rebuild an already-open sandbox with Shift+B → Shift+F2; see the [playground guide](debug-playground.md).
 
 **Ship art:** original Prospector hulls now have clean transparency and native eight-way player frames. Trader, cargo, science and patrol silhouettes are distinct; tints preserve the background, and role hulls match combat portraits. The original sheet sources, credits and visual conventions are documented in [art direction](art-direction.md). This pass establishes the ship style; planetary art is still a separate future pass.
 

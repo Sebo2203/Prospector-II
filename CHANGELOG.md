@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-01 — 0.28 experimental.11: correct galaxy palette object previews
+
+Branch: `experiment/expedition-legacy`; main unchanged.
+
+- Fixed the biome palette creating The Void Royale and Derelict Station as yellow-star systems. They now use native CASINO/DERELICT cells, their existing galaxy artwork and the same boarding-map keys as normal play. Both casino entries board their actual walkable decks.
+- Planetary and civilization samples now show previews of their bodies instead of the yellow-star wrapper. The ordinary orbital view and palette share the existing body colors and drawing routines: habitable continents, banded gas giants, asteroids, intact and broken ringworlds. Ancient-station and cave samples use existing station/entrance art. Dedicated star samples retain their real star artwork, and catalog-derived future biome samples receive body previews automatically.
+- Added missing casino/derelict ASCII glyphs; palette body previews also support ASCII. Regular graphical galaxy systems still use star icons. No new art assets, object types, encounter probabilities or gameplay balance changes were introduced.
+- Validation: all 45 repository tests/build checks passed. Headless checks rendered all 67 galaxy samples (including 20 biomes and 21 civilization scenarios), exercised native biome boarding/orbit/landing, confirmed both casino render/boarding paths and ASCII previews, and restored the career exactly. All 80 biome/scan-state orbital comparisons matched the previous renderer pixel-for-pixel. Full palette interaction, rebuild, future-catalog injection and save-isolation regressions passed without JavaScript errors. Screenshots were inspected; no manual desktop playthrough is claimed.
+- Saves: no career-format changes. Rebuild an already-open test palette with Shift+B then Shift+F2 to replace its old wrapper cells; re-entering from the career also creates the corrected palette. Existing career worlds are unaffected. Remaining: broader art polish and human feedback on tiny previews. See [debug playground](docs/debug-playground.md).
+
 ## 2026-11-01 — 0.28 experimental.10: original ship art and seamless compositing
 
 Branch: `experiment/expedition-legacy`; main unchanged.

@@ -111,8 +111,11 @@ function debugBuildGalaxyPalette(){
   }
   for(const biome of Object.keys(BIOMES)){
     const pos=slot(),label=BIOMES[biome].name||biome;
-    G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor(biome,label)]};
-    if(biome==='CASINO')generateCasinoStationMap(pos.x+','+pos.y+':0');
+    G.galaxy[pos.y][pos.x]=biome==='CASINO'?{type:'CASINO',name:label}:
+      biome==='DERELICT'?{type:'DERELICT',name:label}:
+      {type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor(biome,label)]};
+    if(biome==='CASINO')generateCasinoStationMap('casino:'+pos.x+','+pos.y);
+    else if(biome==='DERELICT')generateDerelict(pos.x+','+pos.y);
     else if(biome!=='GAS_GIANT')getOrCreateScanPlanetData(pos.x+','+pos.y+':0',biome,'full');
     G.debugPalette.entries.push({id:'biome:'+biome,kind:'biome',biome,label,...pos});
   }
@@ -280,4 +283,27 @@ function drawDebugPaletteLabels(){
   }
   ctx.textAlign='left';ctx.fillStyle='#ffe066';ctx.font='12px Courier New';
   ctx.fillText('TEST WORLD — F4 return · Shift+B / F6 directory',8,canvas.height-8);
+}
+
+function drawDebugPaletteBodyIcon(body,x,y){
+  ctx.save();
+  ctx.fillStyle='#04040c';ctx.fillRect(x,y,TS,TS);
+  const color=PLANET_COLS[body.biome]||'#8899aa';
+  if(OPTIONS.asciiMode){
+    const glyph=body.biome==='ANCIENT_STATION'?'B':body.biome==='CAVE'?'>':
+      body.biome==='ASTEROID'?'·':body.biome.includes('RINGWORLD')?'◎':'○';
+    ctx.fillStyle=color;ctx.font='bold '+(TS-1)+'px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(glyph,x+TS/2,y+TS/2+1);
+  }else if(body.biome==='ANCIENT_STATION'){
+    drawSpriteTinted('starbase',x,y,'#77bbaa');
+  }else if(body.biome==='CAVE'){
+    DRAW.cave_floor(ctx,x,y);DRAW.CAVE_ENTRANCE(ctx,x,y);
+  }else{
+    ctx.beginPath();ctx.rect(x,y,TS,TS);ctx.clip();
+    const scale=body.biome.includes('RINGWORLD')?TS/76:body.biome==='GAS_GIANT'?TS/56:
+      body.biome==='ASTEROID'?TS/20:TS/32;
+    ctx.translate(x+TS/2,y+TS/2);ctx.scale(scale,scale);
+    drawSystemBodyIcon(body,0,0,color,true);
+  }
+  ctx.restore();
 }

@@ -2,11 +2,12 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.10
+## Active experiment — 0.28 experimental.11
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
 The [development changelog](CHANGELOG.md) records each meaningful change, its reason,
 validation, save impact and remaining work. It is updated with the code.
+The galaxy palette now shows matching casino, station and planetary previews.
 For reusable testing, open **Shift+B → F2** (galaxy palette) or **F3** (surface
 gallery). **F6** searches the samples; **F4** restores your career. See the
 [debug playground guide](docs/debug-playground.md).
