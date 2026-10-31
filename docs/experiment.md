@@ -12,7 +12,9 @@ The project vision recovered from earlier development discussions adds a living 
 
 Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
 
-## Playable now: 0.28 experimental.6
+## Playable now: 0.28 experimental.7
+
+**Autosave reliability:** saves now use durable browser storage with a previous recovery copy, visible failure notices and retry/export controls. Large saves, legacy imports and save-before-menu/quit paths are checked. See the [autosave guide](autosave.md). Other open foundation findings are tracked in the [technical review](foundation-review-2026-10-31.md).
 
 **Debug playground:** open Shift+B, then F2 for the galaxy palette or F3 for the surface gallery. F6 searches 340 catalog-derived samples and scenarios; F4 restores the original career. Shift+F2 rebuilds the test worlds, and F7 toggles NPC simulation. The sandbox cannot overwrite career saves. See the [playground guide](debug-playground.md) for controls, contextual building scenarios and future-content maintenance. This pass also ensures research objectives spawn on reachable deck tiles and aquatic debug contact has an actual sea.
 

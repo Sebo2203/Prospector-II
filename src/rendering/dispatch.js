@@ -39,7 +39,8 @@ function renderAll(){
   }
   checkAlarms();
   checkMsgDismiss();
-  autoSave();
+  scheduleAutoSave();
+  renderAutosaveStatus();
 }
 
 function drawCanvas(){

@@ -1,4 +1,5 @@
 function initGame(chosenClass, captainName, shipName) {
+  beginAutosaveCareer();
   if(debugPaletteReturn) debugReturnFromPalette(false);
   const cls = chosenClass || 'LIGHT_SCOUT';
   G = {

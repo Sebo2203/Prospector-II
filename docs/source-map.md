@@ -102,6 +102,7 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/debug/playground.js](../src/debug/playground.js) | Added later: disposable galaxy/surface playground and searchable catalogs |
 | [src/audio/sound-effects.js](../src/audio/sound-effects.js) | 217 |
 | [src/persistence/save-load.js](../src/persistence/save-load.js) | 183 |
+| [src/persistence/autosave-store.js](../src/persistence/autosave-store.js) | Added later: transactional autosave records, integrity and ordered writes |
 | [src/platform/desktop-download.js](../src/platform/desktop-download.js) | 14 |
 | [src/ui/menu-and-settings.js](../src/ui/menu-and-settings.js) | 1153 |
 | [src/ui/scaling-and-compass.js](../src/ui/scaling-and-compass.js) | 96 |

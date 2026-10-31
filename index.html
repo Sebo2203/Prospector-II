@@ -1298,6 +1298,8 @@ canvas {
 
 /* ── Version tag ── */
 #version-tag {
+  display: flex;
+  justify-content: space-between;
   padding: 2px 12px;
   background: #111;
   font-size: 13px;
@@ -1308,6 +1310,20 @@ canvas {
   min-height: 18px;
   max-height: 18px;
   overflow: hidden;
+}
+#save-state { color: #558877; }
+#save-state[data-phase="saving"] { color: #aa9955; }
+#save-state[data-phase="error"] { color: #ff7755; }
+#save-notice {
+  position: fixed; top: 8px; right: 8px; z-index: 1200;
+  max-width: min(600px, 95vw); padding: 12px;
+  background: #23140d; color: #ffcc99; border: 1px solid #ee7755;
+  font: 14px 'Courier New', monospace;
+}
+#save-notice[hidden] { display: none; }
+#save-notice button {
+  margin: 8px 4px 0 0; padding: 5px 9px;
+  background: #161b24; border: 1px solid #887755; color: #ffe0aa; cursor: pointer;
 }
 </style>
 </head>
@@ -1443,7 +1459,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag">v0.28 experimental.6</div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.7</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -1490,6 +1506,14 @@ canvas {
   </div>
 
 </div><!-- #root -->
+
+<div id="save-notice" role="alert" hidden>
+  <span id="save-notice-text"></span>
+  <button id="save-retry" onclick="retryAutosave()">Retry</button>
+  <button id="save-load-newer" onclick="continueSavedGame()" hidden>Load newer save</button>
+  <button onclick="saveToFile()">Export save</button>
+  <button id="save-notice-dismiss" onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
+</div>
 
 <script>
 // ─── File identity hash — changes whenever the file content changes ───
@@ -8958,6 +8982,7 @@ function trackPlanetDiscoveryOnce(pKey, flag, eventName, extra){
 }
 
 function initGame(chosenClass, captainName, shipName) {
+  beginAutosaveCareer();
   if(debugPaletteReturn) debugReturnFromPalette(false);
   const cls = chosenClass || 'LIGHT_SCOUT';
   G = {
@@ -12945,7 +12970,8 @@ function renderAll(){
   }
   checkAlarms();
   checkMsgDismiss();
-  autoSave();
+  scheduleAutoSave();
+  renderAutosaveStatus();
 }
 
 function drawCanvas(){
@@ -32172,6 +32198,7 @@ function doWaitPlanet(turnAlreadyAdvanced=false){
 //  action can never silently break the event listener.
 // ─────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e=>{
+  if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
   if(e.key==='F4' && debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return;}
   // ── Debug item search mode — must intercept before ANY other routing ──
   if(DEBUG?.itemSubSearch !== undefined){
@@ -32506,7 +32533,7 @@ document.addEventListener('keydown', e=>{
 
     // Game over / retirement
     if(G.dead || G.retired){
-      if(e.key==='Enter'||e.key===' ') showMenu();
+      if(e.key==='Enter'||e.key===' ') void returnToMainMenuFromGame();
       return;
     }
 
@@ -34193,40 +34220,260 @@ const SFX = (() => {
   };
 })();
 
+// Autosave records are committed as a current/previous pair in one transaction.
+// Keep browser I/O separate from the write queue so failure ordering is testable.
+const AUTOSAVE_DB_NAME='prospector_autosaves';
+const AUTOSAVE_DB_VERSION=1;
+let autosaveDatabasePromise=null;
+let autosaveBaseKnown=false,autosaveExpectedToken=null;
+
+function autosaveRecordToken(record){return record?record.savedAt+':'+record.checksum:null;}
+
+function parseSaveSnapshot(raw){
+  const game=JSON.parse(raw);
+  if(!game || !Array.isArray(game.galaxy) || !game.galaxy.length ||
+     !game.galaxy.every(row=>Array.isArray(row)&&row.length) ||
+     !Array.isArray(game.crew) || !game.crew.every(c=>c&&Number.isFinite(c.hp)) ||
+     !game.ship || !['x','y','hp','maxHp'].every(k=>Number.isFinite(game.ship[k])) ||
+     !Number.isFinite(game.turn) || typeof game.mode!=='string' ||
+     !game.galaxy[game.ship.y]?.[game.ship.x] || game.debugPalette){
+    throw new Error('This file does not contain a valid career save.');
+  }
+  return game;
+}
+
+function autosaveChecksum(raw){
+  let hash=0x811c9dc5;
+  for(let i=0;i<raw.length;i++)hash=Math.imul(hash^raw.charCodeAt(i),0x01000193);
+  return (hash>>>0).toString(16);
+}
+
+function makeAutosaveRecord(raw){
+  const game=parseSaveSnapshot(raw);
+  return {format:1,raw,checksum:autosaveChecksum(raw),savedAt:Date.now(),
+    summary:{turn:game.turn,seed:game.seed,captain:game.crew.find(c=>c.role==='captain')?.name||'Captain'}};
+}
+
+function validAutosaveRecord(record){
+  if(!record || record.format!==1 || typeof record.raw!=='string' || record.checksum!==autosaveChecksum(record.raw))return false;
+  try{
+    const game=parseSaveSnapshot(record.raw);
+    return Number.isFinite(record.savedAt) && record.summary?.turn===game.turn && typeof record.summary.captain==='string';
+  }catch(e){return false;}
+}
+
+function selectAutosaveRecord(current,previous){
+  if(validAutosaveRecord(current))return {record:current,recovered:false};
+  if(validAutosaveRecord(previous))return {record:previous,recovered:true};
+  return null;
+}
+
+function openAutosaveDatabase(){
+  if(autosaveDatabasePromise)return autosaveDatabasePromise;
+  autosaveDatabasePromise=new Promise((resolve,reject)=>{
+    if(typeof indexedDB==='undefined'){reject(new Error('Browser save storage is unavailable.'));return;}
+    let settled=false,request;
+    const fail=error=>{if(!settled){settled=true;clearTimeout(timer);reject(error);}};
+    const timer=setTimeout(()=>fail(new Error('Save storage did not respond. Close other game tabs and retry.')),5000);
+    try{request=indexedDB.open(AUTOSAVE_DB_NAME,AUTOSAVE_DB_VERSION);}catch(e){fail(e);return;}
+    request.onupgradeneeded=()=>{
+      if(!request.result.objectStoreNames.contains('slots'))request.result.createObjectStore('slots');
+    };
+    request.onerror=()=>fail(request.error||new Error('Cannot open browser save storage.'));
+    request.onblocked=()=>fail(new Error('Save storage is blocked by another game tab. Close it and retry.'));
+    request.onsuccess=()=>{
+      if(settled){request.result.close();return;}
+      settled=true;clearTimeout(timer);const db=request.result;
+      db.onversionchange=()=>{db.close();autosaveDatabasePromise=null;};
+      resolve(db);
+    };
+  }).catch(error=>{autosaveDatabasePromise=null;throw error;});
+  return autosaveDatabasePromise;
+}
+
+async function readAutosaveSlots(){
+  const db=await openAutosaveDatabase();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('slots','readonly'),store=tx.objectStore('slots');
+    const current=store.get('current'),previous=store.get('previous');
+    tx.oncomplete=()=>resolve({current:current.result,previous:previous.result});
+    tx.onabort=()=>reject(tx.error||new Error('Cannot read the autosave.'));
+    tx.onerror=()=>{}; // The abort handler reports the transaction result.
+  });
+}
+
+async function writeAutosaveRecord(record){
+  const db=await openAutosaveDatabase();
+  return new Promise((resolve,reject)=>{
+    let tx;
+    try{tx=db.transaction('slots','readwrite',{durability:'strict'});}
+    catch(e){tx=db.transaction('slots','readwrite');}
+    const store=tx.objectStore('slots'),current=store.get('current');
+    let conflict=null;
+    current.onsuccess=()=>{
+      if(autosaveBaseKnown && autosaveRecordToken(current.result)!==autosaveExpectedToken){
+        conflict=new Error('Another game window changed the autosave. Export this game or load the newer save.');
+        conflict.name='AutosaveConflict';tx.abort();return;
+      }
+      // Never rotate a damaged current record over a usable recovery copy.
+      if(validAutosaveRecord(current.result) && current.result.raw!==record.raw)store.put(current.result,'previous');
+      store.put(record,'current');
+    };
+    tx.oncomplete=()=>{
+      autosaveBaseKnown=true;autosaveExpectedToken=autosaveRecordToken(record);resolve();
+    }; // A successful request alone is not a committed save.
+    tx.onabort=()=>reject(conflict||tx.error||new Error('Autosave transaction was interrupted.'));
+    tx.onerror=()=>{};
+  });
+}
+
+function createAutosaveQueue(write,onStatus){
+  let pending=null,running=false,lastRaw=null,lastResult=true,sequence=0;
+  const waiters=[];
+  async function drain(){
+    running=true;
+    while(pending){
+      const next=pending;pending=null;
+      try{
+        onStatus('saving',next.record);
+        if(next.record.raw!==lastRaw || !lastResult)await write(next.record);
+        lastRaw=next.record.raw;lastResult=true;
+        onStatus('saved',next.record);
+      }catch(error){lastResult=false;onStatus('error',next.record,error);}
+      for(let i=waiters.length-1;i>=0;i--)if(waiters[i].sequence<=next.sequence){
+        waiters[i].resolve(lastResult);waiters.splice(i,1);
+      }
+    }
+    running=false;
+  }
+  return {
+    save(record){
+      if(!running && !pending && lastResult && record.raw===lastRaw)return Promise.resolve(true);
+      const next=++sequence;pending={record,sequence:next};
+      const result=new Promise(resolve=>waiters.push({sequence:next,resolve}));
+      if(!running)void drain();
+      return result;
+    },
+    idle(){return running||pending?new Promise(resolve=>waiters.push({sequence,resolve})):Promise.resolve(lastResult);},
+    get busy(){return running||!!pending;},
+  };
+}
 // ─────────────────────────────────────────────────────────────────
 //  SAVE / LOAD / AUTOSAVE
 //
 //  Three mechanisms:
-//    autoSave()      — writes G to localStorage after every action
+//    autoSave()      — commits a captured snapshot to IndexedDB
 //    saveToFile()    — downloads G as prospector_save.json
 //    loadFromFile()  — reads a .json file the player picks
-//    loadFromStorage()— restores G from localStorage
+//    loadFromStorage()— restores IndexedDB, with legacy localStorage import
 //
 //  G.visited is a plain Array (JSON-safe).
 //  Everything else in G is primitives, arrays, plain objects — safe.
 // ─────────────────────────────────────────────────────────────────
 const SAVE_KEY = 'prospector_autosave';
+const AUTOSAVE_STATE={phase:'idle',record:null,error:null,notice:'',ready:false,revision:0,loading:false};
+let autosaveTimer=null,saveLoadGeneration=0;
+const autosaveQueue=createAutosaveQueue(writeAutosaveRecord,(phase,record,error)=>{
+  AUTOSAVE_STATE.phase=phase;AUTOSAVE_STATE.error=error||null;
+  if(phase==='saved'){AUTOSAVE_STATE.record=record;AUTOSAVE_STATE.ready=true;AUTOSAVE_STATE.revision++;}
+  renderAutosaveStatus();
+});
+
+function beginAutosaveCareer(){
+  saveLoadGeneration++;AUTOSAVE_STATE.loading=false;AUTOSAVE_STATE.notice='';
+  setSaveTransition(false);
+}
+
+function setSaveTransition(active){
+  AUTOSAVE_STATE.transition=active;
+  const root=document.getElementById('root');if(root)root.style.pointerEvents=active?'none':'';
+}
+
+function renderAutosaveStatus(){
+  const state=AUTOSAVE_STATE,badge=document.getElementById('save-state'),notice=document.getElementById('save-notice');
+  const sandbox=!!G?.debugPalette;
+  if(badge){
+    badge.textContent=sandbox?'DEBUG — career autosave protected':state.phase==='error'?'AUTOSAVE FAILED':
+      state.phase==='saving'||autosaveTimer?'Saving…':state.record?'Saved · turn '+state.record.summary.turn:'';
+    badge.dataset.phase=autosaveTimer?'saving':state.phase;
+  }
+  if(!notice)return;
+  notice.hidden=sandbox||!(state.error||state.notice);
+  const text=document.getElementById('save-notice-text');
+  const conflict=state.error?.name==='AutosaveConflict';
+  if(text)text.textContent=conflict?state.error.message:state.error?'Autosave failed. '+(state.record?'Your last good save is preserved. ':'Progress is not saved yet. ')+'Retry or export your current game.':state.notice;
+  notice.title=state.error?.message||'';
+  const retry=document.getElementById('save-retry');if(retry)retry.hidden=!state.error||conflict;
+  const newer=document.getElementById('save-load-newer');if(newer)newer.hidden=!conflict;
+  const dismiss=document.getElementById('save-notice-dismiss');if(dismiss)dismiss.hidden=!!state.error;
+}
+
+function scheduleAutoSave(){
+  if(!G?.galaxy || G.debugPalette)return;
+  // Bounded delay: rapid actions share a snapshot; a held key cannot postpone
+  // saving indefinitely. Animation-only drawCanvas calls never save.
+  if(!autosaveTimer)autosaveTimer=setTimeout(()=>{autosaveTimer=null;void autoSave();},200);
+  renderAutosaveStatus();
+}
 
 function autoSave(){
-  if(G?.debugPalette) return;
+  if(autosaveTimer){clearTimeout(autosaveTimer);autosaveTimer=null;}
+  if(!G || G.debugPalette)return Promise.resolve(true);
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(G));
+    // Capture now: queued writes never read a later game or debug world.
+    return autosaveQueue.save(makeAutosaveRecord(JSON.stringify(G)));
   } catch(e) {
-    // localStorage full or unavailable — silently skip
+    AUTOSAVE_STATE.phase='error';AUTOSAVE_STATE.error=e;renderAutosaveStatus();
+    return Promise.resolve(false);
   }
 }
 
 function hasSave(){
-  try { return !!localStorage.getItem(SAVE_KEY); }
+  if(AUTOSAVE_STATE.ready)return !!AUTOSAVE_STATE.record;
+  try { const raw=localStorage.getItem(SAVE_KEY);return !!raw && !!parseSaveSnapshot(raw); }
   catch(e){ return false; }
 }
 
-function saveToFile(){
+async function readStoredAutosave(){
+  let slots,error;
+  try{slots=await readAutosaveSlots();}catch(e){error=e;}
+  const selected=selectAutosaveRecord(slots?.current,slots?.previous);
+  if(selected)return {...selected,source:'database',baseToken:autosaveRecordToken(slots.current)};
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(raw){const record=makeAutosaveRecord(raw);return {record,source:'legacy',recovered:!!(slots?.current||slots?.previous),storageError:error,baseToken:autosaveRecordToken(slots?.current)};}
+  }catch(e){if(!error)error=e;}
+  if(error)throw error;
+  if(slots?.current||slots?.previous)throw new Error('Neither autosave copy is readable. Import a saved file to recover.');
+  return null;
+}
+
+async function refreshSavedGameMenu(){
+  const revision=AUTOSAVE_STATE.revision;
+  try{
+    const saved=await readStoredAutosave();
+    if(revision===AUTOSAVE_STATE.revision){
+      AUTOSAVE_STATE.record=saved?.record||null;AUTOSAVE_STATE.ready=true;
+      if(G===null && !autosaveQueue.busy){autosaveBaseKnown=true;autosaveExpectedToken=saved?.baseToken||null;}
+    }
+    if(saved?.storageError)throw saved.storageError;
+  }catch(error){AUTOSAVE_STATE.error=error;AUTOSAVE_STATE.phase='error';}
+  if(G===null){MENU_STATE.hasAutosave=hasSave();drawMenuScreen();}
+  renderAutosaveStatus();
+}
+
+async function retryAutosave(){
+  if(G && !G.debugPalette)await autoSave();
+  else {AUTOSAVE_STATE.error=null;await refreshSavedGameMenu();}
+}
+
+async function saveToFile(){
   if(G?.debugPalette){addLog('DEBUG: Return to the career with F4 before exporting a save.','li');renderAll();return;}
+  const active=G;
   try {
-    const raw = G ? JSON.stringify(G, null, 2) : localStorage.getItem(SAVE_KEY);
+    const raw = active ? JSON.stringify(active) : (await readStoredAutosave())?.record.raw;
     if(!raw) throw new Error('No save data');
-    const json = G ? raw : JSON.stringify(JSON.parse(raw), null, 2);
+    const json = JSON.stringify(JSON.parse(raw), null, 2);
     const blob = new Blob([json], {type:'application/json'});
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -34234,11 +34481,11 @@ function saveToFile(){
     a.download = 'prospector_save.json';
     a.click();
     URL.revokeObjectURL(url);
-    if(G){
-      autoSave();
+    if(active && G===active){
+      void autoSave();
       addLog('Game saved to file.','lg');
       renderAll();
-    } else {
+    } else if(!G){
       alert('Autosave exported to file.');
       drawMenuScreen();
     }
@@ -34248,44 +34495,10 @@ function saveToFile(){
   }
 }
 
-function loadFromFile(){
-  if(G?.debugPalette){addLog('DEBUG: Return to the career with F4 before loading a save.','li');renderAll();return;}
-  const input = document.createElement('input');
-  input.type  = 'file';
-  input.accept= '.json,application/json';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const loaded = JSON.parse(ev.target.result);
-        // Basic sanity check
-        if(!loaded.galaxy || !loaded.crew) throw new Error('Invalid save');
-        G = loaded;
-        delete G._expeditionPanel; // retire the obsolete standalone UI flag
-        ensureExpeditionState();
-        restoreStrandedShipMarkers();
-        removeInteriorOreDeposits(G.planets);
-        ensureCrewStatusState();
-        addLog('Save file loaded. Welcome back, Captain.','lg');
-        loadSprites().then(()=>{ restoreGameUI(); renderAll(); autoSave(); });
-      } catch(err) {
-        alert('Could not load save file: ' + err.message);
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
-
-function loadFromStorage(){
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if(!raw) return false;
-    const loaded = JSON.parse(raw);
-    if(!loaded.galaxy || !loaded.crew) return false;
-    G = loaded;
+function installSaveSnapshot(loaded){
+  const before=G;
+  try{
+    G=loaded;
     delete G._expeditionPanel;
     ensureExpeditionState();
     restoreStrandedShipMarkers();
@@ -34358,35 +34571,118 @@ function loadFromStorage(){
       if(!c.statuses) c.statuses = {};
     });
     ensureCrewStatusState();
+    return G;
+  }catch(error){G=before;throw error;}
+}
+
+function loadFromFile(){
+  if(G?.debugPalette){addLog('DEBUG: Return to the career with F4 before loading a save.','li');renderAll();return;}
+  const generation=++saveLoadGeneration;
+  const input = document.createElement('input');
+  input.type  = 'file';
+  input.accept= '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      const before=G;
+      try {
+        const loaded = parseSaveSnapshot(ev.target.result);
+        if(generation!==saveLoadGeneration || G?.debugPalette)return;
+        setSaveTransition(true);
+        await autosaveQueue.idle();
+        if(generation!==saveLoadGeneration || G?.debugPalette)return;
+        installSaveSnapshot(loaded);
+        addLog('Save file loaded. Welcome back, Captain.','lg');
+        await loadSprites();
+        if(generation!==saveLoadGeneration)return;
+        restoreGameUI();renderAll();await autoSave();
+      } catch(err) {
+        if(generation===saveLoadGeneration)G=before;
+        alert('Could not load save file: ' + err.message);
+      } finally {
+        setSaveTransition(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+async function loadFromStorage(){
+  if(G?.debugPalette)return false;
+  const generation=++saveLoadGeneration,before=G;
+  try {
+    await autosaveQueue.idle();
+    const saved=await readStoredAutosave();
+    if(!saved || generation!==saveLoadGeneration)return false;
+    const loaded = parseSaveSnapshot(saved.record.raw);
+    installSaveSnapshot(loaded);
+    autosaveBaseKnown=true;autosaveExpectedToken=saved.baseToken;
+    AUTOSAVE_STATE.record=saved.record;AUTOSAVE_STATE.ready=true;
+    if(!saved.storageError){AUTOSAVE_STATE.error=null;AUTOSAVE_STATE.phase='saved';}
+    if(saved.recovered)AUTOSAVE_STATE.notice='Recovered the previous autosave: '+saved.record.summary.captain+', turn '+saved.record.summary.turn+'. Export a copy to keep it.';
+    if(saved.storageError){AUTOSAVE_STATE.error=saved.storageError;AUTOSAVE_STATE.phase='error';}
     addLog('Autosave restored. Welcome back, Captain.','lg');
+    renderAutosaveStatus();
     return true;
-  } catch(e){ return false; }
+  } catch(e){
+    if(generation===saveLoadGeneration)G=before;
+    AUTOSAVE_STATE.error=e;AUTOSAVE_STATE.phase='error';renderAutosaveStatus();return false;
+  }
 }
 
 // Wrapper used by menu — reloads sprites before rendering after a load
-function loadAndRender(loadFn){
-  const ok = loadFn();
-  if(ok) loadSprites().then(()=>{ restoreGameUI(); renderAll(); });
+async function loadAndRender(loadFn){
+  const ok = await loadFn();
+  if(ok){
+    const loaded=G;await loadSprites();if(G!==loaded)return false;
+    restoreGameUI();renderAll();
+  }
   return ok;
 }
 
-async function quitGame(){
-  if(G?.debugPalette){debugReturnFromPalette(false);autoSave();}
-  try {
-    const invoke = window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke;
-    if(invoke){
-      await invoke('quit_app');
-      return;
+async function continueSavedGame(){
+  if(AUTOSAVE_STATE.loading)return;
+  AUTOSAVE_STATE.loading=true;setSaveTransition(true);
+  const generation=saveLoadGeneration+1,before=G;
+  try{
+    if(!await loadAndRender(loadFromStorage) && generation===saveLoadGeneration){
+      if(before){restoreGameUI();renderAll();}else showMenu();
     }
-  } catch(e) {}
-
-  try { window.close(); } catch(e) {}
-  setTimeout(() => {
-    if(document.visibilityState !== 'hidden'){
-      alert('Your browser blocked automatic tab closing. You can close this tab now.');
-    }
-  }, 150);
+  }
+  finally{AUTOSAVE_STATE.loading=false;setSaveTransition(false);}
 }
+
+async function quitGame(){
+  if(AUTOSAVE_STATE.transition)return;
+  if(G?.debugPalette)debugReturnFromPalette(false);
+  const career=G;setSaveTransition(true);
+  try{
+    if(G && !await autoSave())return;
+    if(!await autosaveQueue.idle() || G!==career)return;
+    try {
+      const invoke = window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke;
+      if(invoke){await invoke('quit_app');return;}
+    }catch(e){}
+    try{window.close();}catch(e){}
+    setTimeout(()=>{
+      if(document.visibilityState!=='hidden')alert('Your browser blocked automatic tab closing. You can close this tab now.');
+    },150);
+  }finally{setSaveTransition(false);}
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden' && G && !G.debugPalette)void autoSave();
+});
+window.addEventListener('beforeunload',event=>{
+  if(!G || G.debugPalette)return;
+  if(autosaveTimer || autosaveQueue.busy || AUTOSAVE_STATE.phase==='error'){
+    void autoSave();
+    if(autosaveQueue.busy || AUTOSAVE_STATE.phase==='error'){event.preventDefault();event.returnValue='';}
+  }
+});
 
 function downloadDesktopApp(){
   try { localStorage.setItem('prospector_desktop_download_clicked', '1'); } catch(e) {}
@@ -34509,6 +34805,7 @@ function showMenu(){
   hideMsg();
   document.getElementById('ctx-bar').innerHTML = '';
   drawMenuScreen();
+  void refreshSavedGameMenu();
   // Fetch last commit time from GitHub (only once per session)
   if(MENU_STATE.lastUpdateText === undefined){
     MENU_STATE.lastUpdateText = null; // null = loading
@@ -34544,9 +34841,12 @@ function restoreGameUI(){
   document.getElementById('version-tag').style.display = '';
 }
 
-function returnToMainMenuFromGame(){
-  if(G && !G.dead && !G.retired) autoSave();
-  showMenu();
+async function returnToMainMenuFromGame(){
+  if(AUTOSAVE_STATE.transition)return;
+  if(G?.debugPalette)debugReturnFromPalette(false);
+  const career=G;setSaveTransition(true);
+  try{if(G && !await autoSave())return;if(G===career)showMenu();}
+  finally{setSaveTransition(false);}
 }
 
 function drawMenuScreen(){
@@ -34771,12 +35071,11 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.28 experimental.6  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental.7  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {
-      const _saveRaw = localStorage.getItem(SAVE_KEY);
-      const _saveSeed = _saveRaw ? JSON.parse(_saveRaw).seed : null;
+      const _saveSeed = AUTOSAVE_STATE.record?.summary.seed;
       if(_saveSeed){
         ctx.font='12px Courier New'; ctx.fillStyle='#223344';
         ctx.fillText('seed: #'+_saveSeed, cx, canvas.height-44);
@@ -35201,7 +35500,7 @@ canvas.addEventListener('click', e => {
 
   function activateMainOpt(sel){
     if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=false; drawMenuScreen(); }
-    else if(sel==='c'){ if(loadFromStorage()){ loadSprites().then(()=>{ restoreGameUI(); renderAll(); }); } else showMenu(); }
+    else if(sel==='c'){ void continueSavedGame(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
@@ -35390,6 +35689,7 @@ function drawCreditsScreen(cx){
 }
 
 function handleMenuKey(e){
+  if(AUTOSAVE_STATE.loading)return;
   if(document.getElementById('feedback-overlay').style.display==='flex') return;
   if(document.getElementById('barter-overlay').style.display==='flex') return;
   const k=e.key.toLowerCase();
@@ -35526,7 +35826,7 @@ function handleMenuKey(e){
 
   function activateMainOpt(sel){
     if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=true; drawMenuScreen(); }
-    else if(sel==='c'){ if(loadFromStorage()){ loadSprites().then(()=>{ restoreGameUI(); renderAll(); }); } else showMenu(); }
+    else if(sel==='c'){ void continueSavedGame(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }

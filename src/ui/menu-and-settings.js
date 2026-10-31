@@ -105,6 +105,7 @@ function showMenu(){
   hideMsg();
   document.getElementById('ctx-bar').innerHTML = '';
   drawMenuScreen();
+  void refreshSavedGameMenu();
   // Fetch last commit time from GitHub (only once per session)
   if(MENU_STATE.lastUpdateText === undefined){
     MENU_STATE.lastUpdateText = null; // null = loading
@@ -140,9 +141,12 @@ function restoreGameUI(){
   document.getElementById('version-tag').style.display = '';
 }
 
-function returnToMainMenuFromGame(){
-  if(G && !G.dead && !G.retired) autoSave();
-  showMenu();
+async function returnToMainMenuFromGame(){
+  if(AUTOSAVE_STATE.transition)return;
+  if(G?.debugPalette)debugReturnFromPalette(false);
+  const career=G;setSaveTransition(true);
+  try{if(G && !await autoSave())return;if(G===career)showMenu();}
+  finally{setSaveTransition(false);}
 }
 
 function drawMenuScreen(){
@@ -367,12 +371,11 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.28 experimental.6  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental.7  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {
-      const _saveRaw = localStorage.getItem(SAVE_KEY);
-      const _saveSeed = _saveRaw ? JSON.parse(_saveRaw).seed : null;
+      const _saveSeed = AUTOSAVE_STATE.record?.summary.seed;
       if(_saveSeed){
         ctx.font='12px Courier New'; ctx.fillStyle='#223344';
         ctx.fillText('seed: #'+_saveSeed, cx, canvas.height-44);
@@ -797,7 +800,7 @@ canvas.addEventListener('click', e => {
 
   function activateMainOpt(sel){
     if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=false; drawMenuScreen(); }
-    else if(sel==='c'){ if(loadFromStorage()){ loadSprites().then(()=>{ restoreGameUI(); renderAll(); }); } else showMenu(); }
+    else if(sel==='c'){ void continueSavedGame(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
@@ -986,6 +989,7 @@ function drawCreditsScreen(cx){
 }
 
 function handleMenuKey(e){
+  if(AUTOSAVE_STATE.loading)return;
   if(document.getElementById('feedback-overlay').style.display==='flex') return;
   if(document.getElementById('barter-overlay').style.display==='flex') return;
   const k=e.key.toLowerCase();
@@ -1122,7 +1126,7 @@ function handleMenuKey(e){
 
   function activateMainOpt(sel){
     if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=true; drawMenuScreen(); }
-    else if(sel==='c'){ if(loadFromStorage()){ loadSprites().then(()=>{ restoreGameUI(); renderAll(); }); } else showMenu(); }
+    else if(sel==='c'){ void continueSavedGame(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
     else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }

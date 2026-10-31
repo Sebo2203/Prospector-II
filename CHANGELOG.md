@@ -23,6 +23,17 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-10-31 — 0.28 experimental.7: durable autosaves and recovery
+
+Branch: `experiment/expedition-legacy`.
+
+- Replaced quota-limited localStorage autosave writes with an asynchronous IndexedDB store. Current and previous valid snapshots commit atomically; integrity checks recover a damaged primary without overwriting a valid backup. Existing localStorage saves remain readable and are retained after migration.
+- Added visible saving/saved/failed status, persistent failure notices, retry and export of current unsaved progress. Menu/quit transitions wait for commit and preserve the active game on failure. Pending/failed browser closes request an unsaved-progress warning.
+- Captured snapshots before queueing; serialized writes, coalesced pending work and skipped identical snapshots. Render-triggered writes use a bounded 200 ms schedule. Cross-window conflict checks stop stale careers from overwriting a newer save and offer an explicit load/export choice.
+- Unified compatibility repairs for file and stored saves, added structural/integrity validation and rollback on failed preparation, and guarded asynchronous transitions/loads. Debug worlds remain excluded. Exported JSON retains the existing game-state shape.
+- Validation: 36 repository tests passed. Actual browser storage checks covered aborted transactions, retained backups, failure/export/retry, corruption recovery, legacy import, matching file/storage repairs, invalid-file rollback, stale windows and save-before-menu/quit. A full reload restored a 10,124,288-character snapshot with 210 generated maps, beyond the old localStorage quota. Existing gameplay regressions were also exercised; native quit invocation was mocked, and no manual native playtest is claimed.
+- Saves: legacy reads preserved; database envelope format/schema version 1. Continue and save operations are asynchronous. Remaining: full snapshot serialization and the render scheduling hook await broader action-boundary work; combat/dialogue identity and other audited gameplay defects remain open. Details: [autosave guide](docs/autosave.md).
+
 ## 2026-10-31 — Foundation and roadmap review
 
 Branch: `experiment/expedition-legacy`. Reviewed gameplay commit `616d819`; game version remains `0.28.0-experimental.6`.

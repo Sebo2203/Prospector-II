@@ -110,6 +110,7 @@
     "src/input/keyboard.js",
     "src/debug/playground.js",
     "src/audio/sound-effects.js",
+    "src/persistence/autosave-store.js",
     "src/persistence/save-load.js",
     "src/platform/desktop-download.js",
     "src/ui/menu-and-settings.js",

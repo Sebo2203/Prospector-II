@@ -4,6 +4,7 @@
 //  action can never silently break the event listener.
 // ─────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e=>{
+  if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
   if(e.key==='F4' && debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return;}
   // ── Debug item search mode — must intercept before ANY other routing ──
   if(DEBUG?.itemSubSearch !== undefined){
@@ -338,7 +339,7 @@ document.addEventListener('keydown', e=>{
 
     // Game over / retirement
     if(G.dead || G.retired){
-      if(e.key==='Enter'||e.key===' ') showMenu();
+      if(e.key==='Enter'||e.key===' ') void returnToMainMenuFromGame();
       return;
     }
 

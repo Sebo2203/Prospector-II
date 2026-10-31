@@ -488,6 +488,8 @@ canvas {
 
 /* ── Version tag ── */
 #version-tag {
+  display: flex;
+  justify-content: space-between;
   padding: 2px 12px;
   background: #111;
   font-size: 13px;
@@ -498,4 +500,18 @@ canvas {
   min-height: 18px;
   max-height: 18px;
   overflow: hidden;
+}
+#save-state { color: #558877; }
+#save-state[data-phase="saving"] { color: #aa9955; }
+#save-state[data-phase="error"] { color: #ff7755; }
+#save-notice {
+  position: fixed; top: 8px; right: 8px; z-index: 1200;
+  max-width: min(600px, 95vw); padding: 12px;
+  background: #23140d; color: #ffcc99; border: 1px solid #ee7755;
+  font: 14px 'Courier New', monospace;
+}
+#save-notice[hidden] { display: none; }
+#save-notice button {
+  margin: 8px 4px 0 0; padding: 5px 9px;
+  background: #161b24; border: 1px solid #887755; color: #ffe0aa; cursor: pointer;
 }

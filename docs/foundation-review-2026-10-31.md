@@ -1,5 +1,7 @@
 # Foundation review — October 31, 2026
 
+Status update: experimental.7 addresses the autosave-capacity/failure problem and unifies file/storage compatibility repairs with invalid-import rollback. See the [autosave follow-up](autosave.md). The review below records the original evidence; combat/dialogue identity, action clocks, generation and morale findings remain open.
+
 Reviewed `experiment/expedition-legacy` at `616d81970e32e225d9c0303a4d7dcc53c87784d5`, version `0.28.0-experimental.6`, against the [roadmap](roadmap.md). This assesses the latest experimental game; main remains an earlier gameplay snapshot. Findings below are open, not fixes delivered by this review.
 
 The game has enough working systems to justify developing this codebase further. The modular source layout and single-file distribution are practical. Its foundation needs a focused reliability pass before larger connected stories, sector crises and long careers. File organization is modular; ownership of state, turn progression and persistence is still shared across the game.
