@@ -1,5 +1,7 @@
 # Working on Prospector II
 
+- Keep the main-branch root README strictly for players. Put build instructions, source layout and internal development notes in `docs/development.md` or other developer guides, not the player introduction.
+- Update `CHANGELOG.md` in the same commit as every meaningful gameplay, balance, UI, debugging, architecture or development-workflow change. Record the date, behavior and reason, validation actually performed and its limits, save impact and unresolved work. Keep planned work in the roadmap. Documentation-only changes do not need a game-version bump.
 - Edit `src/`, then run `npm run build`. `index.html` is generated and remains the single-file release artifact. Never patch it directly.
 - Start with `docs/architecture.md` and `docs/source-map.md`; search relevant functions and callers instead of reading the entire game. Skip `src/assets/sprites.js` unless editing embedded images.
 - `src/build-manifest.json` is the explicit assembly order. Preserve the order and script boundaries. These files share globals; they are not independent ES modules.
