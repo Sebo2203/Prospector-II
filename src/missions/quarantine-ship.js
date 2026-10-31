@@ -4,9 +4,10 @@ function placeQuarantineShip(){
   const state=ensureExpeditionState();
   if(state.quarantine) return;
   const candidates=[];
+  const occupied=new Set([G.ship,...(G.pirates||[]),...(G.neutralShips||[]),
+    ...(G.npcStranded||[]),...(G.nebulaLoot||[])].map(object=>object.x+','+object.y));
   for(let y=1;y<MAP_H-1;y++) for(let x=1;x<MAP_W-1;x++){
-    const distance=Math.abs(x-G.ship.x)+Math.abs(y-G.ship.y);
-    if(distance>=4 && distance<=7 && G.galaxy[y]?.[x]?.type==='VOID') candidates.push({x,y});
+    if(G.galaxy[y]?.[x]?.type==='VOID'&&!occupied.has(x+','+y))candidates.push({x,y});
   }
   const pos=candidates[rnd(candidates.length)];
   if(!pos) return;

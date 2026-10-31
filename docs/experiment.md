@@ -12,7 +12,9 @@ The project vision recovered from earlier development discussions adds a living 
 
 Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
 
-## Playable now: 0.28 experimental.7
+## Playable now: 0.28 experimental.8
+
+**Random encounter location:** Mercy of Dawn now uses the whole eligible galaxy rather than a fixed starting-distance band. The initial distress lead and first-boarding start of its air clock are retained. A [long retirement attempt](long-career-2026-10-31.md) records 3,354 turns of ordinary gameplay and an eventual ship loss; it does not establish retirement balance.
 
 **Autosave reliability:** saves now use durable browser storage with a previous recovery copy, visible failure notices and retry/export controls. Large saves, legacy imports and save-before-menu/quit paths are checked. See the [autosave guide](autosave.md). Other open foundation findings are tracked in the [technical review](foundation-review-2026-10-31.md).
 
@@ -20,7 +22,7 @@ Build depth by connecting these systems. New stories should offer clues before c
 
 Use the existing **I → LOG** menu for history. Major discoveries and rescue events appear in ALL and MISSION; **6 / RECORDS** adds current survey progress, unsold survey value, known civilization relationships and survivor records. Existing scrolling, keyboard navigation and mouse filter controls apply. Long messages wrap instead of being cut off. Records live in the save; repeated scans update a finding without repeating the first-discovery entry. Generated but unobserved places remain excluded. The separate popup, J shortcut, context button and popup styling have been removed. J still performs the game's existing cargo jettison action in the ship inventory tab.
 
-A fresh run receives an incomplete distress transmission from **Mercy of Dawn**, on an empty tile near the starting station. The transmitted coordinates use the same one-based display as the galaxy HUD. Fly there and press **Enter** to board a persistent 32 by 20 deck. The earlier four-choice resolution menu has been removed.
+A fresh run receives an incomplete distress transmission from **Mercy of Dawn**, placed uniformly on an eligible empty tile anywhere inside the galaxy border. Placement excludes the player and existing ships or loot; it is no longer restricted to the starting station's neighborhood. Existing saves retain their recorded location. Use the debug galaxy palette's Mercy of Dawn sample for repeatable personal testing. The transmitted coordinates use the same one-based display as the galaxy HUD. Fly there and press **Enter** to board a persistent 32 by 20 deck. The earlier four-choice resolution menu has been removed.
 
 The bridge, medical stores, cargo hold, engineering compartment and sealed isolation ward connect through pressure hatches. Emergency lighting, fog of war and line of sight govern discovery. Survivors are visible individuals with positions, health and transport state. Their exact room positions vary within the authored layout.
 

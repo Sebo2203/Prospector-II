@@ -26,6 +26,35 @@ function context(seed=1){
   c.placeQuarantineShip();return c;
 }
 
+test('Mercy of Dawn placement spans the galaxy instead of a ring around the starting ship',()=>{
+  const quadrants=new Set();let distant=0;
+  for(let seed=1;seed<=100;seed++){
+    const c=context(Math.imul(seed,2654435761)>>>0),q=c.G.expedition.quarantine;
+    assert.ok(q.x>0&&q.x<c.MAP_W-1&&q.y>0&&q.y<c.MAP_H-1);
+    assert.equal(c.G.galaxy[q.y][q.x].name,'Mercy of Dawn');
+    quadrants.add((q.x<c.MAP_W/2?'west':'east')+':'+(q.y<c.MAP_H/2?'north':'south'));
+    if(Math.abs(q.x-5)+Math.abs(q.y-5)>7)distant++;
+    const saved=JSON.stringify(q);c.placeQuarantineShip();assert.equal(JSON.stringify(c.G.expedition.quarantine),saved);
+  }
+  assert.equal(quadrants.size,4);assert.ok(distant>75);
+});
+
+test('random placement preserves occupied galaxy objects and ship positions',()=>{
+  const c=context();c.G.expedition.quarantine=null;
+  c.G.galaxy=Array.from({length:c.MAP_H},()=>Array.from({length:c.MAP_W},()=>({type:'VOID'})));
+  c.G.ship={x:27,y:18};c.G.pirates=[{x:28,y:18}];c.G.neutralShips=[{x:29,y:18}];c.G.npcStranded=[{x:30,y:18}];
+  c.G.galaxy[18][26]={type:'BASE',name:'Unchanged'};c.rnd=n=>n-1;c.placeQuarantineShip();
+  assert.equal(c.G.expedition.quarantine.x,25);assert.equal(c.G.expedition.quarantine.y,18);
+  assert.equal(c.G.galaxy[18][26].name,'Unchanged');
+});
+
+test('a full galaxy omits the incident without overwriting another object',()=>{
+  const c=context();c.G.expedition.quarantine=null;
+  c.G.galaxy=Array.from({length:c.MAP_H},()=>Array.from({length:c.MAP_W},()=>({type:'SYSTEM'})));
+  c.placeQuarantineShip();assert.equal(c.G.expedition.quarantine,null);
+  assert.ok(c.G.galaxy.flat().every(cell=>cell.type==='SYSTEM'));
+});
+
 test('100 generated decks connect all fixtures and survivors through operable doors',()=>{
   for(let seed=1;seed<=100;seed++){
     const c=context(seed),q=c.G.expedition.quarantine,pd=c.generateQuarantineShip(q);
