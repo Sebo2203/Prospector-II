@@ -42,7 +42,7 @@ Two existing defects surfaced while exercising the encounter: planet waiting fai
 
 1. Human playtesting of the spatial incident: clarity of local actions, lighting, time pressure, ferry trips and medical tradeoffs. Tune those observations before adding another encounter.
 2. Connect log leads to the sealed ringworld, robot factory and Apollo's Sanctuary; each gets a return visit and a persistent aftermath.
-3. Add renewable career work, faction news and first contact beyond a single planet.
+3. Expand the renewable career work introduced in experimental.4, then connect faction news and first contact beyond a single planet.
 4. Develop opt-in sector crises and a fact-driven final sector account. Existing random humanity outcomes are not yet wired to this history.
 
 The broader [roadmap](roadmap.md) remains the destination; these items are planned rather than implemented.

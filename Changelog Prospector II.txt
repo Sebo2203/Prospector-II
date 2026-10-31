@@ -1,3 +1,5 @@
+Historical changelog. Ongoing development is recorded in CHANGELOG.md at the repository root.
+
 0.27.1
 -Added sounds for refueling, fuel scooping, repairing ship at the station, applying repair kits.
 

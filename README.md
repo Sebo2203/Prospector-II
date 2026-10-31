@@ -5,11 +5,14 @@ A sci-fi roguelike about exploring space, surveying planets, managing a crew, an
 ## Active experiment — 0.28 experimental.6
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
+The [development changelog](CHANGELOG.md) records each meaningful change, its reason,
+validation, save impact and remaining work. It is updated with the code.
 For reusable testing, open **Shift+B → F2** (galaxy palette) or **F3** (surface
 gallery). **F6** searches the samples; **F4** restores your career. See the
 [debug playground guide](docs/debug-playground.md).
-The latest pass strengthens the existing expedition economy and repeat research
-work; see [career-loop polish](docs/development-pass.md) for changes and validation.
+The latest pass adds reusable debug playgrounds with tighter sample spacing.
+Earlier expedition economy and repeat research work is detailed in
+[career-loop polish](docs/development-pass.md).
 Download **this branch's ZIP**, extract it and open `index.html` to play the experiment.
 Open **I → LOG → RECORDS** for discoveries, survey progress and survivor records.
 A fresh run receives the Mercy of Dawn distress
@@ -50,5 +53,5 @@ The proposed feature sequence is in the [feature roadmap](docs/roadmap.md).
 
 The first extraction preserves the original HTML byte-for-byte. Run
 `npm run verify:migration` to audit this initial equivalence; intentional future game
-changes will naturally change that baseline. The existing Windows executable is
-unchanged by this experiment.
+changes will naturally change that baseline. Experimental desktop builds use a
+separate app identifier; the public download above remains the main release.
