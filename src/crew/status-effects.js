@@ -538,6 +538,7 @@ function maybeSpreadDisease(source, id, chance){
 }
 
 function tickCrewStatuses(context){
+  tickQuarantineIncident();
   ensureCrewStatusState();
   if(!G?.crew) return;
   G.crew.forEach(c=>{

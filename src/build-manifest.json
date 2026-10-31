@@ -22,6 +22,8 @@
     "src/world/tiles.js",
     "src/core/state-and-debug.js",
     "src/missions/expedition.js",
+    "src/missions/quarantine-ship.js",
+    "src/rendering/quarantine.js",
     "src/ui/expedition-journal.js",
     "src/world/minerals.js",
     "src/debug/item-catalog.js",

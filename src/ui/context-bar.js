@@ -175,6 +175,15 @@ function renderContextBar(){
     const pdata = G.planets[G.curPlanet];
     const cell  = pdata?.grid[G.player.y][G.player.x];
     const atShip = cell?.type==='SHIP';
+    if(pdata?.isQuarantine){
+      const person=quarantineNearSurvivor();
+      btns.push(btn('Enter',atShip?'Transfer passengers':'Operate / assist','good'));
+      if(person){btns.push(btn('T','Give medical care','info'));btns.push(btn('P','Deploy isolation pod','info'));}
+      if(cell?.type==='q_life_support') btns.push(btn('R','Manual pump','info'));
+      btns.push(btn('X','Examine','info'));
+      const q=G.expedition.quarantine;
+      if(q.rosterKnown) btns.push(btn('',q.repaired?'Life support stable':'Wreck air reserve: '+q.air,'warn'));
+    }
     if(pdata?.isCasino){
       const labels={casino_host:'Talk to host',casino_info:'Read directory',casino_poker:'Play Void Poker',
         casino_bar:'Drinking contest',casino_arena:'Enter beast arena',casino_wrestle:'Arm wrestle',

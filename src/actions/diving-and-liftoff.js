@@ -104,10 +104,13 @@ function doRefillOxygen(){
 // ─────────────────────────────────────────────────────────────────
 function doLiftOff(){
   if(G.mode!=='planet') return;
+  const leavingCasino=!!G.planets[G.curPlanet]?.isCasino;
   if(!crewAlive()){ addLog('No living crew — cannot lift off!','lc'); renderAll(); return; }
   const cell=G.planets[G.curPlanet]?.grid[G.player.y][G.player.x];
   if(cell?.type==='SHIP'){
+    if(quarantineInterior()) transferQuarantinePassengers();
     if(G.fuel<=0){ addLog('No fuel left - unable to launch.','lc'); renderAll(); return; }
+    if(quarantineInterior()) leaveQuarantineDeck();
     if(!DEBUG.infiniteFuel) G.fuel = Math.max(0, G.fuel-1);
     G.oxygen=100;
     G.underwater=false;

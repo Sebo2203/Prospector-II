@@ -7,6 +7,10 @@ function atmosphereBiomeKey(key){
 }
 
 function atmosphereBiome(key){
+  if(G?.planets?.[key]?.isQuarantine){
+    const q=G.expedition?.quarantine;
+    return {...BIOMES.DERELICT,oxyDrain:q?.air===0&&!q?.repaired?2:0};
+  }
   return BIOMES[atmosphereBiomeKey(key)] || { oxyDrain:1.5 };
 }
 

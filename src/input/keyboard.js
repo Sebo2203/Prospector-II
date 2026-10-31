@@ -63,9 +63,6 @@ document.addEventListener('keydown', e=>{
     if(e.key==='Escape' || e.key==='j' || e.key==='J'){
       e.preventDefault(); closeExpeditionPanel(); return;
     }
-    if(G._expeditionPanel==='quarantine' && /^[1-4]$/.test(e.key)){
-      e.preventDefault(); resolveQuarantine(['isolated','open','beacon','salvage'][Number(e.key)-1]); return;
-    }
     if(['ArrowUp','ArrowDown','PageUp','PageDown'].includes(e.key)){
       e.preventDefault();
       document.querySelector('#expedition-overlay .expedition-panel')?.scrollBy(0,
@@ -838,6 +835,7 @@ document.addEventListener('keydown', e=>{
             renderAll(); return;
           }
           G.cargo.splice(sel, 1);
+          noteQuarantinePodLoss(item);
           G._cargoSel = Math.max(0, Math.min(G._cargoSel||0, G.cargo.length-1));
           G._jettisonConfirm = false;
           addLog(item.name+' jettisoned into space.','lw');
@@ -1297,6 +1295,11 @@ document.addEventListener('keydown', e=>{
       if(e.key==='n'||e.key==='N'||e.key==='Escape'){ doDeclineRescue(); return; }
     }
 
+    if(quarantineInterior()){
+      if(e.key==='t'||e.key==='T'){e.preventDefault();treatQuarantineSurvivor();return;}
+      if(e.key==='p'||e.key==='P'){e.preventDefault();podQuarantineSurvivor();return;}
+      if(e.key==='r'||e.key==='R'){e.preventDefault();manualQuarantinePump();return;}
+    }
     // Movement — arrows always work; numpad always works; letter keys use remappable keybinds
     // All keybind checks use e.code (physical position, layout-independent)
     const kb = (OPTIONS.keybinds || DEFAULT_KEYBINDS);

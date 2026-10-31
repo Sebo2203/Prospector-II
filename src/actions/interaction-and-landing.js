@@ -3,7 +3,8 @@
 // ─────────────────────────────────────────────────────────────────
 function doInteract(){
   if(G.dead||G.retired) return;
-  if(quarantineAtShip()){ openQuarantineReport(); return; }
+  if(quarantineAtShip()){ boardQuarantineShip(); return; }
+  if(quarantineInterior()){ interactQuarantine(); return; }
   if(G.mode==='planet' && G.planets[G.curPlanet]?.isCasino){
     casinoInteractAtPlayer(); renderAll(); return;
   }

@@ -107,8 +107,9 @@ function doWaitGalaxy(){
   renderAll();
 }
 
-function doWaitPlanet(){
+function doWaitPlanet(turnAlreadyAdvanced=false){
   if(G.mode!=='planet'||G.dead||G.retired) return;
+  if(!turnAlreadyAdvanced) G.turn++;
 
   // Advance planet day cycle
   const pdata = G.planets[G.curPlanet];

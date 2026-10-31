@@ -15,15 +15,15 @@ function hasPlanetLOS(pdata, fromX, fromY, toX, toY){
   while(steps++<maxSteps){
     if(x0===x1 && y0===y1) return true;
     const e2=2*err;
-    if(e2>-dy || dx===0){ err-=dy; x0+=sx; }
-    if(e2< dx || dy===0){ err+=dx; y0+=sy; }
+    if(e2>-dy){ err-=dy; x0+=sx; }
+    if(e2< dx){ err+=dx; y0+=sy; }
     if(x0===x1 && y0===y1) return true;
     if(TILE[pdata.grid[y0]?.[x0]?.type]?.pass===false) return false;
     if((x0!==fromX||y0!==fromY) && pdata.grid[y0]?.[x0]?.type==='EARTH_FOREST') return false;
     if((x0!==fromX||y0!==fromY) && pdata.grid[y0]?.[x0]?.type==='NEST' && !pdata.grid[y0]?.[x0]?.revealed) return false;
     if((x0!==fromX||y0!==fromY) && smokePositions.has(y0*W+x0)) return false;
   }
-  return true;
+  return false;
 }
 
 function canSeePlanetTile(tx, ty){

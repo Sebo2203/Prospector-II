@@ -4,6 +4,10 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 
 | File | Lines at extraction |
 | --- | ---: |
+| [src/missions/expedition.js](../src/missions/expedition.js) | Added later: saved journal facts and survey register |
+| [src/missions/quarantine-ship.js](../src/missions/quarantine-ship.js) | Added later: spatial rescue, survivor state, atmosphere and transport |
+| [src/rendering/quarantine.js](../src/rendering/quarantine.js) | Added later: deck fixtures and visible survivors |
+| [src/ui/expedition-journal.js](../src/ui/expedition-journal.js) | Added later: observed findings and career history |
 | [src/core/identity-and-config.js](../src/core/identity-and-config.js) | 109 |
 | [src/ui/canvas-and-messages.js](../src/ui/canvas-and-messages.js) | 38 |
 | [src/assets/sprites.js](../src/assets/sprites.js) | 64 |

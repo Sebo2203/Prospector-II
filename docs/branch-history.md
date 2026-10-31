@@ -4,10 +4,12 @@ After the October 31, 2026 cleanup:
 
 | Branch | Purpose |
 | --- | --- |
-| `main` | Existing public release and GitHub Pages/download source |
+| `main` | Latest pre-experiment modular gameplay snapshot and GitHub Pages source |
 | `experiment/expedition-legacy` | Active modular development and autonomous gameplay experiments |
 
-The public release was not already modular. `modular-source-experiment` contained the source extraction and roadmap. `dev-build` carried that work plus the subsequent gameplay fixes, walkable casino and laptop/desktop build handoff. Its README's Play link still opened the public release, which explains why selecting the branch did not show its changes in the hosted game.
+Before cleanup, the public release was not modular. `modular-source-experiment` contained the source extraction and roadmap. `dev-build` carried that work plus the subsequent gameplay fixes, walkable casino and laptop/desktop build handoff. Its README's Play link still opened the public release, which explains why selecting the branch did not show its changes in the hosted game.
+
+After cleanup, the exact archived `dev-build` files were promoted to `main` in commit `e9b6f36`, at the owner's request. Main now includes modular sources and all pre-experiment gameplay changes. The journal and quarantine development remain on the experiment branch.
 
 The experiment starts from `dev-build` (`e3ffe10`) and retains the history of `main`. The old tips are preserved as annotated tags so the branch list can stay small without losing work:
 

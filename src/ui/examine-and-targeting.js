@@ -60,6 +60,8 @@ function getExamineName(x, y){
   }
 
   if(G.mode==='planet' || G.mode==='examine_planet'){
+    const quarantineInfo=quarantineExamine(x,y);
+    if(quarantineInfo) return quarantineInfo;
     // Check enemies
     const enemy = (G.enemies[G.curPlanet]||[]).find(e=>e.alive&&!e.hidden&&e.x===x&&e.y===y);
     if(enemy) return { type:'creature', enemy };

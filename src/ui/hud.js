@@ -10,7 +10,7 @@ function renderHUD(){
   if(onPlanet){
     // Oxygen gauge
     const biomeKey = atmosphereBiomeKey(G.curPlanet);
-    const oxyDrain = BIOMES[biomeKey]?.oxyDrain ?? 1.5;
+    const oxyDrain = atmosphereBiome(G.curPlanet).oxyDrain ?? 1.5;
     const oxyPct   = Math.max(0, Math.min(1, G.oxygen/100));
     const oxyFill  = document.getElementById('oxy-fill');
     oxyFill.style.height = Math.round(oxyPct*100)+'%';
@@ -50,6 +50,7 @@ function renderHUD(){
 
   const mn={galaxy:'GALAXY MAP', system:'SYSTEM VIEW', planet:'PLANET SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
   document.getElementById('h-mode').textContent=G.mode==='planet'&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':mn[G.mode]||G.mode.toUpperCase();
+  if(quarantineInterior()) document.getElementById('h-mode').textContent='SHIP INTERIOR';
 
   let loc='Deep Space';
   if(G.mode==='base'){
@@ -61,6 +62,7 @@ function renderHUD(){
     loc = cell?.type==='ROGUE_PLANET' ? (cell?.name||'Rogue Planet')+' (Rogue)' : (cell?.name||'Unknown')+' System';
   } else if(G.mode==='planet'){
     if(G.planets[G.curPlanet]?.isCasino) loc='The Void Royale';
+    else if(G.planets[G.curPlanet]?.isQuarantine) loc='Mercy of Dawn';
     else {
     const cell=G.galaxy[G.ship.y]?.[G.ship.x];
     {

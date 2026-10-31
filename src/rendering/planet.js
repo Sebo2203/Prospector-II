@@ -278,6 +278,7 @@ function drawPlanet(){
     }
   }
 
+  if(pdata.isQuarantine) drawQuarantinePeople(pdata,camX,camY);
   // ── Scanner second pass — draw ? on top of darkness for scanned deposits ──
   if((G.inventory||[]).some(i => i.usable === 'ore_scanner')){
     for(let vy=0;vy<VIEW_H;vy++){
@@ -582,7 +583,7 @@ function drawPlanet(){
 
 function drawPlayerPawn(px,py){
   const biomeKey = atmosphereBiomeKey(G.curPlanet);
-  const oxyDrain = biomeKey ? (BIOMES[biomeKey]?.oxyDrain ?? 0) : 0;
+  const oxyDrain = biomeKey ? (atmosphereBiome(G.curPlanet).oxyDrain ?? 0) : 0;
   const sprite = !biomeKey     ? 'player_pawn' :
                  oxyDrain > 0  ? 'player_pawn_helmet' :
                                   'player_pawn_suit';
