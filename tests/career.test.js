@@ -9,6 +9,19 @@ function career(){
   for(const p of ['missions/science.js','actions/survey-and-scan.js']) vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',p),'utf8'),c);
   return c;
 }
+
+test('research console and defenders cannot spawn in isolated hull damage',()=>{
+  const c=career();c.G.enemies={};c.TILE={floor:{pass:true},wall:{pass:false}};
+  c.rnd=n=>n-1;
+  const pd={width:7,height:7,spawnX:1,spawnY:1,grid:Array.from({length:7},()=>Array.from({length:7},()=>({type:'wall'})))};
+  for(const [x,y] of [[1,1],[1,2],[2,2],[3,2],[3,3],[5,5]])pd.grid[y][x]={type:'floor'};
+  c.G.planets.ship=pd;c.ensureScienceJobState().active={id:'reachable',type:'research_ship',target:{mapKey:'ship'}};
+  c.seedResearchShipJobMap('ship');
+  assert.equal(pd.grid[5][5].scienceJobData,undefined);
+  assert.equal(pd.grid[3][3].scienceJobData,true);
+  assert.equal(c.G.enemies.ship.length,3);
+  assert.ok(c.G.enemies.ship.every(e=>!(e.x===5&&e.y===5)));
+});
 test('science handover excludes gear, supplies, quest items, live creatures and reserved specimens',()=>{
   const c=career();c.G.scienceJob={active:{type:'artifact'}};
   c.G.inventory=[{name:'Ancient Artifact',value:200},{name:'Biodata Sample',value:10},

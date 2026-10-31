@@ -6,6 +6,7 @@ const NPC_SHIP_NAMES = [
 ];
 
 function spawnNpcStrandedShip(){
+  if(G?.debugPalette) return;
   if(!G || !G.galaxy || G.mode!=='galaxy') return;
   if((G.npcStranded||[]).length >= 1) return; // cap at 1 simultaneous
   // Find a random VOID tile not too close to bases or player
@@ -45,6 +46,7 @@ function restoreStrandedShipMarkers(){
 }
 
 function tickNpcStranded(){
+  if(G?.debugPalette && !G.debugPalette.simulate) return;
   if(!G.npcStranded) return;
   G.npcStranded = G.npcStranded.filter(s=>{
     s.age++;

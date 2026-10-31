@@ -4,6 +4,7 @@
 //  action can never silently break the event listener.
 // ─────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e=>{
+  if(e.key==='F4' && debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return;}
   // ── Debug item search mode — must intercept before ANY other routing ──
   if(DEBUG?.itemSubSearch !== undefined){
     e.preventDefault();
@@ -56,6 +57,7 @@ document.addEventListener('keydown', e=>{
 
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
+  if(handleDebugPaletteKey(e)) return;
 
   if(G.forcedMove?.active){
     e.preventDefault();

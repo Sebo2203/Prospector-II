@@ -1,4 +1,5 @@
 function initGame(chosenClass, captainName, shipName) {
+  if(debugPaletteReturn) debugReturnFromPalette(false);
   const cls = chosenClass || 'LIGHT_SCOUT';
   G = {
     mode:     'galaxy',   // galaxy | system | planet | base | inventory

@@ -56,6 +56,7 @@ function trackRetirementOnce(){
 }
 
 function syncAnalyticsState(){
+  if(G?.debugPalette) return;
   if(!G) return;
   trackTurnMilestone();
   if(G.dead) trackDeathOnce();

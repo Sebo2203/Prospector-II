@@ -99,6 +99,7 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/actions/station-purchases.js](../src/actions/station-purchases.js) | 631 |
 | [src/actions/wait-and-fuel.js](../src/actions/wait-and-fuel.js) | 208 |
 | [src/input/keyboard.js](../src/input/keyboard.js) | 1495 |
+| [src/debug/playground.js](../src/debug/playground.js) | Added later: disposable galaxy/surface playground and searchable catalogs |
 | [src/audio/sound-effects.js](../src/audio/sound-effects.js) | 217 |
 | [src/persistence/save-load.js](../src/persistence/save-load.js) | 183 |
 | [src/platform/desktop-download.js](../src/platform/desktop-download.js) | 14 |

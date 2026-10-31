@@ -4,6 +4,9 @@ const DEBUG_GALAXY_OBJ_TYPES = [
   { id:'BLACK_HOLE',    label:'Black Hole',    col:'#ff8800' },
   { id:'DERELICT',      label:'Derelict',      col:'#6688aa' },
   { id:'PIRATE_BASE',   label:'Pirate Base',   col:'#bb3311' },
+  ...['BASE','WAYPOINT','CASINO','NEBULA_PINK','NEBULA_BLUE','GAS_WRAITH','GAS_DEVOURER',
+    'TRADER','CARGO_SHIP','SCIENCE_SHIP','PATROL','PIRATE','STRANDED_ALIVE','STRANDED_DEAD','RESEARCH_SHIP','NEBULA_LOOT','QUARANTINE']
+    .map(id=>({id,label:id.replaceAll('_',' '),col:'#88bbcc',place:(x,y)=>debugBuildPaletteGalaxyObject(id,x,y)})),
 ];
 
 const DEBUG_CIV_TIERS = [
@@ -393,7 +396,7 @@ function debugSpawnCivilizationOnCurrentPlanet(){
   // Aquatic civilizations live on the seabed — generate/regenerate the underwater
   // map so their structures are placed there, not on the surface land grid.
   if(species === 'Aquatic'){
-    const uwKey = G.curPlanet + '_uw';
+    const uwKey = G.curPlanet + ':uw';
     generateUnderwaterMap(uwKey, G.curPlanet);
     G.planets[uwKey] = G.planets[uwKey] || {};
     G.planets[uwKey].civilization = pd.civilization;
@@ -443,7 +446,7 @@ function drawDebugOverlay(){
     drawDebugItemSubMenu();
     return;
   }
-  const pad = 10, lh = 22, w = 430;
+  const pad = 8, lh = 17, w = Math.min(560,canvas.width-16);
   const x = canvas.width - w - 8, y = 8;
 
   const items = [
@@ -457,16 +460,16 @@ function drawDebugOverlay(){
     { key:'0', label:'FPS Counter',             val: DEBUG.showFPS         },
   ];
 
-  // Total rows: title + items + money + spawner controls + civ + tools + close
-  const totalRows = 1 + items.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1;
-  const h = pad*2 + totalRows*lh;
+  // Title, eight toggles, eleven existing actions, three palette rows and close.
+  const totalRows = 24;
+  const h = Math.min(canvas.height-16,pad*2 + totalRows*lh);
 
   ctx.fillStyle='rgba(0,0,0,0.82)';
   ctx.fillRect(x, y, w, h);
   ctx.strokeStyle='#ff4400'; ctx.lineWidth=1;
   ctx.strokeRect(x, y, w, h);
 
-  ctx.font='bold 15px Courier New'; ctx.textAlign='left';
+  ctx.font='bold 12px Courier New'; ctx.textAlign='left';
 
   let row = 0;
   const ly = ()=> y + pad + (row++)*lh + lh; // advance and return y
@@ -522,7 +525,11 @@ function drawDebugOverlay(){
   ctx.fillStyle='#d488ff';
   ctx.fillText('[R] Rad  [D] Disease  [H] Hallucination', x+pad, ly());
 
-  ctx.fillStyle='#554433';
+  ctx.fillStyle='#ffe066';
+  ctx.fillText('[F2] Galaxy palette  [Shift+F2] Rebuild',x+pad,ly());
+  ctx.fillText('[F3] Surface palette  [F4] Return to career',x+pad,ly());
+  ctx.fillText('[F6] Search palette  [F7] Live simulation',x+pad,ly());
+  ctx.fillStyle='#998877';
   ctx.fillText('Shift+B to close', x+pad, ly());
 
   ctx.textAlign='left';
@@ -694,7 +701,9 @@ function debugSpawnGalaxyObj(){
     if(G.galaxy[ty][tx].type !== 'VOID') continue;
 
     let cellData;
-    if(objType.id === 'ROGUE_PLANET'){
+    if(objType.place){
+      cellData=objType.place(tx,ty);
+    } else if(objType.id === 'ROGUE_PLANET'){
       const name = 'Debug Rogue';
       const rpPlanetDesc = {
         name, biome:'FROZEN', biomeName: BIOMES.FROZEN?.name||'Frozen',

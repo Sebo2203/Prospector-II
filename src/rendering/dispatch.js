@@ -81,9 +81,11 @@ function drawCanvas(){
   drawCivilizationBoundaryOverlay();
   if(G.dialogue) drawDialogueOverlay();
 
+  drawDebugPaletteLabels();
   if(DEBUG.on) drawDebugOverlay();
   if(DEBUG.on && DEBUG.civSubMenu)  drawDebugCivSubMenu();
   if(DEBUG.on && DEBUG.itemSubMenu) drawDebugItemSubMenu();
   if(DEBUG.on && DEBUG.galaxyReport) drawDebugGalaxyReportPopup();
+  drawDebugPaletteDirectory();
 }
 

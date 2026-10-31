@@ -123,6 +123,7 @@ function tryEnemyRangedAttack(e, pdata){
 }
 
 function moveEnemies(){
+  if(G?.debugPalette && !G.debugPalette.simulate) return;
   const enemies=(G.enemies[G.curPlanet]||[]).filter(e=>e.alive);
   const pdata=G.planets[G.curPlanet];
   if(!pdata) return;

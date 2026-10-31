@@ -13,6 +13,7 @@
 const SAVE_KEY = 'prospector_autosave';
 
 function autoSave(){
+  if(G?.debugPalette) return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(G));
   } catch(e) {
@@ -26,6 +27,7 @@ function hasSave(){
 }
 
 function saveToFile(){
+  if(G?.debugPalette){addLog('DEBUG: Return to the career with F4 before exporting a save.','li');renderAll();return;}
   try {
     const raw = G ? JSON.stringify(G, null, 2) : localStorage.getItem(SAVE_KEY);
     if(!raw) throw new Error('No save data');
@@ -52,6 +54,7 @@ function saveToFile(){
 }
 
 function loadFromFile(){
+  if(G?.debugPalette){addLog('DEBUG: Return to the career with F4 before loading a save.','li');renderAll();return;}
   const input = document.createElement('input');
   input.type  = 'file';
   input.accept= '.json,application/json';
@@ -173,6 +176,7 @@ function loadAndRender(loadFn){
 }
 
 async function quitGame(){
+  if(G?.debugPalette){debugReturnFromPalette(false);autoSave();}
   try {
     const invoke = window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke;
     if(invoke){

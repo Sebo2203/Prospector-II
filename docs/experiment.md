@@ -12,7 +12,9 @@ The project vision recovered from earlier development discussions adds a living 
 
 Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
 
-## Playable now: 0.28 experimental.4
+## Playable now: 0.28 experimental.5
+
+**Debug playground:** open Shift+B, then F2 for the galaxy palette or F3 for the surface gallery. F6 searches 340 catalog-derived samples and scenarios; F4 restores the original career. Shift+F2 rebuilds the test worlds, and F7 toggles NPC simulation. The sandbox cannot overwrite career saves. See the [playground guide](debug-playground.md) for controls, contextual building scenarios and future-content maintenance. This pass also ensures research objectives spawn on reachable deck tiles and aquatic debug contact has an actual sea.
 
 Use the existing **I → LOG** menu for history. Major discoveries and rescue events appear in ALL and MISSION; **6 / RECORDS** adds current survey progress, unsold survey value, known civilization relationships and survivor records. Existing scrolling, keyboard navigation and mouse filter controls apply. Long messages wrap instead of being cut off. Records live in the save; repeated scans update a finding without repeating the first-discovery entry. Generated but unobserved places remain excluded. The separate popup, J shortcut, context button and popup styling have been removed. J still performs the game's existing cargo jettison action in the ship inventory tab.
 

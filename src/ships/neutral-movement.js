@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 function moveNeutralShips(){
+  if(G?.debugPalette && !G.debugPalette.simulate) return;
   // Base positions for cargo/trader shuttle routes
   const bases = G.galaxy ? (() => {
     const found = [];

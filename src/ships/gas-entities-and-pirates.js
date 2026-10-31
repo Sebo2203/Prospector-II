@@ -17,6 +17,7 @@ function collectNebulaLootAt(x, y){
 }
 
 function moveGasEntities(){
+  if(G?.debugPalette && !G.debugPalette.simulate) return;
   if(!G.gasEntities || G.mode !== 'galaxy') return;
   if((G.turn || 0) < 300) return;  // Entities dormant until turn 300
 
@@ -94,6 +95,7 @@ function moveGasEntities(){
 }
 
 function movePirates(){
+  if(G?.debugPalette && !G.debugPalette.simulate) return;
   // -- Deferred initial spawn — guards and roamers fill in from turn 50 --
   if(G.turn >= 50){
     const PIRATE_CLASSES_SPAWN=[

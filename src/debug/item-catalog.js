@@ -34,6 +34,8 @@ const DEBUG_ITEM_CATALOG = [
     { name:'Diving Suit',          col:'#44bbdd', desc:'Enables sustained underwater exploration.',         value:0, usable:'armor_diving' },
   ]},
   { cat:'Equipment', items:[
+    { name:'Folded Isolation Pod',col:'#88ccee',desc:'Deploy beside a survivor with P. Requires two carriers and a cargo slot.',value:0,usable:'quarantine_pod' },
+    { name:'Mercy Pump Coupling',col:'#ddaa55',desc:'Replacement coupling for Mercy of Dawn life support.',value:0,usable:'quarantine_coupling' },
     { name:'Floodlight',           col:'#ffffaa', desc:'Passive: always +2 tile vision radius.',            value:0, usable:'floodlight' },
     { name:'Sensor Drone',         col:'#44ffcc', desc:'Galaxy use only: launches ahead of ship, revealing fog for 4–7 turns.',value:0, usable:'sensor_drone' },
     { name:'Grappling Hook',       col:'#ccaa88', desc:'One-use: hook over 1 obstacle tile. Enter target mode to aim direction.',             value:0, usable:'grapple' },

@@ -2,9 +2,12 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.4
+## Active experiment — 0.28 experimental.5
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
+For reusable testing, open **Shift+B → F2** (galaxy palette) or **F3** (surface
+gallery). **F6** searches the samples; **F4** restores your career. See the
+[debug playground guide](docs/debug-playground.md).
 The latest pass strengthens the existing expedition economy and repeat research
 work; see [career-loop polish](docs/development-pass.md) for changes and validation.
 Download **this branch's ZIP**, extract it and open `index.html` to play the experiment.

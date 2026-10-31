@@ -3,6 +3,10 @@
 // ─────────────────────────────────────────────────────────────────
 function doInteract(){
   if(G.dead||G.retired) return;
+  if(G.debugPalette && G.mode==='planet'){
+    const sample=G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x];
+    if(sample?.debugCommodity){addCargo(makeCommodityItem(sample.debugCommodity,'palette',0));renderAll();return;}
+  }
   if(quarantineAtShip()){ boardQuarantineShip(); return; }
   if(quarantineInterior()){ interactQuarantine(); return; }
   if(G.mode==='planet' && G.planets[G.curPlanet]?.isCasino){
@@ -211,6 +215,7 @@ function doInteract(){
 }
 
 function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
+    if(G.debugPalette && pDesc.biome==='CAVE') G._caveReturn={planet:G.debugPalette.surfaceKey,x:2,y:2};
     // Generate terrain first time
     if(!G.planets[pKey] ||
        ((pDesc.biome==='ANCIENT_STATION'||pDesc.isAncientStation) && !G.planets[pKey].isAncientStation) ||

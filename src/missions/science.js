@@ -329,11 +329,22 @@ function seedResearchShipJobMap(mapKey){
   const pdata = G.planets[mapKey];
   if(!pdata || pdata._scienceJobSeeded) return;
   pdata._scienceJobSeeded = true;
+  // Damage can carve detached floor pockets into the hull. Objectives and
+  // defenders must belong to the deck reachable from the boarding airlock.
+  const reachable=new Set([pdata.spawnX+','+pdata.spawnY]),queue=[{x:pdata.spawnX,y:pdata.spawnY}];
+  for(let i=0;i<queue.length;i++){
+    const p=queue[i];
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const x=p.x+dx,y=p.y+dy,key=x+','+y;
+      if(reachable.has(key)||!TILE[pdata.grid[y]?.[x]?.type]?.pass)continue;
+      reachable.add(key);queue.push({x,y});
+    }
+  }
   const floors = [];
   for(let y=1;y<PH(pdata)-1;y++){
     for(let x=1;x<PW(pdata)-1;x++){
       const t = pdata.grid[y]?.[x]?.type;
-      if(TILE[t]?.pass && !(x===pdata.spawnX && y===pdata.spawnY)) floors.push({x,y});
+      if(TILE[t]?.pass && reachable.has(x+','+y) && !(x===pdata.spawnX && y===pdata.spawnY)) floors.push({x,y});
     }
   }
   function takeFloor(){

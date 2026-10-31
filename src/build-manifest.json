@@ -108,6 +108,7 @@
     "src/actions/station-purchases.js",
     "src/actions/wait-and-fuel.js",
     "src/input/keyboard.js",
+    "src/debug/playground.js",
     "src/audio/sound-effects.js",
     "src/persistence/save-load.js",
     "src/platform/desktop-download.js",
