@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-10-31 — Three observation-limited career playthroughs
+
+Branch: `experiment/expedition-legacy`; played `692bcf5`, experimental.7. Documentation only.
+
+- Recorded three fresh native-action careers in [the playthrough report](docs/playthroughs-2026-10-31.md): Scout early retirement on turn 325 with 993 credits and one survivor delivered; Freighter destruction on turn 194 after repeated escapes, fuel exhaustion and refused surrender; Corvette early retirement on turn 260 with 462 credits, repaired life support and two deliveries.
+- Used revealed information, normal resources and real actions with debug off. Corrected pilot-control mistakes during calibration and replayed the same predetermined seeds; did not reverse final outcomes through reloads. The report distinguishes early-retirement policy, incomplete objectives and pilot mistakes from game defects and balance evidence.
+- Validation: all three final runs ended through native retirement/death paths, below their safety action ceiling, with no captured JavaScript/input errors. Retained action/event traces, screenshots and final save files locally. This is not a statistical hull comparison or proof of full 10,000-credit careers. No gameplay code, save format or version changed.
+
 ## 2026-10-31 — 0.28 experimental.7: durable autosaves and recovery
 
 Branch: `experiment/expedition-legacy`.
