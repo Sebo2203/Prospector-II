@@ -1,0 +1,16 @@
+{
+  "name": "prospector-ii-desktop",
+  "private": true,
+  "version": "0.26.0",
+  "type": "module",
+  "scripts": {
+    "icon": "node scripts/generate-icon.cjs",
+    "sync": "node scripts/sync-index.mjs",
+    "dev": "npm run sync && tauri dev",
+    "build": "npm run sync && tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

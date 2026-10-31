@@ -1,0 +1,783 @@
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║              PROSPECTOR II — DESIGN PHILOSOPHY & CODE GUIDE                  ║
+║              For   future contributors                                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  VERSION: 0.26  (file: index_civB_4_1_.html)
+  STACK: Single self-contained HTML file. No build step, no bundler, no npm.
+         Everything — CSS, JS, sprites, game logic — lives in this one file.
+         This is a deliberate choice: easy to share, host on any static server.
+
+══════════════════════════════════════════════════════════════════════════════
+  DESIGN PHILOSOPHY
+══════════════════════════════════════════════════════════════════════════════
+
+  1. TURN-BASED ROGUELITE FEEL
+     Every player action advances a turn counter (G.turn). Resources tick down
+     per turn (fuel in space, oxygen on planet). There is no real-time loop.
+     Actions are keyboard-driven; mouse is supplementary (compass widget,
+     barter overlay). The game should feel like a classic PC roguelite but with
+     a narrative, cinematic side.
+
+  2. FIXED-SIZE CANVAS + CSS SCALE-TO-FIT
+     The root div is fixed at 1400×720 px. A JS resize observer applies
+     transform:scale() so the game fills any screen without reflowing HTML.
+     Do NOT change the root size or the layout will break on all viewports.
+     Canvas is 960×480 px (tile size TS=24px, so 40×20 tiles visible).
+
+  3. GLOBAL STATE OBJECT G
+     All mutable game state lives in a single global object G (see initGame()).
+     G.mode drives what is drawn and what keyboard inputs do:
+       'galaxy'   — top-down scrolling galaxy map, ship movement
+       'system'   — solar system view, planet selection
+       'planet'   — tile-based ground exploration
+       'base'     — starbase / casino / derelict interior menus
+       'inventory'— full-screen inventory/crew/cargo/ship tabs
+     Adding a new mode means: add a case to renderAll(), handleKey(), and
+     updateCtxBar(). Everything else reads G.mode to decide what to show.
+
+  4. RENDER-ON-DEMAND (not a game loop)
+     There is NO setInterval/requestAnimationFrame main loop. renderAll() is
+     called explicitly after every state change. This keeps CPU use near zero
+     when idle. Exception: meteor animations in galaxy view use rAF internally
+     but only while meteors exist.
+
+  5. TILE-BASED PLANET MAPS
+     Planet grids are stored as G.planets[key].grid — a 2D array of cell
+     objects { type, ...props }. Tile types are defined in the TILE object.
+     Each tile has: pass (walkable), sprite (PNG key), drawFn (DRAW method),
+     and optional flags. Fog of war uses a flat visited[] boolean array.
+     LOS uses a simple raycasting hasLOS(x,y) function.
+
+  6. PROCEDURAL GENERATION PRINCIPLES
+     - Galaxy: generateGalaxy() places nebulae, bases, systems, pirates, etc.
+       Star type (YELLOW/RED/BLUE/WHITE) drives what planet biomes can appear
+       per orbit slot. See STAR_TYPES.
+     - Planets: generatePlanetGrid() builds tile maps from biome templates.
+       Each biome has its own floor tile, obstacle types, creature pool, and
+       ambient rules. Special planets (RINGWORLD, NUCLEAR_WAR, BLOOM, etc.)
+       have unique hand-crafted generation logic — one spawns per run.
+     - Creatures: spawnCreatures() picks from BIOME_CREATURES[biome] templates,
+       places them with proximity-to-nest logic. Hostile biomes get apex
+       predators via the HOSTILE_CREATURE system with procedural names.
+     - Civilizations: civs are seeded per-planet. Tier (primitive→information)
+       drives contact mechanics, barter stock, building tile types, and
+       NPC sprite variants. Traits (diet, social, curiosity, honor) modulate
+       first-contact dialogue outcomes.
+     - RNG: Math.random() is used freely EXCEPT for deterministic per-entity
+       content (civ barter stock uses civRng(seed) — a seedable LCG so the
+       same civ always has the same wares).
+
+  7. DRAWING SYSTEM — THREE LAYERS
+     a) SPRITES_B64: Base64-encoded PNG spritesheets (24×24 px per tile).
+        Loaded once into IMG cache. Used for most tiles and characters.
+     b) DRAW object: Procedural canvas 2D draw functions for complex/animated
+        tiles (planet types, creature sprites, civ buildings, etc.). Each
+        function receives (ctx, x, y) in screen-pixel coordinates.
+     c) ASCII fallback: OPTIONS.asciiMode replaces all sprites with single
+        characters from the ASCII lookup table. Must be maintained alongside
+        any new tile type.
+     Rule: prefer DRAW functions for new unique tiles; use sprite PNG for
+     tiles that need pixel-art detail or share a spritesheet slot.
+
+  8. UI LAYOUT (fixed regions, do not reflow)
+     #hud (top, 46px)         — credits, location, turn, mode
+     #gauge-panel (left, 64px) — fuel/hull in space; O₂ on planet
+     #canvas-wrap (972px)     — the game canvas + tooltip overlay
+     #sidebar (362px right)   — crew list, log entries, context info
+     #msg-bar (28px)          — one-line flash messages
+     #ctx-bar (38px)          — contextual action hint buttons [KEY] Label
+     #persist-bar (30px)      — always-visible global actions (map, inv, etc.)
+     #version-tag (18px)      — bottom right version string
+     Overlays (inventory, barter, dialogue, feedback) use position:fixed
+     with high z-index and are toggled via display:flex/none.
+
+  9. CREW SYSTEM
+     Crew members have: role, name, hp/maxHp, moraleBase, skills (atk, def,
+     med, eng, sci, pilot), statuses[], weaponUsable. Roles: captain, scout,
+     engineer, scientist. Skills affect dice rolls in combat, repairs, medical
+     events, science jobs. Status effects (bleeding, fever, radiation, etc.)
+     tick each turn via tickCrewStatuses(). Each status has a chain of
+     progression/recovery transitions — do not break these chains when adding
+     new statuses.
+
+  10. COMBAT
+      Ground combat: turn-based, crew vs enemies. Each side rolls atk vs def.
+      Ranged combat adds a targeting cursor (G.rangeTarget) and fire mode.
+      Ship combat (G.shipCombat): modal overlay, round-based, uses installed
+      weapons and modules. Pirate ships have configurable loadouts.
+
+  11. ANALYTICS
+      Google Analytics 4 (gtag) is integrated. trackEvent() wraps all calls
+      with try/catch so it never crashes the game. Events are fired for:
+      new_game_started, turn_milestone (per 100), planet_landed, combat,
+      barter_trade, retired, game_over. Add new events for significant new
+      features so player behaviour data stays useful.
+
+  12. SAVE / RESTORE
+      localStorage autosave is active (key: prospector_autosave). Manual
+      save-to-file and load-from-file (JSON) are available from the main menu
+      and in-game. Use save-to-file when switching to a new index.html version
+      in Firefox, since file:// origins isolate localStorage per file path.
+
+  13. CODE CONVENTIONS
+      - Global constants in SCREAMING_SNAKE_CASE (TILE, BIOMES, DRAW, etc.)
+      - Game state fields on G in camelCase
+      - Helper functions in camelCase, prefixed by domain (civXxx, crewXxx,
+        planetXxx, drawXxx, etc.)
+      - Render functions named drawXxx or renderXxx
+      - Log helpers: addLog(text, cssClass) — classes: lc=critical, ll=loud,
+        li=info, lm=muted, lg=good, lw=warn
+      - rnd(n) = Math.floor(Math.random()*n), pick(arr) = arr[rnd(arr.length)]
+
+══════════════════════════════════════════════════════════════════════════════
+  FILE STRUCTURE (approximate line order)
+══════════════════════════════════════════════════════════════════════════════
+
+  ~1      HTML head, GA script, CSS (all layout styles)
+  ~376    HTML body: HUD, gauge panel, canvas, sidebar, overlays, persist bar
+  ~671    SPRITES_B64: base64 PNG sprite data dict
+  ~694    ASCII fallback tile definitions
+  ~750    DRAW object: procedural canvas draw functions for all tile types
+            — planet tiles (earth, cave, ancient station, nuke zone, etc.)
+            — creature sprites (quadruped, serpent, cave_bug, walking_tree…)
+            — galaxy/system tiles (planet, pirate_base, casino, etc.)
+            — civilization NPC sprites (civ_local_base + tier variants)
+  ~2300   TILE object: tile type registry { pass, sprite, drawFn, ... }
+  ~2600   BIOMES object: biome definitions { floor, wall, creatures, ... }
+  ~2700   Civilization generation: generateCivilization(), tier/trait systems
+  ~3000   First-contact dialogue system: primitive trait helpers, comprehension
+  ~3500   Creature generation: spawnCreatures(), hostile creature system,
+            creature descriptions, speed model
+  ~4200   Crew status system: CREW_STATUS_DEFS, applyCrewStatus(),
+            tickCrewStatuses() — all status effect chains
+  ~5200   Analytics helpers, initGame() — G object initialisation
+  ~5600   RETIREMENT_TIERS, HUMANITY_OUTCOMES — end-game narrative text
+  ~6500   STAR_TYPES, system/galaxy generation
+  ~7100   Planet grid generation: generatePlanetGrid() + biome-specific layouts
+  ~8500   renderAll() entry point, draw galaxy/system/planet/base modes
+  ~9500   drawPlanetView() — main planet rendering loop (tiles, LOS, enemies)
+  ~10800  Ground weapons, science job system (SCIENCE_JOB_TYPES, etc.)
+  ~11500  Ship classes (SHIP_CLASSES), modules, weapons
+  ~12500  Base/station menus (drawBaseOverlay, screen state machine)
+  ~14000  Inventory / cargo / crew / ship view screens
+  ~16000  Input handling: keydown dispatch → handleKey() → mode-specific
+  ~18000  Combat logic: ground combat, ship combat overlay
+  ~20000  Galaxy-level events: pirates, NPC ships, stranded rescues, meteors
+  ~22000  Crew talk system, science job completion, retirement flow
+  ~24000  Barter overlay: BARTER state, renderBarterOverlay(), key handler
+  ~26000  Startup: DOMContentLoaded → show title screen → initGame()
+
+══════════════════════════════════════════════════════════════════════════════
+  PLANNED FUTURE FEATURES
+══════════════════════════════════════════════════════════════════════════════
+
+  Status legend:  [ ] not started   [~] partial / stub exists   [x] done
+
+  ── SPECIAL PLANETS (procedural terrain, RNG-generated, not hand-placed) ─────
+  These use the existing generatePlanetGrid() special-type branch.
+  Add new types to the _specialPool array in generateGalaxy() and add a
+  generation case in generatePlanetGrid(). Each needs DRAW tile functions,
+  TILE entries, and ASCII fallback chars.
+
+  [ ] RINGWORLD (exists as stub)
+        - Chance to spawn with a deadly airborne infection (new crew status:
+          'ring_plague' — spreads each turn, lethal if untreated, no cure on ship)
+        - Robot guards: hostile patrol enemies using a robot sprite,
+          high def, immune to poison/radiation statuses
+        - Implementation notes: ringworld grid already generates rw_* tiles;
+          add rw_guard enemy template to BIOME_CREATURES for RINGWORLD biome;
+          add ring_plague to CREW_STATUS_DEFS with a 'ring_plague_cured' recovery
+          only possible via an ancient medical terminal tile on the ringworld
+
+  [ ] DESTROYED RINGWORLD (exists as stub)
+        - Mostly existing; consider adding salvage rewards and hostile robot
+          scavengers similar to RINGWORLD guards above
+
+  [ ] ANCIENT PLANETS — ruined cities, starports
+        - Add new tile types: ancient_city_road, ancient_starport_pad,
+          ancient_terminal (interactable — science XP, artifact spawns)
+        - Ruined city district generation: grid of road tiles with building
+          rubble blocks, occasional intact terminal or artifact loot spawn
+        - Starport tiles: large open pads, docking clamps, fuelling conduit
+          (interactable: partial refuel from residual fuel lines)
+
+  [ ] STELLAR GUN PLANET
+        - Surface tile: a massive cannon structure (multi-tile DRAW function)
+        - Interactable: can be activated to destroy a target system on the
+          galaxy map (irreversible — remove system from G.galaxy grid)
+        - Risk: firing alerts all pirate factions; raises G.threatLevel
+        - Implementation: add G.threatLevel field in initGame(); pirate spawn
+          rate in galaxyTurnEvents() scales with it
+
+  [ ] GREEK STATUE PLANET — sleeping deity (see also Handcrafted: Apollo's Sanctuary)
+        - RNG version: scattered marble statue tiles across a habitable biome
+        - Deity awakes if player: destroys a statue tile, fires a weapon
+          near a statue cluster, or stays on planet > N turns
+        - Awoken deity: spawns a deity_guardian enemy (boss-tier, cannot flee,
+          room-filling attack patterns) — see SPECIAL PREDATORS below
+        - Crew action: [P]ray at statue tile — reduces anger counter
+
+  [ ] TALKING TREES PLANET (exists as stub — walking_tree sprite present)
+        - Trees are passive civLocal NPCs (civTier='ancient_plant') by default
+        - Talking trees communicate via slow vibration — comprehension system
+          applies but uses a unique 'arboreal' contact method
+        - They trade rare seeds (new barter stock item category: 'botanical')
+        - If attacked: all trees on map become hostile simultaneously
+
+  [ ] FERAL HUMANS PLANET
+        - Habitable biome, human NPC sprites but non-sapient behaviour
+        - Use existing primitive civ NPC sprite with unique colour palette
+        - Behaviour: FERAL trait — does not initiate contact, flees then
+          attacks if cornered (like a wild animal, not a civilisation)
+        - No language, no barter; scientist can study them for sci XP
+        - Contact attempt logs a unique flavour message, no dialogue tree
+
+  [ ] SANDWORM PLANET (desert biome)
+        - Multi-tile enemy: sandworm occupies 2×1 or 3×1 tile footprint
+        - Burrows underground (hidden=true) and tracks player via vibration
+          (moves toward player even through walls when hidden)
+        - Surfaces within 3 tiles of player — triggers ambush attack
+        - Killed by: sustained ranged fire before it surfaces, or melee
+          when surfaced (high risk)
+        - Implementation: extend enemy object with { multiTile:true,
+          tileWidth:3, tileHeight:1 }; drawPlanetView() must render the
+          full footprint offset from e.x, e.y
+
+  [ ] CRYSTAL MINEFIELD PLANET
+        - Rich mineral deposits — high survey credit reward
+        - Crystal tiles: passable but trigger explosion on step (random chance,
+          scaled by crystal density around tile)
+        - Explosion: damages crew HP + hull integrity of any nearby crystal tiles
+          (chain reaction risk)
+        - Engineer can defuse a crystal (new action [D]efuse, costs 1 turn,
+          eng skill check)
+        - Visuals: new DRAW.crystal_explosive tile — translucent jagged gem
+          with faint pulsing glow (use Date.now() phase like ancient station)
+
+  [ ] HALLUCINOGENIC VEGETATION PLANET (habitable biome)
+        - Dense bloom_thicket variant tiles that apply 'hallucination' status
+          on entry (already in CREW_STATUS_DEFS — hook: tile step event)
+        - Scientist: massive bio-sample yield, unique sci-job completion here
+        - All crew accumulate hallucination stacks over time on planet
+        - New item: 'Hallucinogen Extract' — usable, grants temporary sci bonus
+          but applies hallucination to the user
+
+  [ ] NUCLEAR WAR PLANET (exists — NUCLEAR_WAR type)
+        - Radiation zones: nuke_water and crater tiles apply radiation status
+          on entry (hook already partially in place — verify tickCrewStatuses)
+        - Survivor bunkers: sealed door tiles, openable with eng skill check,
+          contain loot + possible survivor NPC (rescuable crew candidate)
+        - Radioactive creatures: existing hostile creature pool but all
+          enemies gain 'irradiated' flag — contact applies radiation to crew
+
+  [ ] GIANT DOCILE CREATURES PLANET
+        - Massive multi-tile passive creatures (3×3 footprint)
+        - DOCILE behaviour: only aggress if attacked twice
+        - Scientist: study action yields high sci XP per creature
+        - Visual: new DRAW function for a large grazer silhouette
+
+  [ ] ROBOT FACTORY PLANET
+        - Dense hostile robot enemies (same template as ringworld guards)
+        - Factory tile generates new robots each N turns (respawn mechanic)
+          while the factory core tile is intact
+        - Factory core: interactable — destroy it to stop respawning
+        - Sector effect: if player leaves without destroying core, a robot
+          ship (new NPC type in G.npcStranded pool) spawns and roams galaxy,
+          attacking neutral ships (hooks into galaxyTurnEvents)
+
+  [ ] VR-PLUGGED CIVILISATION PLANET
+        - Habitable planet with information-tier civ buildings but no patrol NPCs
+        - All NPC slots are citizens sitting motionless at VR terminals (new tile)
+        - Interacting with terminal: player can jack in (risk: hallucination
+          status for N turns, reward: encrypted data item)
+        - Scientist: can analyse the VR network — unique sci-job completion here
+        - If power is cut (engineer action on generator tile): citizens wake,
+          confused → can become friendly or hostile based on random roll
+
+  [ ] MASS SUICIDE PLANET
+        - Abandoned habitable world, all NPC bodies are corpse loot tiles
+        - Atmosphere normal, no combat — pure exploration / narrative
+        - Each corpse tile: examine reveals a short unique flavour text
+          (pool of ~12 lines, seeded by tile position)
+        - Rare intact terminal: logs explaining the event (sci XP, story beat)
+        - Crew morale penalty for spending time here
+
+  [ ] DYING SUN PLANET
+        - Orbiting a RED star at slot 0 (super-hot zone)
+        - Planet surface: extreme heat biome — new 'heat' status drains crew HP
+          each turn; engineer can rig suit cooling (costs fuel item)
+        - The star visually pulses / flickers (use rAF phase in drawSystemView)
+        - Time limit: after N turns on surface, a solar flare event fires
+          — damages ship hull and triggers emergency lift-off prompt
+
+  [ ] IMPRISONED MONSTER PLANET
+        - Ancient containment facility on an isolated planet
+        - Boss-tier entity: ultra-rare, massive multi-tile enemy behind sealed
+          bulkhead doors (eng skill check required to open)
+        - If released: monster boards any ship in the system and spawns as a
+          shipboard alien encounter; if player escapes system, monster becomes
+          a roaming galaxy-map threat (permanent, like a mega-pirate)
+        - G.sectorMonsterReleased flag — affects late-game sector events
+
+  ── HANDCRAFTED PLANETS (terrain hand-placed, not fully procedural) ───────────
+  These require a dedicated generateXxxMap() function that places specific
+  tiles at known coordinates, rather than the generic generatePlanetGrid() loop.
+  Store map layout as a template array of [x, y, tileType] triples.
+
+  [ ] APOLLO'S SANCTUARY
+        - Habitable world; manually placed marble statue cluster in a temple
+          courtyard, surrounding a deity_core tile (the sleeping god)
+        - Deity awakens: triggered by weapon fire, certain dialogue choices,
+          or destroying any statue — spawns deity_guardian BOSS enemy
+        - BOSS fight design: deity_guardian has a multi-phase attack pattern
+          (melee → area shockwave → summon 3 stone_sentinel minions)
+        - Peaceful resolution: high-comprehension scientist can perform a
+          ritual (specific tile sequence + turns waited) to calm the deity
+          — earns unique artefact reward and a sector-level narrative note
+
+  [ ] ALIEN COLONISER COLONY
+        - Medium-sized colony with alien information-tier buildings
+        - Pre-placed landing pad, market district, command tower
+        - Coloniser NPCs are sapient and spacefaring — they know about the
+          player's faction; disposition affected by G.reputationAlien
+        - Quest hook: they ask you to deliver a message to a specific system
+          (ties into the alien coloniser galaxy-map encounter below)
+
+  [ ] MAZE PLANET
+        - Dense hedge/wall maze; corridors guaranteed solvable (BSP or
+          recursive backtracker generation but with fixed entrance/exit)
+        - Greek myth statues placed as landmarks inside maze
+        - Optional: Minotaur boss enemy in centre room — large biped sprite,
+          BOSS tier, charges in straight lines, breaks through thin walls
+
+  ── SPECIAL PREDATORS (rare spawns, one per planet at most) ──────────────────
+  Add to BIOME_CREATURES as a 'rare' pool (separate from normal pool).
+  spawnCreatures() rolls a low-probability check and picks from rare pool.
+  All special predators should have isBoss:true and unique combat behaviour flags.
+
+  [ ] CORRUPTED AI ROBOT (Ancient Ruins biome)
+        - Hostile by default; unique sprite (robot silhouette)
+        - Hackable: engineer/scientist skill check → convert to friendly escort
+          (follows player, attacks enemies, despawns on planet exit)
+        - If hacked: drops encrypted_chip item (high value, science job item)
+        - Spawn chance: ~8% per ancient-biome planet visit
+
+  [ ] BURROWING SPIDER MAMA (Ice / Frozen biome)
+        - Stays hidden (hidden:true) and tracks player underground
+        - Surfaces within 2 tiles to attack; retreats underground (hidden:true)
+          again if HP drops below 40%
+        - On death: splits into 5 cave_bug-sized spiders at its position
+          (spawn 5 new enemy objects with low HP, crawl behaviour)
+        - Implementation: on enemy death check e.type==='SPIDER_MAMA',
+          push 5 small_spider entries into enemies array
+
+  [ ] INTELLIGENT FOREST STALKER (Habitable biome)
+        - Stays in EARTH_FOREST tiles; uses ranged attack (thrown projectile)
+          from forest cover (attack without needing adjacency)
+        - Flees into forest and hides (hidden:true) when HP drops below 50%
+        - On death: detonates a proximity bomb — damages all entities within
+          3-tile radius (existing explosion helper or new blastRadius())
+        - Implementation: new 'RANGED_STEALTH' behaviour flag in enemy AI loop
+
+  [ ] INVISIBLE GHOST (any biome, ultra rare ~1% chance)
+        - hidden:true always — never revealed even on direct LOS
+        - Has 'phased' flag: passes through walls
+        - Cannot be targeted by ranged fire; melee only (and misses 60%)
+        - Objective: snatch one crew member (random living crew → sets
+          c.snatched=true, removes from active roster)
+        - Once it snatches a crew member it despawns permanently
+        - Crew member is gone unless rescued via a specific event (future)
+        - G.ghostSnatches counter — feeds into sector narrative log
+
+  [ ] GIANT BIRD / CREWMEMBER SNATCHER (any biome)
+        - Large flying enemy — new bird sprite (DRAW function: wingspan,
+          talons, shadow on ground)
+        - On successful attack against crew: snatches them (same c.snatched
+          mechanic as ghost above) and flies to its nest tile
+        - Nest tile: placed during spawnCreatures() at a random location
+          — examine reveals 'Something large lives here'
+        - Rescue window: nest tile is interactable for N turns after snatch;
+          [R]escue action at nest tile returns crew member (at low HP)
+        - After N turns: crew member is consumed (permanent loss)
+
+  ── GALAXY MAP ENCOUNTERS (events in galaxyTurnEvents / ship movement) ────────
+  These fire as the player moves through the galaxy map. Hook into the
+  existing galaxyTurnEvents() function or the ship movement handler.
+
+  [ ] NEBULA NIGHTMARE — DEVOURER (Nebula tiles)
+        - Ultra-rare encounter when ship enters a NEBULA tile
+        - Nebula Devourer: massive entity, treated as a ship combat encounter
+          but the enemy has regenerating hull and summons gas clouds that
+          disable weapons for 1 round
+        - Fleeing costs double fuel (nebula drag)
+        - Defeating it: drops rare nebula_crystal cargo item
+
+  [ ] ALIEN COLONISER SHIP (Unknown Ship encounter)
+        - Spawns as a new NPC ship type in G.npcStranded or a new
+          G.alienShips array
+        - Disposition: neutral initially; hailing it opens a dialogue overlay
+          (similar to barter but with diplomatic options)
+        - Outcome options: trade, ignore, attack (raises G.reputationAlien
+          negatively), request escort (temporary ally)
+        - Its presence on the map is a signal that the alien colony is near
+
+  [ ] SPACE WHALE (near Gas Giant systems)
+        - Spawns in system view when a GAS_GIANT planet is present
+        - Passive until fuel scoop is used on the gas giant — the scoop
+          disturbs it and it becomes curious (approaches ship)
+        - Scientist with high sci skill: calm it → earns rare bio_sample cargo
+        - If attacked or ignored after approach: becomes hostile → ship combat
+          (whale has high HP, ramming attack, no ranged)
+
+  [ ] ROBOT SHIP (hackable)
+        - New NPC ship in galaxy, hostile by default
+        - Hailing with high pilot/eng skill: hack attempt → convert to neutral
+          or ally (follows player for N turns, helps in ship combat)
+        - From ROBOT FACTORY PLANET: if factory not destroyed, additional
+          robot ships keep spawning over time (G.robotShipsActive counter)
+
+  ── DRIFTING SHIPS (expansions to the NPC stranded ship system) ──────────────
+  Add new types to the npcStranded spawn pool and handle in the
+  stranded ship interaction screen (currently in drawBaseOverlay 'stranded').
+
+  [ ] DEAD DRONE
+        - Small automated probe, no crew, no distress signal
+        - Scan-only: approach reveals cargo manifest (random loot, no rescue)
+        - Engineer can salvage it for ship parts (repair + component items)
+
+  [ ] PLANET-KILLING TITAN (ultra rare, 1 per run max)
+        - Massive drifting warship; no distress signal
+        - Examining it: no response; boarding is possible (new interior map
+          — reuse ancient station tile theme but larger)
+        - Interior: automated defences (robot guard enemies), a navigation
+          core tile that reveals its destination system
+        - If destination system reached first and warned: system evacuates
+          (narrative log), earn reputation + large credit reward
+        - If ignored: target system destroyed on a timer (remove from galaxy)
+
+  [ ] ALIVE ALIEN COLONY SHIP
+        - Sapient alien crew, mid-tier technology
+        - Hailing: opens diplomatic dialogue (uses existing dialogue overlay)
+        - Options: trade, offer escort, ask about their destination
+        - Their destination: the ALIEN COLONISER COLONY handcrafted planet
+          (or a new one if not yet generated)
+        - G.alienColonyShipMet flag — affects alien coloniser disposition
+
+  [ ] HUMAN SEED COLONY SHIP (empty, automated)
+        - No crew; carries plant/soil colonisation payload in cargo
+        - Boarding: access cargo hold → take colony_seed_pod items
+          (rare, high value at Waypoint Omega or the Science Office)
+        - The ship will auto-dock at the nearest habitable planet and
+          establish a colony (narrative event N turns later)
+
+  [ ] QUARANTINE SHIP (sick humans)
+        - Distress signal active; hailing reveals 'medical emergency'
+        - Boarding: crew exposed to disease (roll vs med skill)
+        - Rescuing survivors: adds 1–3 new crew candidates (at low HP,
+          possible 'disease' status already applied)
+        - If rescued crew with disease boards ship: spread risk to existing
+          crew via maybeSpreadDisease()
+        - Abandoning it: morale penalty, narrative log entry
+
+  ── MECHANICS TO IMPLEMENT ───────────────────────────────────────────────────
+  These are cross-cutting systems, not single-feature additions.
+
+  [~] RANGED ATTACKS WITH WEAPONS
+        - Ground combat range mode exists (G.rangeTarget, G.fireMode);
+          verify GROUND_WEAPONS table is complete and all paths work
+        - Add: enemy ranged attacks — enemies with ranged behaviour flag
+          attack from distance before closing in (FOREST STALKER uses this)
+        - Add: ammo system? Or keep it unlimited for simplicity
+
+  [~] DISEASE / INFECTIONS / HALLUCINATIONS
+        - Status effects exist in CREW_STATUS_DEFS and tickCrewStatuses()
+        - Remaining work: ensure all environmental triggers hook in
+          (radiation tiles → radiation status, bloom tiles → hallucination,
+           quarantine boarding → disease, alien parasite from specific enemies)
+        - Add: contagion visual indicator in sidebar crew row (coloured dot)
+
+  [~] SAPIENT NON-SPACEFARING CIVILISATIONS
+        - Civ system exists (generateCivilization, barter overlay, dialogue)
+        - Remaining work: flesh out mid-contact events (gift giving, cultural
+          misunderstanding consequences, language learning over multiple visits)
+        - Add: civ disposition memory — G.planets[key].civState.disposition
+          persists across planet re-visits within a run
+
+  [ ] SPACEFARING ALIEN CIVILISATIONS
+        - New faction: alien colonisers — sapient, space-capable, hostile by
+          default if G.reputationAlien < threshold
+        - G.reputationAlien: -100 (war) to +100 (allies); affected by all
+          alien contact events
+        - Peaceful resolution arc: requires multiple positive encounters,
+          completing a diplomacy science job, and meeting the colony ship
+        - War arc: if G.reputationAlien < -60, alien ships begin actively
+          targeting player and neutral ships (ties into HUMANITY_OUTCOMES)
+
+  [ ] SKILL SYSTEM FLESH-OUT
+        - Current skills: atk, def, med, eng, sci, pilot
+        - Add skill experience gain: crewGainSkillXP(c, skill, amount)
+          increments c.skills[skill]; at threshold, increment displayed value
+        - Medic role: either make 'medic' a standard starting crew role
+          (replacing or alongside scientist in some ship classes) or ensure
+          the engineer's med skill provides meaningful field triage options
+        - Visible skill levels in crew examine screen (currently shown but
+          verify all skill checks are using crewSkillValue() consistently)
+
+  [ ] EXAMINE DESCRIPTIONS FLESH-OUT
+        - Every interactable tile should have a 2–3 sentence examine text
+        - Creature examine: already uses generateCreatureDesc() — expand pool
+        - NPC examine: civ NPCs need tier-specific examine flavour text
+        - Item examine: inventory items show .desc already; verify all items
+          in all barter pools have non-empty desc fields
+
+  [ ] LATE GAME SECTOR EFFECTS
+        - G.threatLevel: increases from robot factory, titan ship, released
+          monster, alien war — each step changes galaxy encounter rates
+        - High threat: more pirate attacks, neutral ships go silent,
+          Waypoint Omega may become inaccessible (blockaded)
+        - Implement in galaxyTurnEvents() as a threat-scaled event table
+
+  [ ] BUILDINGS / COLONISATION / SPACE STATION INSTALLATION
+        - Future stretch goal — likely requires a new G.mode: 'colony'
+        - Placeholder: reserve G.playerColonies = [] in initGame()
+
+  [ ] SHIP LAB / CRAFTING (Scientist feature)
+        - New base screen tab: 'Lab' — available only if scientist is alive
+        - Inputs: bio_sample, alien_component, hallucinogen_extract, etc.
+        - Outputs: new consumable items (stimulants, alien_cure, sensor_booster)
+        - Implementation: new 'lab' case in drawBaseOverlay(); crafting
+          recipes as a RECIPES array of { inputs:[], output:{}, sciSkill:N }
+
+  [ ] ROUTINE SHIP INSPECTIONS / BREAKDOWNS
+        - Each N turns in space: roll vs ship HP → chance of component failure
+        - Failure types: engine (fuel drain doubles), sensors (LOS reduced
+          in system view), weapons offline (ship combat penalty)
+        - Engineer repairs in base or on the fly (costs turns + parts item)
+        - Add: G.shipComponents = { engine, sensors, weapons } object in initGame()
+
+  [ ] STATION GAMES (morale boost)
+        - New screen at base/casino: 'Games' option
+        - Minigame options (simple): card draw (luck-based), arm wrestle
+          (atk-based), drinking contest (morale boost, possible illness risk)
+        - Each game costs credits; winning earns credits + morale boost
+        - Casino station: higher stakes, more game types
+
+  [ ] MUTINY SYSTEM
+        - If average crew morale drops below threshold for N consecutive turns:
+          mutiny warning → then mutiny event
+        - Mutiny: crew refuse to leave current system; captain must negotiate
+          (dialogue overlay with morale-spend options) or fight 1–2 crew
+        - Forced return to nearest base if negotiation fails
+        - Prevention: ensure morale management items / events are tuned first
+
+  [ ] MORE WEAPONS AND ARMOUR
+        - New ground weapons: shotgun (short range, wide spread), plasma
+          pistol (ignores def), stun baton (melee, non-lethal)
+        - New ship weapons: ion cannon (disables enemy weapons 1 round),
+          torpedo (high damage, limited ammo), point-defence (reduces
+          incoming missile damage)
+        - Armour: personal suit upgrades stored as crew items
+          — 'Rad Suit' reduces oxygen drain on irradiated tiles
+          — 'Combat Exo' adds +2 def to wearer
+          — 'Insulated Suit' reduces heat damage on dying-sun planets
+
+  [ ] PIRATE / PATROL FACTION INTERACTIONS
+        - Station patrol ships: friendly NPC ships that orbit BASE systems
+        - Pirates attack neutral ships in their patrol zone (galaxyTurnEvents)
+        - If player witnesses a pirate attack: option to intervene
+          (triggers ship combat as ally of neutral ship; reward: reputation
+           + salvage from destroyed pirate)
+        - Pirates and patrol ships in the same tile: auto-trigger combat
+          between them (narrative log entry)
+
+  [ ] REPUTATION SYSTEM
+        - G.reputationPirate, G.reputationColony, G.reputationAlien,
+          G.reputationScience — each -100 to +100
+        - Affects: barter prices, encounter hostility, dialogue options,
+          access to secret base stock items
+        - Display: new HUD-box or sidebar section showing faction standings
+
+  [ ] PLANET INVASIONS (between two spacefaring civilisations)
+        - Two adjacent systems with spacefaring civs can enter conflict
+        - Galaxy map: invasion fleet ships visible crossing the map
+        - Player can: observe, escort one side (reputation gain/loss),
+          or broker a ceasefire (high sci/pilot skill diplomacy check)
+
+  [ ] TROOP TRANSPORT (Bulk Freighter feature)
+        - New cargo type: 'troops' (G.cargo slot, large, takes 4 slots)
+        - Delivering troops to a warring planet: shifts invasion outcome
+        - Troop deployment: new planet surface event (allied soldiers
+          spawn as friendly NPCs that fight alongside player)
+
+  [ ] NUKES
+        - Rare cargo item: 'Nuclear Device' — very high value, illegal at most
+          stations, destroys all life on a target planet on detonation
+        - Detonation: removes all NPC/creature enemies from planet permanently;
+          adds radiation zone tiles; marks planet as IRRADIATED in galaxy view
+        - Sector consequence: raises G.threatLevel; triggers alien coloniser
+          diplomatic crisis if used near their colony
+
+  [ ] SECTOR-ENDING MONSTER RELEASE
+        - Tied to IMPRISONED MONSTER PLANET above
+        - G.sectorMonsterReleased: if true, galaxyTurnEvents() periodically
+          destroys random systems (removes from G.galaxy grid, narrative log)
+        - Counter: G.systemsDestroyed — feeds into HUMANITY_OUTCOMES at
+          retirement (new outcome variant: 'Monster loose, sector devastated')
+
+  [ ] ALIEN COLONISER PEACEFUL RESOLUTION ARC
+        - Requirements: G.reputationAlien >= 60, met alien colony ship,
+          visited alien coloniser colony, completed diplomacy science job
+        - Resolution event: triggers a special narrative screen (like the
+          retirement humanity screen) describing the peace accord
+        - Reward: sector opens up — alien systems become accessible,
+          alien barter stock unlocked, unique alien technology item
+
+  [ ] ALIEN COLONISER WAR ARC
+        - Requirements: G.reputationAlien <= -60 or titan ship reached target
+        - War state: alien ships spawn regularly, attack everything including
+          player; BASE stations may be blockaded (temporarily inaccessible)
+        - Feeds into HUMANITY_OUTCOMES index 1 (war breaks out) — make sure
+          this arc actually sets the correct humanity outcome index at retirement
+
+  [ ] ALIEN PROSPECTOR ENCOUNTER
+        - Rare galaxy-map encounter: a solo alien vessel, non-military
+        - Hailing: shares a random planet coordinate (potential treasure hint)
+        - Possible trade: alien items for bio-samples or artefacts
+        - Friendly encounter — good opportunity to raise G.reputationAlien
+
+══════════════════════════════════════════════════════════════════════════════
+  NOTES FOR FUTURE 
+══════════════════════════════════════════════════════════════════════════════
+
+  • When a feature touches civilization tiers, check both generateCivilization()
+    and the barter stock pools (generateCivBarterStock) — they must stay in sync.
+  • New status effects must be added to CREW_STATUS_DEFS and handled in
+    tickCrewStatuses(); also add to the sidebar status display in renderSidebar().
+  • New biomes need entries in BIOMES, BIOME_TEMP/GRAV/ATM in generateGalaxy(),
+    STAR_TYPES orbit slot pools, and ASCII + DRAW tile functions.
+  • New planet special types: add to _specialPool in generateGalaxy(),
+    add a generation branch in generatePlanetGrid(), and a DRAW tile function.
+  • The ctx-bar hint buttons update via updateCtxBar() — always keep that
+    function consistent with what handleKey() actually accepts in each mode.
+  • localStorage autosave is implemented (SAVE_KEY = prospector_autosave).
+  • G.reputationAlien, G.threatLevel, G.sectorMonsterReleased, G.playerColonies,
+    G.shipComponents are PLANNED fields — they do not exist in G yet. Add them
+    to initGame() before writing any logic that reads or writes them.
+  • Multi-tile enemies (sandworm, giant bird, docile giant, etc.) require
+    changes to: collision detection in movePlayer(), enemy drawing in
+    drawPlanetView(), and combat targeting. Plan this carefully before adding.
+  • The HUMANITY_OUTCOMES array (line ~5600) should gain new entries when
+    sector-level arcs (monster release, alien war, peaceful resolution) are
+    implemented — the retirement screen picks randomly from this array.
+
+══════════════════════════════════════════════════════════════════════════════
+  DIALOGUE SYSTEM DESIGN PHILOSOPHY
+  (earned through extensive iteration — apply these rules to all future dialogue)
+══════════════════════════════════════════════════════════════════════════════
+
+  CORE PRINCIPLE: Options should only reference things the player already knows.
+  If a label names a concept (council, fire, a person's role), that concept must
+  have been introduced in the current conversation before the label appears.
+  Exposing unknown information in option labels breaks immersion and skips beats.
+
+  ── NAVIGATION RULES ──────────────────────────────────────────────────────────
+
+  1. BACK vs LEAVE vs CLOSE
+     - "Back" / "Continue" / "Step back" → always next:'root' or next:<parent node>
+       Never action:'close'. These are navigation, not exits.
+     - "Leave" → action:'close'. Reserved for intentional full exits from the
+       encounter. Should only appear on root or genuine dead-end nodes.
+     - Dead-end nodes (combat triggered, civ fled, encounter fully resolved)
+       may use action:'close' directly — these are forced exits, not navigation.
+     - NEVER use "Back away" as a close action mid-conversation. Rename it
+       "Leave" if it truly exits, or route it to root if it's a retreat posture.
+
+  2. POSITIVE OUTCOME NODES
+     Nodes that represent something good happening (gift received, analysis done,
+     knowledge shared, non-interference accepted, hunt joined, aid received, etc.)
+     should NOT have a "Leave" option. The player has just succeeded at something.
+     Route them to "Continue" → root. Let the player choose to leave from root
+     with full awareness of their options. Pattern:
+       options: [{label:'Continue', next:'root'}]   // positive outcome
+       options: [{label:'Back', next:'root'}]        // neutral result / info node
+
+  3. ROOT NODE MUST BE repeatable: true
+     The root node text reflects relationship state (memories, language, relation,
+     alert, unlocks). It must re-evaluate every time the player returns to it.
+     Without repeatable:true, text is cached after first visit and never updates.
+     Apply to any node whose text is driven by live game state rather than a
+     one-time event.
+
+  4. NO ATTACK OPTION AFTER PEACEFUL ACTIONS
+     Do not push an attack_civ option immediately after:
+     - gift_given (the gift just landed — attack is incoherent)
+     - territorial_accept_demand (the crew just yielded — attack is incoherent)
+     Attack should be available from root and hostile_menu, not from outcome nodes.
+
+  5. LOOT OPTIONS ARE SETTLEMENT-ONLY
+     "Take from them by force" and "Take what's left behind" must be gated by
+     !isLocalContact(). A local NPC that goes hostile is a combat encounter on
+     the map — there is nothing to loot through a dialogue menu. Apply this gate
+     to both root's hostile branch AND hostile_menu. Both must stay in sync.
+
+  ── CONTENT / SEQUENCING RULES ────────────────────────────────────────────────
+
+  6. OPTION LABELS REFLECT WHAT THE PLAYER DOES, NOT WHAT THEY WANT
+     "Move toward them — open hands" not "Try to be friendly".
+     "Stand tall — hold eye contact" not "Assert dominance".
+     Labels describe the physical/social action. The outcome is unknown.
+
+  7. TEXT MUST REFLECT CURRENT STATE, NOT INITIAL STATE
+     Subtitle disposition words (e.g. "watching the crew closely") should read
+     the current contact state, not the static trait value. Once the player has
+     interacted, the trait is context — what matters is where the relationship is.
+     Priority order for disposition text:
+       hostile → subdued → on the edge (alert≥4) → tense (alert≥3)
+       → relation-based (contacted) → territorial → trait-based (first contact)
+
+  8. LOG MESSAGES ARE SUMMARIES, NOT DIALOGUE ECHOES
+     Never addLog() the same string shown in the dialogue text panel.
+     Log messages should be short confirmations of what happened:
+       "Dr. Chen — language analysis complete. Comprehension: fragmentary."
+     not the full analysis prose. The player can read the dialogue panel.
+     Functions that generate dialogue text (e.g. civCustomsStudyText) must NOT
+     call addLog() internally — the calling node controls logging.
+
+  9. DEAD CODE AUDIT
+     civFirstContactText() is defined but never called (~line 17038). It contains
+     the old "pressure block" stat-dump. Do not revive it. If refactoring the
+     scene text system, delete it entirely.
+
+  ── ARCHITECTURE NOTES ────────────────────────────────────────────────────────
+
+  10. DIALOGUE CACHING
+      enterDialogueNode() caches node text in G.dialogue.nodeText[nodeId] on first
+      visit. Text only re-evaluates if node.repeatable === true or the node has
+      never been visited. Nodes whose text depends on live state (relation, alert,
+      language, memories) must be repeatable. Static outcome text (e.g. "the gift
+      was received") does not need to be repeatable.
+
+  11. CONTACT KIND GATES
+      isLocalContact() — player is adjacent to a civ NPC on the map
+      isSettlementContact() — player is adjacent to a civ building tile
+      isDelegationContact() — a delegation has formally approached the crew
+      Most loot and force options should check !isLocalContact() before appearing.
+      Non-primitive tiers can have local contacts too (workers, guards, officials)
+      — the gate applies to all tiers, not just primitives.
+
+  12. civCustomsStudyText() SIDE EFFECTS
+      This function gives sci XP, increments languageProgress, and returns prose.
+      It is called from both scientist_analyse (dialogue node) and study_customs.
+      It must NOT call addLog() — that is the caller's responsibility.
+      If you add new text-generating functions with side effects, follow this rule.
+
+  13. civCanAnalyzeLanguage() GATES
+      Returns false if: hostile, languageAnalysisDone this visit, progress >= CIV_LANGUAGE_MAX.
+      Do NOT add a 'contacted' gate — analysis should be available on return visits
+      until the natural caps are reached. The contacted gate was removed because it
+      was blocking analysis for the entire post-first-contact game.
+
+══════════════════════════════════════════════════════════════════════════════
+-->

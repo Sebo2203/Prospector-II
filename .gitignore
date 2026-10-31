@@ -1,0 +1,5 @@
+desktop/node_modules/
+desktop/app/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+.tmp-tests/

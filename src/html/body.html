@@ -1,0 +1,180 @@
+
+<div id="root">
+
+  <!-- Feedback overlay -->
+  <div id="feedback-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;">
+    <div style="background:#0e0e1a;border:1px solid #3a3a5a;border-radius:6px;padding:28px 32px;width:420px;font-family:'Courier New',monospace;">
+      <div style="font-size:18px;font-weight:bold;color:#ffaa44;margin-bottom:6px;">SEND FEEDBACK</div>
+      <div style="font-size:13px;color:#445566;margin-bottom:18px;">Your message goes directly to the developer. Reply email required.</div>
+      <div id="feedback-success" style="display:none;color:#70f090;font-size:14px;margin-bottom:12px;">✓ Feedback sent! Thank you.</div>
+      <div id="feedback-error" style="display:none;color:#f07070;font-size:14px;margin-bottom:12px;">Something went wrong. Try again.</div>
+      <input id="feedback-email" type="email" required placeholder="Reply email (required)" style="width:100%;box-sizing:border-box;background:#08080f;border:1px solid #2a2a4a;color:#aaccee;font-family:'Courier New',monospace;font-size:14px;padding:8px 10px;border-radius:3px;margin-bottom:10px;outline:none;">
+      <textarea id="feedback-msg" placeholder="Your message..." rows="5" style="width:100%;box-sizing:border-box;background:#08080f;border:1px solid #2a2a4a;color:#aaccee;font-family:'Courier New',monospace;font-size:14px;padding:8px 10px;border-radius:3px;resize:vertical;outline:none;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button id="feedback-submit" onclick="submitFeedback()" style="flex:1;background:#1a1a3a;border:1px solid #6655cc;color:#fff;font-family:'Courier New',monospace;font-size:14px;padding:8px;border-radius:3px;cursor:pointer;">Send</button>
+        <button onclick="closeFeedback()" style="flex:1;background:#1a1a2a;border:1px solid #333;color:#888;font-family:'Courier New',monospace;font-size:14px;padding:8px;border-radius:3px;cursor:pointer;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="minimap-overlay" onclick="if(event.target.id==='minimap-overlay') closeGalaxyMinimapOverlay();">
+    <div id="minimap-overlay-body">
+      <div id="minimap-large-panel">
+        <canvas id="galaxy-minimap-large" width="880" height="630"></canvas>
+      </div>
+      <div id="minimap-legend">
+        <div class="minimap-legend-title">GALAXY MAP</div>
+        <div id="minimap-legend-rows"></div>
+      </div>
+    </div>
+    <div id="minimap-overlay-hint"><span class="ck">ESC</span> close map</div>
+  </div>
+
+  <!-- HUD — SHIP HP and FUEL moved to left gauge panel, O2 also in gauge panel -->
+  <div id="hud">
+    <div class="hud-box" id="h-phase-box" style="display:none"><div class="hud-label">TIME</div><div class="hud-val" id="h-phase">—</div></div>
+    <div class="hud-box"><div class="hud-label">CREDITS</div><div class="hud-val cy" id="h-creds">500</div></div>
+    <div class="hud-box"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
+    <div class="hud-box"><div class="hud-label">TURN</div><div class="hud-val cy" id="h-turn">1</div></div>
+    <div class="hud-box"><div class="hud-label">MODE</div><div class="hud-val cg" id="h-mode">GALAXY MAP</div></div>
+  </div>
+
+  <!-- Canvas + Gauges + Sidebar -->
+  <div id="main">
+
+    <!-- Left gauge panel: swaps between space gauges and planet gauge -->
+    <div id="gauge-panel">
+      <!-- Fuel gauge (space only) -->
+      <div class="gauge-wrap" id="gauge-fuel">
+        <div class="gauge-label">FUEL</div>
+        <div class="gauge-bar-wrap">
+          <div class="gauge-ticks" id="fuel-ticks"></div>
+          <div class="gauge-fill" id="fuel-fill" style="height:100%;background:#ff8800;"></div>
+        </div>
+        <div class="gauge-val co" id="g-fuel">100</div>
+      </div>
+      <!-- Hull gauge (space only) -->
+      <div class="gauge-wrap" id="gauge-hull">
+        <div class="gauge-label">HULL</div>
+        <div class="gauge-bar-wrap">
+          <div class="gauge-fill" id="hull-fill" style="height:100%;background:#44aaff;"></div>
+        </div>
+        <div class="gauge-val cg" id="g-hull">100</div>
+      </div>
+      <!-- Oxygen gauge (planet only) -->
+      <div class="gauge-wrap" id="gauge-oxy" style="display:none">
+        <div class="gauge-label">O₂</div>
+        <div class="gauge-bar-wrap">
+          <div class="gauge-ticks" id="oxy-ticks"></div>
+          <div class="gauge-fill" id="oxy-fill" style="height:100%;background:#44ddff;"></div>
+        </div>
+        <div class="gauge-val cc" id="g-oxy">100%</div>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="gc"></canvas>
+      
+    </div>
+    <div id="sidebar">
+      <div class="s-title">Crew</div>
+      <div id="crew-list"></div>
+      <div id="inv-list" style="display:none"></div>
+      <div class="s-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Log</span>
+        <span style="display:flex;gap:3px;">
+          <button onclick="adjustLogFont(-1)" style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">−</button>
+          <button onclick="adjustLogFont(1)"  style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">+</button>
+        </span>
+      </div>
+      <div id="log-list"></div>
+    </div>
+  </div>
+
+  <!-- Message bar -->
+  <div id="msg-bar">
+    <span id="msg-bar-text"></span>
+    <button id="msg-bar-dismiss" onclick="dismissMsg()" title="Dismiss">✕</button>
+  </div>
+  <!-- Contextual actions — rebuilt by renderContextBar() each turn -->
+  <div id="ctx-bar"></div>
+  <!-- Persistent global hints — never changes -->
+  <div id="persist-bar">
+    <div id="persist-hints">
+      <div><span class="ck">WASD</span> cardinal move</div>
+      <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
+      <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
+      <div><span class="ck">Enter</span> interact / dock / land</div>
+      <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
+      <div><span class="ck">ESC</span> back / close</div>
+      <div><span class="ck">.</span> wait / repair (galaxy)</div>
+    </div>
+    <div id="hud-tools">
+      <!-- 8-dir compass — always visible, functional in galaxy/planet modes -->
+      <div id="compass-wrap">
+        <div id="compass-grid">
+          <div class="cmp-btn" data-dx="-1" data-dy="-1" title="NW">↖</div>
+          <div class="cmp-btn" data-dx="0"  data-dy="-1" title="N">↑</div>
+          <div class="cmp-btn" data-dx="1"  data-dy="-1" title="NE">↗</div>
+          <div class="cmp-btn" data-dx="-1" data-dy="0"  title="W">←</div>
+          <div class="cmp-btn cmp-center"   title="Wait">·</div>
+          <div class="cmp-btn" data-dx="1"  data-dy="0"  title="E">→</div>
+          <div class="cmp-btn" data-dx="-1" data-dy="1"  title="SW">↙</div>
+          <div class="cmp-btn" data-dx="0"  data-dy="1"  title="S">↓</div>
+          <div class="cmp-btn" data-dx="1" data-dy="1" title="SE">↘</div>
+        </div>
+      </div>
+      <div id="galaxy-minimap-panel">
+        <canvas id="galaxy-minimap" width="208" height="70"></canvas>
+      </div>
+      <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
+    </div>
+  </div>
+  <div id="version-tag">v0.26</div>
+
+  <!-- Barter overlay -->
+  <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
+    <div id="barter-panel" style="background:#08080f;border:2px solid #ffe066;border-radius:4px;width:700px;max-width:96vw;font-family:'Courier New',monospace;outline:none;">
+      <!-- Header -->
+      <div style="background:#100c02;border-bottom:1px solid #3a3000;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div id="barter-title" style="font-size:15px;font-weight:bold;color:#ffe066;">Barter Exchange</div>
+          <div id="barter-subtitle" style="font-size:11px;color:#667788;margin-top:2px;"></div>
+        </div>
+        <div style="font-size:11px;color:#445566;">↑↓ move · ←→ switch side · Enter toggle · Tab confirm · Esc close</div>
+      </div>
+      <!-- Two column layout -->
+      <div style="display:flex;gap:0;height:320px;">
+        <!-- Left: your inventory -->
+        <div style="flex:1;border-right:1px solid #1e1e2e;display:flex;flex-direction:column;">
+          <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
+            <span style="color:#70d8ff;">Your Offer</span>
+          </div>
+          <div id="barter-player-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
+            <div style="font-size:10px;color:#445566;margin-bottom:2px;">OFFERING</div>
+            <div id="barter-offer-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+          </div>
+        </div>
+        <!-- Right: civ stock -->
+        <div style="flex:1;display:flex;flex-direction:column;">
+          <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
+            <span style="color:#90f0a0;">Their Goods</span>
+          </div>
+          <div id="barter-civ-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
+            <div style="font-size:10px;color:#445566;margin-bottom:2px;">REQUESTING</div>
+            <div id="barter-want-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+          </div>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div style="background:#0a0a10;border-top:1px solid #1e1e2e;padding:8px 16px;display:flex;align-items:center;gap:12px;">
+        <div id="barter-value-info" style="flex:1;font-size:12px;color:#667788;"></div>
+        <div id="barter-confirm-hint" style="font-size:12px;color:#445566;">[Tab] Confirm Trade</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- #root -->
+

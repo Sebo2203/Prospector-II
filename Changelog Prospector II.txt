@@ -1,0 +1,9 @@
+0.27.1
+-Added sounds for refueling, fuel scooping, repairing ship at the station, applying repair kits.
+
+-Added button in debug menu to make your ship invisible to enemy ships in the galaxy map.
+(Nebulae wraith still follow)
+
+-Deposit ores should no longer spawn on derelict ships/stations.
+
+-Made casinos walkable.
