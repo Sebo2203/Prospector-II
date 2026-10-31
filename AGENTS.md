@@ -9,3 +9,5 @@
 - `npm run verify:migration` audits the initial extraction against the recorded original HTML hash. It is deliberately separate from normal tests because later gameplay edits should change that hash.
 - `src/html/legacy-design-notes.html` is an unchanged historical comment embedded in the release for exact migration parity. Some descriptions and line references are outdated; current code and `docs/architecture.md` take precedence.
 - Do not edit or package Windows executables as part of source organization work.
+- Prefer deterministic scenario tests against actual game functions and scripted headless integration checks. Do not navigate the game through browser-control tools unless the user asks. Automated checks cover rules and persistence; report separately what still needs human playtesting.
+- `experiment/expedition-legacy` is the active experimental branch; `main` is the public release. The old development tips are preserved as archive tags (see `docs/branch-history.md`).

@@ -1,7 +1,7 @@
 Prospector II — development handoff
 28 September 2026
 
-Use the dev-build branch for ongoing work. The public main branch and its download are separate. The current game is built from the modular files in src/; index.html is generated from them.
+Historical handoff: dev-build was consolidated into experiment/expedition-legacy on 31 October 2026. Use that experimental branch for new work. Its README and docs/experiment.md contain current build and feature instructions. The public main branch and download remain separate. The game is built from the modular files in src/; index.html is generated from them.
 
 Recent work is recorded in Changelog Prospector II.txt. The casino is now a walkable station with poker, drinking, wrestling, a beast arena, and slot machines. A visibility bug that initially made its floor and walls black has been fixed and passes an automated reveal test. That last fix still needs a fresh-run playtest.
 

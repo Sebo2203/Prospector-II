@@ -73,6 +73,9 @@ function drawRetirementScreen(){
 
   ctx.fillStyle='#112233'; ctx.fillRect(cx-300, divY+38, 600, 1);
 
+  ctx.font='12px Courier New'; ctx.fillStyle='#8aaabb';
+  ctx.fillText(expeditionLegacy(), cx, divY+65, cw-50);
+
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#ffe066';
   ctx.fillText('[ ENTER  or  SPACE ]  →  Main Menu', cx, ch-30);
   ctx.textAlign='left';

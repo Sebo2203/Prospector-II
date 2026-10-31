@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────
 function doInteract(){
   if(G.dead||G.retired) return;
+  if(quarantineAtShip()){ openQuarantineReport(); return; }
   if(G.mode==='planet' && G.planets[G.curPlanet]?.isCasino){
     casinoInteractAtPlayer(); renderAll(); return;
   }
@@ -75,6 +76,7 @@ function doInteract(){
       updateCrewLowMoraleFlags();
       SFX.dock();
       addLog('Docked at '+cell.name+'.','li');
+      settleQuarantineAtStation(cell.name);
       // Mystery package delivery
       if(cell.name === 'Waypoint Omega'){
         const pkgIdx = (G.cargo||[]).findIndex(i=>i.questItem==='mystery_delivery');

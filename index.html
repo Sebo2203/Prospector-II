@@ -1308,6 +1308,25 @@ canvas {
   max-height: 18px;
   overflow: hidden;
 }
+/* Expedition records and incident choices share the existing scaled root. */
+#expedition-overlay {
+  position:absolute; inset:0; z-index:100; background:rgba(0,5,12,.94);
+  align-items:center; justify-content:center; color:#b5c9dd;
+  font:16px/1.5 'Courier New',monospace;
+}
+.expedition-panel {
+  width:1050px; max-height:640px; overflow-y:auto; padding:24px 32px;
+  border:1px solid #406078; background:#08121c; box-sizing:border-box;
+}
+.expedition-panel h2 { color:#ffe066; margin:0 0 16px; font-size:22px; }
+.expedition-panel h3 { color:#70d8ff; font-size:16px; border-top:1px solid #243748; padding-top:12px; }
+.expedition-panel p { margin:10px 0; }
+.expedition-panel button {
+  display:block; width:100%; text-align:left; margin:10px 0; padding:12px;
+  font:inherit; color:#b9e5f8; background:#122536; border:1px solid #48708a; cursor:pointer;
+}
+.expedition-panel button:hover,.expedition-panel button:focus-visible { border-color:#ffe066; color:#ffe066; }
+.expedition-panel button:disabled { opacity:.4; cursor:default; }
 </style>
 </head>
 <body>
@@ -1442,7 +1461,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag">v0.26</div>
+  <div id="version-tag">v0.28 experimental</div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -4700,6 +4719,241 @@ function resetDebugSubMenus(){
   DEBUG.itemSubCol = 'left';
 }
 
+// Saved facts, rather than parsed log messages, support the journal and endings.
+function ensureExpeditionState(){
+  if(!G) return null;
+  if(!G.expedition) G.expedition = { version:1, events:[], surveys:{}, quarantine:null };
+  const state = G.expedition;
+  if(!Array.isArray(state.events)) state.events = [];
+  if(!state.surveys) state.surveys = {};
+  return state;
+}
+
+function recordExpeditionEvent(id, kind, text, details={}){
+  const state = ensureExpeditionState();
+  if(!state || state.events.some(event=>event.id===id)) return;
+  state.events.push({ id, kind, text, turn:G.turn, ...details });
+}
+
+function recordSurveyFinding(body){
+  if(!body || !['partial','full'].includes(body.targetDesc.scanState)) return;
+  const state = ensureExpeditionState();
+  const {pKey, targetDesc} = body;
+  const pdata = G.planets?.[pKey];
+  const coverage = pdata ? getScanCoverage(pdata.scanMask) : 0;
+  state.surveys[pKey] = {
+    name:targetDesc.name, biome:targetDesc.biome,
+    scanState:targetDesc.scanState, coverage, turn:G.turn,
+    civilization:coverage>0 && pdata?.civilization
+      ? pdata.civilization.tierLabel+' '+pdata.civilization.species : null,
+  };
+  recordExpeditionEvent('survey:'+pKey, 'discovery', 'First scan recorded: '+targetDesc.name, {planetKey:pKey});
+}
+
+function placeQuarantineShip(){
+  const state = ensureExpeditionState();
+  if(state.quarantine) return;
+  // A nearby empty tile gives the experiment an accessible first story without
+  // overwriting a system, hazard, station, or another authored encounter.
+  const candidates = [];
+  for(let y=1;y<MAP_H-1;y++) for(let x=1;x<MAP_W-1;x++){
+    const distance = Math.abs(x-G.ship.x)+Math.abs(y-G.ship.y);
+    if(distance>=4 && distance<=7 && G.galaxy[y]?.[x]?.type==='VOID') candidates.push({x,y});
+  }
+  const position = candidates[rnd(candidates.length)];
+  if(!position) return;
+  state.quarantine = { ...position, status:'open', choice:null, settled:false };
+  G.galaxy[position.y][position.x] = {type:'DERELICT', name:'Mercy of Dawn [quarantine]'};
+  G.visited[position.y*MAP_W+position.x] = true; // coordinates came in the transmission
+  recordExpeditionEvent('quarantine:signal', 'lead',
+    'Distress transmission: Mercy of Dawn at '+position.x+','+position.y+'. Survivors report an unidentified fever.');
+  addLog('Distress signal: Mercy of Dawn at '+position.x+','+position.y+'. [J] opens the expedition journal.','lw');
+}
+
+function quarantineAtShip(){
+  const incident = ensureExpeditionState()?.quarantine;
+  return G?.mode==='galaxy' && incident && incident.x===G.ship.x && incident.y===G.ship.y ? incident : null;
+}
+
+function openQuarantineReport(){
+  const incident = quarantineAtShip();
+  if(!incident) return;
+  recordExpeditionEvent('quarantine:contact', 'discovery',
+    'Mercy of Dawn: three survivors behind a sealed bulkhead; their fever has spread through the ship.');
+  G._expeditionPanel = 'quarantine';
+  renderAll();
+}
+
+function resolveQuarantine(choice){
+  const incident = quarantineAtShip();
+  if(!incident || incident.choice || !['isolated','open','beacon','salvage'].includes(choice)) return;
+  const fuelCost = choice==='isolated' ? 20 : choice==='beacon' ? 5 : 0;
+  if(G.fuel<fuelCost){ addLog('Insufficient fuel for that operation.','lw'); renderAll(); return; }
+  // Rescue uses the vessel's life pod, not a normal cargo item that can be sold
+  // or jettisoned. It needs neither a particular hull nor a rare equipment drop.
+  G.fuel -= fuelCost;
+  G.fuelSpent = (G.fuelSpent||0)+fuelCost;
+  G.turn++;
+  incident.choice = choice;
+  incident.status = 'pending';
+  incident.choiceTurn = G.turn;
+  if(choice==='open'){
+    const exposed = G.crew.find(c=>c.hp>0);
+    if(exposed) applyCrewStatus(exposed, 'fever', {severity:1});
+    adjustCrewMoraleBase(1);
+  }
+  if(choice==='isolated') adjustCrewMoraleBase(2);
+  if(choice==='salvage'){ earnCredits(180); adjustCrewMoraleBase(-3); }
+  const text = {
+    isolated:'Transferred three survivors in a sealed life pod. Spent 20 fuel; take them to any major station for medical reception and a 300 cr rescue payment.',
+    open:'Rescued three survivors through an open airlock. A crew member developed fever. Station screening will cost 120 cr from the 300 cr rescue payment.',
+    beacon:'Spent 5 fuel powering a rescue beacon. The survivors remain sealed aboard. Ask at the next major station for the recovery report.',
+    salvage:'Stripped emergency cargo for 180 cr, leaving the survivors without life support. Station inspection will assess an 80 cr penalty from these proceeds.',
+  }[choice];
+  recordExpeditionEvent('quarantine:choice', 'decision', text, {choice});
+  addLog(text, choice==='salvage'?'lw':'lg');
+  G._expeditionPanel = null;
+  renderAll();
+}
+
+function settleQuarantineAtStation(stationName){
+  const incident = ensureExpeditionState()?.quarantine;
+  if(!incident?.choice || incident.settled) return;
+  incident.settled = true;
+  incident.status = 'closed';
+  incident.stationName = stationName;
+  const choice = incident.choice;
+  let text;
+  if(choice==='salvage'){
+    // Never turn an inspection into debt or a station-access soft lock.
+    const fine = Math.min(80, Math.max(0,G.credits));
+    G.credits -= fine;
+    G.stationReputation = (G.stationReputation||0)-2;
+    text = stationName+': the Mercy of Dawn loss inquiry links your salvage to three deaths. Inspection penalty: '+fine+' cr. Station standing -2.';
+  } else {
+    const reward = choice==='beacon' ? 100 : choice==='open' ? 180 : 300;
+    earnCredits(reward);
+    const standing = choice==='isolated' ? 4 : choice==='open' ? 2 : 1;
+    G.stationReputation = (G.stationReputation||0)+standing;
+    text = stationName+': '+(choice==='beacon' ? 'recovery tug confirms all three survivors are safe.' :
+      choice==='open' ? 'the survivors enter treatment. Screening deducted 120 cr; your crew still need fever care.' :
+      'medical staff receive the sealed pod. All three survivors reach treatment without exposing your crew.')+
+      ' Rescue payment: '+reward+' cr. Station standing +'+standing+'.';
+  }
+  recordExpeditionEvent('quarantine:aftermath', 'consequence', text, {stationName,choice});
+  addLog(text, choice==='salvage'?'lw':'lg');
+}
+
+function expeditionLegacy(){
+  const incident = ensureExpeditionState()?.quarantine;
+  if(!incident) return 'The Mercy of Dawn distress call never reached this expedition.';
+  if(!incident.choice) return 'The Mercy of Dawn distress call remained unanswered.';
+  if(!incident.settled) return 'The Mercy of Dawn incident was still awaiting a station report.';
+  return incident.choice==='salvage' ? 'Three lives lost aboard Mercy of Dawn; its cargo helped fund your career.' :
+    incident.choice==='beacon' ? 'Your beacon brought a recovery tug to three stranded survivors.' :
+    incident.choice==='isolated' ? 'Three survivors brought home safely in a sealed life pod.' :
+    'Three survivors brought home; an open-airlock rescue exposed your crew to fever.';
+}
+function closeExpeditionPanel(){
+  if(!G) return;
+  G._expeditionPanel = null;
+  renderAll();
+}
+
+function toggleExpeditionJournal(){
+  if(!G || G.dead || G.retired) return;
+  G._expeditionPanel = G._expeditionPanel ? null : 'journal';
+  renderAll();
+}
+
+function renderExpeditionPanel(){
+  let overlay = document.getElementById('expedition-overlay');
+  if(!overlay){
+    overlay = document.createElement('section');
+    overlay.id = 'expedition-overlay';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-label','Expedition journal');
+    document.getElementById('root').appendChild(overlay);
+  }
+  overlay.replaceChildren();
+  overlay.style.display = G?._expeditionPanel ? 'flex' : 'none';
+  if(!G?._expeditionPanel) return;
+  const panel = document.createElement('div');
+  panel.className = 'expedition-panel';
+  overlay.appendChild(panel);
+  const append = (tag,text,className) => {
+    const element = document.createElement(tag);
+    element.textContent = text;
+    if(className) element.className = className;
+    panel.appendChild(element);
+    return element;
+  };
+  const button = (text,action,disabled=false) => {
+    const element = append('button',text);
+    element.type = 'button';
+    element.disabled = disabled;
+    element.onclick = action;
+    return element;
+  };
+  const state = ensureExpeditionState();
+  if(G._expeditionPanel==='quarantine'){
+    append('h2','MERCY OF DAWN — QUARANTINE');
+    append('p','Confirmed: three survivors, a spreading fever, and failing life support. Their sealed life pod can be powered using your fuel. No approach requires a particular hull.');
+    if(!state.quarantine?.choice){
+      append('p','Your choice takes one turn. Rescue payments arrive at the next major station. Fuel costs still apply with debug infinite fuel enabled.');
+      button('[1] Transfer sealed pod — 20 fuel; 300 cr at station',()=>resolveQuarantine('isolated'),G.fuel<20);
+      button('[2] Open-airlock rescue — crew fever; net 180 cr at station',()=>resolveQuarantine('open'));
+      button('[3] Power rescue beacon — 5 fuel; 100 cr after recovery',()=>resolveQuarantine('beacon'),G.fuel<5);
+      button('[4] Strip cargo — 180 cr now; 80 cr penalty, survivors die',()=>resolveQuarantine('salvage'));
+      append('p','Opening your airlock exposes one living crew member to fever. Sealed transfer avoids that exposure. The beacon leaves recovery to a tug. Stripping the ship abandons its people.');
+    } else {
+      append('p',state.events.find(event=>event.id==='quarantine:choice')?.text || 'This incident has been resolved.');
+      append('p',state.events.find(event=>event.id==='quarantine:aftermath')?.text || 'Follow-up pending at your next major station.');
+    }
+  } else {
+    append('h2',"CAPTAIN'S EXPEDITION JOURNAL");
+    append('p','Turn '+G.turn+' · '+G.shipName+' · Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr');
+    append('h3','LEADS & FOLLOW-UP');
+    const incident = state.quarantine;
+    append('p',!incident ? 'No distress lead recorded for this expedition.' : incident.settled ? expeditionLegacy() :
+      incident.choice ? 'Mercy of Dawn: report to any major station for medical reception or recovery news.' :
+      'Reported distress: Mercy of Dawn at '+incident.x+','+incident.y+'. Fever reported; survivors unverified until contact. Fly there and press Enter.');
+    append('h3','SURVEY REGISTER');
+    let count = 0;
+    // Old saves can reconstruct only actual scanned/explored terrain. Generation
+    // alone is not evidence: never list hidden worlds or unobserved civilizations.
+    const keys = new Set([...Object.keys(state.surveys),...Object.keys(G.planets||{})]);
+    for(const key of keys){
+      const finding = state.surveys[key];
+      const pdata = G.planets?.[key];
+      const coverage = pdata ? getScanCoverage(pdata.scanMask) : finding?.coverage || 0;
+      const explored = (pdata?.explored||[]).filter(Boolean).length;
+      if(!finding && !coverage && !explored) continue;
+      if(pdata?.isDerelict || pdata?.isCasino || pdata?.isAncientStation || key.includes(':stranded')) continue;
+      count++;
+      const name = finding?.name || findBodyNameByKey(key);
+      const biome = finding?.biome || pdata?.biome;
+      append('p',name+' ['+key+'] · '+(BIOMES[biome]?.name || biome || 'Unclassified')+
+        ' · '+Math.round(coverage*100)+'% scanned · '+explored+' surface tiles explored'+
+        (finding?.civilization ? ' · Recorded civilization: '+finding.civilization : ''));
+    }
+    if(!count) append('p','No survey findings yet. Enter a system and scan a body to begin.');
+    append('h3','CIVILIZATION CONTACTS');
+    let contacts = 0;
+    for(const [key,pdata] of Object.entries(G.planets||{})){
+      const civ = pdata.civilization;
+      if(!civ?.state?.contacted) continue;
+      contacts++;
+      append('p',findBodyNameByKey(key)+' · '+civ.tierLabel+' '+civ.species+
+        ' · '+civRelationLabel(civ.state)+' ('+civ.state.relation+') · '+civAlertLabel(civ.state));
+    }
+    if(!contacts) append('p','No established contacts yet. Orbital detections appear in the survey register.');
+    append('h3','CAREER HISTORY');
+    if(!state.events.length) append('p','No major events recorded yet.');
+    state.events.slice().reverse().forEach(event=>append('p','T'+event.turn+' · '+event.kind.toUpperCase()+' · '+event.text));
+  }
+  button('Close [Esc]',closeExpeditionPanel);
+}
 const MINERAL_SAMPLE_TYPES = [
   // ── Geological / geochemical samples (indices 0-7) ──────────────────────
   { name:'Rock Sample',         col:'#ffe066', value:40,  desc:'Powdered stone and metallic grit in a labeled vial.' },
@@ -9904,6 +10158,7 @@ function generateGalaxy() {
 
   revealAround(bx, by, 5);
   revealAround(b2x, b2y, 1);
+  placeQuarantineShip();
   addLog('Docked at '+grid[by][bx].name+'. Ready for departure.','li');
   addLog('Fly to a star system and press Enter to enter orbit.','li');
 }
@@ -12334,6 +12589,7 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderGalaxyMinimap();
+  renderExpeditionPanel();
   // Persistent danger status overrides normal msg when relevant
   if(G && !G.dead && !G.retired){
     if(G.stranded){
@@ -18094,6 +18350,9 @@ function drawRetirementScreen(){
   ctx.fillText(grade[2]+'  '+grade[1], cx, divY+28);
 
   ctx.fillStyle='#112233'; ctx.fillRect(cx-300, divY+38, 600, 1);
+
+  ctx.font='12px Courier New'; ctx.fillStyle='#8aaabb';
+  ctx.fillText(expeditionLegacy(), cx, divY+65, cw-50);
 
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#ffe066';
   ctx.fillText('[ ENTER  or  SPACE ]  →  Main Menu', cx, ch-30);
@@ -26430,6 +26689,8 @@ function renderContextBar(){
     btns.push(btn('ESC','Close','info'));
   }
 
+  if(!G.dead && !G.retired && !G.dialogue && !G.showOptions && !DEBUG.on &&
+     ['galaxy','system','planet','base','scanview'].includes(G.mode)) btns.push(btn('J','Expedition journal','info'));
   bar.innerHTML = btns.join('');
 }
 
@@ -29867,6 +30128,7 @@ function drawRadioOverlay(){
 // ─────────────────────────────────────────────────────────────────
 function doInteract(){
   if(G.dead||G.retired) return;
+  if(quarantineAtShip()){ openQuarantineReport(); return; }
   if(G.mode==='planet' && G.planets[G.curPlanet]?.isCasino){
     casinoInteractAtPlayer(); renderAll(); return;
   }
@@ -29939,6 +30201,7 @@ function doInteract(){
       updateCrewLowMoraleFlags();
       SFX.dock();
       addLog('Docked at '+cell.name+'.','li');
+      settleQuarantineAtStation(cell.name);
       // Mystery package delivery
       if(cell.name === 'Waypoint Omega'){
         const pkgIdx = (G.cargo||[]).findIndex(i=>i.questItem==='mystery_delivery');
@@ -30513,6 +30776,7 @@ function doScan(){
     addLog('Scan failed. Dense atmosphere or interference. Try again.','lw');
   }
 
+  recordSurveyFinding(body);
   renderAll();
 }
 function doToggleDive(){
@@ -30916,6 +31180,7 @@ function executeBaseAction(actionId){
           full_survey_bodies: surveyInfo.fullBonusBodies.length,
         }));
         addLog('Sold survey data for '+surveySold+' cr.','lg');
+        recordExpeditionEvent('survey-sale:'+G.turn+':'+(G.surveyCareerCredits||0), 'trade', 'Sold survey data for '+surveySold+' cr.', {credits:surveySold});
         awardSurveyMilestones(surveySold);
         if(surveyInfo.fullBonusBodies.length){
           addLog('Full survey bonus awarded for '+surveyInfo.fullBonusBodies.join(', ')+'.','lg');
@@ -31551,6 +31816,27 @@ document.addEventListener('keydown', e=>{
 
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
+
+  // The expedition panel owns input; no travel or combat occurs underneath it.
+  if(G._expeditionPanel){
+    if(e.key==='F5'){ e.preventDefault(); saveToFile(); return; }
+    if(e.key==='Escape' || e.key==='j' || e.key==='J'){
+      e.preventDefault(); closeExpeditionPanel(); return;
+    }
+    if(G._expeditionPanel==='quarantine' && /^[1-4]$/.test(e.key)){
+      e.preventDefault(); resolveQuarantine(['isolated','open','beacon','salvage'][Number(e.key)-1]); return;
+    }
+    if(['ArrowUp','ArrowDown','PageUp','PageDown'].includes(e.key)){
+      e.preventDefault();
+      document.querySelector('#expedition-overlay .expedition-panel')?.scrollBy(0,
+        (e.key==='ArrowUp'||e.key==='PageUp'?-1:1)*(e.key.startsWith('Page')?240:40));
+    }
+    return;
+  }
+  if((e.key==='j'||e.key==='J') && ['galaxy','system','planet','base','scanview'].includes(G.mode) &&
+     !G.dead && !G.retired && !G.dialogue && !G.showOptions && !DEBUG.on && !G.forcedMove?.active){
+    e.preventDefault(); toggleExpeditionJournal(); return;
+  }
 
   if(G.forcedMove?.active){
     e.preventDefault();
@@ -33297,6 +33583,8 @@ function loadFromFile(){
         // Basic sanity check
         if(!loaded.galaxy || !loaded.crew) throw new Error('Invalid save');
         G = loaded;
+        G._expeditionPanel = null;
+        ensureExpeditionState();
         removeInteriorOreDeposits(G.planets);
         ensureCrewStatusState();
         addLog('Save file loaded. Welcome back, Captain.','lg');
@@ -33317,6 +33605,8 @@ function loadFromStorage(){
     const loaded = JSON.parse(raw);
     if(!loaded.galaxy || !loaded.crew) return false;
     G = loaded;
+    G._expeditionPanel = null;
+    ensureExpeditionState();
     removeInteriorOreDeposits(G.planets);
     // Back-compat: old saves won't have shipStats or cargo
     if(!G.shipStats) G.shipStats = buildShipStats('LIGHT_SCOUT');
@@ -33797,7 +34087,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.26  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {

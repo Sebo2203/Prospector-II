@@ -57,6 +57,27 @@ document.addEventListener('keydown', e=>{
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
 
+  // The expedition panel owns input; no travel or combat occurs underneath it.
+  if(G._expeditionPanel){
+    if(e.key==='F5'){ e.preventDefault(); saveToFile(); return; }
+    if(e.key==='Escape' || e.key==='j' || e.key==='J'){
+      e.preventDefault(); closeExpeditionPanel(); return;
+    }
+    if(G._expeditionPanel==='quarantine' && /^[1-4]$/.test(e.key)){
+      e.preventDefault(); resolveQuarantine(['isolated','open','beacon','salvage'][Number(e.key)-1]); return;
+    }
+    if(['ArrowUp','ArrowDown','PageUp','PageDown'].includes(e.key)){
+      e.preventDefault();
+      document.querySelector('#expedition-overlay .expedition-panel')?.scrollBy(0,
+        (e.key==='ArrowUp'||e.key==='PageUp'?-1:1)*(e.key.startsWith('Page')?240:40));
+    }
+    return;
+  }
+  if((e.key==='j'||e.key==='J') && ['galaxy','system','planet','base','scanview'].includes(G.mode) &&
+     !G.dead && !G.retired && !G.dialogue && !G.showOptions && !DEBUG.on && !G.forcedMove?.active){
+    e.preventDefault(); toggleExpeditionJournal(); return;
+  }
+
   if(G.forcedMove?.active){
     e.preventDefault();
     renderAll();

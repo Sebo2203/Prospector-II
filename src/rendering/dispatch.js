@@ -8,6 +8,7 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderGalaxyMinimap();
+  renderExpeditionPanel();
   // Persistent danger status overrides normal msg when relevant
   if(G && !G.dead && !G.retired){
     if(G.stranded){

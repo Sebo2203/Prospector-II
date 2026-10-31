@@ -2,6 +2,19 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
+## Active experiment — 0.28 experimental.1
+
+This is `experiment/expedition-legacy`, the consolidated modular development branch.
+Download **this branch's ZIP**, extract it and open `index.html` to play the experiment.
+Press **J** for the expedition journal. A fresh run receives the Mercy of Dawn distress
+lead; fly to its recorded coordinates and press **Enter**. Your decision has a saved
+follow-up at the next major station. See [the experiment notes](docs/experiment.md)
+for the implemented slice, design direction, testing and remaining work.
+
+`main` remains the public release. The links below open that release, regardless of
+which GitHub branch you are viewing. Old development branches are preserved as
+archive tags; see [branch history](docs/branch-history.md).
+
 ## Play
 
 - [Play in browser](https://sebo2203.github.io/Prospector-II/)
@@ -11,7 +24,7 @@ The desktop app is a standalone Windows executable. Download it, double-click it
 
 Note: Windows may show a SmartScreen warning because the app is not code-signed yet. Choose **More info** then **Run anyway** if you trust the download.
 
-## Experimental source layout
+## Modular development
 
 Development uses thematic files under `src/`; distribution remains a single `index.html`.
 Use Node.js 22 or newer. No npm dependencies need to be installed.

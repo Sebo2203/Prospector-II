@@ -65,6 +65,8 @@ function loadFromFile(){
         // Basic sanity check
         if(!loaded.galaxy || !loaded.crew) throw new Error('Invalid save');
         G = loaded;
+        G._expeditionPanel = null;
+        ensureExpeditionState();
         removeInteriorOreDeposits(G.planets);
         ensureCrewStatusState();
         addLog('Save file loaded. Welcome back, Captain.','lg');
@@ -85,6 +87,8 @@ function loadFromStorage(){
     const loaded = JSON.parse(raw);
     if(!loaded.galaxy || !loaded.crew) return false;
     G = loaded;
+    G._expeditionPanel = null;
+    ensureExpeditionState();
     removeInteriorOreDeposits(G.planets);
     // Back-compat: old saves won't have shipStats or cargo
     if(!G.shipStats) G.shipStats = buildShipStats('LIGHT_SCOUT');

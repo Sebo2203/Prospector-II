@@ -325,6 +325,8 @@ function renderContextBar(){
     btns.push(btn('ESC','Close','info'));
   }
 
+  if(!G.dead && !G.retired && !G.dialogue && !G.showOptions && !DEBUG.on &&
+     ['galaxy','system','planet','base','scanview'].includes(G.mode)) btns.push(btn('J','Expedition journal','info'));
   bar.innerHTML = btns.join('');
 }
 

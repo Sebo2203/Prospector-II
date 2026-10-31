@@ -267,6 +267,7 @@ function executeBaseAction(actionId){
           full_survey_bodies: surveyInfo.fullBonusBodies.length,
         }));
         addLog('Sold survey data for '+surveySold+' cr.','lg');
+        recordExpeditionEvent('survey-sale:'+G.turn+':'+(G.surveyCareerCredits||0), 'trade', 'Sold survey data for '+surveySold+' cr.', {credits:surveySold});
         awardSurveyMilestones(surveySold);
         if(surveyInfo.fullBonusBodies.length){
           addLog('Full survey bonus awarded for '+surveyInfo.fullBonusBodies.join(', ')+'.','lg');

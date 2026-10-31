@@ -21,6 +21,8 @@
     "src/rendering/tile-drawings.js",
     "src/world/tiles.js",
     "src/core/state-and-debug.js",
+    "src/missions/expedition.js",
+    "src/ui/expedition-journal.js",
     "src/world/minerals.js",
     "src/debug/item-catalog.js",
     "src/crew/names-and-traits.js",

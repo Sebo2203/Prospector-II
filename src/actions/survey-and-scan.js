@@ -327,5 +327,6 @@ function doScan(){
     addLog('Scan failed. Dense atmosphere or interference. Try again.','lw');
   }
 
+  recordSurveyFinding(body);
   renderAll();
 }
