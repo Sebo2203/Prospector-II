@@ -6,7 +6,7 @@ Updated November 1, 2026. This is a practical starting point for a fresh develop
 
 - Repository: [Sebo2203/Prospector-II](https://github.com/Sebo2203/Prospector-II).
 - Active development branch: `experiment/expedition-legacy`. Game version: `0.28.0-experimental.11`.
-- Latest gameplay commit at this handoff: `1bcf37ea7f520d7695e40bde77e70b3ed6b83bb3` (native galaxy-palette previews). Later documentation-only commits do not change that game version.
+- Latest gameplay commit at this handoff: `1bcf37ea7f520d7695e40bde77e70b3ed6b83bb3` (native galaxy-palette previews). Later testing-workflow and documentation commits do not change that game version.
 - `main` remains the previous public release, with its modular sources. Do not merge or replace it as part of resuming work. Old confusing development branches are archived; see [branch history](branch-history.md).
 - To play without development tools, open the experimental branch on GitHub, download that branch through **Code → Download ZIP**, extract it and open `index.html`. The usual GitHub Pages Play link and public Windows download still serve main, not this experiment.
 - The versioned experimental Windows executable produced on the original PC is a local deliverable, not a GitHub Release asset. Copy it separately if desired. The committed HTML is the same game and works without that executable. Windows executables require Windows; the HTML is the alternative on other operating systems.
@@ -22,9 +22,20 @@ npm test
 
 Use Node.js 22 or newer. The root build/tests require no npm dependency installation. Desktop compilation has separate Rust/Tauri/Windows prerequisites; it is unnecessary for playing the HTML or editing game logic.
 
-## Transfer an existing career
+## Fresh careers and portable testing
 
-Autosaves belong to the original browser profile or desktop app; GitHub does not contain or synchronize them. On the original PC, return from the debug palette with **F4**, then use **F5** to export the real career as JSON. Transfer that file and use the game's file-load option on the laptop. Wait for a confirmed saved status after loading. See [autosaves and recovery](autosave.md). No save transfer is needed for a fresh career.
+The user prefers starting fresh and does not need personal saves transferred. Autosaves remain local; no personal careers or generated playthrough checkpoints are included in GitHub. The **automation scripts must travel with the project**. They are now in [qa/](../qa/README.md), with both playthrough policies, portable runners, regression scenarios, pinned dependencies and setup instructions.
+
+After cloning, install and verify them from the repository root:
+
+```sh
+npm ci --prefix qa
+npm --prefix qa run browsers
+npm --prefix qa run smoke
+npm --prefix qa test
+```
+
+Use `npm --prefix qa run retirement` for the current long native-action policy, or `npm --prefix qa run playthroughs` for the three-hull short suite. Generated outputs go into ignored `qa/artifacts/`; the scripts do not depend on files from the original PC. See the [testing guide](../qa/README.md) for bounds, checkpoints and pilot limitations.
 
 ## Read first
 
@@ -55,7 +66,7 @@ Two long retirement-target attempts ended in death below 10,000 credits. The rep
 
 At the last gameplay commit, all **45 repository tests** and GitHub CI passed. Additional local headless checks covered palette interactions/restoration/save isolation, all 67 galaxy samples and 80 unchanged orbital-render comparisons. Earlier art checks covered 384 ship-render combinations; autosave checks exercised actual IndexedDB failures and large saves. These are recorded results, not a claim that a fresh laptop has rerun them or that manual desktop playtesting occurred.
 
-The extended Playwright harnesses, pilot controllers, raw traces, screenshots and packaged executables were local working files outside this Git repository. A clone includes the maintained tests, source assets, design guides and reports, but not those additional scripts/artifacts. If the original machine is unavailable, recreate focused headless checks from the documented cases and actual game functions before claiming equivalent new validation. No transfer ZIP was requested.
+The maintained Playwright harnesses and both pilot controllers are now versioned in `qa/`. Their original raw traces, screenshots, generated checkpoints and packaged executables remain local artifacts; they are unnecessary for running fresh checks. The previous handoff's statement that a clone omitted the automation scripts is superseded. No transfer ZIP or personal-save transfer is needed.
 
 ## Suggested opening message in the new chat
 

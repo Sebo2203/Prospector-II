@@ -23,6 +23,17 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-01 — Preserve playthrough automation in the repository
+
+Branch: `experiment/expedition-legacy`; testing workflow only, game remains `0.28.0-experimental.11`.
+
+- Moved the reusable native-action playthrough controllers and headless regression scenarios into [qa/](qa/README.md), with pinned Playwright dependencies, Chromium setup, repository-relative paths and ignored generated outputs. The earlier and current pilot policies and pre-extraction orbital renderer are preserved from the local harnesses.
+- Consolidated the three playthrough entry points into a shared runner with fresh isolated careers, seed/action/time controls, actual-version reports, explicit checkpoint continuation and rejection of finished-career resumes. Removed obsolete startup waits for guaranteed Mercy encounters. The older policy remains available for historical comparison; pilot limitations are documented rather than hidden by game changes.
+- Added nine portable regression suites covering palettes/art, native encounters/rescues, station/contract rules, the integrated log and real IndexedDB persistence. Added Linux headless checks to the GitHub Source build workflow. The aquatic-generation diagnostic reports the existing defect separately from passing tests.
+- Corrected [the handoff](docs/handoff.md) and contributor instructions: the user needs the automation tools available from a fresh checkout, not personal saves transferred. No personal saves, old raw playthrough traces, generated checkpoints, browser profiles, dependency folders, packaged executables or transfer ZIP are included.
+- Local validation: all 45 root tests/build checks and all nine suites passed using a newly installed Playwright Chromium on Windows. The three-hull smoke runs each made 80 selections; both long policies made 120, and native checkpoint continuation advanced the current policy from 120 to 144 without a reset. A separately exported checkout with a path containing spaces, its own clean dependency installation and an unrelated working directory passed a 24-selection career and all 80 orbital comparisons. Both policy files match the originals exactly; the renderer baseline matches commit `826210e`. The separate diagnostic still reports 7 dry aquatic worlds among 40 selected generators. No complete new retirement career or manual desktop playthrough is claimed.
+- Saves/gameplay: no production code, generated HTML, game version or save format changed. Test careers and evidence are generated afresh into ignored artifacts. Remaining: known pilot weaknesses and the previously documented game foundation defects; do not interpret a controller's poor decisions as balance proof.
+
 ## 2026-11-01 — Laptop development handoff
 
 Branch: `experiment/expedition-legacy`; documentation only, game remains `0.28.0-experimental.11`.

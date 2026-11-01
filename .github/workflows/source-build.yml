@@ -11,3 +11,16 @@ jobs:
         with:
           node-version: '22'
       - run: npm test
+  headless:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix qa
+      - run: npx playwright install --with-deps chromium
+        working-directory: qa
+      - run: npm --prefix qa run smoke
+      - run: npm --prefix qa test

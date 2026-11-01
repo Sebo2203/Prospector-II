@@ -9,6 +9,8 @@ The [development changelog](CHANGELOG.md) records each meaningful change, its re
 validation, save impact and remaining work. It is updated with the code.
 Continuing on another computer or in a fresh chat? Start with the
 [development handoff](docs/handoff.md).
+The [scripted testing guide](qa/README.md) includes the portable playthrough
+controllers and headless regression checks used during development.
 The galaxy palette now shows matching casino, station and planetary previews.
 For reusable testing, open **Shift+B → F2** (galaxy palette) or **F3** (surface
 gallery). **F6** searches the samples; **F4** restores your career. See the
