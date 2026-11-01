@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-01 — Laptop development handoff
+
+Branch: `experiment/expedition-legacy`; documentation only, game remains `0.28.0-experimental.11`.
+
+- Added [a fresh-chat/computer handoff](docs/handoff.md), linked from the experimental README, with the exact branch/version, setup and playing instructions, agreed design decisions, remaining foundation findings and relevant reports. This preserves the development context independently of chat access.
+- Clarified that public Play/download links serve main, careers need JSON export/import between devices, and extended headless harnesses and packaged Windows builds are local artifacts rather than files supplied by a clone. No transfer ZIP was created, at the user's request.
+- Validation: verified the remote experimental tip matches gameplay commit `1bcf37e`, checked instructions against source/current guides and checked local Markdown link targets. No game code, generated HTML, version or save format changed; gameplay tests were not rerun for this documentation-only update.
+
 ## 2026-11-01 — 0.28 experimental.11: correct galaxy palette object previews
 
 Branch: `experiment/expedition-legacy`; main unchanged.
