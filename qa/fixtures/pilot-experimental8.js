@@ -232,7 +232,7 @@ window.installPlaythroughPilot=function(profile){
   if(p.returning){p.goal={...base,kind:'base'};}
   else if(p.profile.kind==='trade'){
    const destination=bases().find(b=>b.name!==p.lastStation);p.goal=destination?{...destination,kind:'base'}:{...base,kind:'base'};
-  }else if(p.profile.kind==='rescue'&&G.expedition.quarantine?.status!=='closed'&&!(G.expedition.quarantine?.survivors?.length&&G.expedition.quarantine.survivors.every(s=>['delivered','dead','lost'].includes(s.status)))){
+  }else if(p.profile.kind==='rescue'&&G.expedition.quarantine&&G.expedition.quarantine.discovered!==false&&G.expedition.quarantine?.status!=='closed'&&!(G.expedition.quarantine?.survivors?.length&&G.expedition.quarantine.survivors.every(s=>['delivered','dead','lost'].includes(s.status)))){
    // Only the distress transmission's published position is used here.
    const lead=G.expedition.quarantine;p.goal={x:lead.x,y:lead.y,kind:'rescue',name:'Mercy of Dawn distress coordinates'};
   }else if(active?.type==='research_ship'&&!G.inventory.some(i=>i.scienceJobId===active.id)){

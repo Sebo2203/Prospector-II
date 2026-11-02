@@ -1,24 +1,32 @@
 // Mercy of Dawn is a persistent interior. Actions use position, ordinary items,
 // crew skills, cargo space, line of sight and the existing planet turn loop.
-function maybeDiscoverQuarantineShip(newSectors){
+function placeQuarantineShip(){
   const state=ensureExpeditionState();
-  if(!state || state.quarantine || G.mode!=='galaxy' || G.dead || G.retired ||
-    G.debugPalette || DEBUG.on || !newSectors?.length) return false;
+  if(!state || state.quarantine || G.debugPalette) return false;
+  const candidates=[];
   const occupied=new Set([G.ship,...(G.pirates||[]),...(G.neutralShips||[]),
     ...(G.npcStranded||[]),...(G.nebulaLoot||[])].map(object=>object.x+','+object.y));
-  for(const {x,y} of newSectors){
-    if(x<1 || x>=MAP_W-1 || y<1 || y>=MAP_H-1 ||
-      G.galaxy[y]?.[x]?.type!=='VOID' || occupied.has(x+','+y)) continue;
-    // One roll per newly charted empty sector; revisiting or waiting cannot reroll it.
-    if(rnd(1000)!==0) continue;
-    state.quarantine={x,y,version:2,status:'unvisited',survivors:[],repaired:false,air:180,lastTick:null};
-    G.galaxy[y][x]={type:'DERELICT',name:'Mercy of Dawn'};
-    const text='Nearby distress transmission: Mercy of Dawn at '+(x+1)+','+(y+1)+'. The caller mentions a sealed ward before the signal cuts out.';
-    recordExpeditionEvent('quarantine:signal','lead',text);
-    addLog(text+' Coordinates recorded in LOG.','lw');
-    return true;
+  // Choose once across the galaxy, outside the opening station reveals.
+  for(let y=1;y<MAP_H-1;y++) for(let x=1;x<MAP_W-1;x++){
+    if(G.galaxy[y]?.[x]?.type==='VOID' && !G.visited[y*MAP_W+x] &&
+      !occupied.has(x+','+y)) candidates.push({x,y});
   }
-  return false;
+  if(!candidates.length) return false;
+  const {x,y}=candidates[rnd(candidates.length)];
+  state.quarantine={x,y,version:2,status:'unvisited',discovered:false,
+    survivors:[],repaired:false,air:180,lastTick:null};
+  G.galaxy[y][x]={type:'DERELICT',name:'Mercy of Dawn'};
+  return true;
+}
+
+function revealQuarantineShip(){
+  const q=G?.expedition?.quarantine;
+  if(!q || q.discovered!==false || G.debugPalette || DEBUG.on ||
+    !G.visited[q.y*MAP_W+q.x]) return;
+  q.discovered=true;
+  const text='Nearby distress transmission: Mercy of Dawn at '+(q.x+1)+','+(q.y+1)+'. The caller mentions a sealed ward before the signal cuts out.';
+  recordExpeditionEvent('quarantine:signal','lead',text);
+  addLog(text+' Coordinates recorded in LOG.','lw');
 }
 
 function quarantineAtShip(){
@@ -385,7 +393,7 @@ function settleQuarantineAtStation(stationName){
 
 function expeditionLegacy(){
   const q=ensureExpeditionState()?.quarantine;
-  if(!q) return 'No Mercy of Dawn encounter recorded.';
+  if(!q || q.discovered===false) return 'No Mercy of Dawn encounter recorded.';
   if(q.version!==2) return 'Mercy of Dawn: see the preserved record from the earlier experiment.';
   if(!q.survivors.length) return 'The Mercy of Dawn distress call remained unexplored.';
   const rescued=q.survivors.filter(s=>s.status==='delivered').length;

@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-02 — 0.28 experimental.12: fixed Mercy placement at galaxy generation
+
+Branch: `fix/experimental-save-indicator`, targeting `experiment/expedition-legacy`; PR #4. Main/public build unchanged.
+
+- Corrected release numbering to `0.28.0-experimental.12` across the game, package and desktop metadata. The previous unnumbered save-indicator download is superseded by this build, which retains the state-only `Saved` indicator.
+- Removed experimental.9–11's 1-in-1,000 exploration spawn rolls. Galaxy generation now selects Mercy once, uniformly across eligible interior VOID cells, excluding opening station reveals, the player, other ships, loot and existing objects. A full galaxy safely omits it. There is no forced nearby placement or narrow starting-distance band, and no additional minimum travel distance beyond opening visibility.
+- The wreck exists before exploration and remains hidden until ordinary nebula-aware sensors reach its saved sector. Detection (including a remote drone reveal) records one signal and coordinates; it never spawns or relocates the wreck. No initial marker, signal or LOG records leak the location. Air and survivor clocks still start on first boarding. Debug boarding and save protection remain intact. Updated both testing pilots and their startup report to distinguish a generated hidden wreck from a known encounter.
+- Validation: rebuilt HTML; all 46 repository tests and generated-source checks passed; five Edge headless suites (`encounters`, `rescue`, `log`, `palette`, `autosave`) passed with no JavaScript errors. Coverage includes 100 seeded placement cases, blocked/occupied/full galaxies, zero RNG during reveal, nebula occlusion, 12 real generated openings with seeded repeatability, hidden/known save-load stability, no spawn in old incident-free worlds, 15 spatial rescues / 862 surface steps, hidden LOG records, palette interactions/restoration and IndexedDB recovery/stale-window/large-save checks (8,077,073 characters / 175 maps). Three-hull smoke careers completed 80 selections each without JavaScript errors. These are scripted checks, not human whole-career playtesting or a distance-balance study. Desktop executable packaging was not run.
+- Saves: optional `discovered:false` marks only newly generated hidden incidents; old records without this field stay known and retain their exact position/progress. Existing worlds without Mercy are not backfilled. Start a fresh career to use the new generation rule. No storage keys or root save schema changed. Remaining: broader encounter-distance feedback and existing foundation findings; see [current experiment rules](docs/experiment.md).
+
 ## 2026-11-02 — Save indicator cleanup and Mercy discovery investigation
 
 Branch: `fix/experimental-save-indicator`, targeting `experiment/expedition-legacy`; follow-up to `0.28.0-experimental.11`, no new release or public build.

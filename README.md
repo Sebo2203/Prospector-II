@@ -2,7 +2,7 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.11
+## Active experiment — 0.28 experimental.12
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
 The [development changelog](CHANGELOG.md) records each meaningful change, its reason,
@@ -17,8 +17,9 @@ gallery). **F6** searches the samples; **F4** restores your career. See the
 [debug playground guide](docs/debug-playground.md).
 Ships now use clean original Prospector artwork, with distinct civilian silhouettes
 and seamless rendering over nebulae. See the [art pass and credits](docs/art-direction.md).
-Mercy of Dawn is an optional discovery while charting new space, with no wreck or
-coordinates message at startup. Its galaxy palette sample remains available for
+Mercy of Dawn is placed once during galaxy generation, across eligible empty
+sectors outside the opening station reveals. Exploration only reveals the existing
+wreck; it never rolls to spawn one. Coordinates stay hidden until detection. Its galaxy palette sample remains available for
 repeatable testing. See the [second retirement attempt](docs/retirement-attempt-2-2026-10-31.md).
 Durable autosaves, recovery and failure/export controls remain available; see the
 [autosave guide](docs/autosave.md).

@@ -1,12 +1,12 @@
 # Continuing on another computer
 
-Updated November 1, 2026. This is a practical starting point for a fresh development chat; it is not a transcript of the previous chat.
+Updated November 2, 2026. This is a practical starting point for a fresh development chat; it is not a transcript of the previous chat.
 
 ## Current checkout and playing
 
 - Repository: [Sebo2203/Prospector-II](https://github.com/Sebo2203/Prospector-II).
-- Active development branch: `experiment/expedition-legacy`. Game version: `0.28.0-experimental.11`.
-- Latest gameplay commit at this handoff: `1bcf37ea7f520d7695e40bde77e70b3ed6b83bb3` (native galaxy-palette previews). Later testing-workflow and documentation commits do not change that game version.
+- Active development branch: `experiment/expedition-legacy`. Game version: `0.28.0-experimental.12`.
+- Current follow-up: experimental.12 in PR #4 adds fixed generation-time Mercy placement and the state-only save indicator. See the newest [changelog entry](../CHANGELOG.md); the PR targets the active experimental branch.
 - `main` remains the previous public release, with its modular sources. Do not merge or replace it as part of resuming work. Old confusing development branches are archived; see [branch history](branch-history.md).
 - To play without development tools, open the experimental branch on GitHub, download that branch through **Code → Download ZIP**, extract it and open `index.html`. The usual GitHub Pages Play link and public Windows download still serve main, not this experiment.
 - The versioned experimental Windows executable produced on the original PC is a local deliverable, not a GitHub Release asset. Copy it separately if desired. The committed HTML is the same game and works without that executable. Windows executables require Windows; the HTML is the alternative on other operating systems.
@@ -49,7 +49,7 @@ Use `npm --prefix qa run retirement` for the current long native-action policy, 
 
 - Follow Matthias Mennel's original **Prospector**, retaining Prospector II's richer systems. It is a freelance exploration/crew/trade/science/salvage career with voluntary retirement. Deepen and balance existing systems before adding disconnected content.
 - Encounters happen through actual movement, equipment, NPCs, hazards, transport and persistent consequences. Do not replace a playable situation with popup options that grant its outcomes. Mercy of Dawn is the reference implementation of that distinction.
-- Mercy is an optional discovery when ordinary movement charts eligible empty space, not a guaranteed starting wreck or introductory coordinates message. Its explicit debug sample remains available. Preserve already-created encounters in old saves.
+- Mercy is placed once at galaxy generation across eligible empty sectors outside opening station reveals. Exploration never rolls to spawn it; sensors only reveal its fixed location and distress signal. Hide coordinates until detection. Its explicit debug sample remains available. Preserve already-created encounters in old saves; old worlds without Mercy are not backfilled.
 - The separate Expedition Journal and its buttons were removed. Use the existing **I → LOG → RECORDS** interface; do not restore another journal popup.
 - Maintain modular sources and the single-file playable build. Player-facing text should explain the game, not development internals. Documentation belongs in repository guides.
 - The galaxy and surface debug palettes must cover future catalog additions too. Use native interactions, support rebuilds and exact return to career, and keep debug state out of career saves. Controls: **Shift+B → F2/F3**, **F6** search, **Shift+F2** rebuild, **F7** simulation, **F4** career. Current spacing was tightened by about half at the user's request.

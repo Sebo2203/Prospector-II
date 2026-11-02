@@ -79,7 +79,7 @@ async function run(mode, args = process.argv.slice(2)) {
           Math.random = () => { careerRngState = (Math.imul(careerRngState, 1664525) + 1013904223) >>> 0; return careerRngState / 4294967296; };
         }, resumed);
         assert.equal(await page.evaluate(() => !!DEBUG.on || !!G.debugPalette), false);
-        console.log('START', config.id, JSON.stringify(await page.evaluate(() => ({ turn: G.turn, credits: G.credits, mercy: G.expedition?.quarantine ? 'discovered' : null, actions: PILOT.actions }))));
+        console.log('START', config.id, JSON.stringify(await page.evaluate(() => ({ turn: G.turn, credits: G.credits, mercy: G.expedition?.quarantine && G.expedition.quarantine.discovered !== false ? 'discovered' : null, actions: PILOT.actions }))));
         let lastActions = -1, stalled = 0, nextReport = 0, reason = 'action limit';
         const deadline = Date.now() + options.maxMinutes * 60000;
         while (Date.now() < deadline) {
