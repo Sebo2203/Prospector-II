@@ -1,6 +1,7 @@
 # Working on Prospector II
 
 - Edit `src/`, then run `npm run build`. `index.html` is generated and remains the single-file release artifact. Never patch it directly.
+- Maintain the current release version only in root `package.json`. The build injects runtime/HTML labels and synchronizes desktop metadata; `npm run check` rejects stale versions. Do not manually bump generated copies or rewrite historical version references. See `docs/architecture.md`.
 - Start with `docs/architecture.md` and `docs/source-map.md`; search relevant functions and callers instead of reading the entire game. Skip `src/assets/sprites.js` unless editing embedded images.
 - `src/build-manifest.json` is the explicit assembly order. Preserve the order and script boundaries. These files share globals; they are not independent ES modules.
 - Preserve the `G` save shape, localStorage keys, inline-handler function names, DOM IDs, turn progression, startup order, and 1400 x 720 root layout unless the task explicitly changes them.

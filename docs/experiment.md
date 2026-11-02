@@ -12,7 +12,9 @@ The project vision recovered from earlier development discussions adds a living 
 
 Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
 
-## Playable now: 0.28 experimental.12
+## Playable now
+
+Current release: see [package.json](../package.json), the version source for the build.
 
 **Palette previews:** The Void Royale and derelict samples now use their actual galaxy-object art and boarding paths. Planetary and civilization exhibits show body previews from the orbital renderer, with station/cave art for those contexts. Dedicated star samples retain their stars. Rebuild an already-open sandbox with Shift+B → Shift+F2; see the [playground guide](debug-playground.md).
 

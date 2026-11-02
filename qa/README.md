@@ -58,6 +58,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 
 | Suite | Coverage |
 | --- | --- |
+| `version` | Canonical package version matches runtime constants, canvas menu and visible in-game label |
 | `palette` | Runtime catalog coverage, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |
 | `previews` | Galaxy sample art/boarding, ASCII, and 80 pixel comparisons with the preserved pre-extraction orbital renderer |
 | `ships` | 384 ship/direction/background/opacity combinations, transparency, role/combat art, sensor concealment and ASCII |
@@ -74,4 +75,4 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 
 Keep these scripts with relevant code changes. Add a focused scenario for a changed behavior, rebuild `index.html`, and run the affected suite. Do not edit production code or weaken assertions merely to make an existing fixture/controller work. Report manual readability, desktop behavior and whole-career balance separately from scripted evidence.
 
-GitHub's Source build workflow installs Chromium on Linux and runs the three-hull smoke check plus all nine regression suites alongside the dependency-free root tests. Long careers remain explicit runs rather than automatic CI work.
+GitHub's Source build workflow installs Chromium on Linux and runs the three-hull smoke check plus all regression suites alongside the dependency-free root tests. Long careers remain explicit runs rather than automatic CI work.

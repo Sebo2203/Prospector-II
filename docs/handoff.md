@@ -5,8 +5,8 @@ Updated November 2, 2026. This is a practical starting point for a fresh develop
 ## Current checkout and playing
 
 - Repository: [Sebo2203/Prospector-II](https://github.com/Sebo2203/Prospector-II).
-- Active development branch: `experiment/expedition-legacy`. Game version: `0.28.0-experimental.12`.
-- Current follow-up: experimental.12 in PR #4 adds fixed generation-time Mercy placement and the state-only save indicator. See the newest [changelog entry](../CHANGELOG.md); the PR targets the active experimental branch.
+- Active development branch: `experiment/expedition-legacy`. Current game version: see [package.json](../package.json).
+- Merged experimental.12 in PR #4 adds fixed generation-time Mercy placement and the state-only save indicator. See the newest [changelog entry](../CHANGELOG.md); the changes are on the active experimental branch.
 - `main` remains the previous public release, with its modular sources. Do not merge or replace it as part of resuming work. Old confusing development branches are archived; see [branch history](branch-history.md).
 - To play without development tools, open the experimental branch on GitHub, download that branch through **Code → Download ZIP**, extract it and open `index.html`. The usual GitHub Pages Play link and public Windows download still serve main, not this experiment.
 - The versioned experimental Windows executable produced on the original PC is a local deliverable, not a GitHub Release asset. Copy it separately if desired. The committed HTML is the same game and works without that executable. Windows executables require Windows; the HTML is the alternative on other operating systems.

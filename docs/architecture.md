@@ -14,6 +14,14 @@ Use Node.js 22 or newer. There are no npm dependencies and no installation step.
 
 The build injects source text into `src/index.template.html`. It preserves source order and whitespace, checks individual and combined JavaScript syntax, and rejects duplicate, omitted or incorrectly configured inputs. `npm run check` detects an out-of-date generated HTML without rewriting it. CI runs the same checks.
 
+## Release version
+
+`package.json` → `version` is the only manually maintained current version. Edit that one value, run `npm run build`, then `npm test`, and commit the generated output with the change. No separate version-editing pass is needed.
+
+`tools/version.js` validates the value and supplies `GAME_VERSION` and `GAME_VERSION_LABEL` to the single-file build. The HUD and canvas menu share the derived label. The build also synchronizes desktop package/lock metadata, the Tauri configuration and the game package's Cargo manifest/lock entry; dependency versions are preserved. `npm run check` rejects stale packaging metadata or HTML. Desktop `npm run sync`, `dev` and `build` run the same source build first. If using `PROSPECTOR_INDEX`, that override still chooses the HTML copied into the desktop wrapper; the developer is responsible for choosing a matching external artifact.
+
+Current guides link to the version source rather than duplicate a changing number. Historical release notes and changelog entries keep their original versions. The canonical version is embedded in the generated HTML, so offline play needs no external version file.
+
 Optional browser-based checks and native-action playthrough controllers live in [qa/](../qa/README.md), with their own pinned Playwright dependency and portable Chromium setup. They resolve the built HTML relative to the repository and keep generated evidence in ignored `qa/artifacts/`. The root build/tests retain their dependency-free setup. Fixtures used by scenario checks are separate from unassisted career policies; both must report their actual limits and outcomes.
 
 ## Runtime model

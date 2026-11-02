@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-02 — One source for the release version
+
+Branch: `experiment/expedition-legacy`; build/workflow change, game remains `0.28.0-experimental.12`. Main/public build unchanged.
+
+- Root `package.json` is now the only manually maintained current version. The source build supplies `GAME_VERSION` / `GAME_VERSION_LABEL` to the HTML and canvas menu, and synchronizes desktop package/lock metadata, Tauri config and the game package's Cargo manifest/lock version. Dependency versions remain unchanged. Desktop sync/dev/build runs this same build first. Stale metadata or HTML fails `npm run check` / `npm test`.
+- Removed independently maintained current-version strings from the HUD/menu and changed current guides to link to the canonical version. Historical release notes, chronology and changelog numbers are preserved. Added contributor guidance and [release workflow documentation](docs/architecture.md).
+- Validation: `npm run build`, all 47 root tests plus generated-source/metadata checks and the new Edge browser version suite passed. A simulated version bump verifies HTML/runtime values, all five desktop files, stable/prerelease labels, stale-file detection, rejected unsafe values, unchanged dependency versions and unchanged historical notes. Browser checks verified actual canvas-menu text and the visible in-game label against the canonical version, with no JavaScript errors; inspected the screenshot. `npm --prefix desktop run sync` rebuilt and copied the HTML successfully. No Rust compilation, packaged executable or whole-career playtest is claimed. `git diff --check` passed.
+- Saves/gameplay: unchanged; no keys, schema or migrations. The game remains a self-contained offline HTML file. Remaining: desktop executable packaging is outside this workflow change.
+
 ## 2026-11-02 — 0.28 experimental.12: fixed Mercy placement at galaxy generation
 
 Branch: `fix/experimental-save-indicator`, targeting `experiment/expedition-legacy`; PR #4. Main/public build unchanged.

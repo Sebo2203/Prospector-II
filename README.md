@@ -2,9 +2,10 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and trying to retire rich enough to survive the void.
 
-## Active experiment — 0.28 experimental.12
+## Active experiment
 
 This is `experiment/expedition-legacy`, the consolidated modular development branch.
+The current release version is defined in [package.json](package.json).
 The [development changelog](CHANGELOG.md) records each meaningful change, its reason,
 validation, save impact and remaining work. It is updated with the code.
 Continuing on another computer or in a fresh chat? Start with the
