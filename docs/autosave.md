@@ -1,6 +1,6 @@
 # Autosaves and recovery — experimental.7
 
-The game saves locally in your browser or desktop app. The bottom status line says **Saving…**, **Saved · turn …**, or **AUTOSAVE FAILED**. Success appears after the storage transaction commits.
+The game saves locally in your browser or desktop app. The bottom status line says **Saving…**, **Saved**, or **AUTOSAVE FAILED**. Success appears after the storage transaction commits. The redundant turn counter has been removed from this indicator; saved turn metadata and recovery details are retained.
 
 If a write fails, a persistent notice offers **Retry** and **Export save**. Your last committed save is retained. Export downloads your current game, including progress that could not be autosaved. F5 remains the normal file-export shortcut. Returning to the menu and quitting through the game wait for the save; on failure the current career stays open for recovery/export.
 

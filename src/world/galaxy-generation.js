@@ -583,15 +583,14 @@ function generateGalaxy() {
 
   revealAround(bx, by, 5);
   revealAround(b2x, b2y, 1);
+  placeQuarantineShip();
   addLog('Docked at '+grid[by][bx].name+'. Ready for departure.','li');
   addLog('Fly to a star system and press Enter to enter orbit.','li');
 }
 
-function revealAround(cx,cy,r,discoverEncounters=false){
-  const newSectors=[];
+function revealAround(cx,cy,r){
   function revealTile(x,y){
     const index=y*MAP_W+x;
-    if(discoverEncounters && !G.visited[index]) newSectors.push({x,y});
     G.visited[index]=true;
   }
   // Nebula tiles are visible (border shows) but block vision behind them
@@ -637,6 +636,6 @@ function revealAround(cx,cy,r,discoverEncounters=false){
   const mult=[[1,0,0,-1,-1,0,0,1],[0,1,-1,0,0,-1,1,0],[0,1,1,0,0,-1,-1,0],[1,0,0,1,-1,0,0,-1]];
   for(let oct=0;oct<8;oct++)
     castLight(1,1.0,0.0,r,mult[0][oct],mult[1][oct],mult[2][oct],mult[3][oct]);
-  if(discoverEncounters) maybeDiscoverQuarantineShip(newSectors);
+  revealQuarantineShip();
 }
 

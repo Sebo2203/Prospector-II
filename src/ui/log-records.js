@@ -30,7 +30,7 @@ function currentLogRecords(){
     add('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
   } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
   const incident=state.quarantine;
-  if(incident){
+  if(incident && incident.discovered!==false){
     add('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
       incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.':
       'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));

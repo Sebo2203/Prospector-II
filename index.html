@@ -1459,7 +1459,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.11</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.12</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -4861,25 +4861,33 @@ function recordSurveyFinding(body){
 }
 // Mercy of Dawn is a persistent interior. Actions use position, ordinary items,
 // crew skills, cargo space, line of sight and the existing planet turn loop.
-function maybeDiscoverQuarantineShip(newSectors){
+function placeQuarantineShip(){
   const state=ensureExpeditionState();
-  if(!state || state.quarantine || G.mode!=='galaxy' || G.dead || G.retired ||
-    G.debugPalette || DEBUG.on || !newSectors?.length) return false;
+  if(!state || state.quarantine || G.debugPalette) return false;
+  const candidates=[];
   const occupied=new Set([G.ship,...(G.pirates||[]),...(G.neutralShips||[]),
     ...(G.npcStranded||[]),...(G.nebulaLoot||[])].map(object=>object.x+','+object.y));
-  for(const {x,y} of newSectors){
-    if(x<1 || x>=MAP_W-1 || y<1 || y>=MAP_H-1 ||
-      G.galaxy[y]?.[x]?.type!=='VOID' || occupied.has(x+','+y)) continue;
-    // One roll per newly charted empty sector; revisiting or waiting cannot reroll it.
-    if(rnd(1000)!==0) continue;
-    state.quarantine={x,y,version:2,status:'unvisited',survivors:[],repaired:false,air:180,lastTick:null};
-    G.galaxy[y][x]={type:'DERELICT',name:'Mercy of Dawn'};
-    const text='Nearby distress transmission: Mercy of Dawn at '+(x+1)+','+(y+1)+'. The caller mentions a sealed ward before the signal cuts out.';
-    recordExpeditionEvent('quarantine:signal','lead',text);
-    addLog(text+' Coordinates recorded in LOG.','lw');
-    return true;
+  // Choose once across the galaxy, outside the opening station reveals.
+  for(let y=1;y<MAP_H-1;y++) for(let x=1;x<MAP_W-1;x++){
+    if(G.galaxy[y]?.[x]?.type==='VOID' && !G.visited[y*MAP_W+x] &&
+      !occupied.has(x+','+y)) candidates.push({x,y});
   }
-  return false;
+  if(!candidates.length) return false;
+  const {x,y}=candidates[rnd(candidates.length)];
+  state.quarantine={x,y,version:2,status:'unvisited',discovered:false,
+    survivors:[],repaired:false,air:180,lastTick:null};
+  G.galaxy[y][x]={type:'DERELICT',name:'Mercy of Dawn'};
+  return true;
+}
+
+function revealQuarantineShip(){
+  const q=G?.expedition?.quarantine;
+  if(!q || q.discovered!==false || G.debugPalette || DEBUG.on ||
+    !G.visited[q.y*MAP_W+q.x]) return;
+  q.discovered=true;
+  const text='Nearby distress transmission: Mercy of Dawn at '+(q.x+1)+','+(q.y+1)+'. The caller mentions a sealed ward before the signal cuts out.';
+  recordExpeditionEvent('quarantine:signal','lead',text);
+  addLog(text+' Coordinates recorded in LOG.','lw');
 }
 
 function quarantineAtShip(){
@@ -5246,7 +5254,7 @@ function settleQuarantineAtStation(stationName){
 
 function expeditionLegacy(){
   const q=ensureExpeditionState()?.quarantine;
-  if(!q) return 'No Mercy of Dawn encounter recorded.';
+  if(!q || q.discovered===false) return 'No Mercy of Dawn encounter recorded.';
   if(q.version!==2) return 'Mercy of Dawn: see the preserved record from the earlier experiment.';
   if(!q.survivors.length) return 'The Mercy of Dawn distress call remained unexplored.';
   const rescued=q.survivors.filter(s=>s.status==='delivered').length;
@@ -5333,7 +5341,7 @@ function currentLogRecords(){
     add('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
   } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
   const incident=state.quarantine;
-  if(incident){
+  if(incident && incident.discovered!==false){
     add('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
       incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.':
       'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));
@@ -10615,15 +10623,14 @@ function generateGalaxy() {
 
   revealAround(bx, by, 5);
   revealAround(b2x, b2y, 1);
+  placeQuarantineShip();
   addLog('Docked at '+grid[by][bx].name+'. Ready for departure.','li');
   addLog('Fly to a star system and press Enter to enter orbit.','li');
 }
 
-function revealAround(cx,cy,r,discoverEncounters=false){
-  const newSectors=[];
+function revealAround(cx,cy,r){
   function revealTile(x,y){
     const index=y*MAP_W+x;
-    if(discoverEncounters && !G.visited[index]) newSectors.push({x,y});
     G.visited[index]=true;
   }
   // Nebula tiles are visible (border shows) but block vision behind them
@@ -10669,7 +10676,7 @@ function revealAround(cx,cy,r,discoverEncounters=false){
   const mult=[[1,0,0,-1,-1,0,0,1],[0,1,-1,0,0,-1,1,0],[0,1,1,0,0,-1,-1,0],[1,0,0,1,-1,0,0,-1]];
   for(let oct=0;oct<8;oct++)
     castLight(1,1.0,0.0,r,mult[0][oct],mult[1][oct],mult[2][oct],mult[3][oct]);
-  if(discoverEncounters) maybeDiscoverQuarantineShip(newSectors);
+  revealQuarantineShip();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -28096,7 +28103,7 @@ function tryMove(dx,dy,confirmed){
     const bestNavSkill = Math.max(0, ...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
     const baseRange  = G.shipStats?.sensorRange ?? 3;
     const floodBonus = (G.inventory||[]).some(i=>i.usable==='floodlight') ? 2 : 0;
-    revealAround(nx, ny, baseRange + (bestNavSkill >= 2 ? 1 : 0) + floodBonus, true);
+    revealAround(nx, ny, baseRange + (bestNavSkill >= 2 ? 1 : 0) + floodBonus);
     const cell=G.galaxy[ny][nx];
     // NPC stranded ship proximity log — fires regardless of cell type
       const _strandedHere=(G.npcStranded||[]).find(s=>s.x===nx&&s.y===ny);
@@ -34537,7 +34544,7 @@ function renderAutosaveStatus(){
   const sandbox=!!G?.debugPalette;
   if(badge){
     badge.textContent=sandbox?'DEBUG — career autosave protected':state.phase==='error'?'AUTOSAVE FAILED':
-      state.phase==='saving'||autosaveTimer?'Saving…':state.record?'Saved · turn '+state.record.summary.turn:'';
+      state.phase==='saving'||autosaveTimer?'Saving…':state.record?'Saved':'';
     badge.dataset.phase=autosaveTimer?'saving':state.phase;
   }
   if(!notice)return;
@@ -35224,7 +35231,7 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('v0.28 experimental.11  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText('v0.28 experimental.12  —  Made by Sebastian', cx, canvas.height-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {

@@ -30,7 +30,7 @@ npm --prefix qa run retirement
 - `retirement`: the latest long survey policy, targeting 10,000 credits, capped at 50,000 selections and 15 minutes. Retirement is an attempted outcome, never guaranteed or forced.
 - `long`: the earlier long-career policy preserved in `fixtures/pilot-experimental8.js`, with a 20,000-selection cap. This retains the less cautious combat/dialogue behavior for comparison. Prefer `retirement` for further development.
 
-Both policy files are preserved from the local harnesses. The three entry-point scripts now share `playthrough-runner.cjs` to remove duplicated setup, obsolete guaranteed-Mercy waits, fixed version strings and machine-specific paths. They run the checked-out game, so old reports are historical evidence, not expected golden outputs. The `long` profile selects the older policy; short/retirement use `playthrough-pilot.js`.
+Both policy files originated in the local harnesses; their rescue-target guards now require a known incident so hidden generated coordinates cannot guide the pilot. The three entry-point scripts now share `playthrough-runner.cjs` to remove duplicated setup, obsolete guaranteed-Mercy waits, fixed version strings and machine-specific paths. They run the checked-out game, so old reports are historical evidence, not expected golden outputs. The `long` profile selects the older policy; short/retirement use `playthrough-pilot.js`.
 
 Options are passed after `--`:
 
@@ -62,7 +62,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `previews` | Galaxy sample art/boarding, ASCII, and 80 pixel comparisons with the preserved pre-extraction orbital renderer |
 | `ships` | 384 ship/direction/background/opacity combinations, transparency, role/combat art, sensor concealment and ASCII |
 | `ship-previews` | Native ship-selection and hull-change screenshots, old/new ship compositing comparison |
-| `encounters` | No initial Mercy, newly charted-sector discovery, no rerolls, persistence and explicit debug boarding |
+| `encounters` | One hidden Mercy at generation, seeded repeatability, sensor-only detection, no exploration spawns, save/load and explicit debug boarding |
 | `rescue` | 15 spatial Mercy rescue scenarios using real door, movement, medicine, carrying, transport and handoff actions |
 | `career` | 54 fixture-assisted renewable contract completions across three hulls, station sales, provenance, reloads and physical research-console recovery |
 | `log` | Removed journal controls, integrated LOG filters, hidden knowledge, wrapping/deduplication and legacy UI cleanup |

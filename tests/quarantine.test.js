@@ -23,51 +23,69 @@ function context(seed=1){
   for(const file of ['missions/expedition.js','missions/quarantine-ship.js']){
     vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),c);
   }
-  const random=c.rnd;c.rnd=()=>0;c.maybeDiscoverQuarantineShip([{x:10,y:10}]);c.rnd=random;return c;
+  const random=c.rnd;c.rnd=()=>0;c.placeQuarantineShip();c.rnd=random;return c;
 }
 
-test('Mercy is a chance discovery, not guaranteed placement or a startup message',()=>{
-  const c=context();c.G.expedition.quarantine=null;c.G.expedition.events=[];
-  let rolls=0;c.rnd=n=>{assert.equal(n,1000);rolls++;return 1;};
-  assert.equal(c.maybeDiscoverQuarantineShip([{x:15,y:12}]),false);
-  assert.equal(rolls,1);assert.equal(c.G.expedition.quarantine,null);assert.equal(c.G.expedition.events.length,0);
-  c.rnd=()=>0;assert.equal(c.maybeDiscoverQuarantineShip([{x:15,y:12}]),true);
-  assert.equal(c.G.expedition.quarantine.x,15);assert.equal(c.G.expedition.quarantine.lastTick,null);
-  assert.match(c.G.expedition.events[0].text,/Nearby distress transmission.*16,13/);
-  const before=JSON.stringify(c.G.expedition);c.maybeDiscoverQuarantineShip([{x:20,y:12}]);
-  assert.equal(JSON.stringify(c.G.expedition),before);
-});
-
-test('discovery preserves occupied sectors, existing objects and the galaxy border',()=>{
-  const c=context();c.G.expedition.quarantine=null;c.rnd=()=>0;
-  c.G.pirates=[{x:12,y:12}];c.G.neutralShips=[{x:13,y:12}];c.G.npcStranded=[{x:14,y:12}];
-  c.G.nebulaLoot=[{x:15,y:12}];c.G.galaxy[12][16]={type:'BASE',name:'Unchanged'};
-  const cells=[c.G.ship,...c.G.pirates,...c.G.neutralShips,...c.G.npcStranded,...c.G.nebulaLoot,
-    {x:16,y:12},{x:0,y:1},{x:31,y:19},{x:-1,y:2},{x:17,y:12}];
-  c.maybeDiscoverQuarantineShip(cells);
-  assert.equal(c.G.expedition.quarantine.x,17);assert.equal(c.G.galaxy[12][16].name,'Unchanged');
-});
-
-test('debug worlds and inactive careers cannot trigger the random event',()=>{
-  for(const flag of ['debugPalette','dead','retired']){
-    const c=context();c.G.expedition.quarantine=null;c.G[flag]=true;
-    c.rnd=()=>{throw Error('Unexpected roll');};assert.equal(c.maybeDiscoverQuarantineShip([{x:12,y:12}]),false);
+test('Mercy placement is selected once across the galaxy and stays hidden until revealed',()=>{
+  const positions=new Set();
+  for(let seed=1;seed<=100;seed++){
+    const c=context(seed*104729);c.G.expedition.quarantine=null;c.G.expedition.events=[];
+    c.G.visited[6*c.MAP_W+6]=true;
+    assert.equal(c.placeQuarantineShip(),true);
+    const q=c.G.expedition.quarantine;
+    assert.equal(q.discovered,false);assert.equal(q.lastTick,null);
+    assert.equal(c.G.galaxy[q.y][q.x].name,'Mercy of Dawn');
+    assert.equal(!!c.G.visited[q.y*c.MAP_W+q.x],false);
+    assert.equal(c.G.expedition.events.length,0);positions.add(q.x+','+q.y);
+    const before=JSON.stringify(q);c.rnd=()=>{throw Error('Placement rerolled');};
+    assert.equal(c.placeQuarantineShip(),false);assert.equal(JSON.stringify(q),before);
   }
-  const c=context();c.G.expedition.quarantine=null;c.DEBUG.on=true;
-  assert.equal(c.maybeDiscoverQuarantineShip([{x:12,y:12}]),false);
+  assert.ok(positions.size>80);
 });
 
-test('initial reveals, repeated visits and reloads do not create or reroll the encounter',()=>{
-  const c=context();c.G.expedition.quarantine=null;c.G.expedition.events=[];
-  vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/world/galaxy-generation.js'),'utf8'),c);
-  c.rnd=()=>0;c.revealAround(5,5,3);
+test('placement protects occupied, charted, border and nonempty cells; a full galaxy is safe',()=>{
+  const c=context();c.G.expedition.quarantine=null;
+  c.G.galaxy=Array.from({length:20},()=>Array.from({length:32},()=>({type:'BASE'})));
+  const cells=[c.G.ship,{x:12,y:12},{x:13,y:12},{x:14,y:12},{x:15,y:12},{x:16,y:12},{x:0,y:1},{x:31,y:19},{x:17,y:12}];
+  for(const {x,y} of cells)c.G.galaxy[y][x]={type:'VOID'};
+  c.G.pirates=[cells[1]];c.G.neutralShips=[cells[2]];c.G.npcStranded=[cells[3]];c.G.nebulaLoot=[cells[4]];
+  c.G.visited[12*c.MAP_W+16]=true;
+  c.rnd=n=>{assert.equal(n,1);return 0;};
+  assert.equal(c.placeQuarantineShip(),true);assert.equal(c.G.expedition.quarantine.x,17);
+  c.G.expedition.quarantine=null;c.rnd=()=>{throw Error('Empty candidate list rolled');};
+  assert.equal(c.placeQuarantineShip(),false);assert.equal(c.G.expedition.quarantine,null);
+});
+
+test('reveal never places a wreck or rolls RNG; a preset wreck signals once and persists',()=>{
+  const c=context();vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/world/galaxy-generation.js'),'utf8'),c);
+  const q=c.G.expedition.quarantine;c.G.expedition.events=[];
+  c.rnd=()=>{throw Error('Exploration rolled RNG');};
+  c.revealAround(q.x,q.y,1);assert.equal(q.discovered,true);assert.equal(q.lastTick,null);
+  assert.equal(c.G.expedition.events.filter(e=>e.id==='quarantine:signal').length,1);
+  const before=JSON.stringify(c.G.expedition);c.revealAround(q.x,q.y,3);
+  c.G=JSON.parse(JSON.stringify(c.G));c.revealAround(q.x,q.y,3);
+  assert.equal(JSON.stringify(c.G.expedition),before);
+  c.G.expedition.quarantine=null;c.G.expedition.events=[];c.revealAround(18,12,3);
   assert.equal(c.G.expedition.quarantine,null);assert.equal(c.G.expedition.events.length,0);
-  let rolls=0;c.rnd=()=>{rolls++;return 1;};c.revealAround(18,12,3,true);
-  assert.ok(rolls>0);const previous=rolls;c.revealAround(18,12,3,true);assert.equal(rolls,previous);
-  c.G=JSON.parse(JSON.stringify(c.G));c.revealAround(18,12,3,true);assert.equal(rolls,previous);
-  c.rnd=()=>0;c.revealAround(25,12,3,true);
-  assert.ok(c.G.expedition.quarantine);const q=c.G.expedition.quarantine;
-  assert.equal(c.G.visited[q.y*c.MAP_W+q.x],true);assert.equal(q.lastTick,null);
+});
+
+test('nebula visibility blocks the preset signal until sensors actually reach the wreck',()=>{
+  const c=context();vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/world/galaxy-generation.js'),'utf8'),c);
+  const q=c.G.expedition.quarantine;
+  c.G.galaxy[q.y][q.x]={type:'VOID'};
+  Object.assign(q,{x:10,y:10});c.G.galaxy[10][10]={type:'DERELICT',name:'Mercy of Dawn'};
+  for(let y=0;y<c.MAP_H;y++)c.G.galaxy[y][7]={type:'NEBULA'};
+  c.revealAround(5,10,6);assert.equal(q.discovered,false);assert.equal(c.G.expedition.events.length,0);
+  c.revealAround(10,10,1);assert.equal(q.discovered,true);assert.equal(c.G.expedition.events.length,1);
+});
+
+test('debug reveals do not signal, and legacy known incidents retain their location and state',()=>{
+  const c=context(),q=c.G.expedition.quarantine;c.G.visited[q.y*c.MAP_W+q.x]=true;
+  c.DEBUG.on=true;c.revealQuarantineShip();assert.equal(q.discovered,false);
+  c.DEBUG.on=false;c.G.debugPalette={};c.revealQuarantineShip();assert.equal(q.discovered,false);
+  delete c.G.debugPalette;delete q.discovered;
+  const before=JSON.stringify(q);c.revealQuarantineShip();assert.equal(JSON.stringify(q),before);
+  assert.equal(c.G.expedition.events.length,0);
 });
 
 test('100 generated decks connect all fixtures and survivors through operable doors',()=>{
