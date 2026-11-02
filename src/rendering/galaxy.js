@@ -61,15 +61,16 @@ function drawGalaxy(){
         }
         ctx.textBaseline='alphabetic'; ctx.textAlign='left';
       } else {
+        // Station artwork composites over the ordinary space layer.
+        if(['BASE','PIRATE_BASE','CASINO','DERELICT'].includes(cell.type)) DRAW.void(ctx,px,py);
         if(cell.type==='SYSTEM'){
           drawSystemTile(ctx, px, py, cell.starType);
         } else if(cell.type==='BASE'){
-          drawSprite('starbase', px, py, '#445500');
+          drawSprite('starbase', px, py);
         } else if(cell.type==='PIRATE_BASE'){
           const _pb2 = (G.pirateBases||[]).find(b=>b.x===mx&&b.y===my);
           if(_pb2&&_pb2.destroyed){
             // Rubble: dark ruin glyph
-            ctx.fillStyle='#0d0d0a'; ctx.fillRect(px,py,TS,TS);
             ctx.font='bold '+(TS-4)+'px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
             ctx.fillStyle='#554433'; ctx.fillText('✕',px+TS/2,py+TS/2+1);
             ctx.textBaseline='alphabetic'; ctx.textAlign='left';
@@ -94,13 +95,7 @@ function drawGalaxy(){
             DRAW.casino(ctx, px, py);
           }
         } else if(cell.type==='DERELICT'){
-          ctx.fillStyle='#08080f'; ctx.fillRect(px,py,TS,TS);
-          ctx.strokeStyle='#334455'; ctx.lineWidth=1; ctx.strokeRect(px+2,py+2,TS-4,TS-4);
-          ctx.fillStyle='#556677';
-          ctx.font='bold '+(TS-1)+'px Courier New';
-          ctx.textAlign='center'; ctx.textBaseline='middle';
-          ctx.fillText('†',px+TS/2,py+TS/2+1);
-          ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+          drawDerelictStation(ctx,px,py);
         } else if(cell.type==='BLACK_HOLE'){
           DRAW.black_hole(ctx, px, py);
         } else if(cell.type==='ROGUE_PLANET'){

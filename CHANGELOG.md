@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-02 — 0.28 experimental.14: transparent stations and derelict wreck art
+
+Branch: `experiment/expedition-legacy`; main/public build unchanged.
+
+- Verified the original starbase sprite already has genuine transparency (308 of 576 pixels). Removed the solid-color loading fallback and render it over normal space so the cleared canvas cannot show a differently colored square. Removed tile-sized matte fills from casino/pirate artwork and the destroyed pirate-base marker; station object art now composites over the ordinary galaxy background.
+- Replaced graphical derelicts' boxed dagger placeholder with original code-authored 24px wreck artwork: broken orbital ring, severed spokes/docking arm, breached core, rusty plates and debris. It is cached once on an alpha canvas and shared by native derelict stations, their palette biome sample and Mercy. Updated the maintained preview generator to use the actual renderer. Existing ASCII symbols, placement, names, docking/boarding, interiors, salvage and rescue rules remain unchanged. No new object or catalog type was introduced. [Art guidance](docs/art-direction.md).
+- Bumped the canonical package version to `0.28.0-experimental.14`; rebuilt HTML and automatically synchronized desktop metadata. Validation: all 47 repository tests and generated-source/version checks passed, plus four Edge browser suites (`stations`, `previews`, `palette`, `version`) without JavaScript errors. The new station suite verifies true alpha/corner transparency and 3,243 preserved background pixel positions across space/blue/pink nebulae, actual derelict/Mercy render and boarding paths, ASCII and exact career restoration. Preview checks retained all 80 orbital comparisons, 67 galaxy sample renders and native biome entry paths. Inspected native-size and enlarged station/wreck artwork. `git diff --check` passed. No packaged desktop executable or manual whole-career playtest is claimed.
+- Saves: no schema, keys or migration changes; existing worlds use the art immediately. Remaining: human feedback on tiny wreck recognition and broader planetary artwork.
+
 ## 2026-11-02 — 0.28 experimental.13: subtle radio contacts
 
 Branch: `experiment/expedition-legacy`; main/public build unchanged.

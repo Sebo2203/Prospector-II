@@ -29,6 +29,12 @@ No generated replacement art was needed after locating the original direction sh
 
 From experimental.13, unknown pirate and civilian radio contacts share a small, muted yellow `?` (14px Courier New, `#c9b66b`) centered on the galaxy tile. It is drawn directly over the existing map with no panel fill or border. Sensor/radio ranges, fog rules and identified ship artwork are unchanged; the symbol never reveals a contact's role or allegiance.
 
+## Stations and wrecks
+
+From experimental.14, station artwork is composited over the ordinary space layer. The original starbase sprite retains its genuine alpha; casino/pirate renderers no longer paint tile-sized background fills, and the destroyed pirate-base marker has no matte. Starbase loading no longer falls back to a solid colored tile. Station art preserves underlying pixels outside its silhouette, including over colored backgrounds.
+
+Derelict galaxy objects now use original code-authored 24px wreck art: a fractured orbital ring, severed spokes, breached hub, exposed rusty plating and detached debris. `src/rendering/station-art.js` caches this on a transparent canvas. Native derelicts, the derelict biome sample and Mercy use the same renderer; ASCII retains its existing glyph. No generated bitmap or external art source is required. The existing stations and wrecks keep their interactions, names, placement and saves.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.

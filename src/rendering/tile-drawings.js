@@ -474,7 +474,6 @@ const DRAW = {
   },
   pirate_base(c,x,y){
     // Dark derelict station — rusted red core, jagged spikes, hazard feel
-    c.fillStyle='#04040c'; c.fillRect(x,y,TS,TS);
     // Outer threat glow
     c.fillStyle='#330800'; c.beginPath(); c.arc(x+12,y+12,11,0,Math.PI*2); c.fill();
     // Main body — dark rust
@@ -497,7 +496,6 @@ const DRAW = {
   },
   casino(c,x,y){
     // Neon-purple space station tile
-    c.fillStyle='#04040c'; c.fillRect(x,y,TS,TS);
     // Outer glow
     c.fillStyle='#3a0066'; c.beginPath(); c.arc(x+12,y+12,10,0,Math.PI*2); c.fill();
     // Station body

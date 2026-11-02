@@ -1,6 +1,7 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const suites = {
+  stations: 'station-art-scenarios.cjs',
   version: 'version-scenarios.cjs',
   palette: 'palette-scenarios.cjs',
   previews: 'palette-icons-scenarios.cjs',

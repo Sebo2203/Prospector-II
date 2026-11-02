@@ -18,6 +18,7 @@
     "src/assets/ship-sprites.js",
     "src/rendering/sprite-loader.js",
     "src/rendering/ship-art.js",
+    "src/rendering/station-art.js",
     "src/rendering/ascii.js",
     "src/rendering/sprite-effects.js",
     "src/rendering/tile-drawings.js",

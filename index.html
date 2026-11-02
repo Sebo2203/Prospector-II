@@ -1459,7 +1459,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.13</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.14</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -1516,8 +1516,8 @@ canvas {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.13';
-const GAME_VERSION_LABEL = 'v0.28 experimental.13';
+const GAME_VERSION = '0.28.0-experimental.14';
+const GAME_VERSION_LABEL = 'v0.28 experimental.14';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -1832,6 +1832,39 @@ function neutralShipArt(ship){
 function drawDirectionalShip(key,x,y,dx,dy){
   // Use authored frames: rotating a 24px raster loses the original pixel shapes.
   drawSprite(OPTIONS.asciiMode?key:shipDirectionKey(key,dx,dy),Math.round(x),Math.round(y),'#aab8c8');
+}
+// A shattered orbital station: broken ring, severed spokes and exposed core.
+// Native 24px pixel art, cached on genuine alpha with no space-colored matte.
+let derelictStationSprite=null;
+function drawDerelictStation(c,x,y){
+  if(!derelictStationSprite){
+    const tile=document.createElement('canvas');tile.width=tile.height=24;
+    const p=tile.getContext('2d');
+    const rect=(color,x,y,w,h)=>{p.fillStyle=color;p.fillRect(x,y,w,h);};
+    const dark='#29343e',steel='#71838b',light='#a6b3b5',rust='#80614c',cut='#d49a65';
+    // Surviving upper-left ring; the lower-right quadrant is torn away.
+    rect(dark,6,3,10,3);rect(dark,3,6,4,9);rect(dark,5,15,4,4);
+    rect(steel,7,3,8,2);rect(steel,4,6,2,8);rect(steel,5,14,2,3);
+    rect(light,8,3,5,1);rect(light,4,7,1,5);
+    rect(rust,6,17,3,2);rect(cut,8,17,2,1);
+    // Broken ring fragment still attached to the upper spoke.
+    rect(dark,16,5,3,4);rect(steel,16,5,2,3);rect(cut,17,8,2,1);
+    // Docking arm and radial trusses, interrupted at the fracture.
+    rect(dark,1,10,10,3);rect(steel,2,10,8,1);rect(rust,6,11,4,1);
+    rect(dark,10,5,3,13);rect(steel,11,5,1,12);
+    rect(dark,13,10,5,3);rect(steel,14,10,3,1);rect(cut,17,11,1,2);
+    // Two hull plates around a dark, asymmetric breach in the central hub.
+    rect(dark,8,8,7,7);rect(steel,9,8,5,2);rect(light,9,8,3,1);
+    rect(rust,8,10,2,4);rect(steel,10,13,4,2);rect(light,11,14,2,1);
+    rect('#111820',10,10,4,3);rect(cut,13,10,1,1);rect(rust,12,12,2,1);
+    // Detached lower hull and small debris; no powered windows or engines.
+    rect(dark,14,17,5,3);rect(steel,15,17,4,1);rect(rust,16,18,3,2);
+    rect(light,15,17,2,1);rect(cut,18,16,1,1);
+    rect(steel,20,13,2,1);rect(dark,20,14,1,2);
+    rect(rust,10,20,2,1);rect(steel,4,20,1,1);rect(dark,21,7,1,1);
+    derelictStationSprite=tile;
+  }
+  c.drawImage(derelictStationSprite,x,y,TS,TS);
 }
 const ASCII = {
   // Galaxy
@@ -2649,7 +2682,6 @@ const DRAW = {
   },
   pirate_base(c,x,y){
     // Dark derelict station — rusted red core, jagged spikes, hazard feel
-    c.fillStyle='#04040c'; c.fillRect(x,y,TS,TS);
     // Outer threat glow
     c.fillStyle='#330800'; c.beginPath(); c.arc(x+12,y+12,11,0,Math.PI*2); c.fill();
     // Main body — dark rust
@@ -2672,7 +2704,6 @@ const DRAW = {
   },
   casino(c,x,y){
     // Neon-purple space station tile
-    c.fillStyle='#04040c'; c.fillRect(x,y,TS,TS);
     // Outer glow
     c.fillStyle='#3a0066'; c.beginPath(); c.arc(x+12,y+12,10,0,Math.PI*2); c.fill();
     // Station body
@@ -13750,15 +13781,16 @@ function drawGalaxy(){
         }
         ctx.textBaseline='alphabetic'; ctx.textAlign='left';
       } else {
+        // Station artwork composites over the ordinary space layer.
+        if(['BASE','PIRATE_BASE','CASINO','DERELICT'].includes(cell.type)) DRAW.void(ctx,px,py);
         if(cell.type==='SYSTEM'){
           drawSystemTile(ctx, px, py, cell.starType);
         } else if(cell.type==='BASE'){
-          drawSprite('starbase', px, py, '#445500');
+          drawSprite('starbase', px, py);
         } else if(cell.type==='PIRATE_BASE'){
           const _pb2 = (G.pirateBases||[]).find(b=>b.x===mx&&b.y===my);
           if(_pb2&&_pb2.destroyed){
             // Rubble: dark ruin glyph
-            ctx.fillStyle='#0d0d0a'; ctx.fillRect(px,py,TS,TS);
             ctx.font='bold '+(TS-4)+'px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
             ctx.fillStyle='#554433'; ctx.fillText('✕',px+TS/2,py+TS/2+1);
             ctx.textBaseline='alphabetic'; ctx.textAlign='left';
@@ -13783,13 +13815,7 @@ function drawGalaxy(){
             DRAW.casino(ctx, px, py);
           }
         } else if(cell.type==='DERELICT'){
-          ctx.fillStyle='#08080f'; ctx.fillRect(px,py,TS,TS);
-          ctx.strokeStyle='#334455'; ctx.lineWidth=1; ctx.strokeRect(px+2,py+2,TS-4,TS-4);
-          ctx.fillStyle='#556677';
-          ctx.font='bold '+(TS-1)+'px Courier New';
-          ctx.textAlign='center'; ctx.textBaseline='middle';
-          ctx.fillText('†',px+TS/2,py+TS/2+1);
-          ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+          drawDerelictStation(ctx,px,py);
         } else if(cell.type==='BLACK_HOLE'){
           DRAW.black_hole(ctx, px, py);
         } else if(cell.type==='ROGUE_PLANET'){
