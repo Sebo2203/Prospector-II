@@ -9,6 +9,15 @@ const {chromium}=require('./runtime.cjs'),fs=require('node:fs'),path=require('no
   const directions=[[0,-1,'N'],[1,-1,'NE'],[1,0,'E'],[1,1,'SE'],[0,1,'S'],[-1,1,'SW'],[-1,0,'W'],[-1,-1,'NW']];
   const background=type=>{ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#04040c';ctx.fillRect(0,0,24,24);if(type==='blue'||type==='pink')DRAW.nebula(ctx,0,0,type,10,10);};
   let cases=0,preserved=0;const roleKeys=new Set(Object.values(SHIP_ROLE_ART).map(a=>a.sprite));
+  for(const bg of ['space','blue','pink']){
+   background(bg);const before=ctx.getImageData(0,0,24,24).data;drawRadioContact(0,0);const after=ctx.getImageData(0,0,24,24).data;let changed=0,yellow=false;
+   for(let y=0;y<24;y++)for(let x=0;x<24;x++){
+    const i=(y*24+x)*4;if(before.slice(i,i+4).every((v,c)=>v===after[i+c]))continue;
+    if(x<7||x>16||y<4||y>19)throw Error('Radio contact painted outside its small glyph: '+bg);
+    changed++;if(after[i]>after[i+1]&&after[i+1]>after[i+2]&&after[i]>150)yellow=true;
+   }
+   if(!changed||!yellow)throw Error('Radio contact is missing or not yellow: '+bg);
+  }
   for(const [base]of hulls)for(const [dx,dy]of directions)for(const bg of ['space','blue','pink'])for(const opacity of [1,0.6]){
    const key=shipDirectionKey(base,dx,dy),image=IMG[key],tile=document.createElement('canvas');tile.width=tile.height=24;tile.getContext('2d').drawImage(image,0,0);const alpha=tile.getContext('2d').getImageData(0,0,24,24).data;
    background(bg);const before=ctx.getImageData(0,0,24,24).data;drawSpriteTinted(key,0,0,'#80dce4',opacity);const after=ctx.getImageData(0,0,24,24).data;
@@ -45,5 +54,6 @@ const {chromium}=require('./runtime.cjs'),fs=require('node:fs'),path=require('no
   return {checks:['all eight player headings in native galaxy renderer','all four palette civilian silhouettes','matching role hull in native ship combat','unknown contacts retain sensor/radio concealment','ASCII mode renders','palette restores career'],errors:[]};
  });
  await page.evaluate(()=>{debugEnterPalette('galaxy');debugPaletteVisit('galaxy:TRADER');G.ship.x-=3;G.ship.y-=1;DEBUG.fullVision=true;renderAll();});await page.screenshot({path:artifactPath('Prospector-II-galaxy-art.png')});
+ await page.evaluate(()=>{DEBUG.fullVision=false;G.shipStats.sensorRange=1;renderAll();});await page.screenshot({path:artifactPath('Prospector-II-radio-contacts.png')});
  assert.deepEqual(errors,[]);console.log(JSON.stringify({...result,integration,errors},null,2));await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

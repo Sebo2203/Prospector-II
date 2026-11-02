@@ -25,6 +25,10 @@ No generated replacement art was needed after locating the original direction sh
 - Player headings use exact original frames, with integer screen positions. NPCs retain their existing north-facing map presentation. Their role silhouettes also appear in neutral-target combat. ASCII mode has T/C/S/P for the new civilian keys; existing player and pirate symbols remain.
 - Ship roles and behavior, detection, radio pings, encounter placement, movement speed, combat, prices and saves are unaffected. The existing debug palette's trader/cargo/science/patrol samples display the new art without requiring new scenario registrations.
 
+## Radio contacts
+
+From experimental.13, unknown pirate and civilian radio contacts share a small, muted yellow `?` (14px Courier New, `#c9b66b`) centered on the galaxy tile. It is drawn directly over the existing map with no panel fill or border. Sensor/radio ranges, fog rules and identified ship artwork are unchanged; the symbol never reveals a contact's role or allegiance.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.

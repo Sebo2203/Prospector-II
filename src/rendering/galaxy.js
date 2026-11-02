@@ -1,3 +1,11 @@
+function drawRadioContact(x,y){
+  ctx.save();
+  ctx.font='14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#c9b66b';
+  ctx.fillText('?',x+TS/2,y+TS/2);
+  ctx.restore();
+}
+
 function drawGalaxy(){
   // Camera: centre the viewport on the ship, clamped to map edges
   const camX = Math.max(0, Math.min(MAP_W - VIEW_W, G.ship.x - Math.floor(VIEW_W/2)));
@@ -121,11 +129,7 @@ function drawGalaxy(){
     if(!DEBUG.fullVision && dist > rr) return;
     const px = vx*TS, py = vy*TS;
     if(!DEBUG.fullVision && dist > SENSOR_RANGE){
-      ctx.fillStyle='rgba(10,20,35,0.78)'; ctx.fillRect(px+4, py+4, TS-8, TS-8);
-      ctx.strokeStyle='#2a5a88'; ctx.strokeRect(px+4, py+4, TS-8, TS-8);
-      ctx.font='bold 16px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#70d8ff';
-      ctx.fillText('?', px+TS/2, py+17);
-      ctx.textAlign='left';
+      drawRadioContact(px,py);
       return;
     }
     if(!DEBUG.fullVision && !G.visited[p.y*MAP_W+p.x]) return;
@@ -171,11 +175,7 @@ function drawGalaxy(){
     if(!DEBUG.fullVision && dist2 > rr) return;
     const px2 = vx2*TS, py2 = vy2*TS;
     if(!DEBUG.fullVision && dist2 > SENSOR_RANGE){
-      ctx.fillStyle='rgba(10,20,35,0.78)'; ctx.fillRect(px2+4, py2+4, TS-8, TS-8);
-      ctx.strokeStyle='#2a5a88'; ctx.strokeRect(px2+4, py2+4, TS-8, TS-8);
-      ctx.font='bold 16px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#70d8ff';
-      ctx.fillText('?', px2+TS/2, py2+17);
-      ctx.textAlign='left';
+      drawRadioContact(px2,py2);
       return;
     }
     if(!DEBUG.fullVision && !G.visited[ns.y*MAP_W+ns.x]) return;

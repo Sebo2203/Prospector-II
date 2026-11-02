@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-02 — 0.28 experimental.13: subtle radio contacts
+
+Branch: `experiment/expedition-legacy`; main/public build unchanged.
+
+- Replaced the filled blue radio-contact panels and outlined boxes with a small muted-yellow `?` on a transparent background. Pirates and civilians share the same centered glyph, preserving unknown identity. A shared renderer restores canvas drawing state. Identified ships, detection/radio ranges, fog rules and gameplay are unchanged. Updated [art guidance](docs/art-direction.md).
+- Bumped only the canonical root package version; the build automatically synchronized game labels and desktop packaging metadata to `0.28.0-experimental.13` and rebuilt the single-file HTML. Packaged executables were not rebuilt.
+- Validation: `npm run build`, all 47 repository tests and generated-source/version checks passed. Edge headless `ships` and `version` suites passed without JavaScript errors: 384 ship compositing cases, unchanged sensor concealment/identified artwork, and the version labels. Extended the existing art scenarios to verify the question mark's yellow color and unchanged background pixels outside the small glyph over space and both nebula colors. Inspected the actual galaxy radio-contact screenshot. `git diff --check` passed; no manual desktop or whole-career playtest is claimed.
+- Saves: no state, schema, keys or migration changes. Existing careers use the new presentation immediately. Remaining: visual feedback at native tile size.
+
 ## 2026-11-02 — One source for the release version
 
 Branch: `experiment/expedition-legacy`; build/workflow change, game remains `0.28.0-experimental.12`. Main/public build unchanged.

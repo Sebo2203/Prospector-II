@@ -61,7 +61,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `version` | Canonical package version matches runtime constants, canvas menu and visible in-game label |
 | `palette` | Runtime catalog coverage, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |
 | `previews` | Galaxy sample art/boarding, ASCII, and 80 pixel comparisons with the preserved pre-extraction orbital renderer |
-| `ships` | 384 ship/direction/background/opacity combinations, transparency, role/combat art, sensor concealment and ASCII |
+| `ships` | 384 ship/direction/background/opacity combinations, transparency, subtle radio glyphs over space/nebulae, role/combat art, sensor concealment and ASCII |
 | `ship-previews` | Native ship-selection and hull-change screenshots, old/new ship compositing comparison |
 | `encounters` | One hidden Mercy at generation, seeded repeatability, sensor-only detection, no exploration spawns, save/load and explicit debug boarding |
 | `rescue` | 15 spatial Mercy rescue scenarios using real door, movement, medicine, carrying, transport and handoff actions |
