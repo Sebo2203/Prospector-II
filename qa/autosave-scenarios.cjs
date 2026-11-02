@@ -7,6 +7,7 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),f
  const url=gameUrl;
  await page.goto(url);await page.evaluate(()=>initGame('LIGHT_SCOUT','Save Audit','Save Audit'));await page.waitForFunction(()=>G?.galaxy&&G.log.some(e=>e.msg.includes('Ready for departure')));
  assert.equal(await page.evaluate(()=>autoSave()),true);
+ assert.equal(await page.locator('#save-state').textContent(),'Saved');
  const first=await page.evaluate(async()=>{const s=await readAutosaveSlots();return s.current.raw;});
  await page.evaluate(()=>{G.turn=20;G.credits=777;});assert.equal(await page.evaluate(()=>autoSave()),true);
  assert.equal(await page.evaluate(async()=>{const s=await readAutosaveSlots();return s.previous.raw;}),first);
@@ -14,6 +15,7 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),f
  const safe=await page.evaluate(async()=>JSON.stringify(await readAutosaveSlots()));
  await page.evaluate(async()=>{const db=await openAutosaveDatabase();window.qaDb=db;window.qaTransaction=db.transaction;db.transaction=function(...args){const tx=qaTransaction.apply(this,args);if(args[1]==='readwrite')queueMicrotask(()=>tx.abort());return tx;};G.turn=21;});
  assert.equal(await page.evaluate(()=>autoSave()),false);
+ assert.equal(await page.locator('#save-state').textContent(),'AUTOSAVE FAILED');
  assert.equal(await page.evaluate(async()=>JSON.stringify(await readAutosaveSlots())),safe);
  assert.equal(await page.locator('#save-notice').isVisible(),true);
  await page.evaluate(()=>returnToMainMenuFromGame());assert.equal(await page.evaluate(()=>!!G),true);
@@ -26,6 +28,7 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),f
  checks.push('file export contains unsaved current progress after storage failure');
  await page.evaluate(()=>{qaDb.transaction=qaTransaction;delete window.__TAURI__;document.getElementById('save-retry').click();});await page.waitForFunction(()=>AUTOSAVE_STATE.phase==='saved');
  assert.equal(await page.locator('#save-notice').isVisible(),false);assert.equal(await page.evaluate(async()=>JSON.parse((await readAutosaveSlots()).current.raw).turn),21);
+ assert.equal(await page.locator('#save-state').textContent(),'Saved');
  checks.push('retry commits the latest game and clears the failure state');
  const backupTurn=await page.evaluate(async()=>{
   const db=await openAutosaveDatabase(),slots=await readAutosaveSlots();
@@ -79,6 +82,7 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),f
  await page.evaluate(()=>quitGame());assert.equal(await page.evaluate(()=>qaQuitTurn),5010);await page.evaluate(()=>{delete window.__TAURI__;});
  checks.push('native quit invocation occurs only after the latest snapshot commits');
  await page.evaluate(async()=>{window.qaActualDb=await openAutosaveDatabase();autosaveDatabasePromise=new Promise(resolve=>{window.qaReleaseDb=resolve;});G.turn=5011;window.qaMenuPromise=returnToMainMenuFromGame();});
+ assert.equal(await page.locator('#save-state').textContent(),'Saving…');
  await page.keyboard.press('d');assert.equal(await page.evaluate(()=>G.turn),5011);
  assert.equal(await page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;}),true);
  await page.evaluate(async()=>{qaReleaseDb(qaActualDb);await qaMenuPromise;await autosaveQueue.idle();});assert.equal(await page.evaluate(()=>G),null);

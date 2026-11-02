@@ -34537,7 +34537,7 @@ function renderAutosaveStatus(){
   const sandbox=!!G?.debugPalette;
   if(badge){
     badge.textContent=sandbox?'DEBUG — career autosave protected':state.phase==='error'?'AUTOSAVE FAILED':
-      state.phase==='saving'||autosaveTimer?'Saving…':state.record?'Saved · turn '+state.record.summary.turn:'';
+      state.phase==='saving'||autosaveTimer?'Saving…':state.record?'Saved':'';
     badge.dataset.phase=autosaveTimer?'saving':state.phase;
   }
   if(!notice)return;

@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-02 — Save indicator cleanup and Mercy discovery investigation
+
+Branch: `fix/experimental-save-indicator`, targeting `experiment/expedition-legacy`; follow-up to `0.28.0-experimental.11`, no new release or public build.
+
+- Removed the redundant turn counter from the bottom saved indicator: it now reads `Saved`. `Saving…`, `AUTOSAVE FAILED`, the debug protection message, failure/retry/export controls and saved turn metadata are unchanged. Rebuilt the single-file HTML from source and updated [the autosave guide](docs/autosave.md).
+- Investigated Mercy against experimental tip `3e80186`. Experimental.9 (`8b236ff`) replaced experimental.8's galaxy-wide random placement with a 1-in-1,000 roll per newly charted eligible empty sector in actual movement sensor reveals. A successful roll creates the wreck nearby; no minimum distance or turn delay exists. Early nearby discovery is permitted, not a placement bug. Opening reveals do not roll; existing saves retain old incidents. The exact observed player's encounter cannot be diagnosed without its save. [Current rules and source links](docs/experiment.md) explain the distinction. No encounter generation, reveal, probability, turn, combat or rescue behavior changed.
+- Validation: `npm run build`, all 45 `npm test` tests and generated-source checks passed; `git diff --check` passed. Headless `encounters` and `autosave` suites passed using installed Edge after the bundled Chromium download failed. Added assertions for exact Saved/Saving/failure badge text during real commits, pending saves, transaction failure and retry. Encounter checks covered 12 clean openings, winning/losing rolls, native movement, no rerolls, uniqueness, save/load and debug boarding. Actual IndexedDB checks retained recovery, stale-window protection, export and a 7,207,008-character / 155-map reload with no JavaScript errors. These are controlled scenarios, not a human desktop playthrough or encounter-frequency balance study.
+- Saves: no format, keys, migration or reset changes. Existing locations and rescue progress remain intact. Main, published releases and packaged executables are untouched. Remaining: wider discovery-frequency playtesting and the existing foundation findings.
+
 ## 2026-11-01 — Preserve playthrough automation in the repository
 
 Branch: `experiment/expedition-legacy`; testing workflow only, game remains `0.28.0-experimental.11`.
