@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — 0.28 experimental.15 removes the in-game changelog
+
+Released on `experiment/expedition-legacy`.
+
+- Removed the main menu Change Log button, its V shortcut, the embedded release notes screen and its scroll handlers. Release history lives in the repository documentation. The v0.25 and v0.2 summaries from the menu are now in the [historical changelog](Changelog%20Prospector%20II.txt).
+- Rebuilt the standalone HTML with the experimental.15 version and synchronized desktop metadata. All 47 repository tests, the generated build check, and the Edge menu/version and autosave suites passed. Browser checks covered keyboard and mouse navigation with and without a save, the retired shortcut, and saved-game Continue. Inspected the main menu screenshot and checked the runtime sources and generated HTML for remaining changelog references. Packaged desktop builds were outside the scope of this check.
+- Existing saves open without migration. This change only removes the release notes screen and its controls.
+
 ## 2026-11-02 — 0.28 experimental.14: transparent stations and derelict wreck art
 
 Branch: `experiment/expedition-legacy`; main/public build unchanged.

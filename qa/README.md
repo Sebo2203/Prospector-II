@@ -59,7 +59,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | Suite | Coverage |
 | --- | --- |
 | `stations` | Station/wreck alpha, background preservation, native derelict/Mercy render and boarding paths, ASCII and career restoration |
-| `version` | Canonical package version matches runtime constants, canvas menu and visible in-game label |
+| `version` | Version labels, main menu keyboard and mouse navigation with and without a save, and retired changelog shortcut |
 | `palette` | Runtime catalog coverage, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |
 | `previews` | Galaxy sample art/boarding, ASCII, and 80 pixel comparisons with the preserved pre-extraction orbital renderer |
 | `ships` | 384 ship/direction/background/opacity combinations, transparency, subtle radio glyphs over space/nebulae, role/combat art, sensor concealment and ASCII |

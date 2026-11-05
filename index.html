@@ -1459,7 +1459,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.14</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.15</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
@@ -1516,8 +1516,8 @@ canvas {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.14';
-const GAME_VERSION_LABEL = 'v0.28 experimental.14';
+const GAME_VERSION = '0.28.0-experimental.15';
+const GAME_VERSION_LABEL = 'v0.28 experimental.15';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -35052,11 +35052,6 @@ function drawMenuScreen(){
     return;
   }
 
-  if(MENU_STATE.screen==='changelog'){
-    drawChangelogScreen(cx);
-    return;
-  }
-
   if(MENU_STATE.screen==='credits'){
     drawCreditsScreen(cx);
     return;
@@ -35221,7 +35216,6 @@ function drawMenuScreen(){
   opts.push({key:'N', label:'New Game',       col:'#70f090'});
   opts.push({key:'L', label:'Load Save File', col:'#aaaaff'});
   opts.push({key:'O', label:'Options',        col:'#ffaa44'});
-  opts.push({key:'V', label:'Change Log',     col:'#aa88ff'});
   opts.push({key:'X', label:'Credits',        col:'#ffdd88'});
 
   opts.push({key:'Q', label:'Quit',           col:'#ff7777'});
@@ -35446,83 +35440,6 @@ function drawKeybindingsScreen(cx){
   ctx.textAlign='left';
 }
 
-function drawChangelogScreen(cx){
-  ctx.font='bold 31px Courier New'; ctx.fillStyle='#aa88ff'; ctx.textAlign='center';
-  ctx.fillText('CHANGE LOG',cx,70);
-  ctx.fillStyle='#2a1a44'; ctx.fillRect(cx-280,88,560,1);
-
-  // ── CHANGELOG ENTRIES — edit below, newest at top ──────────────
-  const entries = [
-    {
-      version: 'v0.25',
-      date: '2026',
-      changes: [
-        'Galaxy map expanded ~2.4× (west + south regions added)',
-        'Galaxy minimap added to HUD — [M] opens full-screen overlay with legend',
-        'Ship movement in galaxy view is now animated',
-        'Underwater zones — dive from ocean tiles, explore with a diving suit',
-        'Aquatic civilizations appear in underwater maps',
-        'Casino fully playable — Void Poker, Arm Wrestle, Drinking Contest, Beast Arena',
-        'New star names and crew names added for more varied runs',
-      ]
-    },
-    {
-      version: 'v0.2 (public)',
-      date: '2026',
-      changes: [
-        'Initial public release',
-        'Galaxy exploration, planet landing, crew & cargo systems',
-        'Civilizations with first-contact dialogue and barter',
-        'Ground combat and ship combat',
-        'Special planets: Ringworld, Bloom, Nuclear War, Ancient Station',
-        'Retirement / end-game narrative',
-      ]
-    },
-  ];
-  // ── END OF CHANGELOG ENTRIES ───────────────────────────────────
-
-  const contentTop = 136;
-  const contentBottom = canvas.height - 44;
-  const viewH = contentBottom - contentTop;
-  const contentH = entries.reduce((sum, entry) => sum + 26 + 10 + entry.changes.length * 22 + 14, 0);
-  const maxScroll = Math.max(0, contentH - viewH);
-  MENU_STATE.changelogScroll = Math.max(0, Math.min(MENU_STATE.changelogScroll || 0, maxScroll));
-  MENU_STATE._changelogMaxScroll = maxScroll;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(cx-292, contentTop-26, 572, viewH+28);
-  ctx.clip();
-
-  let y = contentTop - MENU_STATE.changelogScroll;
-  entries.forEach(entry => {
-    ctx.font='bold 17px Courier New'; ctx.fillStyle='#aa88ff'; ctx.textAlign='left';
-    ctx.fillText(entry.version+'  —  '+entry.date, cx-280, y);
-    y += 26;
-    ctx.fillStyle='#2a1a44'; ctx.fillRect(cx-280, y, 560, 1);
-    y += 10;
-    entry.changes.forEach(line => {
-      ctx.font='15px Courier New'; ctx.fillStyle='#8899aa';
-      ctx.fillText('›  '+line, cx-270, y);
-      y += 22;
-    });
-    y += 14;
-  });
-  ctx.restore();
-
-  if(maxScroll > 0){
-    const trackX = cx + 304, trackY = contentTop - 4, trackH = viewH + 4;
-    const thumbH = Math.max(28, Math.round(trackH * (viewH / contentH)));
-    const thumbY = trackY + Math.round((trackH - thumbH) * (MENU_STATE.changelogScroll / maxScroll));
-    ctx.fillStyle = '#0e0e1a'; ctx.fillRect(trackX, trackY, 5, trackH);
-    ctx.fillStyle = '#3a2a66'; ctx.fillRect(trackX, thumbY, 5, thumbH);
-  }
-
-  ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('[ ↑↓ / Wheel ]  Scroll    [ ESC ]  Back to main menu', cx, canvas.height-16);
-  ctx.textAlign='left';
-}
-
 // ─────────────────────────────────────────────────────────────────
 //  MENU KEY HANDLER
 // ─────────────────────────────────────────────────────────────────
@@ -35683,7 +35600,6 @@ canvas.addEventListener('click', e => {
   mainOpts.push('n');
   mainOpts.push('l');
   mainOpts.push('o');
-  mainOpts.push('v');
   mainOpts.push('x');
   mainOpts.push('q');
 
@@ -35692,7 +35608,6 @@ canvas.addEventListener('click', e => {
     else if(sel==='c'){ void continueSavedGame(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
-    else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
     else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
     else if(sel==='q'){ quitGame(); }
   }
@@ -35704,15 +35619,6 @@ canvas.addEventListener('click', e => {
     }
   });
 });
-
-canvas.addEventListener('wheel', e => {
-  if(MENU_STATE.screen !== 'changelog') return;
-  const maxScroll = MENU_STATE._changelogMaxScroll || 0;
-  if(maxScroll <= 0) return;
-  e.preventDefault();
-  MENU_STATE.changelogScroll = Math.max(0, Math.min(maxScroll, (MENU_STATE.changelogScroll || 0) + e.deltaY));
-  drawMenuScreen();
-}, { passive:false });
 
 // ── Menu hover highlighting ───────────────────────────────────
 canvas.addEventListener('mousemove', e => {
@@ -35912,22 +35818,6 @@ function handleMenuKey(e){
     return;
   }
 
-  if(MENU_STATE.screen==='changelog'){
-    if(e.key==='Escape'){ MENU_STATE.screen='main'; drawMenuScreen(); return; }
-    const maxScroll = MENU_STATE._changelogMaxScroll || 0;
-    if(e.key==='ArrowUp' || e.key==='PageUp'){
-      MENU_STATE.changelogScroll = Math.max(0, (MENU_STATE.changelogScroll || 0) - (e.key==='PageUp' ? 160 : 36));
-      drawMenuScreen(); return;
-    }
-    if(e.key==='ArrowDown' || e.key==='PageDown'){
-      MENU_STATE.changelogScroll = Math.min(maxScroll, (MENU_STATE.changelogScroll || 0) + (e.key==='PageDown' ? 160 : 36));
-      drawMenuScreen(); return;
-    }
-    if(e.key==='Home'){ MENU_STATE.changelogScroll = 0; drawMenuScreen(); return; }
-    if(e.key==='End'){ MENU_STATE.changelogScroll = maxScroll; drawMenuScreen(); return; }
-    return;
-  }
-
   if(MENU_STATE.screen==='credits'){
     if(e.key==='Escape'){ MENU_STATE.screen='main'; drawMenuScreen(); return; }
     return;
@@ -36008,7 +35898,6 @@ function handleMenuKey(e){
   mainOpts.push('n');
   mainOpts.push('l');
   mainOpts.push('o');
-  mainOpts.push('v');
   mainOpts.push('x');
   mainOpts.push('q');
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
@@ -36018,7 +35907,6 @@ function handleMenuKey(e){
     else if(sel==='c'){ void continueSavedGame(); }
     else if(sel==='l'){ loadFromFile(); }
     else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
-    else if(sel==='v'){ MENU_STATE.screen='changelog'; MENU_STATE.changelogScroll=0; drawMenuScreen(); }
     else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
     else if(sel==='q'){ quitGame(); }
   }
@@ -36039,7 +35927,6 @@ function handleMenuKey(e){
   else if(k==='c' && MENU_STATE.hasAutosave) activateMainOpt('c');
   else if(k==='l') activateMainOpt('l');
   else if(k==='o') activateMainOpt('o');
-  else if(k==='v') activateMainOpt('v');
   else if(k==='x') activateMainOpt('x');
   else if(k==='d' && shouldShowDesktopDownload()) downloadDesktopApp();
   else if(k==='q') activateMainOpt('q');
