@@ -1589,7 +1589,7 @@ canvas {
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.19</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.20</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1647,8 +1647,8 @@ canvas {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.19';
-const GAME_VERSION_LABEL = 'v0.28 experimental.19';
+const GAME_VERSION = '0.28.0-experimental.20';
+const GAME_VERSION_LABEL = 'v0.28 experimental.20';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -35536,7 +35536,12 @@ function drawMenuScreen(){
     ships.forEach((s,i)=>{
       const isSel = i===sel;
       const bx=startX+i*(cardW+cardGap), by=78;
-      canvasMenuTarget(bx,by,cardW,cardH,()=>openVesselRegistration(i,false));
+      canvasMenuTarget(bx,by,cardW,cardH,()=>openVesselRegistration(i,false),{hover:()=>{
+        if(MENU_STATE.shipSel!==i){
+          MENU_STATE.shipSel=i;
+          drawMenuScreen();
+        }
+      }});
       ctx.fillStyle = isSel ? '#0e1a2e' : '#080810';
       ctx.fillRect(bx,by,cardW,cardH);
       ctx.strokeStyle = isSel ? s.col : '#2a2a4a';
@@ -35600,35 +35605,37 @@ function drawMenuScreen(){
     ctx.font='14px Courier New'; ctx.fillStyle='#556677';
     ctx.fillText('Hull type: '+cls.hullType, cx, 120);
 
-    function drawField(label, value, active, y){
+    function drawField(id, label, value, y){
+      const active = field===id;
       ctx.textAlign='left';
       ctx.font='13px Courier New'; ctx.fillStyle= active ? '#aaccee' : '#445566';
       ctx.fillText(label, cx-240, y);
-      const bx=cx-240, bw=480, bh=34;
+      const bx=cx-240, by=y+10, bw=480, bh=42;
       ctx.fillStyle = active ? '#0e1a2e' : '#080810';
-      ctx.fillRect(bx, y+8, bw, bh);
+      ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = active ? '#ffe066' : '#2a2a4a';
       ctx.lineWidth = active ? 2 : 1;
-      ctx.strokeRect(bx, y+8, bw, bh);
+      ctx.strokeRect(bx, by, bw, bh);
       ctx.font='bold 16px Courier New';
       ctx.fillStyle = active ? '#ffffff' : '#667788';
-      ctx.fillText(value + (active ? '█' : ''), bx+12, y+31);
+      ctx.fillText(value + (active ? '█' : ''), bx+12, by+27);
       ctx.textAlign='center';
+      canvasMenuTarget(bx,by,bw,bh,()=>{
+        MENU_STATE.namingField=id;
+        drawMenuScreen();
+      });
     }
 
-    drawField('Captain name:', capName,  field==='captain', 148);
-    drawField('Ship name:',    shipName, field==='ship',    220);
-    canvasMenuTarget(cx-240,156,480,34,()=>{ MENU_STATE.namingField='captain'; drawMenuScreen(); });
-    canvasMenuTarget(cx-240,228,480,34,()=>{ MENU_STATE.namingField='ship'; drawMenuScreen(); });
-    canvasMenuButton(field==='captain'?'Next [Enter]':'Launch [Enter]',cx+120,274,advanceVesselRegistration);
-    canvasMenuButton('Back [Esc]',cx-240,274,()=>handleMenuKey({key:'Escape'}));
+    drawField('captain', 'Captain name:', capName, 160);
+    drawField('ship', 'Ship name:', shipName, 244);
 
-    // Hint
-    ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
+    ctx.font='14px Courier New'; ctx.fillStyle='#8899aa'; ctx.textAlign='center';
     const hint = field==='captain'
       ? 'Type your captain\'s name, then press Enter'
       : 'Christen your ship, then press Enter to launch';
-    ctx.fillText(hint, cx, 300);
+    ctx.fillText(hint, cx, 332);
+    canvasMenuButton('Back [Esc]',cx-240,356,()=>handleMenuKey({key:'Escape'}));
+    canvasMenuButton(field==='captain'?'Next [Enter]':'Launch [Enter]',cx+120,356,advanceVesselRegistration);
     return;
   }
 

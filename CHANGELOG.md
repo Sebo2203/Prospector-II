@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — 0.28 experimental.20 polishes ship registration
+
+Released on `experiment/expedition-legacy`.
+
+- Spaced the captain and ship name fields, gave the instructions a separate line above the buttons, and increased their contrast. Ship selection now highlights the card under the pointer using the same selection as the arrow keys.
+- The build, all 47 repository tests, and four headless Edge suites passed. Verified the ship highlight and mixed mouse and keyboard input, and inspected the registration screen at a scaled viewport. Existing saves require no migration.
+
 ## 2026-11-05 — 0.28 experimental.19 adds mouse and keyboard menu controls
 
 Released on `experiment/expedition-legacy`.

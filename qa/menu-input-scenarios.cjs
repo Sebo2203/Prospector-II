@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const {chromium,gameUrl} = require('./runtime.cjs');
+const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
 
 (async()=>{
   const browser = await chromium.launch({headless:true});
@@ -47,12 +47,25 @@ const {chromium,gameUrl} = require('./runtime.cjs');
     });
     await click(...begin);
     assert.equal(await menuScreen(),'ship_select');
+    await page.mouse.move(...await point(1010,160));
+    assert.equal(await page.evaluate(()=>MENU_STATE.shipSel),2);
+    assert.deepEqual(await page.evaluate(()=>Array.from(ctx.getImageData(880,292,1,1).data)),[14,26,46,255]);
+    await press('ArrowLeft');
+    assert.equal(await page.evaluate(()=>MENU_STATE.shipSel),1);
+    await page.mouse.move(...await point(390,160));
+    assert.equal(await page.evaluate(()=>MENU_STATE.shipSel),0);
+    assert.equal(await menuScreen(),'ship_select');
+    await press('Enter');
+    assert.equal(await page.evaluate(()=>MENU_STATE.chosenClass),'LIGHT_SCOUT');
+    await press('Escape');
+    assert.equal(await menuScreen(),'ship_select');
     await click(700,160);
     assert.equal(await menuScreen(),'naming');
+    await game.screenshot({path:artifactPath('Vessel-registration.png')});
     await page.keyboard.type('Pointer QA');
-    await click(857,284);
+    await click(857,367);
     await page.keyboard.type('Menu Ship');
-    await click(857,284);
+    await click(857,367);
     await page.waitForFunction(()=>G?.galaxy && G.log.some(entry=>entry.msg.includes('Ready for departure')));
     assert.deepEqual(await page.evaluate(()=>[G.shipStats.classId,G.shipName]),['BULK_FREIGHTER','Menu Ship']);
 
