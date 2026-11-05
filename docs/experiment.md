@@ -4,7 +4,7 @@ These rules apply to the active experimental build. [Download instructions](../R
 
 ## Controls
 
-Use the keyboard to move, target, fire, and pick things up. The HUD compass also moves or waits during normal play. In menus, click choices or use the displayed keys. Use **I** or the HUD Inventory button to open the inventory, crew, ship, and log tabs. Select cargo and press **X**, or click its slot, to open the same details. Hover gives a quick preview.
+Use the keyboard to move, target, fire, and pick things up. The HUD compass also moves or waits during normal play. The gray shortcut legend is a keyboard reference. Press **I** to open the inventory, crew, ship, and log tabs, or **O** to open Options. In menus, click choices or use the displayed keys. Select cargo and press **X**, or click its slot, to open the same details. Hover gives a quick preview.
 
 ## Crew at a glance
 

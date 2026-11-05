@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — 0.28 experimental.21 restores the gray shortcut legend
+
+Released on `experiment/expedition-legacy`.
+
+- Returned the bottom shortcut legend to muted static text and removed the Inventory and Options buttons added there in experimental.19. Open these menus with **I** and **O**. Menu choices support mouse and keyboard.
+- The build, all 47 repository tests, and the menu-input, interface, and version browser suites passed. Verified that the legend retains its color on hover and clicks leave gameplay state alone. The barter resize check now waits for the scale update and measures both bounds together. Existing saves require no migration.
+
 ## 2026-11-05 — 0.28 experimental.20 polishes ship registration
 
 Released on `experiment/expedition-legacy`.

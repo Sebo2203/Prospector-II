@@ -94,7 +94,18 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await page.evaluate(()=>G.dialogue.node),'threats');
     await press('Escape');
 
-    await page.locator('#options-menu-btn').click();
+    const legend=page.locator('#persist-hints');
+    assert.equal(await legend.locator('button,a,[tabindex],[onclick]').count(),0);
+    for(const key of ['I','O']){
+      const label=legend.locator('.ck').filter({hasText:new RegExp('^'+key+'$')});
+      const color=await label.evaluate(el=>getComputedStyle(el).color);
+      await label.hover();
+      assert.equal(await label.evaluate(el=>getComputedStyle(el).color),color);
+      await label.click();
+      assert.equal(await mode(),'galaxy');
+      assert.equal(await page.evaluate(()=>!!G.showOptions),false);
+    }
+    await press('o');
     assert.equal(await page.evaluate(()=>G.showOptions),true);
     await click(480,211);
     assert.equal(await page.evaluate(()=>G._kbScreen),true);
@@ -111,7 +122,7 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
       ];
       renderAll();
     });
-    await page.locator('#inventory-menu-btn').click();
+    await press('i');
     await click(420,20);
     assert.equal(await page.evaluate(()=>G._viewTab),'crew');
     await click(125,130);

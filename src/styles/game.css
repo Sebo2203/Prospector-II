@@ -410,7 +410,6 @@ canvas {
   cursor: pointer;
 }
 .hud-menu-btn:hover, .hud-menu-btn:focus-visible { border-color: #aaddff; }
-.hud-menu-btn:disabled { opacity: 0.45; cursor: default; }
 #persist-hints {
   flex: 1;
   min-width: 0;

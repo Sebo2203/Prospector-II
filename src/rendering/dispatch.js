@@ -12,8 +12,6 @@ function renderAll(){
   checkAlarms();
   scheduleAutoSave();
   renderAutosaveStatus();
-  document.getElementById('inventory-menu-btn').disabled = !canToggleInventoryMenu();
-  document.getElementById('options-menu-btn').disabled = G.dead || G.retired;
 }
 
 function drawCanvas(){

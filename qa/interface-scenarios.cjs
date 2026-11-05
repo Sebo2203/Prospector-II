@@ -268,11 +268,17 @@ const assert = require('node:assert/strict');
 
     for(const viewport of [{width: 800, height: 600}, {width: 1400, height: 720}, {width: 2560, height: 1440}]){
       await page.setViewportSize(viewport);
-      const bounds = await panel.boundingBox();
-      const root = await page.locator('#root').boundingBox();
-      assert.ok(bounds && bounds.x >= root.x && bounds.y >= root.y &&
-        bounds.x + bounds.width <= root.x + root.width && bounds.y + bounds.height <= root.y + root.height,
-      'barter stays inside the scaled game at '+viewport.width+'×'+viewport.height);
+      await page.waitForFunction(({width,height})=>{
+        const scale=Math.min(width/GAME_W,height/GAME_H);
+        return Math.abs(document.getElementById('root').getBoundingClientRect().width-GAME_W*scale)<1;
+      },viewport);
+      const fits = await panel.evaluate(el=>{
+        const bounds=el.getBoundingClientRect();
+        const root=document.getElementById('root').getBoundingClientRect();
+        return bounds.width>0 && bounds.height>0 && bounds.left>=root.left && bounds.top>=root.top &&
+          bounds.right<=root.right && bounds.bottom<=root.bottom;
+      });
+      assert.ok(fits,'barter stays inside the scaled game at '+viewport.width+'×'+viewport.height);
       assert.equal(await panel.evaluate(el => el.scrollWidth > el.clientWidth), false);
     }
     await page.setViewportSize({width: 1400, height: 720});
