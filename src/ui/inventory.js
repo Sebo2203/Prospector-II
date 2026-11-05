@@ -525,7 +525,7 @@ function drawInventoryOverlay(){
     // ── LOG tab ──────────────────────────────────────────────────────
     // Filter buttons
     const FILTERS = LOG_FILTERS;
-    if(!FILTERS.some(filter=>filter.id===G._logFilter)) G._logFilter = 'all';
+    if(!FILTERS.some(filter=>filter.id===G._logFilter)) G._logFilter = 'records';
 
     // Draw filter buttons
     const fBtnW = 90, fBtnH = 22, fBtnGap = 6;
@@ -613,9 +613,11 @@ function drawInventoryOverlay(){
       return true;
     }
 
+    const records = G._logFilter==='records';
     const allEntries = gameLogEntries(G._logFilter);
+    const entries = records ? allEntries : allEntries.filter(e=>logMatchesFilter(e,G._logFilter)).reverse();
     ctx.font='12px Courier New';
-    const filtered = wrapGameLog(allEntries.filter(e=>logMatchesFilter(e, G._logFilter)).slice().reverse(),
+    const filtered = wrapGameLog(entries,
       cw-48-62-16,text=>ctx.measureText(text).width);
 
     // Scrollable list
@@ -624,8 +626,8 @@ function drawInventoryOverlay(){
     const rowH = 20;
     const visRows = Math.floor((listBottom - listTop) / rowH);
     const maxScroll = Math.max(0, filtered.length - visRows);
-    // Default to bottom (newest) on first open; Infinity gets clamped to maxScroll
-    if(G._logScroll === undefined || G._logScroll === Infinity) G._logScroll = maxScroll;
+    // Records starts at its active work. History opens on the latest entries.
+    if(G._logScroll === undefined || G._logScroll === Infinity) G._logScroll = records ? 0 : maxScroll;
     G._logScroll = Math.max(0, Math.min(G._logScroll, maxScroll));
 
     if(!filtered.length){
@@ -645,9 +647,9 @@ function drawInventoryOverlay(){
         const turnStr = '[T'+String(entry.turn||1).padStart(4,' ')+']';
         ctx.font = '11px Courier New';
         ctx.fillStyle = '#334455';
-        if(!entry.continuation) ctx.fillText(turnStr, 48, ey+14);
+        if(!entry.continuation && !entry.heading) ctx.fillText(turnStr, 48, ey+14);
         // Message
-        ctx.font = '12px Courier New';
+        ctx.font = (entry.heading?'bold ':'')+'12px Courier New';
         ctx.fillStyle = col;
         ctx.fillText(entry.msg, 48+62, ey+14);
       });

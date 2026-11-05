@@ -93,6 +93,40 @@ function quarantineNearSurvivor(){
     hasPlanetLOS(pd,G.player.x,G.player.y,s.x,s.y))
     .sort((a,b)=>(Math.abs(a.x-G.player.x)+Math.abs(a.y-G.player.y))-(Math.abs(b.x-G.player.x)+Math.abs(b.y-G.player.y)))[0] || null;
 }
+
+function quarantineAdjacentHatch(pd,x,y){
+  return [[0,-1],[1,0],[0,1],[-1,0]]
+    .map(([dx,dy])=>pd.grid[y+dy]?.[x+dx])
+    .find(cell=>cell?.type==='q_door'||cell?.type==='q_sealed_door');
+}
+
+function quarantineEnterLabel(pd,cell,person){
+  const q=G.expedition.quarantine;
+  switch(cell?.type){
+    case 'SHIP': return 'Transfer passengers';
+    case 'q_log': return 'Read bridge terminal';
+    case 'q_medical': return cell.looted?'':'Search medical locker';
+    case 'q_pods': return cell.looted?'':'Collect isolation pods';
+    case 'q_parts': return cell.looted?'':'Retrieve pump coupling';
+    case 'q_salvage':
+      return !cell.looted && G.cargo.length<(G.shipStats?.cargoCapacity??1)?'Load salvage':'';
+    case 'q_life_support':
+      if(q.repaired) return 'Check life support';
+      if(G.inventory.some(item=>item.usable==='quarantine_coupling'||item.usable==='repair_kit')) return 'Repair life support';
+      return quarantineCrewSkill('eng')>=3?'Rewire pump bypass':'';
+    case 'q_filter': return q.filtered?'Check scrubber':'Reconnect scrubber';
+  }
+  const hatch=quarantineAdjacentHatch(pd,G.player.x,G.player.y);
+  if(hatch) return hatch.type==='q_sealed_door'?'Open ward hatch':'Open pressure hatch';
+  if(!person) return '';
+  if(person.status==='carried') return 'Set down '+person.name;
+  if(person.status==='following') return 'Ask '+person.name+' to wait';
+  if(person.injured || person.pod){
+    const twoCarriers=G.crew.filter(c=>c.hp>0).length>=2;
+    return twoCarriers && !quarantinePeople().some(s=>s.status==='carried')?'Carry '+person.name:'';
+  }
+  return 'Ask '+person.name+' to follow';
+}
 function discoverQuarantinePeople(){
   if(!quarantineInterior()) return;
   for(const s of quarantinePeople()){
@@ -209,7 +243,7 @@ function interactQuarantine(){
     addLog('At your airlock. [L] departs. Emergency passenger capacity: '+quarantineBerths()+'. Isolation pods use cargo space.','li');
     renderAll(); return true;
   } else {
-    const door=[[0,-1],[1,0],[0,1],[-1,0]].map(([dx,dy])=>pd.grid[y+dy]?.[x+dx]).find(c=>['q_door','q_sealed_door'].includes(c?.type));
+    const door=quarantineAdjacentHatch(pd,x,y);
     const survivor=quarantineNearSurvivor();
     if(door){
       const sealed=door.type==='q_sealed_door';door.type='q_open_door';

@@ -58,6 +58,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 
 | Suite | Coverage |
 | --- | --- |
+| `interface` | Actionable banners versus ordinary sidebar messages, Mercy action hints and pump examination, keyboard barter with long lists at three window sizes |
 | `stations` | Station/wreck alpha, background preservation, native derelict/Mercy render and boarding paths, ASCII and career restoration |
 | `version` | Version labels, main menu keyboard and mouse navigation with and without a save, and retired changelog shortcut |
 | `palette` | Runtime catalog coverage, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |
@@ -67,7 +68,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `encounters` | One hidden Mercy at generation, seeded repeatability, sensor-only detection, no exploration spawns, save/load and explicit debug boarding |
 | `rescue` | 15 spatial Mercy rescue scenarios using real door, movement, medicine, carrying, transport and handoff actions |
 | `career` | 54 fixture-assisted renewable contract completions across three hulls, station sales, provenance, reloads and physical research-console recovery |
-| `log` | Removed journal controls, integrated LOG filters, hidden knowledge, wrapping/deduplication and legacy UI cleanup |
+| `log` | Removed journal controls, integrated LOG filters, active work first in Records, hidden knowledge, wrapping/deduplication and legacy UI cleanup |
 | `autosave` | Actual IndexedDB failure/recovery, large saves/reload, stale windows, import/export and save-before-transition behavior |
 
 `fixtures/palette-orbit-baseline.js` is the original `src/rendering/system.js` from gameplay commit `826210e`, before the shared body-art extraction. It is a visual regression reference, not production code. Do not regenerate it from current code just to make a comparison pass.

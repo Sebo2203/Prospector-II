@@ -1325,6 +1325,77 @@ canvas {
   margin: 8px 4px 0 0; padding: 5px 9px;
   background: #161b24; border: 1px solid #887755; color: #ffe0aa; cursor: pointer;
 }
+
+
+/* Barter lives in the same coordinate space as the scaled game root. */
+#barter-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 998;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.45);
+}
+#barter-panel {
+  width: min(720px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #08080f;
+  border: 2px solid #ffe066;
+  border-radius: 4px;
+  outline: none;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.barter-header, .barter-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 16px;
+}
+.barter-header {
+  justify-content: space-between;
+  background: #100c02;
+  border-bottom: 1px solid #3a3000;
+}
+.barter-footer {
+  background: #0a0a10;
+  border-top: 1px solid #1e1e2e;
+}
+.barter-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  height: 320px;
+  min-height: 0;
+}
+.barter-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.barter-list {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.barter-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+.barter-summary {
+  max-height: 4.5em;
+  overflow-y: auto;
+  color: #888;
+  font-size: 12px;
+  font-style: italic;
+}
 </style>
 </head>
 <body>
@@ -1459,13 +1530,13 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.15</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.16</span></div>
 
   <!-- Barter overlay -->
-  <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
-    <div id="barter-panel" style="background:#08080f;border:2px solid #ffe066;border-radius:4px;width:700px;max-width:96vw;font-family:'Courier New',monospace;outline:none;">
+  <div id="barter-overlay">
+    <div id="barter-panel" tabindex="-1">
       <!-- Header -->
-      <div style="background:#100c02;border-bottom:1px solid #3a3000;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+      <div class="barter-header">
         <div>
           <div id="barter-title" style="font-size:15px;font-weight:bold;color:#ffe066;">Barter Exchange</div>
           <div id="barter-subtitle" style="font-size:11px;color:#667788;margin-top:2px;"></div>
@@ -1473,32 +1544,32 @@ canvas {
         <div style="font-size:11px;color:#445566;">↑↓ move · ←→ switch side · Enter toggle · Tab confirm · Esc close</div>
       </div>
       <!-- Two column layout -->
-      <div style="display:flex;gap:0;height:320px;">
+      <div class="barter-columns">
         <!-- Left: your inventory -->
-        <div style="flex:1;border-right:1px solid #1e1e2e;display:flex;flex-direction:column;">
+        <div class="barter-column" style="border-right:1px solid #1e1e2e;">
           <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
             <span style="color:#70d8ff;">Your Offer</span>
           </div>
-          <div id="barter-player-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div id="barter-player-list" class="barter-list"></div>
           <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
             <div style="font-size:10px;color:#445566;margin-bottom:2px;">OFFERING</div>
-            <div id="barter-offer-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+            <div id="barter-offer-summary" class="barter-summary">— nothing —</div>
           </div>
         </div>
         <!-- Right: civ stock -->
-        <div style="flex:1;display:flex;flex-direction:column;">
+        <div class="barter-column">
           <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
             <span style="color:#90f0a0;">Their Goods</span>
           </div>
-          <div id="barter-civ-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div id="barter-civ-list" class="barter-list"></div>
           <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
             <div style="font-size:10px;color:#445566;margin-bottom:2px;">REQUESTING</div>
-            <div id="barter-want-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+            <div id="barter-want-summary" class="barter-summary">— nothing —</div>
           </div>
         </div>
       </div>
       <!-- Footer -->
-      <div style="background:#0a0a10;border-top:1px solid #1e1e2e;padding:8px 16px;display:flex;align-items:center;gap:12px;">
+      <div class="barter-footer">
         <div id="barter-value-info" style="flex:1;font-size:12px;color:#667788;"></div>
         <div id="barter-confirm-hint" style="font-size:12px;color:#445566;">[Tab] Confirm Trade</div>
       </div>
@@ -1516,8 +1587,8 @@ canvas {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.15';
-const GAME_VERSION_LABEL = 'v0.28 experimental.15';
+const GAME_VERSION = '0.28.0-experimental.16';
+const GAME_VERSION_LABEL = 'v0.28 experimental.16';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -1640,31 +1711,60 @@ function adjustLogFont(delta){
   document.documentElement.style.setProperty('--log-font', _logFontSize+'px');
 }
 
-// ── Message bar with auto-dismiss ────────────────────────────
-let _msgTimer = null;
-let _msgTurn = -1;
-function showMsg(text, color, persist){
-  const bar  = document.getElementById('msg-bar');
-  const span = document.getElementById('msg-bar-text');
-  if(!text){ hideMsg(); return; }
-  span.textContent = text;
-  bar.style.color = color || '';
-  bar.classList.add('visible');
-  if(_msgTimer){ clearTimeout(_msgTimer); _msgTimer = null; }
-  _msgTurn = persist ? -1 : (G ? G.turn : -1);
-}
-function checkMsgDismiss(){
-  // Called each turn — dismiss if 4 turns have passed since the message
-  if(_msgTurn >= 0 && G && G.turn >= _msgTurn + 4) hideMsg();
-}
-function hideMsg(){
-  if(_msgTimer){ clearTimeout(_msgTimer); _msgTimer = null; }
-  _msgTurn = -1;
+// The full-width banner is driven by current, actionable emergencies.
+// Routine dialogue, discoveries and log entries stay in the sidebar and LOG.
+function showMsg(text, color){
   const bar = document.getElementById('msg-bar');
-  bar.classList.remove('visible');
+  const span = document.getElementById('msg-bar-text');
+  if(span.textContent!==text) span.textContent = text;
+  bar.style.color = color;
+  bar.classList.add('visible');
 }
+
+function hideMsg(){
+  document.getElementById('msg-bar').classList.remove('visible');
+}
+
 function dismissMsg(){ hideMsg(); if(G) G.msg=''; }
 
+function renderCriticalBanner(){
+  if(!G || G.dead || G.retired){ hideMsg(); return; }
+  if(G.stranded){
+    if(G.stranded.rescuePhase==='offer') showMsg('⚡ RESCUE OFFERED — [Y] Accept  [N] Decline','#44ff88');
+    else showMsg('⚠ STRANDED — Crew suffocating. [T] SOS beacon.','#ff4400');
+    return;
+  }
+
+  const mode=G.mode==='inventory'?G._prevMode:G.mode;
+  if(mode==='planet'){
+    const armed=(G.inventory||[]).filter(item=>item?.usable==='c4' && item._armed);
+    if(armed.length){
+      const fuse=Math.min(...armed.map(item=>item._c4Timer));
+      showMsg('⚠ C4 ARMED — '+fuse+' turn'+(fuse===1?'':'s')+' left. Select it in inventory, drop [D] and move clear.','#ff3300');
+      return;
+    }
+    const grid=G.planets[G.curPlanet]?.grid;
+    const {x,y}=G.player;
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      const imminent=grid?.[y+dy]?.[x+dx]?.drops?.some(item=>item?.usable==='c4' && item._armed && item._c4Timer<=2);
+      if(imminent){ showMsg('⚠ C4 NEARBY — move clear of the blast now.','#ff3300'); return; }
+    }
+    if(G.oxygen<=25 && !DEBUG.infiniteOxy && grid?.[y]?.[x]?.type!=='SHIP' &&
+       (atmosphereBiome(G.curPlanet).oxyDrain>0 || G.underwater)){
+      showMsg(G.underwater?'⚠ OXYGEN CRITICAL — surface now [Z]!':'⚠ OXYGEN CRITICAL — return to your ship now!','#ff3300');
+      return;
+    }
+  }
+  if(mode==='galaxy' && (G.blackHoles||[]).some(hole=>Math.abs(hole.x-G.ship.x)+Math.abs(hole.y-G.ship.y)===1)){
+    showMsg('⚠ SINGULARITY ADJACENT — steer away from the black hole.','#ff3300');
+    return;
+  }
+  if((mode==='galaxy'||mode==='system') && G.fuel>0 && G.fuel/G.maxFuel<=0.25){
+    showMsg('⚠ FUEL CRITICAL — return to Starbase immediately!','#ff3300');
+    return;
+  }
+  hideMsg();
+}
 // ── Sprite data (base64 PNG, 24×24, some extracted from original Prospector) ──
 const SPRITES_B64 = {
   player_pawn: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAC/UlEQVR4nLWUTUhUURiG36tSjuB0z0EUs00wm34m8moGbXQztGihi1a1kxrbCJKthnAluMkg2yRB2MokwgJnZQgOzSJHnelmxODVa0Q/dxhmZIS5TsK8LaRhpvkt6oW7uN/fc853vnOA/yzlD2L5N/m1AiiEgNPpzBlSqRSSyWTVGg01AuB0OuFyuXL/hmH8AlRUXa0Al8uFhVsDMAwDC7cGCmD/Qtye8rFh7Ai5OMuGsSPcnvIRpc+lQDW36OQpN/Z2JwEAe+5JNKotNeVVBQghmEwmYX58j5uv3ubsj/sv5vv/ZBoLiwshuPYEFELQHO2n/fwhzdH+ArsQomqrSkqqkjs7n2iaJjVNyxUTQlDTNJqmyY2NDUpVlgWUbZEQguFIBACgKPVYXl5Gb29vzj8yMoK6uno0NztBpfwGygIUKqhX6tHYdBTptI1UKoVAIIB4PI5sNgvDMKAoCpqaHJicvI87t0eZ2E0UnUVZABVic2sTbvdZPHs2i9Odlwr8360UIpFZDA4OoqfnQsVdFEmqkp8/faFtZxgKhXjX4+HC4hvatp37rl6/wYkrVxgKhWjbGQ4PD5c8i5I3mQrR0tqCpaXXGB8fxzGHo+RCjjkcmJ+fBwB0dmolY4paJFXJb18tbG5FYVkxBAIB3FtZwYNHTzEzM1MQ65mYwNzcHLa2NtHW1lqlL3mAjH1An89HKSWlKrm/v0+S1HWd169do67rJMl4PE6pSvp8Pmbsg4rjWgSx7Qylegjw+/2MRqPUdZ2aplHXdUajUfr9fubH1tQiAEjsJpSO9nYmdhOKVCUtKwb+2Me79x8AAP6XL+F2n0EsmQIAdLS3o9SIAhWe6/yEcHgdfZ7LON/VhZ3tHZzr6kKf5zLC4fWi2JoB+QoGg0in07CsGADAsmJIp9MIBoNVcyu+plKVnJ6eRnd3NyLrEYTXDlccXlvHieMdePH8BVZXVzE0NFTyFleVVCWZJZklvV4vpZQUQlBKSa/Xm/NVmp6q1Pzk/FWWs/+un/DTnloyA279AAAAAElFTkSuQmCC",
@@ -4988,6 +5088,40 @@ function quarantineNearSurvivor(){
     hasPlanetLOS(pd,G.player.x,G.player.y,s.x,s.y))
     .sort((a,b)=>(Math.abs(a.x-G.player.x)+Math.abs(a.y-G.player.y))-(Math.abs(b.x-G.player.x)+Math.abs(b.y-G.player.y)))[0] || null;
 }
+
+function quarantineAdjacentHatch(pd,x,y){
+  return [[0,-1],[1,0],[0,1],[-1,0]]
+    .map(([dx,dy])=>pd.grid[y+dy]?.[x+dx])
+    .find(cell=>cell?.type==='q_door'||cell?.type==='q_sealed_door');
+}
+
+function quarantineEnterLabel(pd,cell,person){
+  const q=G.expedition.quarantine;
+  switch(cell?.type){
+    case 'SHIP': return 'Transfer passengers';
+    case 'q_log': return 'Read bridge terminal';
+    case 'q_medical': return cell.looted?'':'Search medical locker';
+    case 'q_pods': return cell.looted?'':'Collect isolation pods';
+    case 'q_parts': return cell.looted?'':'Retrieve pump coupling';
+    case 'q_salvage':
+      return !cell.looted && G.cargo.length<(G.shipStats?.cargoCapacity??1)?'Load salvage':'';
+    case 'q_life_support':
+      if(q.repaired) return 'Check life support';
+      if(G.inventory.some(item=>item.usable==='quarantine_coupling'||item.usable==='repair_kit')) return 'Repair life support';
+      return quarantineCrewSkill('eng')>=3?'Rewire pump bypass':'';
+    case 'q_filter': return q.filtered?'Check scrubber':'Reconnect scrubber';
+  }
+  const hatch=quarantineAdjacentHatch(pd,G.player.x,G.player.y);
+  if(hatch) return hatch.type==='q_sealed_door'?'Open ward hatch':'Open pressure hatch';
+  if(!person) return '';
+  if(person.status==='carried') return 'Set down '+person.name;
+  if(person.status==='following') return 'Ask '+person.name+' to wait';
+  if(person.injured || person.pod){
+    const twoCarriers=G.crew.filter(c=>c.hp>0).length>=2;
+    return twoCarriers && !quarantinePeople().some(s=>s.status==='carried')?'Carry '+person.name:'';
+  }
+  return 'Ask '+person.name+' to follow';
+}
 function discoverQuarantinePeople(){
   if(!quarantineInterior()) return;
   for(const s of quarantinePeople()){
@@ -5104,7 +5238,7 @@ function interactQuarantine(){
     addLog('At your airlock. [L] departs. Emergency passenger capacity: '+quarantineBerths()+'. Isolation pods use cargo space.','li');
     renderAll(); return true;
   } else {
-    const door=[[0,-1],[1,0],[0,1],[-1,0]].map(([dx,dy])=>pd.grid[y+dy]?.[x+dx]).find(c=>['q_door','q_sealed_door'].includes(c?.type));
+    const door=quarantineAdjacentHatch(pd,x,y);
     const survivor=quarantineNearSurvivor();
     if(door){
       const sealed=door.type==='q_sealed_door';door.type='q_open_door';
@@ -5358,34 +5492,40 @@ function careerLogEntries(){
 }
 
 function currentLogRecords(){
-  const state=ensureExpeditionState(),rows=[];
-  const add=msg=>rows.push({msg,turn:G.turn,cls:'li'});
-  add('CURRENT RECORDS — Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
+  const state=ensureExpeditionState(),active=[],rows=[];
+  const record=msg=>({msg,turn:G.turn,cls:'li'});
+  const add=msg=>rows.push(record(msg));
+  const addActive=msg=>active.push(record(msg));
   const science=ensureScienceJobState();
   if(science.active){
     const job=science.active;
-    add('SCIENCE CONTRACT: '+scienceJobDetail()+'.');
-    if(job.target?.reportedX!==undefined) add('Last reported sector: '+(job.target.reportedX+1)+','+(job.target.reportedY+1)+'. Position may have drifted.');
-    if(job.targetStation) add('Delivery destination: '+job.targetStation+'.');
-    if(job.target?.planetName) add('Reported world: '+job.target.planetName+' in '+job.target.systemName+'.');
+    addActive('SCIENCE CONTRACT: '+scienceJobDetail()+'.');
+    if(job.target?.reportedX!==undefined) addActive('Last reported sector: '+(job.target.reportedX+1)+','+(job.target.reportedY+1)+'. Position may have drifted.');
+    if(job.targetStation) addActive('Delivery destination: '+job.targetStation+'.');
+    if(job.target?.planetName) addActive('Reported world: '+job.target.planetName+' in '+job.target.systemName+'.');
     if(job.required){
       const name=job.type==='biodata'?'Biodata Sample':'Alien Corpse';
-      add('Required specimens: '+countInventoryByName(name)+' / '+job.required+'.');
+      addActive('Required specimens: '+countInventoryByName(name)+' / '+job.required+'.');
     }
-    add('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
+    addActive('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
   } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
   const incident=state.quarantine;
   if(incident && incident.discovered!==false){
-    add('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
+    const addIncident=incident.status==='closed'||incident.choice ? add : addActive;
+    addIncident('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
       incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.':
       'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));
     if(incident.version===2) for(const person of incident.survivors){
       if(!person.met && !incident.rosterKnown) continue;
       const known=['onboard','delivered','lost'].includes(person.status)?person.status:
         person.seenCondition || (person.met?'last seen aboard the wreck':'listed in the bridge roster; not located');
-      add(person.name+' — '+known+(person.status==='onboard'&&person.pod?' — isolated in cargo':''));
+      addIncident(person.name+' — '+known+(person.status==='onboard'&&person.pod?' — isolated in cargo':''));
     }
   }
+  if((G.cargo||[]).some(item=>item.questItem==='mystery_delivery')){
+    addActive('PACKAGE DELIVERY: Take the mysterious package to Waypoint Omega for 300 cr.');
+  }
+  add('Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
   const keys=new Set([...Object.keys(state.surveys),...Object.keys(G.planets||{})]);
   for(const key of keys){
     const finding=state.surveys[key],pd=G.planets?.[key];
@@ -5404,9 +5544,12 @@ function currentLogRecords(){
     add('CONTACT: '+findBodyNameByKey(key)+' — '+civ.tierLabel+' '+civ.species+' — '+
       civRelationLabel(civ.state)+' ('+civ.state.relation+'); '+civAlertLabel(civ.state)+'.');
   }
-  // Newest-first, as expected by the existing log renderer. The current
-  // reference summary follows chronological history at the bottom of the view.
-  return [...rows.reverse(),...careerLogEntries()];
+  const history=careerLogEntries().reverse();
+  return [
+    ...(active.length ? [{msg:'ACTIVE WORK & LEADS',cls:'ll',heading:true},...active] : []),
+    {msg:'OTHER RECORDS',cls:'ll',heading:true},...rows,
+    ...(history.length ? [{msg:'HISTORY',cls:'ll',heading:true},...history] : []),
+  ];
 }
 
 function gameLogEntries(filter){
@@ -13094,37 +13237,8 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderGalaxyMinimap();
-  // Persistent danger status overrides normal msg when relevant
-  if(G && !G.dead && !G.retired){
-    if(G.stranded){
-      const st = G.stranded;
-      if(st.rescuePhase==='offer'){
-        showMsg('⚡ RESCUE OFFERED — [Y] Accept  [N] Decline', '#44ff88', true);
-      } else {
-        showMsg('⚠ STRANDED — Crew suffocating. [T] SOS beacon. Move key = wait.', '#ff4400', true);
-      }
-    } else if(G.mode==='planet' && G.oxygen<=25 && G.oxygen>0 &&
-              ((BIOMES[atmosphereBiomeKey(G.curPlanet)]?.oxyDrain ?? 1.5)>0 || G.underwater)){
-      showMsg('⚠ OXYGEN CRITICAL — surface or return to ship!', '#ff3300', true);
-    } else if(G.mode==='planet' && G.oxygen<=50 &&
-              ((BIOMES[atmosphereBiomeKey(G.curPlanet)]?.oxyDrain ?? 1.5)>0 || G.underwater)){
-      showMsg('⚠ Oxygen low — head back to ship.', '#ffaa00', true);
-    } else if((G.mode==='galaxy'||G.mode==='system') && G.fuel/G.maxFuel<=0.25 && G.fuel>0){
-      showMsg('⚠ FUEL CRITICAL — return to Starbase immediately!', '#ff3300', true);
-    } else if((G.mode==='galaxy'||G.mode==='system') && G.fuel/G.maxFuel<=0.5){
-      showMsg('⚠ Fuel below 50% — consider returning to Starbase.', '#ffaa00', true);
-    } else if(G.msg){
-      showMsg(G.msg, '');
-    } else {
-      hideMsg();
-    }
-  } else if(G && G.msg){
-    showMsg(G.msg, '');
-  } else {
-    hideMsg();
-  }
+  renderCriticalBanner();
   checkAlarms();
-  checkMsgDismiss();
   scheduleAutoSave();
   renderAutosaveStatus();
 }
@@ -17513,7 +17627,7 @@ function drawInventoryOverlay(){
     // ── LOG tab ──────────────────────────────────────────────────────
     // Filter buttons
     const FILTERS = LOG_FILTERS;
-    if(!FILTERS.some(filter=>filter.id===G._logFilter)) G._logFilter = 'all';
+    if(!FILTERS.some(filter=>filter.id===G._logFilter)) G._logFilter = 'records';
 
     // Draw filter buttons
     const fBtnW = 90, fBtnH = 22, fBtnGap = 6;
@@ -17601,9 +17715,11 @@ function drawInventoryOverlay(){
       return true;
     }
 
+    const records = G._logFilter==='records';
     const allEntries = gameLogEntries(G._logFilter);
+    const entries = records ? allEntries : allEntries.filter(e=>logMatchesFilter(e,G._logFilter)).reverse();
     ctx.font='12px Courier New';
-    const filtered = wrapGameLog(allEntries.filter(e=>logMatchesFilter(e, G._logFilter)).slice().reverse(),
+    const filtered = wrapGameLog(entries,
       cw-48-62-16,text=>ctx.measureText(text).width);
 
     // Scrollable list
@@ -17612,8 +17728,8 @@ function drawInventoryOverlay(){
     const rowH = 20;
     const visRows = Math.floor((listBottom - listTop) / rowH);
     const maxScroll = Math.max(0, filtered.length - visRows);
-    // Default to bottom (newest) on first open; Infinity gets clamped to maxScroll
-    if(G._logScroll === undefined || G._logScroll === Infinity) G._logScroll = maxScroll;
+    // Records starts at its active work. History opens on the latest entries.
+    if(G._logScroll === undefined || G._logScroll === Infinity) G._logScroll = records ? 0 : maxScroll;
     G._logScroll = Math.max(0, Math.min(G._logScroll, maxScroll));
 
     if(!filtered.length){
@@ -17633,9 +17749,9 @@ function drawInventoryOverlay(){
         const turnStr = '[T'+String(entry.turn||1).padStart(4,' ')+']';
         ctx.font = '11px Courier New';
         ctx.fillStyle = '#334455';
-        if(!entry.continuation) ctx.fillText(turnStr, 48, ey+14);
+        if(!entry.continuation && !entry.heading) ctx.fillText(turnStr, 48, ey+14);
         // Message
-        ctx.font = '12px Courier New';
+        ctx.font = (entry.heading?'bold ':'')+'12px Courier New';
         ctx.fillStyle = col;
         ctx.fillText(entry.msg, 48+62, ey+14);
       });
@@ -26931,14 +27047,28 @@ function renderContextBar(){
 
   // Helper: build a button string
   const btn = (key, label, cls='') =>
-    `<div class="ctx-btn ${cls}"><span class="ck">[${key}]</span> ${label}</div>`;
+    `<div class="ctx-btn ${cls}"><span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}</div>`;
 
   if(G.dead){
     btns.push(btn('Enter','Main Menu','info'));
 
+  } else if(BARTER.active){
+    btns.push(btn('↑/↓','Select goods','info'));
+    btns.push(btn('←/→','Switch side','info'));
+    if(BARTER.side==='player' && BARTER.playerItems.length){
+      btns.push(btn('Enter',BARTER.offered.has(BARTER.playerSel)?'Remove from offer':'Offer selected item','good'));
+    } else if(BARTER.side==='civ' && BARTER.civItems.length){
+      btns.push(btn('Enter',BARTER.wanted.has(BARTER.civSel)?'Remove from request':'Request selected good','good'));
+    }
+    btns.push(btn('ESC','Close barter','info'));
+
   } else if(G.dialogue){
     btns.push(btn('↑/↓','Select reply','info'));
-    btns.push(btn('Enter','Choose','good'));
+    const reply=dialogueVisibleOptions()[G.dialogue.sel||0];
+    if(reply && !reply.disabled){
+      const label=String(reply.label||'Choose reply');
+      btns.push(btn('Enter',label.length>60 ? label.slice(0,57)+'…' : label,'good'));
+    }
     btns.push(btn('1-9','Quick choose','info'));
     if(dialogueAllowsEscape()) btns.push(btn('ESC','Close dialogue','info'));
 
@@ -26986,19 +27116,39 @@ function renderContextBar(){
     if(G.stranded){
       const st = G.stranded;
       if(st.rescuePhase==='offer'){
-        btns.push(btn('Y','Accept rescue','good'));
+        btns.push(btn('Y / Enter','Accept rescue','good'));
         btns.push(btn('N','Decline','danger'));
       } else {
         btns.push(btn('Move key','Wait one turn (crew drain)','danger'));
         btns.push(btn('T', st.sos ? 'Disable SOS beacon' : 'Activate SOS beacon', st.sos?'danger':'good'));
       }
     } else {
-      if(cell.type==='BASE'){
+      const lootHere=(G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
+      const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
+      if(quarantineAtShip()){
+        btns.push(btn('Enter','Board Mercy of Dawn','good'));
+      } else if(lootHere){
+        const ss = G.shipStats || buildShipStats('LIGHT_SCOUT');
+        const cargoFull = (G.cargo||[]).length >= (ss.cargoCapacity||0);
+        if(!cargoFull) btns.push(btn('Enter','Collect Nebula Crystal','good'));
+        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Nebula Crystal here, cargo hold full</div>`);
+      } else if(cell.type==='BASE'){
         btns.push(btn('Enter','Dock at Starbase','good'));
       } else if(cell.type==='CASINO'){
         btns.push(btn('Enter','Dock at The Void Royale','good'));
       } else if(cell.type==='BLACK_HOLE'){
         btns.push(btn('!','WARNING: Singularity — entry is fatal','danger'));
+      } else if(cell.type==='PULSAR'){
+        btns.push(btn('Enter','Measure pulsar period','warn'));
+      } else if(cell.type==='ROGUE_PLANET'){
+        btns.push(btn('Enter','Enter rogue planet orbit','info'));
+      } else if(npcStrandedHere){
+        const label=npcStrandedHere.type==='alive'
+          ? 'Offer '+npcStrandedHere.fuelCost+' fuel to '+npcStrandedHere.name
+          : 'Board '+npcStrandedHere.name;
+        btns.push(btn('Enter',label,'info'));
+      } else if(cell.type==='DERELICT'){
+        btns.push(btn('Enter','Board '+cell.name,'good'));
       } else if(cell.type==='SYSTEM'){
         btns.push(btn('Enter','Enter orbit — '+cell.name,'info'));
       }
@@ -27006,34 +27156,15 @@ function renderContextBar(){
       if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
       const pirateNear = !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
       if(pirateNear) btns.push(btn('!','Pirate nearby: '+pirateNear.name,'danger'));
-      // Nebula loot at current tile
-      const lootHere = (G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
-      if(lootHere){
-        const ss2 = G.shipStats || buildShipStats('LIGHT_SCOUT');
-        const cargoFull = (G.cargo||[]).length >= (ss2.cargoCapacity||0);
-        if(!cargoFull) btns.push(btn('Enter','Collect Nebula Crystal','good'));
-        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Nebula Crystal here, cargo hold full</div>`);
-      }
       const neutralTarget = nearestNeutralTarget(1);
       if(neutralTarget) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
       // REP status removed from ctx bar
       const radioContact = nearestRadioContact();
       if(radioContact) btns.push(btn('H','Hail '+radioContact.name+' ('+neutralShipDistance(radioContact)+'u)','info'));
-      // NPC stranded ship on this tile
-      const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
-  if(npcStrandedHere){
-    if(npcStrandedHere.type==='alive')
-      btns.push(btn('Enter','Hail '+npcStrandedHere.name+' (stranded — needs fuel)','good'));
-    else if(npcStrandedHere.type==='research')
-      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (silent research vessel)','info'));
-    else
-      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (derelict)','info'));
-    // Tractor beam — tow dead derelict ships
-    const hasTractor = (G.installedModules||[]).includes('tractor_beam');
-    if(hasTractor && npcStrandedHere.type==='dead' && !G.towedShip){
-      btns.push(btn('T','Tow '+npcStrandedHere.name+' (tractor beam)','good'));
-    }
-  }
+      const hasTractor = (G.installedModules||[]).includes('tractor_beam');
+      if(hasTractor && npcStrandedHere?.type==='dead' && !G.towedShip){
+        btns.push(btn('T','Tow '+npcStrandedHere.name+' (tractor beam)','good'));
+      }
       // Show tow status if currently towing
       if(G.towedShip){
         btns.push(`<div class="ctx-btn" style="color:#cc88ff;border-color:#442266">⚓ Towing: ${G.towedShip.name} — dock at a station to sell  [X to release]</div>`);
@@ -27082,15 +27213,20 @@ function renderContextBar(){
     if(numP>1) btns.push(btn('1-'+numP,'Quick select'));
     if(scanState!=='full' && DEBUG.preScan !== 1) btns.push(btn('S','Scan (1 fuel)'));
     if(scanState==='full'||scanState==='partial'||DEBUG.preScan===1) btns.push(btn('V','View scan'));
-    if(isGasGiant && pDesc?.moons?.length && pDesc?.scanState==='full'){
-      if(G.selMoon>=0) btns.push(btn('Enter','Land on moon','good'));
-    } else if(!isGasGiant){
-      btns.push(btn('Enter','Land on planet','good'));
-    }
+    if(isGasGiant && G.selMoon>=0 && activeBody!==pDesc) btns.push(btn('Enter','Land on '+(activeBody.name||'moon'),'good'));
+    else if(pDesc && !isGasGiant) btns.push(btn('Enter','Land on '+(pDesc.name||'planet'),'good'));
     // Fuel scoop on gas giant
     const _hasScoopSys = (G.installedModules||[]).includes('fuel_scoop');
     if(_hasScoopSys && isGasGiant && G.fuel < G.maxFuel) btns.push(btn('U','Scoop gas giant fuel','good'));
     btns.push(btn('ESC','Leave system','info'));
+
+  } else if(G.mode==='scanview'){
+    const pdata=G.planets[G.scanViewKey];
+    btns.push(btn('Move','Select landing site','info'));
+    if(pdata && canLandAt(pdata,G.scanCursorX ?? pdata.spawnX,G.scanCursorY ?? pdata.spawnY)){
+      btns.push(btn('Enter','Land at selected site','good'));
+    }
+    btns.push(btn('ESC','Return to orbit','info'));
 
   } else if(G.mode==='planet'){
     const pdata = G.planets[G.curPlanet];
@@ -27098,12 +27234,11 @@ function renderContextBar(){
     const atShip = cell?.type==='SHIP';
     if(pdata?.isQuarantine){
       const person=quarantineNearSurvivor();
-      btns.push(btn('Enter',atShip?'Transfer passengers':'Operate / assist','good'));
+      const action=quarantineEnterLabel(pdata,cell,person);
+      if(action) btns.push(btn('Enter',action,'good'));
       if(person){btns.push(btn('T','Give medical care','info'));btns.push(btn('P','Deploy isolation pod','info'));}
-      if(cell?.type==='q_life_support') btns.push(btn('R','Manual pump','info'));
+      if(cell?.type==='q_life_support' && !G.expedition.quarantine.repaired) btns.push(btn('R','Work manual pump','info'));
       btns.push(btn('X','Examine','info'));
-      const q=G.expedition.quarantine;
-      if(q.rosterKnown) btns.push(btn('',q.repaired?'Life support stable':'Wreck air reserve: '+q.air,'warn'));
     }
     if(pdata?.isCasino){
       const labels={casino_host:'Talk to host',casino_info:'Read directory',casino_poker:'Play Void Poker',
@@ -27115,7 +27250,7 @@ function renderContextBar(){
 
     if(atShip){
       btns.push(btn('L','Lift off','info'));
-    } else {
+    } else if(!pdata?.isQuarantine){
       btns.push(btn('L','Lift off (go to ship first)',''));
     }
     if(civContact) btns.push(btn('T', civContact.local ? 'Talk to local' : 'Contact civilization','good'));
@@ -27162,7 +27297,8 @@ function renderContextBar(){
     const cas = G.casino || {};
     if(cas.screen==='main'){
       btns.push(btn('Up/Down','Select','info'));
-      btns.push(btn('Enter','Enter','good'));
+      const game=CASINO_GAMES[cas.sel||0];
+      if(game) btns.push(btn('Enter',game.label,'good'));
       btns.push(btn('ESC',G.planets[G.curPlanet]?.isCasino?'Return to floor':'Undock','info'));
     } else if(cas.screen==='poker'){
       if(cas.poker && cas.poker.phase==='hold') btns.push(btn('1-5','Hold cards','info'));
@@ -27195,15 +27331,34 @@ function renderContextBar(){
       }
     }
 
+  } else if(G.mode==='radio'){
+    const action=radioTradeRows()[G.radio?.sel||0];
+    btns.push(btn('↑↓','Select trade','info'));
+    if(action && !action.disabled) btns.push(btn('Enter',action.label,'good'));
+    btns.push(btn('ESC','Close channel','info'));
+
   } else if(G.mode==='base'){
     const b = G.base;
-    if(b.screen==='main'){
+    const building=STATION_BUILDINGS[b.sel];
+    if(b.confirm==='retire'){
+      btns.push(btn('Enter','Confirm retirement','warn'));
+      btns.push(btn('ESC','Cancel','info'));
+    } else if(b.confirm==='retire_story'){
+      btns.push(btn('Enter','View career record','good'));
+    } else if(b.screen==='main'){
       btns.push(btn('↑↓','Select building','info'));
-      btns.push(btn('Enter','Enter','good'));
+      if(building){
+        const name=typeof building.name==='function' ? building.name(b.stationName) : building.name;
+        btns.push(btn('Enter','Open '+name,'good'));
+      }
       btns.push(btn('ESC','Undock','info'));
     } else {
-      btns.push(btn('↑↓','Select action','info'));
-      btns.push(btn('Enter','Confirm','good'));
+      btns.push(btn(b.screen==='changehull'?'←/→':'↑↓','Select action','info'));
+      const action=b.screen==='sub'?building?.actions()[b.subSel]:null;
+      if(action && !action.disabled && !action._header) btns.push(btn('Enter',action.label,'good'));
+      else if(b.screen==='recruit') btns.push(btn('Enter','Hire selected recruit','good'));
+      else if(b.screen==='installweapon') btns.push(btn('Enter','Install selected weapon','good'));
+      else if(b.screen==='changehull') btns.push(btn('Enter','Change to selected hull','good'));
       btns.push(btn('ESC','Back','info'));
     }
 
@@ -36344,47 +36499,6 @@ const BARTER = {
   civ: null,
 };
 
-// Position the barter panel directly above the dialogue box on the canvas.
-// The dialogue is drawn at canvas logical coords; we map those to screen px.
-function positionBarterPanel(){
-  const panel = document.getElementById('barter-panel');
-  const overlay = document.getElementById('barter-overlay');
-  const canvasEl = document.getElementById('gc');
-  if(!canvasEl || !panel) return;
-
-  const cr = canvasEl.getBoundingClientRect();
-  // Canvas logical size is 960×480; CSS size matches (width:960px height:480px).
-  // Scale factor from logical → screen:
-  const scaleX = cr.width  / 960;
-  const scaleY = cr.height / 480;
-
-  // Dialogue box logical coords (mirrors drawDialogueOverlay):
-  const dlgW = Math.min(720, 960 - 80);   // 720
-  const dlgH = Math.min(390, 480 - 90);   // 390
-  const dlgX = Math.round((960 - dlgW) / 2); // 120
-  const dlgY = Math.round(480 - dlgH - 34);  // 56
-
-  // Convert to screen coords
-  const dlgScreenLeft = cr.left + dlgX * scaleX;
-  const dlgScreenTop  = cr.top  + dlgY * scaleY;
-  const dlgScreenW    = dlgW * scaleX;
-
-  // Panel should sit flush above the dialogue top, horizontally aligned to it.
-  const panelW = Math.min(dlgScreenW, window.innerWidth * 0.96);
-  panel.style.width    = panelW + 'px';
-  panel.style.maxWidth = panelW + 'px';
-  panel.style.position = 'absolute';
-
-  // Place panel so its bottom edge touches the dialogue top edge, centred on dialogue.
-  const panelH = panel.offsetHeight || 360;
-  panel.style.left = (dlgScreenLeft + (dlgScreenW - panelW) / 2 - panelW * 0.15) + 'px';
-  panel.style.top  = Math.max(4, dlgScreenTop - panelH - 6) + 'px';
-
-  // Switch overlay from flex-centering to absolute so our coords take effect
-  overlay.style.alignItems     = 'flex-start';
-  overlay.style.justifyContent = 'flex-start';
-}
-
 function openBarterOverlay(){
   const wrap = dialogueCivilization();
   if(!wrap) return;
@@ -36424,17 +36538,13 @@ function openBarterOverlay(){
   overlay.style.display = 'flex';
   renderBarterOverlay();
 
-  // Position after render so panel has a measured height
-  requestAnimationFrame(() => { positionBarterPanel(); });
   document.getElementById('barter-panel').focus();
 }
 
 function closeBarterOverlay(){
   BARTER.active = false;
   const overlay = document.getElementById('barter-overlay');
-  overlay.style.display        = 'none';
-  overlay.style.alignItems     = 'center';
-  overlay.style.justifyContent = 'center';
+  overlay.style.display = 'none';
   renderAll();
 }
 
@@ -36457,7 +36567,7 @@ function renderBarterOverlay(){
         : '';
       return `<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:default;">
         <span style="color:${checked?'#ffe066':'#333'};font-size:13px;width:12px;">${checked?'▶':'·'}</span>
-        <span style="color:${col};font-size:13px;flex:1;">${item.name}</span>
+        <span class="barter-item-name" style="color:${col};">${htmlEsc(item.name)}</span>
         ${cargoTag}
         <span style="color:#556;font-size:11px;">${civOfferValueForBarter(BARTER.civ, item)} cv</span>
       </div>`;
@@ -36481,7 +36591,7 @@ function renderBarterOverlay(){
         : '';
       return `<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:default;">
         <span style="color:${checked?'#90f0a0':'#333'};font-size:13px;width:12px;">${checked?'▶':'·'}</span>
-        <span style="color:${col};font-size:13px;flex:1;">${stock.name}</span>
+        <span class="barter-item-name" style="color:${col};">${htmlEsc(stock.name)}</span>
         ${cargoTag}
         <span style="color:#556;font-size:11px;">×${qty} · ${stock.value} cr</span>
       </div>`;
@@ -36533,6 +36643,16 @@ function renderBarterOverlay(){
     confirmEl.style.color = '#445566';
     confirmEl.textContent = '[Tab] Confirm Trade';
   }
+
+  // The summaries can resize the lists, so scroll after updating the layout.
+  for(const [list, index] of [[playerEl, playerSel], [civEl, civSel]]){
+    const row = list.children[index];
+    if(!row) continue;
+    const bottom = row.offsetTop + row.offsetHeight;
+    if(row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop;
+    else if(bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }
+  renderContextBar();
 }
 
 function confirmBarterTrade(){

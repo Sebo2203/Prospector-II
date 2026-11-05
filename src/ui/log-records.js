@@ -13,34 +13,40 @@ function careerLogEntries(){
 }
 
 function currentLogRecords(){
-  const state=ensureExpeditionState(),rows=[];
-  const add=msg=>rows.push({msg,turn:G.turn,cls:'li'});
-  add('CURRENT RECORDS — Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
+  const state=ensureExpeditionState(),active=[],rows=[];
+  const record=msg=>({msg,turn:G.turn,cls:'li'});
+  const add=msg=>rows.push(record(msg));
+  const addActive=msg=>active.push(record(msg));
   const science=ensureScienceJobState();
   if(science.active){
     const job=science.active;
-    add('SCIENCE CONTRACT: '+scienceJobDetail()+'.');
-    if(job.target?.reportedX!==undefined) add('Last reported sector: '+(job.target.reportedX+1)+','+(job.target.reportedY+1)+'. Position may have drifted.');
-    if(job.targetStation) add('Delivery destination: '+job.targetStation+'.');
-    if(job.target?.planetName) add('Reported world: '+job.target.planetName+' in '+job.target.systemName+'.');
+    addActive('SCIENCE CONTRACT: '+scienceJobDetail()+'.');
+    if(job.target?.reportedX!==undefined) addActive('Last reported sector: '+(job.target.reportedX+1)+','+(job.target.reportedY+1)+'. Position may have drifted.');
+    if(job.targetStation) addActive('Delivery destination: '+job.targetStation+'.');
+    if(job.target?.planetName) addActive('Reported world: '+job.target.planetName+' in '+job.target.systemName+'.');
     if(job.required){
       const name=job.type==='biodata'?'Biodata Sample':'Alien Corpse';
-      add('Required specimens: '+countInventoryByName(name)+' / '+job.required+'.');
+      addActive('Required specimens: '+countInventoryByName(name)+' / '+job.required+'.');
     }
-    add('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
+    addActive('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
   } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
   const incident=state.quarantine;
   if(incident && incident.discovered!==false){
-    add('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
+    const addIncident=incident.status==='closed'||incident.choice ? add : addActive;
+    addIncident('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
       incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.':
       'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));
     if(incident.version===2) for(const person of incident.survivors){
       if(!person.met && !incident.rosterKnown) continue;
       const known=['onboard','delivered','lost'].includes(person.status)?person.status:
         person.seenCondition || (person.met?'last seen aboard the wreck':'listed in the bridge roster; not located');
-      add(person.name+' — '+known+(person.status==='onboard'&&person.pod?' — isolated in cargo':''));
+      addIncident(person.name+' — '+known+(person.status==='onboard'&&person.pod?' — isolated in cargo':''));
     }
   }
+  if((G.cargo||[]).some(item=>item.questItem==='mystery_delivery')){
+    addActive('PACKAGE DELIVERY: Take the mysterious package to Waypoint Omega for 300 cr.');
+  }
+  add('Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
   const keys=new Set([...Object.keys(state.surveys),...Object.keys(G.planets||{})]);
   for(const key of keys){
     const finding=state.surveys[key],pd=G.planets?.[key];
@@ -59,9 +65,12 @@ function currentLogRecords(){
     add('CONTACT: '+findBodyNameByKey(key)+' — '+civ.tierLabel+' '+civ.species+' — '+
       civRelationLabel(civ.state)+' ('+civ.state.relation+'); '+civAlertLabel(civ.state)+'.');
   }
-  // Newest-first, as expected by the existing log renderer. The current
-  // reference summary follows chronological history at the bottom of the view.
-  return [...rows.reverse(),...careerLogEntries()];
+  const history=careerLogEntries().reverse();
+  return [
+    ...(active.length ? [{msg:'ACTIVE WORK & LEADS',cls:'ll',heading:true},...active] : []),
+    {msg:'OTHER RECORDS',cls:'ll',heading:true},...rows,
+    ...(history.length ? [{msg:'HISTORY',cls:'ll',heading:true},...history] : []),
+  ];
 }
 
 function gameLogEntries(filter){

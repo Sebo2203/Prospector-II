@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — 0.28 experimental.16 improves interface priorities
+
+Released on `experiment/expedition-legacy`.
+
+- Centered civilization barter inside the scaled game area. Trade lists scroll independently, long names wrap, and the current keyboard selection stays visible as the offer changes.
+- Made Enter hints describe the selected action in orbit, at stations, in dialogue and barter, and aboard Mercy of Dawn. Removed the persistent wreck-air readout from Mercy's context bar. Examine the engineering pump to read the remaining reserve.
+- Made Records the default LOG view, with active contracts, known open rescue leads, and pending deliveries above survey records, contacts, and history.
+- Reserved the full-width banner for immediate actions such as a rescue decision, critically low fuel or oxygen, an armed explosive, or an adjacent singularity. Routine updates, radio traffic, and NPC speech go to the sidebar log.
+- The build, all 47 repository tests, and all 12 headless Edge suites passed across test runs. The interface checks exercised keyboard barter with long lists at 800×600, 1400×720, and 2560×1440, Mercy actions and pump examination, and routine versus critical messages. The rescue fixture now waits for file import to finish before sending keys. Existing saves open without migration.
+
 ## 2026-11-05 — Reorganize the project documentation
 
 Documentation update on `experiment/expedition-legacy` for experimental.15.

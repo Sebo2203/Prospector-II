@@ -153,7 +153,8 @@ const {pathToFileURL}=require('node:url');
   fs.writeFileSync(fixturePath,await page.evaluate(()=>JSON.stringify(G)));
   const chooser=page.waitForEvent('filechooser');await page.evaluate(()=>loadFromFile());
   await (await chooser).setFiles(fixturePath);
-  await page.waitForFunction(()=>G.log.some(e=>e.msg==='Save file loaded. Welcome back, Captain.'));
+  await page.waitForFunction(()=>!AUTOSAVE_STATE.transition &&
+    G.log.some(e=>e.msg==='Save file loaded. Welcome back, Captain.'));
   assert.equal(await page.evaluate(()=>quarantinePeople().find(s=>s.id==='ilya').status),'carried');
   await airlock();
   assert.equal(await page.evaluate(()=>G.cargo.some(i=>i.quarantinePatient==='ilya')),true);

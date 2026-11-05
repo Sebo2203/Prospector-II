@@ -10,14 +10,28 @@ function renderContextBar(){
 
   // Helper: build a button string
   const btn = (key, label, cls='') =>
-    `<div class="ctx-btn ${cls}"><span class="ck">[${key}]</span> ${label}</div>`;
+    `<div class="ctx-btn ${cls}"><span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}</div>`;
 
   if(G.dead){
     btns.push(btn('Enter','Main Menu','info'));
 
+  } else if(BARTER.active){
+    btns.push(btn('↑/↓','Select goods','info'));
+    btns.push(btn('←/→','Switch side','info'));
+    if(BARTER.side==='player' && BARTER.playerItems.length){
+      btns.push(btn('Enter',BARTER.offered.has(BARTER.playerSel)?'Remove from offer':'Offer selected item','good'));
+    } else if(BARTER.side==='civ' && BARTER.civItems.length){
+      btns.push(btn('Enter',BARTER.wanted.has(BARTER.civSel)?'Remove from request':'Request selected good','good'));
+    }
+    btns.push(btn('ESC','Close barter','info'));
+
   } else if(G.dialogue){
     btns.push(btn('↑/↓','Select reply','info'));
-    btns.push(btn('Enter','Choose','good'));
+    const reply=dialogueVisibleOptions()[G.dialogue.sel||0];
+    if(reply && !reply.disabled){
+      const label=String(reply.label||'Choose reply');
+      btns.push(btn('Enter',label.length>60 ? label.slice(0,57)+'…' : label,'good'));
+    }
     btns.push(btn('1-9','Quick choose','info'));
     if(dialogueAllowsEscape()) btns.push(btn('ESC','Close dialogue','info'));
 
@@ -65,19 +79,39 @@ function renderContextBar(){
     if(G.stranded){
       const st = G.stranded;
       if(st.rescuePhase==='offer'){
-        btns.push(btn('Y','Accept rescue','good'));
+        btns.push(btn('Y / Enter','Accept rescue','good'));
         btns.push(btn('N','Decline','danger'));
       } else {
         btns.push(btn('Move key','Wait one turn (crew drain)','danger'));
         btns.push(btn('T', st.sos ? 'Disable SOS beacon' : 'Activate SOS beacon', st.sos?'danger':'good'));
       }
     } else {
-      if(cell.type==='BASE'){
+      const lootHere=(G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
+      const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
+      if(quarantineAtShip()){
+        btns.push(btn('Enter','Board Mercy of Dawn','good'));
+      } else if(lootHere){
+        const ss = G.shipStats || buildShipStats('LIGHT_SCOUT');
+        const cargoFull = (G.cargo||[]).length >= (ss.cargoCapacity||0);
+        if(!cargoFull) btns.push(btn('Enter','Collect Nebula Crystal','good'));
+        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Nebula Crystal here, cargo hold full</div>`);
+      } else if(cell.type==='BASE'){
         btns.push(btn('Enter','Dock at Starbase','good'));
       } else if(cell.type==='CASINO'){
         btns.push(btn('Enter','Dock at The Void Royale','good'));
       } else if(cell.type==='BLACK_HOLE'){
         btns.push(btn('!','WARNING: Singularity — entry is fatal','danger'));
+      } else if(cell.type==='PULSAR'){
+        btns.push(btn('Enter','Measure pulsar period','warn'));
+      } else if(cell.type==='ROGUE_PLANET'){
+        btns.push(btn('Enter','Enter rogue planet orbit','info'));
+      } else if(npcStrandedHere){
+        const label=npcStrandedHere.type==='alive'
+          ? 'Offer '+npcStrandedHere.fuelCost+' fuel to '+npcStrandedHere.name
+          : 'Board '+npcStrandedHere.name;
+        btns.push(btn('Enter',label,'info'));
+      } else if(cell.type==='DERELICT'){
+        btns.push(btn('Enter','Board '+cell.name,'good'));
       } else if(cell.type==='SYSTEM'){
         btns.push(btn('Enter','Enter orbit — '+cell.name,'info'));
       }
@@ -85,34 +119,15 @@ function renderContextBar(){
       if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
       const pirateNear = !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
       if(pirateNear) btns.push(btn('!','Pirate nearby: '+pirateNear.name,'danger'));
-      // Nebula loot at current tile
-      const lootHere = (G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
-      if(lootHere){
-        const ss2 = G.shipStats || buildShipStats('LIGHT_SCOUT');
-        const cargoFull = (G.cargo||[]).length >= (ss2.cargoCapacity||0);
-        if(!cargoFull) btns.push(btn('Enter','Collect Nebula Crystal','good'));
-        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Nebula Crystal here, cargo hold full</div>`);
-      }
       const neutralTarget = nearestNeutralTarget(1);
       if(neutralTarget) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
       // REP status removed from ctx bar
       const radioContact = nearestRadioContact();
       if(radioContact) btns.push(btn('H','Hail '+radioContact.name+' ('+neutralShipDistance(radioContact)+'u)','info'));
-      // NPC stranded ship on this tile
-      const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
-  if(npcStrandedHere){
-    if(npcStrandedHere.type==='alive')
-      btns.push(btn('Enter','Hail '+npcStrandedHere.name+' (stranded — needs fuel)','good'));
-    else if(npcStrandedHere.type==='research')
-      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (silent research vessel)','info'));
-    else
-      btns.push(btn('Enter','Board '+npcStrandedHere.name+' (derelict)','info'));
-    // Tractor beam — tow dead derelict ships
-    const hasTractor = (G.installedModules||[]).includes('tractor_beam');
-    if(hasTractor && npcStrandedHere.type==='dead' && !G.towedShip){
-      btns.push(btn('T','Tow '+npcStrandedHere.name+' (tractor beam)','good'));
-    }
-  }
+      const hasTractor = (G.installedModules||[]).includes('tractor_beam');
+      if(hasTractor && npcStrandedHere?.type==='dead' && !G.towedShip){
+        btns.push(btn('T','Tow '+npcStrandedHere.name+' (tractor beam)','good'));
+      }
       // Show tow status if currently towing
       if(G.towedShip){
         btns.push(`<div class="ctx-btn" style="color:#cc88ff;border-color:#442266">⚓ Towing: ${G.towedShip.name} — dock at a station to sell  [X to release]</div>`);
@@ -161,15 +176,20 @@ function renderContextBar(){
     if(numP>1) btns.push(btn('1-'+numP,'Quick select'));
     if(scanState!=='full' && DEBUG.preScan !== 1) btns.push(btn('S','Scan (1 fuel)'));
     if(scanState==='full'||scanState==='partial'||DEBUG.preScan===1) btns.push(btn('V','View scan'));
-    if(isGasGiant && pDesc?.moons?.length && pDesc?.scanState==='full'){
-      if(G.selMoon>=0) btns.push(btn('Enter','Land on moon','good'));
-    } else if(!isGasGiant){
-      btns.push(btn('Enter','Land on planet','good'));
-    }
+    if(isGasGiant && G.selMoon>=0 && activeBody!==pDesc) btns.push(btn('Enter','Land on '+(activeBody.name||'moon'),'good'));
+    else if(pDesc && !isGasGiant) btns.push(btn('Enter','Land on '+(pDesc.name||'planet'),'good'));
     // Fuel scoop on gas giant
     const _hasScoopSys = (G.installedModules||[]).includes('fuel_scoop');
     if(_hasScoopSys && isGasGiant && G.fuel < G.maxFuel) btns.push(btn('U','Scoop gas giant fuel','good'));
     btns.push(btn('ESC','Leave system','info'));
+
+  } else if(G.mode==='scanview'){
+    const pdata=G.planets[G.scanViewKey];
+    btns.push(btn('Move','Select landing site','info'));
+    if(pdata && canLandAt(pdata,G.scanCursorX ?? pdata.spawnX,G.scanCursorY ?? pdata.spawnY)){
+      btns.push(btn('Enter','Land at selected site','good'));
+    }
+    btns.push(btn('ESC','Return to orbit','info'));
 
   } else if(G.mode==='planet'){
     const pdata = G.planets[G.curPlanet];
@@ -177,12 +197,11 @@ function renderContextBar(){
     const atShip = cell?.type==='SHIP';
     if(pdata?.isQuarantine){
       const person=quarantineNearSurvivor();
-      btns.push(btn('Enter',atShip?'Transfer passengers':'Operate / assist','good'));
+      const action=quarantineEnterLabel(pdata,cell,person);
+      if(action) btns.push(btn('Enter',action,'good'));
       if(person){btns.push(btn('T','Give medical care','info'));btns.push(btn('P','Deploy isolation pod','info'));}
-      if(cell?.type==='q_life_support') btns.push(btn('R','Manual pump','info'));
+      if(cell?.type==='q_life_support' && !G.expedition.quarantine.repaired) btns.push(btn('R','Work manual pump','info'));
       btns.push(btn('X','Examine','info'));
-      const q=G.expedition.quarantine;
-      if(q.rosterKnown) btns.push(btn('',q.repaired?'Life support stable':'Wreck air reserve: '+q.air,'warn'));
     }
     if(pdata?.isCasino){
       const labels={casino_host:'Talk to host',casino_info:'Read directory',casino_poker:'Play Void Poker',
@@ -194,7 +213,7 @@ function renderContextBar(){
 
     if(atShip){
       btns.push(btn('L','Lift off','info'));
-    } else {
+    } else if(!pdata?.isQuarantine){
       btns.push(btn('L','Lift off (go to ship first)',''));
     }
     if(civContact) btns.push(btn('T', civContact.local ? 'Talk to local' : 'Contact civilization','good'));
@@ -241,7 +260,8 @@ function renderContextBar(){
     const cas = G.casino || {};
     if(cas.screen==='main'){
       btns.push(btn('Up/Down','Select','info'));
-      btns.push(btn('Enter','Enter','good'));
+      const game=CASINO_GAMES[cas.sel||0];
+      if(game) btns.push(btn('Enter',game.label,'good'));
       btns.push(btn('ESC',G.planets[G.curPlanet]?.isCasino?'Return to floor':'Undock','info'));
     } else if(cas.screen==='poker'){
       if(cas.poker && cas.poker.phase==='hold') btns.push(btn('1-5','Hold cards','info'));
@@ -274,15 +294,34 @@ function renderContextBar(){
       }
     }
 
+  } else if(G.mode==='radio'){
+    const action=radioTradeRows()[G.radio?.sel||0];
+    btns.push(btn('↑↓','Select trade','info'));
+    if(action && !action.disabled) btns.push(btn('Enter',action.label,'good'));
+    btns.push(btn('ESC','Close channel','info'));
+
   } else if(G.mode==='base'){
     const b = G.base;
-    if(b.screen==='main'){
+    const building=STATION_BUILDINGS[b.sel];
+    if(b.confirm==='retire'){
+      btns.push(btn('Enter','Confirm retirement','warn'));
+      btns.push(btn('ESC','Cancel','info'));
+    } else if(b.confirm==='retire_story'){
+      btns.push(btn('Enter','View career record','good'));
+    } else if(b.screen==='main'){
       btns.push(btn('↑↓','Select building','info'));
-      btns.push(btn('Enter','Enter','good'));
+      if(building){
+        const name=typeof building.name==='function' ? building.name(b.stationName) : building.name;
+        btns.push(btn('Enter','Open '+name,'good'));
+      }
       btns.push(btn('ESC','Undock','info'));
     } else {
-      btns.push(btn('↑↓','Select action','info'));
-      btns.push(btn('Enter','Confirm','good'));
+      btns.push(btn(b.screen==='changehull'?'←/→':'↑↓','Select action','info'));
+      const action=b.screen==='sub'?building?.actions()[b.subSel]:null;
+      if(action && !action.disabled && !action._header) btns.push(btn('Enter',action.label,'good'));
+      else if(b.screen==='recruit') btns.push(btn('Enter','Hire selected recruit','good'));
+      else if(b.screen==='installweapon') btns.push(btn('Enter','Install selected weapon','good'));
+      else if(b.screen==='changehull') btns.push(btn('Enter','Change to selected hull','good'));
       btns.push(btn('ESC','Back','info'));
     }
 

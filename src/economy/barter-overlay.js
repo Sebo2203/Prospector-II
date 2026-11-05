@@ -16,47 +16,6 @@ const BARTER = {
   civ: null,
 };
 
-// Position the barter panel directly above the dialogue box on the canvas.
-// The dialogue is drawn at canvas logical coords; we map those to screen px.
-function positionBarterPanel(){
-  const panel = document.getElementById('barter-panel');
-  const overlay = document.getElementById('barter-overlay');
-  const canvasEl = document.getElementById('gc');
-  if(!canvasEl || !panel) return;
-
-  const cr = canvasEl.getBoundingClientRect();
-  // Canvas logical size is 960×480; CSS size matches (width:960px height:480px).
-  // Scale factor from logical → screen:
-  const scaleX = cr.width  / 960;
-  const scaleY = cr.height / 480;
-
-  // Dialogue box logical coords (mirrors drawDialogueOverlay):
-  const dlgW = Math.min(720, 960 - 80);   // 720
-  const dlgH = Math.min(390, 480 - 90);   // 390
-  const dlgX = Math.round((960 - dlgW) / 2); // 120
-  const dlgY = Math.round(480 - dlgH - 34);  // 56
-
-  // Convert to screen coords
-  const dlgScreenLeft = cr.left + dlgX * scaleX;
-  const dlgScreenTop  = cr.top  + dlgY * scaleY;
-  const dlgScreenW    = dlgW * scaleX;
-
-  // Panel should sit flush above the dialogue top, horizontally aligned to it.
-  const panelW = Math.min(dlgScreenW, window.innerWidth * 0.96);
-  panel.style.width    = panelW + 'px';
-  panel.style.maxWidth = panelW + 'px';
-  panel.style.position = 'absolute';
-
-  // Place panel so its bottom edge touches the dialogue top edge, centred on dialogue.
-  const panelH = panel.offsetHeight || 360;
-  panel.style.left = (dlgScreenLeft + (dlgScreenW - panelW) / 2 - panelW * 0.15) + 'px';
-  panel.style.top  = Math.max(4, dlgScreenTop - panelH - 6) + 'px';
-
-  // Switch overlay from flex-centering to absolute so our coords take effect
-  overlay.style.alignItems     = 'flex-start';
-  overlay.style.justifyContent = 'flex-start';
-}
-
 function openBarterOverlay(){
   const wrap = dialogueCivilization();
   if(!wrap) return;
@@ -96,17 +55,13 @@ function openBarterOverlay(){
   overlay.style.display = 'flex';
   renderBarterOverlay();
 
-  // Position after render so panel has a measured height
-  requestAnimationFrame(() => { positionBarterPanel(); });
   document.getElementById('barter-panel').focus();
 }
 
 function closeBarterOverlay(){
   BARTER.active = false;
   const overlay = document.getElementById('barter-overlay');
-  overlay.style.display        = 'none';
-  overlay.style.alignItems     = 'center';
-  overlay.style.justifyContent = 'center';
+  overlay.style.display = 'none';
   renderAll();
 }
 
@@ -129,7 +84,7 @@ function renderBarterOverlay(){
         : '';
       return `<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:default;">
         <span style="color:${checked?'#ffe066':'#333'};font-size:13px;width:12px;">${checked?'▶':'·'}</span>
-        <span style="color:${col};font-size:13px;flex:1;">${item.name}</span>
+        <span class="barter-item-name" style="color:${col};">${htmlEsc(item.name)}</span>
         ${cargoTag}
         <span style="color:#556;font-size:11px;">${civOfferValueForBarter(BARTER.civ, item)} cv</span>
       </div>`;
@@ -153,7 +108,7 @@ function renderBarterOverlay(){
         : '';
       return `<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:default;">
         <span style="color:${checked?'#90f0a0':'#333'};font-size:13px;width:12px;">${checked?'▶':'·'}</span>
-        <span style="color:${col};font-size:13px;flex:1;">${stock.name}</span>
+        <span class="barter-item-name" style="color:${col};">${htmlEsc(stock.name)}</span>
         ${cargoTag}
         <span style="color:#556;font-size:11px;">×${qty} · ${stock.value} cr</span>
       </div>`;
@@ -205,6 +160,16 @@ function renderBarterOverlay(){
     confirmEl.style.color = '#445566';
     confirmEl.textContent = '[Tab] Confirm Trade';
   }
+
+  // The summaries can resize the lists, so scroll after updating the layout.
+  for(const [list, index] of [[playerEl, playerSel], [civEl, civSel]]){
+    const row = list.children[index];
+    if(!row) continue;
+    const bottom = row.offsetTop + row.offsetHeight;
+    if(row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop;
+    else if(bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }
+  renderContextBar();
 }
 
 function confirmBarterTrade(){

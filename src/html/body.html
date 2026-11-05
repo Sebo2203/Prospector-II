@@ -133,10 +133,10 @@
   <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>__GAME_VERSION_LABEL__</span></div>
 
   <!-- Barter overlay -->
-  <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
-    <div id="barter-panel" style="background:#08080f;border:2px solid #ffe066;border-radius:4px;width:700px;max-width:96vw;font-family:'Courier New',monospace;outline:none;">
+  <div id="barter-overlay">
+    <div id="barter-panel" tabindex="-1">
       <!-- Header -->
-      <div style="background:#100c02;border-bottom:1px solid #3a3000;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+      <div class="barter-header">
         <div>
           <div id="barter-title" style="font-size:15px;font-weight:bold;color:#ffe066;">Barter Exchange</div>
           <div id="barter-subtitle" style="font-size:11px;color:#667788;margin-top:2px;"></div>
@@ -144,32 +144,32 @@
         <div style="font-size:11px;color:#445566;">↑↓ move · ←→ switch side · Enter toggle · Tab confirm · Esc close</div>
       </div>
       <!-- Two column layout -->
-      <div style="display:flex;gap:0;height:320px;">
+      <div class="barter-columns">
         <!-- Left: your inventory -->
-        <div style="flex:1;border-right:1px solid #1e1e2e;display:flex;flex-direction:column;">
+        <div class="barter-column" style="border-right:1px solid #1e1e2e;">
           <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
             <span style="color:#70d8ff;">Your Offer</span>
           </div>
-          <div id="barter-player-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div id="barter-player-list" class="barter-list"></div>
           <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
             <div style="font-size:10px;color:#445566;margin-bottom:2px;">OFFERING</div>
-            <div id="barter-offer-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+            <div id="barter-offer-summary" class="barter-summary">— nothing —</div>
           </div>
         </div>
         <!-- Right: civ stock -->
-        <div style="flex:1;display:flex;flex-direction:column;">
+        <div class="barter-column">
           <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
             <span style="color:#90f0a0;">Their Goods</span>
           </div>
-          <div id="barter-civ-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div id="barter-civ-list" class="barter-list"></div>
           <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
             <div style="font-size:10px;color:#445566;margin-bottom:2px;">REQUESTING</div>
-            <div id="barter-want-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+            <div id="barter-want-summary" class="barter-summary">— nothing —</div>
           </div>
         </div>
       </div>
       <!-- Footer -->
-      <div style="background:#0a0a10;border-top:1px solid #1e1e2e;padding:8px 16px;display:flex;align-items:center;gap:12px;">
+      <div class="barter-footer">
         <div id="barter-value-info" style="flex:1;font-size:12px;color:#667788;"></div>
         <div id="barter-confirm-hint" style="font-size:12px;color:#445566;">[Tab] Confirm Trade</div>
       </div>

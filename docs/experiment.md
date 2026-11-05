@@ -4,7 +4,9 @@ These rules apply to the active experimental build. [Download instructions](../R
 
 ## The captain’s log
 
-Open **I → LOG** for history. Major discoveries and rescue events appear in ALL and MISSION. **6 / RECORDS** shows survey progress, unsold survey value, known civilization relationships, and survivor records. The log keeps known discoveries in the save. Repeated scans update the existing finding. Use **J** in the ship inventory tab to jettison cargo.
+Open **I → LOG**. The default **6 / RECORDS** view starts with active science contracts, known open rescue leads, and pending deliveries. Survey totals, known civilization relationships, closed incidents, and history follow. Major discoveries and rescue events also appear in ALL and MISSION. The log keeps known discoveries in the save. Repeated scans update the existing finding. Use **J** in the ship inventory tab to jettison cargo.
+
+The sidebar log carries routine updates, NPC speech, and radio traffic. The full-width banner is for immediate action, such as critical fuel or oxygen, a rescue decision, armed explosives, or an adjacent singularity.
 
 ## Science work and survey sales
 
@@ -22,7 +24,7 @@ The bridge, medical stores, cargo hold, engineering compartment and sealed isola
 
 ### Interaction
 
-Move normally. Enter operates the equipment underfoot, opens an adjacent closed hatch, or assists/releases a nearby survivor. X examines visible equipment and people. T gives medical care to an adjacent survivor. P deploys a recovered isolation pod. At the engineering pump, R manually restores temporary pressure. L departs only from your own airlock.
+Move normally. The context bar labels what Enter will do as you move between equipment, hatches, and survivors. X examines visible equipment and people. Examine the engineering pump to see the remaining air reserve. T gives medical care to an adjacent survivor. P deploys a recovered isolation pod. At the pump, R manually restores temporary pressure. L departs only from your own airlock.
 
 ### Survival
 
