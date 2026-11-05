@@ -154,11 +154,16 @@ function openGalaxyMinimapOverlay(){
   const ov = document.getElementById('minimap-overlay');
   if(!ov) return;
   ov.classList.add('visible');
+  // Move focus off the opener so gameplay keys cannot activate it after closing.
+  ov.focus({preventScroll:true});
   updateMinimapLegend();
   drawGalaxyMinimapToCanvas(document.getElementById('galaxy-minimap-large'));
 }
 
 function closeGalaxyMinimapOverlay(){
-  document.getElementById('minimap-overlay')?.classList.remove('visible');
+  const ov = document.getElementById('minimap-overlay');
+  if(!ov) return;
+  ov.blur();
+  ov.classList.remove('visible');
 }
 

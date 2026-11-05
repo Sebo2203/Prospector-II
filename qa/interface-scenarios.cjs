@@ -12,6 +12,55 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => initGame('LIGHT_SCOUT', 'Interface QA', 'Interface QA'));
     await page.waitForFunction(() => G?.galaxy && G.log.some(entry => entry.msg.includes('Ready for departure')));
 
+    // Put a patrol in range, then use the real map controls and hail/reply keys.
+    await page.evaluate(() => {
+      G.neutralShips = [{ type: 'patrol', name: 'QA Station Patrol', x: G.ship.x + 1, y: G.ship.y }];
+      renderAll();
+    });
+    const map = page.locator('#minimap-overlay');
+    const mapButton = page.locator('#minimap-max-btn');
+    async function askPatrolAboutThreats(key){
+      await page.keyboard.press('h');
+      assert.equal(await page.evaluate(() => G.dialogue?.id), 'galaxy_ship_patrol');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press(key);
+      assert.equal(await page.evaluate(() => G.dialogue?.node), 'threats');
+      assert.equal(await map.isVisible(), false, 'the dialogue reply must not reopen the galaxy map');
+      await page.keyboard.press('Escape');
+    }
+
+    await mapButton.click();
+    assert.equal(await map.isVisible(), true);
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'minimap-overlay');
+    await page.keyboard.press('Escape');
+    assert.equal(await map.isVisible(), false);
+    assert.equal(await page.evaluate(() => document.activeElement === document.body), true);
+    await askPatrolAboutThreats('Enter');
+
+    await mapButton.click();
+    await map.click({position: {x: 8, y: 8}});
+    assert.equal(await map.isVisible(), false);
+    await askPatrolAboutThreats('Space');
+
+    await page.keyboard.press('m');
+    assert.equal(await map.isVisible(), true);
+    await page.keyboard.press('Escape');
+    assert.equal(await map.isVisible(), false);
+    await askPatrolAboutThreats('Enter');
+
+    await page.keyboard.press('m');
+    assert.equal(await map.isVisible(), true);
+    await page.keyboard.press('m');
+    assert.equal(await map.isVisible(), false);
+    await askPatrolAboutThreats('2');
+
+    // Dialogue still owns Enter and Space if the player tabs to the map button.
+    for(const key of ['Enter', 'Space']){
+      await mapButton.focus();
+      await askPatrolAboutThreats(key);
+    }
+    await mapButton.evaluate(button => button.blur());
+
     const banner = page.locator('#msg-bar');
     const actions = page.locator('#ctx-bar');
     await page.evaluate(() => {
@@ -153,6 +202,6 @@ const assert = require('node:assert/strict');
     assert.equal(await page.evaluate(() => G.inventory.some(item => item.name.startsWith('Trade good 27 '))), true);
     assert.equal(await banner.isVisible(), false);
     assert.deepEqual(errors, []);
-    console.log('PASS: actionable banners, Mercy action hints and pump examine, and native barter with long lists at three viewport sizes.');
+    console.log('PASS: map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and keyboard barter at three viewport sizes.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });

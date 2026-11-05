@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — 0.28 experimental.17 fixes map reopening during dialogue
+
+Released on `experiment/expedition-legacy`.
+
+- Clicking the galaxy map button could leave it focused after the map closed. Enter or Space then chose a dialogue reply and also clicked the focused button. The full map now takes focus when it opens and releases it on close. Dialogue consumes Enter and Space even when a HUD button has focus.
+- Reproduced the issue in experimental.16 with the station patrol's threat reply. Verified mouse and keyboard map controls, Enter/Space and numbered replies, and the focused button case in headless Edge. All 47 repository tests and the four affected browser suites passed. Existing saves require no migration.
+
 ## 2026-11-05 — 0.28 experimental.16 improves interface priorities
 
 Released on `experiment/expedition-legacy`.

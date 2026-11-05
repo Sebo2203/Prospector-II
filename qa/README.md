@@ -58,7 +58,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 
 | Suite | Coverage |
 | --- | --- |
-| `interface` | Actionable banners versus ordinary sidebar messages, Mercy action hints and pump examination, keyboard barter with long lists at three window sizes |
+| `interface` | Galaxy map focus and station patrol replies, actionable banners, Mercy action hints and pump examination, keyboard barter with long lists at three window sizes |
 | `stations` | Station/wreck alpha, background preservation, native derelict/Mercy render and boarding paths, ASCII and career restoration |
 | `version` | Version labels, main menu keyboard and mouse navigation with and without a save, and retired changelog shortcut |
 | `palette` | Runtime catalog coverage, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |

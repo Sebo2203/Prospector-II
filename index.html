@@ -1417,7 +1417,7 @@ canvas {
     </div>
   </div>
 
-  <div id="minimap-overlay" onclick="if(event.target.id==='minimap-overlay') closeGalaxyMinimapOverlay();">
+  <div id="minimap-overlay" tabindex="-1" onclick="if(event.target.id==='minimap-overlay') closeGalaxyMinimapOverlay();">
     <div id="minimap-overlay-body">
       <div id="minimap-large-panel">
         <canvas id="galaxy-minimap-large" width="880" height="630"></canvas>
@@ -1530,7 +1530,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.16</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.17</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1587,8 +1587,8 @@ canvas {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.16';
-const GAME_VERSION_LABEL = 'v0.28 experimental.16';
+const GAME_VERSION = '0.28.0-experimental.17';
+const GAME_VERSION_LABEL = 'v0.28 experimental.17';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -13446,12 +13446,17 @@ function openGalaxyMinimapOverlay(){
   const ov = document.getElementById('minimap-overlay');
   if(!ov) return;
   ov.classList.add('visible');
+  // Move focus off the opener so gameplay keys cannot activate it after closing.
+  ov.focus({preventScroll:true});
   updateMinimapLegend();
   drawGalaxyMinimapToCanvas(document.getElementById('galaxy-minimap-large'));
 }
 
 function closeGalaxyMinimapOverlay(){
-  document.getElementById('minimap-overlay')?.classList.remove('visible');
+  const ov = document.getElementById('minimap-overlay');
+  if(!ov) return;
+  ov.blur();
+  ov.classList.remove('visible');
 }
 
 function drawCivilizationBoundaryOverlay(){
@@ -32679,6 +32684,8 @@ document.addEventListener('keydown', e=>{
         renderAll(); return;
       }
       if(e.key==='Enter' || e.key===' '){
+        // A focused HUD button must not also receive this reply as a click.
+        e.preventDefault();
         chooseDialogueOption(G.dialogue.sel || 0);
         return;
       }

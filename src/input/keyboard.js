@@ -177,6 +177,8 @@ document.addEventListener('keydown', e=>{
         renderAll(); return;
       }
       if(e.key==='Enter' || e.key===' '){
+        // A focused HUD button must not also receive this reply as a click.
+        e.preventDefault();
         chooseDialogueOption(G.dialogue.sel || 0);
         return;
       }
