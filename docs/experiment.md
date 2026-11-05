@@ -2,6 +2,10 @@
 
 These rules apply to the active experimental build. [Download instructions](../README.md#play)
 
+## Controls
+
+Use the keyboard to move, target, fire, and pick things up. The HUD compass also moves or waits during normal play. In menus, click choices or use the displayed keys. Use **I** or the HUD Inventory button to open the inventory, crew, ship, and log tabs. Select cargo and press **X**, or click its slot, to open the same details. Hover gives a quick preview.
+
 ## Crew at a glance
 
 The sidebar shows one badge per living crew member. **C** is Captain, **N** Navigator, **E** Engineer, **S** Scientist, **+** Medic, **m** Mercenary, and **r** Redshirt. The meter shows remaining HP in green, amber below 60%, and red below 30%. A pulsing **!** marks an active condition and stays still with reduced motion enabled. Hover for the crew member's name, exact HP, and known conditions. Open **I → CREW** for the full roster.

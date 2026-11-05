@@ -73,6 +73,10 @@ function drawRadioOverlay(){
   const startY=92, rowH=42;
   rows.forEach((row,i)=>{
     const y=startY+i*rowH;
+    if(!row.disabled) canvasMenuTarget(cw/2-280,y-22,560,34,()=>{
+      G.radio.sel=i;
+      executeRadioTrade(row.id);
+    });
     const sel=i===G.radio.sel;
     ctx.fillStyle=sel?'#18150a':'#08080f'; ctx.fillRect(cw/2-280,y-22,560,34);
     ctx.strokeStyle=sel?'#aa8833':'#2a2414'; ctx.strokeRect(cw/2-280,y-22,560,34);
@@ -83,5 +87,6 @@ function drawRadioOverlay(){
   });
   ctx.textAlign='center'; ctx.font='13px Courier New'; ctx.fillStyle='#445566';
   ctx.fillText('Up/Down select   Enter trade   Esc close channel', cw/2, ch-14);
+  canvasMenuButton('Close [Esc]',40,ch-28,()=>executeRadioTrade('close'));
   ctx.textAlign='left';
 }

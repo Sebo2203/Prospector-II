@@ -227,6 +227,12 @@ function debugPaletteFilteredEntries(){
   return (G?.debugPalette?.entries||[]).filter(e=>(e.kind+' '+e.label+' '+e.id).toLowerCase().includes(query));
 }
 
+function moveDebugPaletteSelection(step){
+  const count=debugPaletteFilteredEntries().length;
+  DEBUG.paletteSel=Math.max(0,Math.min(count-1,(DEBUG.paletteSel||0)+step));
+  renderAll();
+}
+
 function handleDebugPaletteKey(e){
   if(e.key==='F4'&&debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return true;}
   if(DEBUG.on && ['F2','F3','F6','F7'].includes(e.key)){
@@ -240,7 +246,10 @@ function handleDebugPaletteKey(e){
   e.preventDefault();
   if(e.key==='Escape'){DEBUG.paletteMenu=false;DEBUG.on=false;renderAll();return true;}
   const rows=debugPaletteFilteredEntries();
-  if(e.key==='ArrowUp'||e.key==='ArrowDown')DEBUG.paletteSel=Math.max(0,Math.min(rows.length-1,(DEBUG.paletteSel||0)+(e.key==='ArrowUp'?-1:1)));
+  if(e.key==='ArrowUp'||e.key==='ArrowDown'){
+    moveDebugPaletteSelection(e.key==='ArrowUp'?-1:1);
+    return true;
+  }
   else if(e.key==='Enter'){const entry=rows[DEBUG.paletteSel||0];if(entry)debugPaletteVisit(entry.id);return true;}
   else {if(e.key==='Backspace')DEBUG.paletteSearch=DEBUG.paletteSearch.slice(0,-1);
     else if(e.key.length===1&&!e.ctrlKey&&!e.altKey)DEBUG.paletteSearch+=e.key;DEBUG.paletteSel=0;}
@@ -257,8 +266,15 @@ function drawDebugPaletteDirectory(){
   DEBUG.paletteSel=Math.max(0,Math.min(rows.length-1,DEBUG.paletteSel||0));
   const start=Math.max(0,Math.min(DEBUG.paletteSel-Math.floor(count/2),rows.length-count));
   rows.slice(start,start+count).forEach((e,i)=>{
+    canvasMenuTarget(20,94+i*22,canvas.width-40,22,()=>debugPaletteVisit(e.id));
     ctx.fillStyle=start+i===DEBUG.paletteSel?'#ffe066':'#aabbd0';
     ctx.fillText((start+i===DEBUG.paletteSel?'> ':'  ')+e.kind.toUpperCase()+' — '+e.label,20,109+i*22,canvas.width-40);
+  });
+  canvasMenuScroll=moveDebugPaletteSelection;
+  canvasMenuButton('Close [Esc]',canvas.width-125,canvas.height-32,()=>{
+    DEBUG.paletteMenu=false;
+    DEBUG.on=false;
+    renderAll();
   });
   ctx.fillStyle='#88aabb';ctx.fillText(rows.length+' matching samples · Arrow keys select',20,canvas.height-12);
 }

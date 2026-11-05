@@ -280,8 +280,15 @@ const assert = require('node:assert/strict');
     await page.keyboard.press('Tab');
     assert.equal(await panel.isVisible(), false);
     assert.equal(await page.evaluate(() => G.inventory.some(item => item.name.startsWith('Trade good 27 '))), true);
+    await page.keyboard.press('Enter');
+    assert.equal(await panel.isVisible(), true);
+    await page.locator('#barter-player-list [data-barter-row="0"]').click();
+    await page.locator('#barter-civ-list [data-barter-row="0"]').click();
+    await page.locator('#barter-confirm-hint').click();
+    assert.equal(await panel.isVisible(), false);
+    assert.equal(await page.evaluate(() => G.inventory.some(item => item.name.startsWith('Trade good 0 '))), true);
     assert.equal(await banner.isVisible(), false);
     assert.deepEqual(errors, []);
-    console.log('PASS: compact crew status, map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and keyboard barter at three viewport sizes.');
+    console.log('PASS: compact crew status, map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and mouse and keyboard barter.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });

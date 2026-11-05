@@ -12,9 +12,12 @@ function renderAll(){
   checkAlarms();
   scheduleAutoSave();
   renderAutosaveStatus();
+  document.getElementById('inventory-menu-btn').disabled = !canToggleInventoryMenu();
+  document.getElementById('options-menu-btn').disabled = G.dead || G.retired;
 }
 
 function drawCanvas(){
+  resetCanvasMenu();
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if(G.mode==='planet'){
@@ -43,15 +46,27 @@ function drawCanvas(){
     drawInventoryOverlay();
   }
 
-  if(G.dead) drawGameOverOverlay();
-  if(G.retired) drawRetirementScreen();
-  if(G.showOptions) drawInGameOptions();
-  if(G.stranded) drawStrandedOverlay();
-  if(G.examine) drawExamineCursor();
-  if(G.rangeTarget) drawRangeCursor();
-  if(G._itemAimMode) drawItemAimOverlay();
+  if(G.dead || G.retired){
+    resetCanvasMenu();
+    if(G.dead) drawGameOverOverlay(); else drawRetirementScreen();
+  }
+  if(G.stranded || G.examine || G.rangeTarget || G._itemAimMode){
+    resetCanvasMenu();
+    if(G.stranded) drawStrandedOverlay();
+    if(G.examine) drawExamineCursor();
+    if(G.rangeTarget) drawRangeCursor();
+    if(G._itemAimMode) drawItemAimOverlay();
+  }
   drawCivilizationBoundaryOverlay();
-  if(G.dialogue) drawDialogueOverlay();
+  if(G.dialogue){
+    resetCanvasMenu();
+    drawDialogueOverlay();
+  }
+  if(G.showOptions){
+    resetCanvasMenu();
+    drawInGameOptions();
+  }
+  if(DEBUG.on || G.forcedMove?.active) resetCanvasMenu();
 
   drawDebugPaletteLabels();
   if(DEBUG.on) drawDebugOverlay();

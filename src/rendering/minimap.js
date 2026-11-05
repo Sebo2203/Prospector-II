@@ -163,7 +163,7 @@ function openGalaxyMinimapOverlay(){
 function closeGalaxyMinimapOverlay(){
   const ov = document.getElementById('minimap-overlay');
   if(!ov) return;
-  ov.blur();
+  if(ov.contains(document.activeElement)) document.activeElement.blur();
   ov.classList.remove('visible');
 }
 

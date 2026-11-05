@@ -3,6 +3,7 @@ function drawBaseOverlay(){
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
 
   const b = G.base;
+  const back = ()=>handleStationKey('Escape');
 
   // Retirement confirm screen
   if(b.confirm === 'retire'){
@@ -30,6 +31,8 @@ function drawBaseOverlay(){
     ctx.font='bold 16px Courier New';
     ctx.fillStyle='#44ff88'; ctx.fillText('[ ENTER ]  Confirm', cx-80, 264);
     ctx.fillStyle='#ff6644'; ctx.fillText('[ ESC ]  Cancel', cx+90, 264);
+    canvasMenuTarget(cx-154,246,146,26,()=>handleStationKey('Enter'));
+    canvasMenuTarget(cx+27,246,146,26,back);
     ctx.textAlign='left';
     return;
   }
@@ -96,11 +99,13 @@ function drawBaseOverlay(){
     // Prompt
     ctx.font='bold 15px Courier New'; ctx.fillStyle='#ffe066';
     ctx.fillText('[ ENTER ]  See your career stats', cx, ch-30);
+    canvasMenuTarget(cx-180,ch-48,360,26,()=>handleStationKey('Enter'));
     ctx.textAlign='left';
     return;
   }
 
   if(b.screen === 'main'){
+    canvasMenuScroll = step=>handleStationKey(step<0?'ArrowUp':'ArrowDown');
     // Header
     ctx.font='bold 21px Courier New'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
     ctx.fillText((G.base.stationName||'STARBASE').toUpperCase(), cw/2, 36);
@@ -121,6 +126,7 @@ function drawBaseOverlay(){
       if(visIdx < 0 || visIdx >= bldgVisible) return;
       const sel = i === b.sel;
       const bx = cw/2 - 410, by = BLDG_TOP + visIdx*(BLDG_ROW_H+BLDG_GAP), bw = 820, bh = BLDG_ROW_H;
+      canvasMenuTarget(bx,by,bw,bh,()=>{ b.sel=i; handleStationKey('Enter'); });
       ctx.fillStyle = sel ? '#0e1a2a' : '#08080f';
       ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = sel ? bldg.col : '#1a1a2a';
@@ -148,6 +154,7 @@ function drawBaseOverlay(){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
 
   } else if(b.screen === 'sub'){
+    canvasMenuScroll = step=>handleStationKey(step<0?'ArrowUp':'ArrowDown');
     const bldg = STATION_BUILDINGS[b.sel];
     const actions = bldg.actions();
 
@@ -177,6 +184,7 @@ function drawBaseOverlay(){
       const sel = i === b.subSel;
       const ax = cw/2 - 410, ay = LIST_TOP + visIdx*ROW_H, aw = 820, ah = 30;
       const dim = act.disabled;
+      if(!dim && !act._header) canvasMenuTarget(ax,ay,aw,ah,()=>{ b.subSel=i; handleStationKey('Enter'); });
       // Section headers — compact divider row
       if(act._header){
         ctx.fillStyle='#0a0a12'; ctx.fillRect(ax, ay, aw, ah);
@@ -243,6 +251,7 @@ function drawBaseOverlay(){
       const isSel = i === sel;
       const roleData = CREW_ROLES[r.key];
       const ax=cx-280, ay=listTop+i*rowH, aw=560, ah=54;
+      canvasMenuTarget(ax,ay,aw,ah,()=>{ b.recruitSel=i; renderAll(); });
       ctx.fillStyle = isSel ? '#0e1a10' : '#080810';
       ctx.fillRect(ax,ay,aw,ah);
       ctx.strokeStyle = isSel ? (roleData?.col||'#aaa') : '#1a1a2a';
@@ -261,6 +270,7 @@ function drawBaseOverlay(){
     ctx.textAlign='center'; ctx.font='13px Courier New';
     ctx.fillStyle = canAfford ? '#ffaa44' : '#662222';
     ctx.fillText(canAfford ? '[ ENTER ]  Hire '+HIRE_ROLES[sel]?.label+' for '+HIRE_ROLES[sel]?.cost+' cr' : 'Not enough credits', cx, listTop+HIRE_ROLES.length*rowH+16);
+    if(canAfford) canvasMenuTarget(cx-250,listTop+HIRE_ROLES.length*rowH,500,22,()=>handleStationKey('Enter'));
     ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   Enter confirm   ESC back', cx, ch-14);
 
   } else if(b.screen === 'installweapon'){
@@ -278,6 +288,7 @@ function drawBaseOverlay(){
       const isSel = i === sel;
       const isInstalled = (G.installedWeapons||[]).includes(wdef.id);
       const ax=cx-300, ay=listTop+i*rowH, aw=600, ah=56;
+      canvasMenuTarget(ax,ay,aw,ah,()=>{ b.weaponSel=i; renderAll(); });
       ctx.fillStyle = isSel ? '#0e1a10' : '#080810';
       ctx.fillRect(ax,ay,aw,ah);
       ctx.strokeStyle = isSel ? '#ff9944' : '#1a1a2a';
@@ -309,6 +320,7 @@ function drawBaseOverlay(){
       ctx.fillStyle='#662222'; ctx.fillText('Insufficient credits (need '+selW.cost+' cr, have '+G.credits+').', cx, listTop+weapons.length*rowH+16);
     } else {
       ctx.fillStyle='#ff9944'; ctx.fillText('[ ENTER ]  Install '+selW.name+' for '+selW.cost+' cr', cx, listTop+weapons.length*rowH+16);
+      canvasMenuTarget(cx-250,listTop+weapons.length*rowH,500,22,()=>handleStationKey('Enter'));
     }
     ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   ESC cancel', cx, ch-14);
     }
@@ -337,6 +349,7 @@ function drawBaseOverlay(){
 
       ctx.fillStyle = isCurrent ? '#0a0a18' : isSel ? '#0a1a2a' : '#080810';
       ctx.fillRect(bx, by, cardW, cardH);
+      canvasMenuTarget(bx,by,cardW,cardH,()=>{ b.hullSel=i; renderAll(); });
       ctx.strokeStyle = isCurrent ? '#334488' : isSel ? '#44aaff' : '#1a1a2a';
       ctx.lineWidth = isSel ? 2 : 1;
       ctx.strokeRect(bx, by, cardW, cardH);
@@ -405,11 +418,91 @@ function drawBaseOverlay(){
     } else {
       ctx.fillStyle='#44aaff';
       ctx.fillText('[ ENTER ]  Purchase '+selCls.hullType+' for '+HULL_COST+' cr', cx, 62+260+22);
+      canvasMenuTarget(cx-250,62+260+6,500,22,()=>handleStationKey('Enter'));
     }
     ctx.font='13px Courier New'; ctx.fillStyle='#334455';
     ctx.fillText('← → navigate   ESC cancel', cx, ch-14);
   }
 
+  canvasMenuButton(b.screen==='main'?'Undock [Esc]':'Back [Esc]',40,ch-27,back);
   ctx.textAlign='left';
 }
 
+
+function handleStationKey(key){
+  const b = G.base;
+  // Retirement confirm screen
+  if(b.confirm==='retire'){
+    if(key==='Enter'||key===' '){
+      b.confirm='retire_story';
+      // Pick a random story variant now and lock it so redraws stay consistent
+      const _tier = RETIREMENT_TIERS.find(t=>G.credits>=t.min&&G.credits<=t.max)||RETIREMENT_TIERS[0];
+      G.retirementStoryIdx     = Math.floor(Math.random() * _tier.story.length);
+      const _picked = _tier.story[G.retirementStoryIdx];
+      G.retirementNoEpilogue  = !!(_picked && _picked.noEpilogue);
+      G.retirementEpilogueIdx = Math.floor(Math.random() * RETIREMENT_EPILOGUES.length);
+      // DEAD — pre-roll humanity arc indices ready for when the screen is wired in
+      G.retirementHumanityIdx      = Math.floor(Math.random() * HUMANITY_OUTCOMES.length);
+      G.retirementHumanityCodaIdx  = Math.floor(Math.random() * HUMANITY_CODAS_ALIVE.length);
+      renderAll(); return;
+    }
+    if(key==='Escape'){ b.confirm=null; renderAll(); return; }
+    return;
+  }
+  // Retirement story screen — press Enter to proceed to stats
+  if(b.confirm==='retire_story'){
+    if(key==='Enter'||key===' '){ G.retired=true; renderAll(); return; }
+    return;
+  }
+  if(b.screen==='main'){
+    if(key==='ArrowUp'){   b.sel=Math.max(0,b.sel-1); renderAll(); return; }
+    if(key==='ArrowDown'){ b.sel=Math.min(STATION_BUILDINGS.length-1,b.sel+1); renderAll(); return; }
+    if(key==='Enter'){ b.screen='sub'; b.subSel=0; b.subScroll=0; b.medbaySub=null; b.scienceCorpSub=false; renderAll(); return; }
+    if(key==='Escape'){ G.mode='galaxy'; addLog('Undocked.','li'); renderAll(); return; }
+  } else if(b.screen==='recruit'){
+    const HIRE_COUNT = 6;
+    if(key==='ArrowUp'){   b.recruitSel=Math.max(0,(b.recruitSel||0)-1); renderAll(); return; }
+    if(key==='ArrowDown'){ b.recruitSel=Math.min(HIRE_COUNT-1,(b.recruitSel||0)+1); renderAll(); return; }
+    if(key==='Enter'){ executeBaseAction('recruit_confirm'); renderAll(); return; }
+    if(key==='Escape'){ b.screen='sub'; renderAll(); return; }
+  } else if(b.screen==='installweapon'){
+    const weapons3 = Object.values(SHIP_WEAPONS);
+    if(key==='ArrowUp'){   b.weaponSel=Math.max(0,(b.weaponSel||0)-1); renderAll(); return; }
+    if(key==='ArrowDown'){ b.weaponSel=Math.min(weapons3.length-1,(b.weaponSel||0)+1); renderAll(); return; }
+    if(key==='Enter'){ executeBaseAction('confirminstall'); renderAll(); return; }
+    if(key==='Escape'){ b.screen='sub'; renderAll(); return; }
+  } else if(b.screen==='changehull'){
+    const HULL_IDS = ['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE'];
+    if(key==='ArrowLeft'){  b.hullSel=Math.max(0,(b.hullSel||0)-1); renderAll(); return; }
+    if(key==='ArrowRight'){ b.hullSel=Math.min(HULL_IDS.length-1,(b.hullSel||0)+1); renderAll(); return; }
+    if(key==='Enter'){ executeBaseAction('confirmhull'); renderAll(); return; }
+    if(key==='Escape'){ b.screen='sub'; renderAll(); return; }
+  } else if(b.screen==='sub'){
+    const actions = STATION_BUILDINGS[b.sel].actions();
+    // Skip over header rows and disabled rows when navigating
+    function subStep(dir){
+      let next = b.subSel + dir;
+      while(next >= 0 && next < actions.length && (actions[next]._header || actions[next].disabled)){
+        next += dir;
+      }
+      if(next >= 0 && next < actions.length) b.subSel = next;
+    }
+    if(key==='ArrowUp'){   subStep(-1); renderAll(); return; }
+    if(key==='ArrowDown'){ subStep(1);  renderAll(); return; }
+    if(key==='Enter'){
+      const act = actions[b.subSel];
+      if(act && !act.disabled && !act._header) executeBaseAction(act.id);
+      return;
+    }
+    if(key==='Escape'){
+      if(b.medbaySub === 'vend'){
+        b.medbaySub = null;
+        b.subSel = 0;
+        b.subScroll = 0;
+        renderAll(); return;
+      }
+      b.screen='main'; b.subScroll=0; b.medbaySub=null; b.scienceCorpSub=false; if(b.hangarSub) b.hangarSub='top'; renderAll(); return;
+    }
+  }
+  return;
+}

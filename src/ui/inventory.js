@@ -1,3 +1,56 @@
+const INVENTORY_TABS = ['inventory','crew','ship','log'];
+
+function selectInventoryTab(tab){
+  if(G._viewTab===tab) return;
+  G._viewTab = tab;
+  G._viewCrewSel = 0;
+  G._inventoryExamine = false;
+  G._cargoExamine = false;
+  G._crewExamine = false;
+  G._logScroll = Infinity;
+  G._jettisonConfirm = false;
+  renderAll();
+}
+
+function canToggleInventoryMenu(){
+  return !!G && ['galaxy','planet','system','scanview','inventory'].includes(G.mode) &&
+    !G.dead && !G.retired && !G.showOptions && !G.dialogue && !G.examine && !G.rangeTarget &&
+    !G._itemAimMode && !DEBUG.on;
+}
+
+function toggleInventoryMenu(){
+  if(!canToggleInventoryMenu() || canvasMenuBlocked()) return;
+  if(G.mode==='inventory') G.mode=G._prevMode;
+  else {
+    if(G.mode!=='system') G._viewTab='inventory';
+    G._prevMode=G.mode;
+    G.mode='inventory';
+  }
+  G._inventoryExamine=false;
+  G._crewExamine=false;
+  renderAll();
+}
+
+function closeInventoryMenu(){
+  if(G._cargoExamine) G._cargoExamine=false;
+  else if(G._crewExamine) G._crewExamine=false;
+  else if(G._inventoryExamine) G._inventoryExamine=false;
+  else {
+    G.mode=G._prevMode;
+    G._equipGunIdx=G._equipArmorIdx=G._equipImplantIdx=G._equipStimIdx=undefined;
+    G._jettisonConfirm=false;
+  }
+  renderAll();
+}
+
+function inventoryEquipType(item){
+  const key=item?.usable;
+  if(['gun','gun_sniper','knife','gun_shotgun','gun_burst','gun_plasma','stun_baton','vibroblade','tranq_darts'].includes(key)) return 'weapon';
+  if(['armor_flight','armor_reinforced','armor_diving','armor_exosuit','armor_plate'].includes(key)) return 'armor';
+  if(key?.startsWith('implant_')) return 'implant';
+  if(key==='stim_pack') return 'stim';
+}
+
 function drawInventoryOverlay(){
   const cw = canvas.width, ch = canvas.height;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
@@ -7,12 +60,13 @@ function drawInventoryOverlay(){
   const tab = G._viewTab || 'inventory';
 
   // Tab headers — 4 tabs, evenly spaced
-  const tabs = [{id:'inventory',label:'INVENTORY'},{id:'crew',label:'CREW'},{id:'ship',label:'SHIP'},{id:'log',label:'LOG'}];
+  const tabs = INVENTORY_TABS;
   const tw=110, tgap=8, totalW=tabs.length*(tw+tgap)-tgap;
   const tabsStartX = Math.round((cw-totalW)/2);
   tabs.forEach((t,i)=>{
-    const sel = tab===t.id;
+    const sel = tab===t;
     const tx = tabsStartX + i*(tw+tgap), ty = 10, th = 26;
+    canvasMenuTarget(tx,ty,tw,th,()=>selectInventoryTab(t));
     ctx.fillStyle = sel ? '#0e1a2a' : '#06060e';
     ctx.fillRect(tx, ty, tw, th);
     ctx.strokeStyle = sel ? '#ffe066' : '#2a2a4a';
@@ -21,9 +75,11 @@ function drawInventoryOverlay(){
     ctx.font = 'bold 12px Courier New';
     ctx.fillStyle = sel ? '#ffe066' : '#445566';
     ctx.textAlign = 'center';
-    ctx.fillText(t.label, tx+tw/2, ty+17);
+    ctx.fillText(t.toUpperCase(), tx+tw/2, ty+17);
   });
   ctx.fillStyle='#1a1a2a'; ctx.fillRect(40,40,cw-80,1);
+  canvasMenuScroll = step=>handleInventoryKey(step<0?'ArrowUp':'ArrowDown');
+  canvasMenuButton('Close [Esc]',cw-125,12,closeInventoryMenu);
 
   if(tab==='inventory'){
     // ── INVENTORY tab — usable/personal items ────────────────────
@@ -94,6 +150,10 @@ function drawInventoryOverlay(){
           const {item, count} = row.stack;
           const isSel = ri===stackSel;
           const ax=40, ay=yOffset, aw=cw-80, ah=26;
+          canvasMenuTarget(ax,ay,aw,ah,()=>{
+            G._viewInvSel=row.stack.firstIdx;
+            renderAll();
+          });
           ctx.fillStyle = isSel ? '#0e1a2a' : '#08080f';
           ctx.fillRect(ax, ay, aw, ah);
           ctx.strokeStyle = isSel ? (item.usable ? '#ff6688' : '#ffe066') : '#1a1a2a';
@@ -112,7 +172,10 @@ function drawInventoryOverlay(){
       ctx.fillStyle='#223344'; ctx.fillRect(40, listBottom, cw-80, 1);
       ctx.fillStyle='#aaaaaa'; ctx.font='15px Courier New';
       ctx.fillText('Total value: '+tot+' cr', 40, listBottom+18);
-      ctx.fillStyle='#445566'; ctx.fillText('[X] Examine selected item', 240, listBottom+18);
+      canvasMenuButton(G._inventoryExamine?'Close details [X]':'Examine [X]',240,listBottom+4,()=>handleInventoryKey('x'));
+      if(!G._inventoryExamine && inventoryEquipType(G.inventory[rawSel])){
+        canvasMenuButton('Select crew [Enter]',400,listBottom+4,()=>handleInventoryKey('Enter'));
+      }
       if(startIdx>0){ ctx.fillStyle='#667788'; ctx.fillText('^ more', cw-120, 44); }
       if(endIdx<rows.length){ ctx.fillStyle='#667788'; ctx.fillText('v more', cw-120, listBottom+18); }
     }
@@ -120,7 +183,7 @@ function drawInventoryOverlay(){
   } else if(tab==='crew'){
     // ── CREW tab ─────────────────────────────────────────────────
     const living = G.crew.filter(c=>c.hp>0);
-    const sel = Math.min(G._viewCrewSel||0, living.length-1);
+    const sel = Math.max(0,Math.min(G._viewCrewSel||0, living.length-1));
     const equipMode = G._equipGunIdx !== undefined || G._equipArmorIdx !== undefined || G._equipImplantIdx !== undefined || G._equipStimIdx !== undefined;
     const equipGun = G._equipGunIdx !== undefined ? G.inventory[G._equipGunIdx] : null;
     const equipArmor = G._equipArmorIdx !== undefined ? G.inventory[G._equipArmorIdx] : null;
@@ -140,12 +203,16 @@ function drawInventoryOverlay(){
       ctx.font='16px Courier New'; ctx.fillStyle='#f07070'; ctx.textAlign='left';
       ctx.fillText('All crew dead!', 40, 80);
     } else {
-      // Left: crew list — each card is 54px tall to fit 3 rows
-      living.forEach((c,i)=>{
+      const top = equipMode ? 74 : 54;
+      const visibleCount = Math.max(1,Math.floor((ch-top-55)/58));
+      const start = Math.max(0,Math.min(sel-Math.floor(visibleCount/2),living.length-visibleCount));
+      living.slice(start,start+visibleCount).forEach((c,offset)=>{
+        const i = start+offset;
         const isSel = i===sel;
         const roleData = CREW_ROLES[c.role];
         const roleCol = roleData ? roleData.col : '#aaaaaa';
-        const by = (equipMode ? 74 : 54) + i*58;
+        const by = top + offset*58;
+        canvasMenuTarget(40,by,200,50,()=>{ G._viewCrewSel=i; renderAll(); });
         ctx.fillStyle = isSel ? '#0e1a2a' : '#08080f';
         ctx.fillRect(40, by, 200, 50);
         ctx.strokeStyle = isSel ? (equipMode ? '#aaaaff' : roleCol) : '#1a1a2a';
@@ -185,6 +252,10 @@ function drawInventoryOverlay(){
           ctx.fillText(c.armor, 150, by+46);
         }
       });
+      if(start>0) canvasMenuButton('↑ More',40,ch-49,()=>handleInventoryKey('ArrowUp',true));
+      if(start+visibleCount<living.length) canvasMenuButton('↓ More',132,ch-49,()=>handleInventoryKey('ArrowDown',true));
+      if(equipMode) canvasMenuButton('Confirm [Enter]',270,ch-49,()=>handleInventoryKey('Enter'));
+      else canvasMenuButton('Crew details [X]',270,ch-49,()=>handleInventoryKey('x'));
 
       // Right: detail panel for selected crew
       const c = living[sel];
@@ -486,6 +557,12 @@ function drawInventoryOverlay(){
       ctx.lineWidth = isSel ? 2.5 : (item ? 1.5 : 1);
       ctx.strokeRect(bx, boxY, boxSize, boxSize);
       if(item){
+        canvasMenuTarget(bx,boxY,boxSize,boxSize,()=>{
+          if(G._cargoSel!==i) G._jettisonConfirm=false;
+          G._cargoSel=i;
+          G._cargoExamine=true;
+          renderAll();
+        },{title:item.name+(item.desc?' — '+item.desc:'')});
         ctx.font = 'bold 20px Courier New';
         ctx.fillStyle = item.col || '#aaaaaa';
         ctx.textAlign = 'center';
@@ -507,6 +584,8 @@ function drawInventoryOverlay(){
     if(inSpace && (G.cargo?.length||0) > 0){
       const selItem = G.cargo[cargoSel];
       const hintY = boxY + boxSize + 16;
+      canvasMenuButton(G._cargoExamine?'Close details [X]':'Examine cargo [X]',cw-365,46,()=>handleInventoryKey('x'));
+      canvasMenuButton(G._jettisonConfirm?'Confirm jettison [J]':'Jettison [J]',cw-190,46,()=>handleInventoryKey('j'));
       if(G._jettisonConfirm && selItem){
         ctx.font = 'bold 13px Courier New';
         ctx.fillStyle = '#ff4444';
@@ -534,6 +613,7 @@ function drawInventoryOverlay(){
     const fY = 52;
     FILTERS.forEach((f,i)=>{
       const fx = fStartX + i*(fBtnW+fBtnGap);
+      canvasMenuTarget(fx,fY,fBtnW,fBtnH,()=>handleInventoryKey(String(i+1)));
       const sel = G._logFilter === f.id;
       ctx.fillStyle = sel ? '#1a2a1a' : '#0a0a12';
       ctx.fillRect(fx, fY, fBtnW, fBtnH);
@@ -678,3 +758,507 @@ function drawInventoryOverlay(){
   }
 }
 
+
+function handleInventoryKey(key,shiftKey=false){
+  if((key==='x'||key==='X') && G._viewTab==='inventory'){
+    if(G.inventory.length){
+      G._inventoryExamine = !G._inventoryExamine;
+      renderAll(); return;
+    }
+    addLog('Inventory is empty.','li');
+    renderAll(); return;
+  }
+  // ── D — drop item on planet floor ──────────────────────────
+  if((key==='d'||key==='D') && G._viewTab==='inventory' && G._prevMode==='planet'){
+    if(!G.inventory.length){ addLog('Inventory is empty.','li'); renderAll(); return; }
+    const idx = Math.max(0, Math.min(G._viewInvSel||0, G.inventory.length-1));
+    const item = G.inventory[idx];
+    if(!item){ renderAll(); return; }
+    G.inventory.splice(idx, 1);
+    G._viewInvSel = Math.max(0, Math.min(idx, G.inventory.length-1));
+    dropPlanetLoot(G.player.x, G.player.y, [item]);
+    renderAll(); return;
+  }
+  if((key==='x'||key==='X') && G._viewTab==='ship'){
+    if((G.cargo?.length||0) > 0){
+      G._cargoExamine = !G._cargoExamine;
+      renderAll(); return;
+    }
+    addLog('Cargo hold is empty.','li');
+    renderAll(); return;
+  }
+  if((key==='x'||key==='X') && G._viewTab==='crew' && G._equipGunIdx===undefined && G._equipArmorIdx===undefined){
+    if(selectedCrewMember()){
+      startCrewDialogue('root');
+      return;
+    }
+    addLog('No living crew selected.','li');
+    renderAll(); return;
+  }
+  if(key==='ArrowLeft'||key==='ArrowRight'){
+    const cur = INVENTORY_TABS.indexOf(G._viewTab||'inventory');
+    const dir = key==='ArrowRight' ? 1 : -1;
+    selectInventoryTab(INVENTORY_TABS[(cur+dir+INVENTORY_TABS.length)%INVENTORY_TABS.length]); return;
+  }
+  // ── Ship tab — cargo navigation (Up/Down) and jettison ─────────
+  if(G._viewTab==='ship' && G.mode !== 'base' && G.mode !== 'planet'){
+    if((key==='ArrowUp'||key==='ArrowDown') && (G.cargo?.length||0) > 0){
+      const dir = key==='ArrowDown' ? 1 : -1;
+      G._cargoSel = ((G._cargoSel||0) + dir + G.cargo.length) % G.cargo.length;
+      G._jettisonConfirm = false;
+      // Leave _cargoExamine open so details update live
+      renderAll(); return;
+    }
+    if(key==='j'||key==='J'){
+      const cargo = G.cargo||[];
+      if(!cargo.length){ addLog('Cargo hold is empty.','li'); renderAll(); return; }
+      const sel = Math.max(0, Math.min(G._cargoSel||0, cargo.length-1));
+      const item = cargo[sel];
+      if(!item){ renderAll(); return; }
+      if(!G._jettisonConfirm){
+        G._jettisonConfirm = true;
+        addLog('Jettison '+item.name+'? Press J again to confirm, ESC to cancel.','lw');
+        renderAll(); return;
+      }
+      G.cargo.splice(sel, 1);
+      noteQuarantinePodLoss(item);
+      G._cargoSel = Math.max(0, Math.min(G._cargoSel||0, G.cargo.length-1));
+      G._jettisonConfirm = false;
+      addLog(item.name+' jettisoned into space.','lw');
+      renderAll(); return;
+    }
+    if(G._jettisonConfirm && key==='Escape'){
+      G._jettisonConfirm = false;
+      addLog('Jettison cancelled.','li');
+      renderAll(); return;
+    }
+  }
+  if(G._viewTab==='log'){
+    if(key==='ArrowUp')  { G._logScroll = Math.max(0,(G._logScroll||0)-(shiftKey?10:1)); renderAll(); return; }
+    if(key==='ArrowDown'){ G._logScroll = (G._logScroll||0)+(shiftKey?10:1); renderAll(); return; }
+    if(key>='1'&&Number(key)<=LOG_FILTERS.length){ G._logFilter=LOG_FILTERS[Number(key)-1].id; G._logScroll=Infinity; renderAll(); return; }
+    renderAll(); return;
+  }
+  if(G._viewTab==='crew'){
+    const living = G.crew.filter(c=>c.hp>0);
+    if(key==='ArrowUp'||key==='ArrowDown'){
+      const step = (key==='ArrowUp'?-1:1)*(shiftKey?5:1);
+      G._viewCrewSel=Math.max(0,Math.min(living.length-1,(G._viewCrewSel||0)+step));
+      renderAll(); return;
+    }
+    if(key==='Enter' && G._equipGunIdx !== undefined){
+      const target = living[G._viewCrewSel||0];
+      const gun = G.inventory[G._equipGunIdx];
+      if(target && gun){
+        // Unequip any existing gun from this crew member first
+        const oldGun = target.weapon;
+        if(oldGun && oldGun !== 'Bare hands'){
+          const oldIsSniper = target.weaponUsable === 'gun_sniper';
+          const oldIsKnife  = target.weaponUsable === 'knife';
+          const oldUsable   = target.weaponUsable || 'gun';
+          const oldDesc     = oldIsSniper ? '+5 ATK when equipped.' : oldIsKnife ? '+1 ATK when equipped.' : '+2 ATK when equipped.';
+          const oldCol      = oldIsSniper ? '#ffaa44' : oldIsKnife ? '#ccccaa' : '#aaaaff';
+          G.inventory.push({name:oldGun, col:oldCol, desc:oldDesc, value:0, usable:oldUsable});
+          addLog(crewDisplayName(target)+' unequips '+oldGun+'.','li');
+        }
+        const atkBonus = gun.usable === 'gun_sniper' ? 5 : gun.usable === 'gun_breacher' ? 4 : gun.usable === 'vibroblade' ? 4 : gun.usable === 'knife' ? 1 : gun.usable === 'stun_baton' ? 2 : gun.usable === 'tranq_darts' ? 0 : (gun.usable === 'gun_shotgun' || gun.usable === 'gun_burst' || gun.usable === 'gun_plasma') ? 3 : 2;
+        target.weapon = gun.name;
+        target.weaponUsable = gun.usable;
+        G.inventory.splice(G._equipGunIdx, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        G._equipGunIdx = undefined;
+        addLog(crewDisplayName(target)+' equipped '+gun.name+'. ATK +'+atkBonus+'.','lg');
+      }
+      renderAll(); return;
+    }
+    if(key==='Enter' && G._equipArmorIdx !== undefined){
+      const target = living[G._viewCrewSel||0];
+      const armor = G.inventory[G._equipArmorIdx];
+      if(target && armor){
+        // Return old armor to inventory if not naked
+        if(target.armorUsable){
+          const oldDef = armorDefBonus(target);
+          const oldCol = target.armorUsable === 'armor_exosuit' ? '#ff8833' : target.armorUsable === 'armor_reinforced' ? '#ffcc44' : target.armorUsable === 'armor_plate' ? '#aaaacc' : '#88ddff';
+          G.inventory.push({name:target.armor, col:oldCol, desc:'+'+oldDef+' DEF when equipped.', value:0, usable:target.armorUsable});
+          addLog(crewDisplayName(target)+' removes '+target.armor+'.','li');
+        }
+        const defBonus = armor.usable === 'armor_exosuit' ? 3 : armor.usable === 'armor_reinforced' ? 2 : 1;
+        target.armor = armor.name;
+        target.armorUsable = armor.usable;
+        G.inventory.splice(G._equipArmorIdx, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        G._equipArmorIdx = undefined;
+        addLog(crewDisplayName(target)+' equipped '+armor.name+'. DEF +'+defBonus+'.','lg');
+      }
+      renderAll(); return;
+    }
+    if(key==='Escape' && G._equipGunIdx !== undefined){
+      G._equipGunIdx = undefined;
+      G._viewTab = 'inventory';
+      addLog('Equip cancelled.','li');
+      renderAll(); return;
+    }
+    if(key==='Escape' && G._equipArmorIdx !== undefined){
+      G._equipArmorIdx = undefined;
+      G._viewTab = 'inventory';
+      addLog('Equip cancelled.','li');
+      renderAll(); return;
+    }
+    // Implant install — Enter confirms on selected crew member
+    if(key==='Enter' && G._equipImplantIdx !== undefined){
+      const target = living[G._viewCrewSel||0];
+      const implantItem = G.inventory[G._equipImplantIdx];
+      if(target && implantItem){
+        if(!target.implants) target.implants = [];
+        const MAX_IMPLANTS = 2;
+        if(target.implants.length >= MAX_IMPLANTS){
+          addLog(crewDisplayName(target)+' already has '+MAX_IMPLANTS+' implants (maximum). Remove one first.','lw');
+        } else {
+          const impId = implantItem.implantId || implantItem.usable.slice('implant_'.length);
+          if(target.implants.includes(impId)){
+            addLog(crewDisplayName(target)+' already has this implant installed.','lw');
+          } else {
+            const imp = IMPLANT_CATALOG.find(i=>i.id===impId);
+            target.implants.push(impId);
+            // Apply permanent stat effects
+            if(imp?.effect?.maxHp) target.maxHp = (target.maxHp||10) + imp.effect.maxHp;
+            G.inventory.splice(G._equipImplantIdx, 1);
+            G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+            G._equipImplantIdx = undefined;
+            addLog(crewDisplayName(target)+': '+imp.name+' installed. ['+(target.implants.length)+'/'+MAX_IMPLANTS+']','lg');
+          }
+        }
+      }
+      renderAll(); return;
+    }
+    if(key==='Escape' && G._equipImplantIdx !== undefined){
+      G._equipImplantIdx = undefined;
+      G._viewTab = 'inventory';
+      addLog('Implant install cancelled.','li');
+      renderAll(); return;
+    }
+    // ── Combat Stim — apply to selected crew member ────────
+    if(key==='Enter' && G._equipStimIdx !== undefined){
+      const target = living[G._viewCrewSel||0];
+      const stimItem = G.inventory[G._equipStimIdx];
+      if(target && stimItem){
+        if((target._stimAtk||0) > 0 && G.turn <= (target._stimUntil||0)){
+          addLog(crewDisplayName(target)+' is already stimmed — wait for it to wear off.','lw');
+        } else {
+          target._stimUntil = G.turn + 8;
+          target._stimAtk = 3;
+          G.inventory.splice(G._equipStimIdx, 1);
+          G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+          G._equipStimIdx = undefined;
+          addLog('Combat Stim administered to '+crewDisplayName(target)+'. +3 ATK for 8 turns.','lg');
+        }
+      }
+      renderAll(); return;
+    }
+    if(key==='Escape' && G._equipStimIdx !== undefined){
+      G._equipStimIdx = undefined;
+      G._viewTab = 'inventory';
+      addLog('Stim administration cancelled.','li');
+      renderAll(); return;
+    }
+    // W — unequip weapon (changed from U to avoid conflict with fuel scoop), S — strip armor
+    if((key==='w'||key==='W') && G._equipGunIdx===undefined && G._equipArmorIdx===undefined && G._equipStimIdx===undefined){
+      const sc = living[G._viewCrewSel||0];
+      if(sc && sc.weapon && sc.weapon !== 'Bare hands'){
+        const oldIsSniper = sc.weaponUsable === 'gun_sniper';
+        const oldIsKnife  = sc.weaponUsable === 'knife';
+        const oldUsable   = sc.weaponUsable || 'gun';
+        const oldDesc     = oldIsSniper ? '+5 ATK when equipped.' : oldIsKnife ? '+1 ATK when equipped.' : '+2 ATK when equipped.';
+        const oldCol      = oldIsSniper ? '#ffaa44' : oldIsKnife ? '#ccccaa' : '#aaaaff';
+        G.inventory.push({name:sc.weapon, col:oldCol, desc:oldDesc, value:0, usable:oldUsable});
+        addLog(crewDisplayName(sc)+' unequips '+sc.weapon+'.','li');
+        sc.weapon = 'Bare hands';
+        sc.weaponUsable = null;
+      } else addLog('No weapon to unequip.','li');
+      renderAll(); return;
+    }
+    if((key==='s'||key==='S') && G._equipGunIdx===undefined && G._equipArmorIdx===undefined && G._equipStimIdx===undefined){
+      const sc = living[G._viewCrewSel||0];
+      if(sc && sc.armorUsable){
+        const oldDef = armorDefBonus(sc);
+        const oldCol = sc.armorUsable === 'armor_exosuit' ? '#ff8833' : sc.armorUsable === 'armor_reinforced' ? '#ffcc44' : sc.armorUsable === 'armor_plate' ? '#aaaacc' : '#88ddff';
+        G.inventory.push({name:sc.armor, col:oldCol, desc:'+'+oldDef+' DEF when equipped.', value:0, usable:sc.armorUsable});
+        addLog(crewDisplayName(sc)+' strips off '+sc.armor+'.','lw');
+        sc.armor = 'Naked';
+        sc.armorUsable = null;
+      } else addLog('Already unarmored.','li');
+      renderAll(); return;
+    }
+  }
+  if(G._viewTab==='inventory'){
+    if(key==='ArrowUp'||key==='ArrowDown'){
+      // Navigate by the sorted display order, not raw G.inventory order
+      // Re-derive the same category sort used in rendering
+      const getCategory2 = (item) => {
+        const u = item.usable || '';
+        if(u.startsWith('gun')||u==='knife'||u==='stun_baton'||u==='vibroblade'||u==='tranq_darts') return 'Weapons';
+        if(u.startsWith('armor_')) return 'Armour';
+        if(u.startsWith('implant_')) return 'Implants';
+        if(u==='medikit'||u==='trauma_kit'||u==='stim_pack'||u==='antibiotics'||u==='iodine_pills'||u==='rad_flush'||u==='mild_antidepressants'||u==='field_rations'||u==='morale_drug') return 'Medical';
+        if(u==='oxytank'||u==='repair_kit') return 'Supplies';
+        if(u==='mining_tool'||u==='ore_scanner'||u==='floodlight'||u==='jetpack'||u==='grapple'||u==='sensor_drone'||u==='capture_net'||u==='contain_crate') return 'Equipment';
+        if(item.value > 0 && !u) return 'Valuables';
+        return 'Misc';
+      };
+      const catOrder2 = ['Weapons','Armour','Implants','Medical','Supplies','Equipment','Valuables','Misc'];
+      const stacks2 = [];
+      const seen2 = {};
+      G.inventory.forEach((item,idx)=>{ if(!seen2[item.name]){ seen2[item.name]=true; stacks2.push({name:item.name,idx}); } });
+      const catsPresent2 = new Set(G.inventory.map(getCategory2));
+      if(catsPresent2.size >= 2){
+        stacks2.sort((a,b)=>{
+          const ca = catOrder2.indexOf(getCategory2(G.inventory[a.idx]));
+          const cb = catOrder2.indexOf(getCategory2(G.inventory[b.idx]));
+          return ca !== cb ? ca - cb : a.name.localeCompare(b.name);
+        });
+      }
+      const curName = G.inventory[G._viewInvSel||0]?.name;
+      const stackPos = stacks2.findIndex(s=>s.name===curName);
+      if(key==='ArrowUp'){
+        G._viewInvSel = stacks2[Math.max(0, stackPos-1)]?.idx ?? 0;
+      } else {
+        G._viewInvSel = stacks2[Math.min(stacks2.length-1, stackPos+1)]?.idx ?? 0;
+      }
+      renderAll(); return;
+    }
+    if(G._inventoryExamine){
+      renderAll(); return;
+    }
+    if(key==='Enter'){
+      const item = G.inventory[G._viewInvSel||0];
+      const equipType = inventoryEquipType(item);
+      if(item?.usable==='c4'){
+        if(item._armed){
+          addLog('C4 is already armed — '+item._c4Timer+' turns remaining. Drop it!','lw');
+        } else if(G.mode !== 'planet' && G._prevMode !== 'planet'){
+          addLog('C4 can only be armed on a planet surface.','lw');
+        } else {
+          item._armed = true;
+          item._c4Timer = 5;
+          addLog('C4 armed. 5 turns until detonation — DROP IT before it blows!','lc');
+        }
+        renderAll(); return;
+      }
+      if(item?.usable==='medikit'){
+        const injured = G.crew.filter(c=>c.hp>0&&c.hp<c.maxHp).sort((a,b)=>a.hp-b.hp);
+        if(!injured.length){ addLog('All crew are at full health.','li'); }
+        else {
+          const target = injured[0];
+          target.hp = Math.min(target.maxHp, target.hp+10);
+          G.inventory.splice(G._viewInvSel||0, 1);
+          G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+          addLog('Medikit used on '+target.name+'. +10 HP.','lg');
+          // Best medic gains XP from the treatment
+          const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.med||0)-(a.skills?.med||0))[0];
+          if(_medUser) giveSkillXP(_medUser, 'med', 2);
+        }
+        renderAll(); return;
+      }
+      if(item?.usable==='trauma_kit'){
+        const candidates = G.crew.filter(c=>c.hp>0 && (c.hp<c.maxHp || hasCrewInjury(c)))
+          .sort((a,b)=>{
+            const bi = hasCrewInjury(b) ? 1 : 0;
+            const ai = hasCrewInjury(a) ? 1 : 0;
+            if(bi !== ai) return bi - ai;
+            return a.hp - b.hp;
+          });
+        if(!candidates.length){ addLog('No crew member needs trauma care.','li'); renderAll(); return; }
+        const target = candidates[0];
+        const hadInjury = removeCrewInjuries(target, true) > 0;
+        target.hp = Math.min(target.maxHp, target.hp + 20);
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        addLog('Advanced Trauma Kit used on '+target.name+'. '+(hadInjury ? 'Injury treated. ' : '')+'+20 HP.','lg');
+        const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.med||0)-(a.skills?.med||0))[0];
+        if(_medUser) giveSkillXP(_medUser, 'med', 4);
+        renderAll(); return;
+      }
+      if(item?.usable==='mild_antidepressants'){
+        const livingCrew = G.crew.filter(c=>c.hp>0);
+        if(!livingCrew.length){ addLog('No living crew can use that.','lw'); renderAll(); return; }
+        boostCrewFromMildAntidepressants();
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        addLog('Mild Anti-depressants used. Crew morale steadies.','lg');
+        renderAll(); return;
+      }
+      if(item?.usable==='iodine_pills'){
+        const treated = reduceCrewRadiation(2);
+        if(!treated){ addLog('No crew member has radiation sickness.','li'); renderAll(); return; }
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        addLog('Iodine Pills used. Radiation sickness reduced for '+treated+' crew.','lg');
+        renderAll(); return;
+      }
+      if(item?.usable==='antibiotics'){
+        let treated = 0;
+        G.crew.forEach(c=>{
+          if(c.hp>0 && removeCrewDiseases(c, true)>0) treated++;
+        });
+        if(!treated){ addLog('No crew member needs antibiotics.','li'); renderAll(); return; }
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        addLog('Antibiotics used. Disease treated for '+treated+' crew.','lg');
+        const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.med||0)-(a.skills?.med||0))[0];
+        if(_medUser) giveSkillXP(_medUser, 'med', 4);
+        renderAll(); return;
+      }
+      if(item?.usable==='oxytank'){
+        const onPlanet = G.mode==='planet' || G._prevMode==='planet';
+        if(!onPlanet){ addLog('Oxygen Tank can only be used on a planet surface.','lw'); renderAll(); return; }
+        if(G.oxygen>=100){ addLog('Oxygen already full.','li'); renderAll(); return; }
+        G.oxygen = 100;
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        addLog('Oxygen Tank used. O₂ refilled to 100%.','lg');
+        renderAll(); return;
+      }
+      if(item?.usable==='morale_drug'){
+        const livingCrew = G.crew.filter(c=>c.hp>0);
+        if(!livingCrew.length){ addLog('No living crew can use that.','lw'); renderAll(); return; }
+        boostCrewFromDrugs();
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
+        addLog(item.name+' used. Crew morale surges into dangerous good humor.','lg');
+        renderAll(); return;
+      }
+      if(equipType==='weapon'){
+        G._viewTab = 'crew';
+        G._viewCrewSel = 0;
+        G._equipGunIdx = G._viewInvSel||0;
+        addLog('Select a crew member to equip the '+item.name+'.','li');
+        renderAll(); return;
+      }
+      if(equipType==='armor'){
+        G._viewTab = 'crew';
+        G._viewCrewSel = 0;
+        G._equipArmorIdx = G._viewInvSel||0;
+        addLog('Select a crew member to equip the '+item.name+'.','li');
+        renderAll(); return;
+      }
+      if(equipType==='implant'){
+        G._viewTab = 'crew';
+        G._viewCrewSel = 0;
+        G._equipImplantIdx = G._viewInvSel||0;
+        addLog('Select a crew member to install '+item.name+' (max 2 implants per crew).','li');
+        renderAll(); return;
+      }
+      // ── Combat Stim — crew selection ───────────────────────
+      if(equipType==='stim'){
+        const living2 = G.crew.filter(c=>c.hp>0);
+        if(!living2.length){ addLog('No living crew to administer stim to.','lw'); renderAll(); return; }
+        G._viewTab = 'crew';
+        G._viewCrewSel = 0;
+        G._equipStimIdx = G._viewInvSel||0;
+        addLog('Select a crew member to administer the Combat Stim.','li');
+        renderAll(); return;
+      }
+      // ── Grappling Hook ─────────────────────────────────────
+      if(item?.usable==='grapple'){
+        const onPlanet = G.mode==='planet' || G._prevMode==='planet';
+        if(!onPlanet){ addLog('Grappling Hook can only be used on a planet surface.','lw'); renderAll(); return; }
+        G._itemAimMode = { usable:'grapple', invIdx: G._viewInvSel||0 };
+        G.mode = 'planet';
+        addLog('GRAPPLE AIM \u2014 arrow keys to pick direction, [Esc] to cancel.','li');
+        renderAll(); return;
+      }
+      // ── Jetpack ────────────────────────────────────────────
+      if(item?.usable==='jetpack'){
+        const onPlanetJ = G.mode==='planet' || G._prevMode==='planet';
+        if(!onPlanetJ){ addLog('Jetpack can only be used on a planet surface.','lw'); renderAll(); return; }
+        if((item.fuel||0) <= 0){ addLog('Jetpack is out of fuel \u2014 find a refuel station or buy a new one.','lw'); renderAll(); return; }
+        G._itemAimMode = { usable:'jetpack', invIdx: G._viewInvSel||0 };
+        G.mode = 'planet';
+        addLog('JETPACK AIM \u2014 arrow keys to pick direction, [Esc] to cancel.','li');
+        renderAll(); return;
+      }
+
+      // ── Capture Net ────────────────────────────────────────
+      if(item?.usable==='capture_net'){
+        const onPlanetC = G.mode==='planet' || G._prevMode==='planet'; if(!onPlanetC){ addLog('Capture Net can only be used on a planet surface.','lw'); renderAll(); return; }
+        const pdata4 = G.planets[G.curPlanet];
+        const nearEnemies2 = (G.enemies[G.curPlanet]||[]).filter(e=>e.alive && !e.hidden && Math.max(Math.abs(e.x-G.player.x),Math.abs(e.y-G.player.y)) <= 1);
+        if(!nearEnemies2.length){ addLog('No creature adjacent (net requires melee range).','lw'); renderAll(); return; }
+        const target3 = nearEnemies2.sort((a,b)=>(Math.abs(a.x-G.player.x)+Math.abs(a.y-G.player.y))-(Math.abs(b.x-G.player.x)+Math.abs(b.y-G.player.y)))[0];
+        target3.stunTurns = (target3.stunTurns||0) + 5;
+        target3.netted = true;
+        addLog(target3.name+' tangled in capture net — stunned for 5 turns and ready for containment.','lg');
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+        G.mode = G._prevMode;
+        G.turn++; pdata4.planetTurn = (pdata4.planetTurn||0)+1; moveEnemies();
+        renderAll(); return;
+      }
+      // ── Containment Crate ──────────────────────────────────
+      if(item?.usable==='contain_crate'){
+        const onPlanetCR = G.mode==='planet' || G._prevMode==='planet'; if(!onPlanetCR){ addLog('Containment Crate can only be used on a planet surface.','lw'); renderAll(); return; }
+        const anyNetted = (G.enemies[G.curPlanet]||[]).find(e=>e.alive && e.netted);
+        const nettedEnemy = (G.enemies[G.curPlanet]||[]).find(e=>e.alive && e.netted && Math.max(Math.abs(e.x-G.player.x),Math.abs(e.y-G.player.y)) <= 1);
+        if(!anyNetted){ addLog('No netted creature on this planet. Use Capture Net on a creature first.','lw'); renderAll(); return; }
+        if(!nettedEnemy){ addLog('Netted creature is too far — move adjacent to it first.','lw'); renderAll(); return; }
+        const bounty = 150 + Math.floor(Math.random()*200);
+        nettedEnemy.alive = false;
+        G.mode = G._prevMode;
+        G.inventory.push({ name:'Contained: '+nettedEnemy.name, isCapturedCreature:true, creatureName:nettedEnemy.name, bounty, boughtPrice:0, col:'#44ffcc', desc:'Live specimen secured. Deliver to Margo Security for '+bounty+' cr bounty.', value:bounty });
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+        addLog(nettedEnemy.name+' secured in containment crate. Deliver to Margo Security for '+bounty+' cr bounty.','lg');
+        renderAll(); return;
+      }
+      // ── Field Rations ──────────────────────────────────────
+      if(item?.usable==='field_rations'){
+        const injured2 = G.crew.filter(c=>c.hp>0&&c.hp<c.maxHp).sort((a,b)=>a.hp-b.hp);
+        if(!injured2.length){ addLog('All crew are at full health.','li'); renderAll(); return; }
+        injured2[0].hp = Math.min(injured2[0].maxHp, injured2[0].hp+5);
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+        addLog('Field Rations used on '+injured2[0].name+'. +5 HP.','lg');
+        renderAll(); return;
+      }
+      // ── Rad-Flush Tablet ───────────────────────────────────
+      if(item?.usable==='rad_flush'){
+        const treated2 = (typeof reduceCrewRadiation === 'function') ? reduceCrewRadiation(99) : 0;
+        if(!treated2){ addLog('No crew member has radiation sickness.','li'); renderAll(); return; }
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+        addLog('Rad-Flush Tablet used. Radiation cleared for '+treated2+' crew.','lg');
+        renderAll(); return;
+      }
+      // ── Sensor Drone ───────────────────────────────────────
+      // Galaxy-only: use Rovers for planetside scouting instead.
+      if(item?.usable==='sensor_drone'){
+        const inGalaxy = G.mode==='galaxy' || G._prevMode==='galaxy';
+        if(!inGalaxy){
+          addLog('Sensor Drone can only be launched from galaxy view. Use a Rover for planetside scouting.','lw'); renderAll(); return;
+        }
+        const facing = G.ship?.facing || { dx:0, dy:-1 };
+        const fdx = facing.dx||0, fdy = facing.dy||0;
+        if(fdx===0 && fdy===0){ addLog('Move the ship first to set a launch direction.','lw'); renderAll(); return; }
+        if(!G._activeDrones) G._activeDrones = [];
+        G._activeDrones.push({ x: G.ship.x, y: G.ship.y, dx: fdx, dy: fdy, turnsLeft: 4 + Math.floor(Math.random() * 4) });
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+        addLog('Sensor Drone launched — flying ahead, revealing galaxy fog.','lg');
+        G.mode = 'galaxy';
+        renderAll(); return;
+      }
+      // ── Repair Kit ─────────────────────────────────────────
+      if(item?.usable==='repair_kit'){
+        if(G.ship.hp >= G.ship.maxHp){ addLog('Ship hull is already at full integrity.','li'); renderAll(); return; }
+        G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 15);
+        SFX.repair();
+        G.inventory.splice(G._viewInvSel||0, 1);
+        G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
+        addLog('Repair Kit applied. Ship hull +15 HP.','lg');
+        renderAll(); return;
+      }
+      // floodlight is passive — no activation needed
+    }
+  }
+  return;
+}

@@ -215,6 +215,8 @@ function drawStrandedOverlay(){
     ctx.font='bold 14px Courier New';
     ctx.fillStyle='#44ff88'; ctx.fillText('[Y] Accept', opx+12, opy+58);
     ctx.fillStyle='#ff6644'; ctx.fillText('[N] Decline', opx+160, opy+58);
+    canvasMenuTarget(opx+10,opy+43,108,21,doAcceptRescue);
+    canvasMenuTarget(opx+158,opy+43,116,21,doDeclineRescue);
   }
   if(st.rescuePhase==='broke'){
     const opx=px2, opy=py2-52, opw=pw, oph=44;

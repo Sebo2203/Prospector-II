@@ -237,16 +237,20 @@ function casinoDrawContest(cx,ch,drink){
       ctx.font='13px Courier New'; ctx.fillStyle='#668899';
       ctx.fillText('Enter drinks again. ESC backs out before the next glass.',cx,222);
       ctx.fillText('Each glass makes the room meaner. The log tells the story.',cx,244);
+      canvasMenuButton('Drink again [Enter]',cx-95,265,()=>handleCasinoKey('Enter'));
     } else {
       ctx.font='13px Courier New'; ctx.fillStyle='#997766';
       ctx.fillText('1 steady pressure   2 hard surge   3 shoulder feint   ESC concede',cx,222);
       ctx.fillText('First to two clean table moves wins. The log carries the blow-by-blow.',cx,244);
+      canvasMenuButton('Steady [1]',cx-175,265,()=>handleCasinoKey('1'));
+      canvasMenuButton('Surge [2]',cx-55,265,()=>handleCasinoKey('2'));
+      canvasMenuButton('Feint [3]',cx+65,265,()=>handleCasinoKey('3'));
     }
     return;
   }
   ctx.font='14px Courier New';ctx.fillStyle='#aa77cc';ctx.textAlign='center';
   ctx.fillText('Stepping up: '+(best?crewDisplayName(best):'no living crew'),cx,158);
-  list.forEach((o,i)=>{const y=184+i*72,x=cx-300,sel=i===selIdx;casinoBox(x,y,600,60,sel,drink?'#88ddff':'#ff8844');ctx.font='bold 16px Courier New';ctx.fillStyle=sel?'#fff':'#ccaaff';ctx.textAlign='left';ctx.fillText(o.name+'   Stake '+o.stake+' cr   Purse '+o.payout+' cr',x+26,y+23);ctx.font='13px Courier New';ctx.fillStyle=sel?'#aaddff':'#665577';ctx.fillText(o.line,x+26,y+43);});
+  list.forEach((o,i)=>{const y=184+i*72,x=cx-300,sel=i===selIdx;casinoBox(x,y,600,60,sel,drink?'#88ddff':'#ff8844'); canvasMenuTarget(x,y,600,60,()=>{ if(drink)c.drinkSel=i;else c.wrestleSel=i; handleCasinoKey('Enter'); });ctx.font='bold 16px Courier New';ctx.fillStyle=sel?'#fff':'#ccaaff';ctx.textAlign='left';ctx.fillText(o.name+'   Stake '+o.stake+' cr   Purse '+o.payout+' cr',x+26,y+23);ctx.font='13px Courier New';ctx.fillStyle=sel?'#aaddff':'#665577';ctx.fillText(o.line,x+26,y+43);});
   casinoFoot('Up/Down opponent   Enter step up   ESC back',cx,ch);
 }
 function casinoBox(x,y,w,h,sel,col){ ctx.fillStyle=sel?'#1a0a2e':'#0d0618'; ctx.fillRect(x,y,w,h); ctx.strokeStyle=sel?col:'#2a1a3a'; ctx.lineWidth=sel?2:1; ctx.strokeRect(x,y,w,h); }
@@ -259,12 +263,12 @@ function drawCasinoOverlay(){
   ctx.textAlign='center'; ctx.font='bold 32px Courier New'; ctx.fillStyle='#cc44ff'; ctx.fillText('THE VOID ROYALE',cx,50); ctx.font='16px Courier New'; ctx.fillStyle='#7733aa'; ctx.fillText('Deep Space Entertainment Complex - Est. 2387',cx,72); ctx.fillStyle='#3a1a5a'; ctx.fillRect(cx-320,82,640,1);
   if(c.screen==='main'){
     ctx.font='bold 17px Courier New'; ctx.fillStyle='#ffe066'; ctx.fillText('Balance: '+G.credits+' cr   Session: +'+(c.sessionWon||0)+' / -'+(c.sessionLost||0)+' cr',cx,108); ctx.font='13px Courier New'; ctx.fillStyle='#aa77cc'; ctx.fillText(c.npcLine,cx,130);
-    CASINO_GAMES.forEach((g,i)=>{ const y=150+i*66,x=cx-300,sel=i===c.sel; casinoBox(x,y,600,54,sel,g.col); if(sel){ctx.fillStyle=g.col;ctx.font='bold 18px Courier New';ctx.textAlign='left';ctx.fillText('>',x+12,y+24);} ctx.font='bold 17px Courier New';ctx.fillStyle=sel?'#fff':g.col;ctx.textAlign='left';ctx.fillText(g.label,x+34,y+22);ctx.font='13px Courier New';ctx.fillStyle=sel?'#aaa':'#665577';ctx.fillText(g.sub,x+34,y+42); });
+    CASINO_GAMES.forEach((g,i)=>{ const y=150+i*66,x=cx-300,sel=i===c.sel; casinoBox(x,y,600,54,sel,g.col); canvasMenuTarget(x,y,600,54,()=>{c.sel=i;handleCasinoKey('Enter');}); if(sel){ctx.fillStyle=g.col;ctx.font='bold 18px Courier New';ctx.textAlign='left';ctx.fillText('>',x+12,y+24);} ctx.font='bold 17px Courier New';ctx.fillStyle=sel?'#fff':g.col;ctx.textAlign='left';ctx.fillText(g.label,x+34,y+22);ctx.font='13px Courier New';ctx.fillStyle=sel?'#aaa':'#665577';ctx.fillText(g.sub,x+34,y+42); });
     ctx.font='13px Courier New'; ctx.fillStyle='#8866aa'; ctx.textAlign='center'; ctx.fillText('Lifetime won '+(stats.lifetimeWon||0)+' cr  |  Lifetime lost '+(stats.lifetimeLost||0)+' cr  |  Jackpot '+(stats.jackpot||1200)+' cr',cx,ch-38); casinoFoot('Up/Down navigate   Enter select   ESC undock',cx,ch);
   } else if(c.screen==='poker'){
     casinoHead('VOID POKER',cx); const p=c.poker;
-    if(!p){ if(c.lastResult){ctx.font='bold 15px Courier New';ctx.fillStyle=c.lastResult.win?'#44ff88':'#ff6666';ctx.fillText(c.lastResult.msg,cx,160);} CASINO_POKER_STAKES.forEach((s,i)=>{const y=178+i*64,x=cx-280,sel=i===c.betSel;casinoBox(x,y,560,52,sel,'#ffcc00');ctx.font='bold 16px Courier New';ctx.fillStyle=sel?'#fff':'#ccaaff';ctx.textAlign='left';ctx.fillText(s.label+' - '+s.amount+' cr',x+28,y+22);ctx.font='13px Courier New';ctx.fillStyle=sel?'#ffcc44':'#665577';ctx.fillText(s.hint,x+28,y+40);}); casinoFoot('Up/Down table   Enter buy in   ESC back',cx,ch); }
-    else { const sci=casinoBest('sci'), peek=Math.min(3,Math.floor((casinoSkill(sci,'sci')+1)/3)); ctx.font='14px Courier New';ctx.fillStyle='#aa77cc';ctx.fillText('Stake '+p.stake+' cr'+(sci?'  |  SCI read: '+crewDisplayName(sci)+(peek?' sees '+p.deck.slice(0,peek).map(casinoCard).join(' '):' gets static'):''),cx,160); for(let i=0;i<5;i++){const x=cx-250+i*125,y=194;casinoBox(x,y,92,120,p.hold[i],'#ffcc00');ctx.font='bold 30px Courier New';ctx.fillStyle=p.hold[i]?'#ffe066':'#fff';ctx.textAlign='center';ctx.fillText(casinoCard(p.hand[i]),x+46,y+58);ctx.font='12px Courier New';ctx.fillStyle=p.hold[i]?'#44ff88':'#665577';ctx.fillText((i+1)+' '+(p.hold[i]?'HELD':'hold'),x+46,y+94);} if(p.phase==='result'){const r=p.result;ctx.font='bold 18px Courier New';ctx.fillStyle=r.profit>0?'#44ff88':'#ff6666';ctx.fillText(r.rank.name+'   Payout '+r.payout+' cr   Net '+r.profit+' cr',cx,350);casinoFoot('Enter new hand   ESC tables',cx,ch);} else {ctx.font='14px Courier New';ctx.fillStyle='#8866aa';ctx.fillText('Payouts: Pair x2, Two Pair x3, Trips x4, Straight x5, Flush x6, Full House x8, Four x12',cx,350);casinoFoot('1-5 toggle hold   Enter redraw   ESC fold/back',cx,ch);} }
+    if(!p){ if(c.lastResult){ctx.font='bold 15px Courier New';ctx.fillStyle=c.lastResult.win?'#44ff88':'#ff6666';ctx.fillText(c.lastResult.msg,cx,160);} CASINO_POKER_STAKES.forEach((s,i)=>{const y=178+i*64,x=cx-280,sel=i===c.betSel;casinoBox(x,y,560,52,sel,'#ffcc00'); canvasMenuTarget(x,y,560,52,()=>{c.betSel=i;handleCasinoKey('Enter');});ctx.font='bold 16px Courier New';ctx.fillStyle=sel?'#fff':'#ccaaff';ctx.textAlign='left';ctx.fillText(s.label+' - '+s.amount+' cr',x+28,y+22);ctx.font='13px Courier New';ctx.fillStyle=sel?'#ffcc44':'#665577';ctx.fillText(s.hint,x+28,y+40);}); casinoFoot('Up/Down table   Enter buy in   ESC back',cx,ch); }
+    else { const sci=casinoBest('sci'), peek=Math.min(3,Math.floor((casinoSkill(sci,'sci')+1)/3)); ctx.font='14px Courier New';ctx.fillStyle='#aa77cc';ctx.fillText('Stake '+p.stake+' cr'+(sci?'  |  SCI read: '+crewDisplayName(sci)+(peek?' sees '+p.deck.slice(0,peek).map(casinoCard).join(' '):' gets static'):''),cx,160); for(let i=0;i<5;i++){const x=cx-250+i*125,y=194;casinoBox(x,y,92,120,p.hold[i],'#ffcc00'); if(p.phase==='hold') canvasMenuTarget(x,y,92,120,()=>handleCasinoKey(String(i+1)));ctx.font='bold 30px Courier New';ctx.fillStyle=p.hold[i]?'#ffe066':'#fff';ctx.textAlign='center';ctx.fillText(casinoCard(p.hand[i]),x+46,y+58);ctx.font='12px Courier New';ctx.fillStyle=p.hold[i]?'#44ff88':'#665577';ctx.fillText((i+1)+' '+(p.hold[i]?'HELD':'hold'),x+46,y+94);} if(p.phase==='result'){const r=p.result;ctx.font='bold 18px Courier New';ctx.fillStyle=r.profit>0?'#44ff88':'#ff6666';ctx.fillText(r.rank.name+'   Payout '+r.payout+' cr   Net '+r.profit+' cr',cx,350);casinoFoot('Enter new hand   ESC tables',cx,ch);} else {ctx.font='14px Courier New';ctx.fillStyle='#8866aa';ctx.fillText('Payouts: Pair x2, Two Pair x3, Trips x4, Straight x5, Flush x6, Full House x8, Four x12',cx,350);casinoFoot('1-5 toggle hold   Enter redraw   ESC fold/back',cx,ch);} }
   } else if(c.screen==='wrestle'||c.screen==='drink'){
     casinoDrawContest(cx,ch,c.screen==='drink');
   } else if(c.screen==='arena'){
@@ -272,55 +276,65 @@ function drawCasinoOverlay(){
         const _lc=casinoCrew();
         ctx.font='bold 16px Courier New';ctx.fillStyle='#ffcc66';ctx.textAlign='center';
         ctx.fillText('SELECT FIGHTER',cx,160);
-        _lc.forEach((cr,i)=>{
-          const y=186+i*46,x=cx-280,sel=i===(c.fighterSel||0);
+        const visible=Math.max(1,Math.floor((ch-225)/46));
+        const start=Math.max(0,Math.min((c.fighterSel||0)-2,_lc.length-visible));
+        canvasMenuScroll=step=>handleCasinoKey(step<0?'ArrowUp':'ArrowDown');
+        _lc.slice(start,start+visible).forEach((cr,offset)=>{
+          const i=start+offset;
+          const y=186+offset*46,x=cx-280,sel=i===(c.fighterSel||0);
           casinoBox(x,y,560,38,sel,'#ff5555');
+          canvasMenuTarget(x,y,560,38,()=>{ c.fighterSel=i; handleCasinoKey('Enter'); });
           ctx.font=sel?'bold 14px Courier New':'14px Courier New';
           ctx.fillStyle=sel?'#fff':'#cc9999';ctx.textAlign='left';
           ctx.fillText(crewDisplayName(cr)+'  HP '+cr.hp+'/'+cr.maxHp+'  ATK '+cr.atk+'  CBT '+casinoSkill(cr,'cbt'),x+16,y+24);
         });
         casinoFoot('Up/Down select   Enter confirm   ESC back',cx,ch);
-      } else if(!c.arena){const f=casinoBest('cbt');ctx.font='14px Courier New';ctx.fillStyle='#aa77cc';ctx.fillText('Fighter: '+(f?crewDisplayName(f)+' HP '+f.hp+'/'+f.maxHp+' CBT '+casinoSkill(f,'cbt'):'no living crew'),cx,160);CASINO_BEASTS.forEach((b,i)=>{const y=184+i*64,x=cx-310,sel=i===c.beastSel,defeated=(c.defeatedBeasts&&c.defeatedBeasts.includes(i));casinoBox(x,y,620,54,sel&&!defeated,defeated?'#442222':'#ff5555');ctx.font='bold 15px Courier New';ctx.fillStyle=defeated?'#664444':sel?'#fff':'#ff9999';ctx.textAlign='left';ctx.fillText(b.name+(defeated?' — DEFEATED':'')+'  HP '+b.hp+' ATK '+b.atk+' DEF '+b.def+'  Bet '+b.bet+' cr',x+24,y+21);ctx.font='13px Courier New';ctx.fillStyle=defeated?'#443333':sel?'#ffccaa':'#775566';ctx.fillText(defeated?'Already conquered this season':'Prize '+b.prize+' cr + side bet x'+b.mult+' - '+b.line,x+24,y+40);});casinoFoot('Up/Down beast   Enter fight   ESC back',cx,ch);} else {const a=c.arena;ctx.font='bold 16px Courier New';ctx.fillStyle='#aaccff';ctx.textAlign='left';ctx.fillText(crewDisplayName(a.fighter)+' HP '+a.fighterHp+'/'+a.fighter.maxHp,cx-300,164);ctx.fillStyle='#ff8888';ctx.textAlign='right';ctx.fillText(a.beast.name+' HP '+a.beast.hp+'/'+a.beast.maxHp,cx+300,164);a.log.slice(-10).reverse().forEach((line,i)=>{ctx.font=i===0?'bold 14px Courier New':'13px Courier New';ctx.fillStyle=line.indexOf('VICTORY')===0?'#44ff88':line.indexOf('DEFEAT')===0?'#ff4444':'#c8b8d8';ctx.textAlign='center';ctx.fillText(line,cx,204+i*24);});casinoFoot(a.result?'Enter continue':'Enter next round   Space auto round',cx,ch);} }
+      } else if(!c.arena){const f=casinoBest('cbt');ctx.font='14px Courier New';ctx.fillStyle='#aa77cc';ctx.fillText('Fighter: '+(f?crewDisplayName(f)+' HP '+f.hp+'/'+f.maxHp+' CBT '+casinoSkill(f,'cbt'):'no living crew'),cx,160);CASINO_BEASTS.forEach((b,i)=>{const y=184+i*64,x=cx-310,sel=i===c.beastSel,defeated=(c.defeatedBeasts&&c.defeatedBeasts.includes(i));casinoBox(x,y,620,54,sel&&!defeated,defeated?'#442222':'#ff5555'); if(!defeated)canvasMenuTarget(x,y,620,54,()=>{ c.beastSel=i; handleCasinoKey('Enter'); });ctx.font='bold 15px Courier New';ctx.fillStyle=defeated?'#664444':sel?'#fff':'#ff9999';ctx.textAlign='left';ctx.fillText(b.name+(defeated?' — DEFEATED':'')+'  HP '+b.hp+' ATK '+b.atk+' DEF '+b.def+'  Bet '+b.bet+' cr',x+24,y+21);ctx.font='13px Courier New';ctx.fillStyle=defeated?'#443333':sel?'#ffccaa':'#775566';ctx.fillText(defeated?'Already conquered this season':'Prize '+b.prize+' cr + side bet x'+b.mult+' - '+b.line,x+24,y+40);});casinoFoot('Up/Down beast   Enter fight   ESC back',cx,ch);} else {const a=c.arena;ctx.font='bold 16px Courier New';ctx.fillStyle='#aaccff';ctx.textAlign='left';ctx.fillText(crewDisplayName(a.fighter)+' HP '+a.fighterHp+'/'+a.fighter.maxHp,cx-300,164);ctx.fillStyle='#ff8888';ctx.textAlign='right';ctx.fillText(a.beast.name+' HP '+a.beast.hp+'/'+a.beast.maxHp,cx+300,164);a.log.slice(-10).reverse().forEach((line,i)=>{ctx.font=i===0?'bold 14px Courier New':'13px Courier New';ctx.fillStyle=line.indexOf('VICTORY')===0?'#44ff88':line.indexOf('DEFEAT')===0?'#ff4444':'#c8b8d8';ctx.textAlign='center';ctx.fillText(line,cx,204+i*24);});casinoFoot(a.result?'Enter continue':'Enter next round   Space auto round',cx,ch);} }
+  if(c.screen==='poker' && c.poker){
+    canvasMenuButton(c.poker.phase==='hold'?'Redraw [Enter]':'New hand [Enter]',cx-100,ch-58,()=>handleCasinoKey('Enter'));
+  }
+  if(c.screen==='arena' && c.arena?.result) canvasMenuButton('Continue [Enter]',cx-100,ch-58,()=>handleCasinoKey('Enter'));
+  if(!c.arena || c.arena.result) canvasMenuButton('Back [Esc]',24,ch-34,()=>handleCasinoKey('Escape'));
   ctx.textAlign='left';
 }
 
-function handleCasinoKey(e){
+function handleCasinoKey(key){
   const c=ensureCasinoState();
-  if(e.key==='Escape' && G.planets[G.curPlanet]?.isCasino){
+  if(key==='Escape' && G.planets[G.curPlanet]?.isCasino){
     if(c.arena && !c.arena.result) return;
     if(c.contest) casinoQuitContest();
     if(c.poker?.phase==='hold') casinoLose(c.poker.stake);
     c.poker=null;c.contest=null;c.arena=null;c.arenaPhase=null;c.screen='main';
     G.mode='planet'; renderAll(); return;
   }
-  if(c.screen==='main'){ if(e.key==='ArrowUp'){c.sel=Math.max(0,c.sel-1);renderAll();return;} if(e.key==='ArrowDown'){c.sel=Math.min(CASINO_GAMES.length-1,c.sel+1);renderAll();return;} if(e.key==='Enter'){c.lastResult=null;if(c.sel===0){c.screen='poker';c.betSel=0;c.poker=null;} if(c.sel===1){c.screen='wrestle';c.wrestleSel=0;} if(c.sel===2){c.screen='drink';c.drinkSel=0;} if(c.sel===3){c.screen='arena';c.beastSel=0;c.arena=null;c.arenaPhase='choose';} renderAll();return;} if(e.key==='Escape'){G.mode='galaxy';addLog('Left The Void Royale. Session: +'+(c.sessionWon||0)+' / -'+(c.sessionLost||0)+' cr.','li');renderAll();return;} return; }
-  if(c.screen==='poker'){ if(!c.poker){ if(e.key==='ArrowUp'){c.betSel=Math.max(0,c.betSel-1);renderAll();return;} if(e.key==='ArrowDown'){c.betSel=Math.min(CASINO_POKER_STAKES.length-1,c.betSel+1);renderAll();return;} if(e.key==='Enter'){casinoStartPoker();renderAll();return;} if(e.key==='Escape'){c.screen='main';c.sel=0;renderAll();return;} return; } if(c.poker.phase==='hold'){ if(['1','2','3','4','5'].includes(e.key)){const i=Number(e.key)-1;c.poker.hold[i]=!c.poker.hold[i];renderAll();return;} if(e.key==='Enter'){casinoFinishPoker();renderAll();return;} if(e.key==='Escape'){casinoLose(c.poker.stake);c.poker=null;c.screen='main';renderAll();return;} return; } if(e.key==='Enter'||e.key==='Escape'){c.poker=null;renderAll();return;} }
+  if(c.screen==='main'){ if(key==='ArrowUp'){c.sel=Math.max(0,c.sel-1);renderAll();return;} if(key==='ArrowDown'){c.sel=Math.min(CASINO_GAMES.length-1,c.sel+1);renderAll();return;} if(key==='Enter'){c.lastResult=null;if(c.sel===0){c.screen='poker';c.betSel=0;c.poker=null;} if(c.sel===1){c.screen='wrestle';c.wrestleSel=0;} if(c.sel===2){c.screen='drink';c.drinkSel=0;} if(c.sel===3){c.screen='arena';c.beastSel=0;c.arena=null;c.arenaPhase='choose';} renderAll();return;} if(key==='Escape'){G.mode='galaxy';addLog('Left The Void Royale. Session: +'+(c.sessionWon||0)+' / -'+(c.sessionLost||0)+' cr.','li');renderAll();return;} return; }
+  if(c.screen==='poker'){ if(!c.poker){ if(key==='ArrowUp'){c.betSel=Math.max(0,c.betSel-1);renderAll();return;} if(key==='ArrowDown'){c.betSel=Math.min(CASINO_POKER_STAKES.length-1,c.betSel+1);renderAll();return;} if(key==='Enter'){casinoStartPoker();renderAll();return;} if(key==='Escape'){c.screen='main';c.sel=0;renderAll();return;} return; } if(c.poker.phase==='hold'){ if(['1','2','3','4','5'].includes(key)){const i=Number(key)-1;c.poker.hold[i]=!c.poker.hold[i];renderAll();return;} if(key==='Enter'){casinoFinishPoker();renderAll();return;} if(key==='Escape'){casinoLose(c.poker.stake);c.poker=null;c.screen='main';renderAll();return;} return; } if(key==='Enter'||key==='Escape'){c.poker=null;renderAll();return;} }
   if(c.screen==='wrestle'||c.screen==='drink'){
     const drink=c.screen==='drink', max=(drink?CASINO_DRINKERS:CASINO_WRESTLERS).length-1;
     if(c.contest){
-      if(e.key==='Escape'){ casinoQuitContest(); renderAll(); return; }
-      if(drink && e.key==='Enter'){ casinoDrinkRound(); renderAll(); return; }
-      if(!drink && e.key==='1'){ casinoWrestleRound('steady'); renderAll(); return; }
-      if(!drink && e.key==='2'){ casinoWrestleRound('surge'); renderAll(); return; }
-      if(!drink && e.key==='3'){ casinoWrestleRound('feint'); renderAll(); return; }
+      if(key==='Escape'){ casinoQuitContest(); renderAll(); return; }
+      if(drink && key==='Enter'){ casinoDrinkRound(); renderAll(); return; }
+      if(!drink && key==='1'){ casinoWrestleRound('steady'); renderAll(); return; }
+      if(!drink && key==='2'){ casinoWrestleRound('surge'); renderAll(); return; }
+      if(!drink && key==='3'){ casinoWrestleRound('feint'); renderAll(); return; }
       return;
     }
-    if(e.key==='ArrowUp'){ if(drink)c.drinkSel=Math.max(0,c.drinkSel-1); else c.wrestleSel=Math.max(0,c.wrestleSel-1); renderAll();return;}
-    if(e.key==='ArrowDown'){ if(drink)c.drinkSel=Math.min(max,c.drinkSel+1); else c.wrestleSel=Math.min(max,c.wrestleSel+1); renderAll();return;}
-    if(e.key==='Enter'){casinoStartContest(drink?'drink':'wrestle');renderAll();return;}
-    if(e.key==='Escape'){c.screen='main';c.sel=drink?2:1;c.lastResult=null;renderAll();return;}
+    if(key==='ArrowUp'){ if(drink)c.drinkSel=Math.max(0,c.drinkSel-1); else c.wrestleSel=Math.max(0,c.wrestleSel-1); renderAll();return;}
+    if(key==='ArrowDown'){ if(drink)c.drinkSel=Math.min(max,c.drinkSel+1); else c.wrestleSel=Math.min(max,c.wrestleSel+1); renderAll();return;}
+    if(key==='Enter'){casinoStartContest(drink?'drink':'wrestle');renderAll();return;}
+    if(key==='Escape'){c.screen='main';c.sel=drink?2:1;c.lastResult=null;renderAll();return;}
     return;
   }
   if(c.screen==='arena'){
       if(c.arenaPhase==='pick_fighter'){
         const _lc=casinoCrew();
-        if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){c.fighterSel=Math.max(0,(c.fighterSel||0)-1);renderAll();return;}
-        if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){c.fighterSel=Math.min(_lc.length-1,(c.fighterSel||0)+1);renderAll();return;}
-        if(e.key==='Enter'||e.key===' '){casinoStartArena();renderAll();return;}
-        if(e.key==='Escape'){c.arenaPhase='choose';renderAll();return;}
+        if(key==='ArrowUp'||key==='w'||key==='W'){c.fighterSel=Math.max(0,(c.fighterSel||0)-1);renderAll();return;}
+        if(key==='ArrowDown'||key==='s'||key==='S'){c.fighterSel=Math.min(_lc.length-1,(c.fighterSel||0)+1);renderAll();return;}
+        if(key==='Enter'||key===' '){casinoStartArena();renderAll();return;}
+        if(key==='Escape'){c.arenaPhase='choose';renderAll();return;}
         return;
       }
-      if(!c.arena){ if(e.key==='ArrowUp'){c.beastSel=Math.max(0,c.beastSel-1);renderAll();return;} if(e.key==='ArrowDown'){c.beastSel=Math.min(CASINO_BEASTS.length-1,c.beastSel+1);renderAll();return;} if(e.key==='Enter'){const _bi=c.beastSel;if(c.defeatedBeasts&&c.defeatedBeasts.includes(_bi)){addLog('You have already defeated this beast. Choose another.','lw');renderAll();return;}c.arenaPhase='pick_fighter';c.fighterSel=0;renderAll();return;} if(e.key==='Escape'){c.screen='main';c.sel=3;c.lastResult=null;renderAll();return;} return; } if(c.arena.result){ if(e.key==='Enter'||e.key===' '){ if(G.dead){showMenu();return;} c.arena=null;c.arenaPhase=null;c.screen='main';c.sel=3;renderAll();return;} return; } if(e.key==='Enter'||e.key===' '){casinoArenaStep();renderAll();return;} }
+      if(!c.arena){ if(key==='ArrowUp'){c.beastSel=Math.max(0,c.beastSel-1);renderAll();return;} if(key==='ArrowDown'){c.beastSel=Math.min(CASINO_BEASTS.length-1,c.beastSel+1);renderAll();return;} if(key==='Enter'){const _bi=c.beastSel;if(c.defeatedBeasts&&c.defeatedBeasts.includes(_bi)){addLog('You have already defeated this beast. Choose another.','lw');renderAll();return;}c.arenaPhase='pick_fighter';c.fighterSel=0;renderAll();return;} if(key==='Escape'){c.screen='main';c.sel=3;c.lastResult=null;renderAll();return;} return; } if(c.arena.result){ if(key==='Enter'||key===' '){ if(G.dead){showMenu();return;} c.arena=null;c.arenaPhase=null;c.screen='main';c.sel=3;renderAll();return;} return; } if(key==='Enter'||key===' '){casinoArenaStep();renderAll();return;} }
 }
 
 //  NEUTRAL SHIP MOVEMENT

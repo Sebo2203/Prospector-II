@@ -150,6 +150,7 @@ async function returnToMainMenuFromGame(){
 }
 
 function drawMenuScreen(){
+  resetCanvasMenu();
   ctx.fillStyle='#050510';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   // Starfield
@@ -210,6 +211,8 @@ function drawMenuScreen(){
     ctx.font = 'bold 14px Courier New';
     ctx.fillStyle = '#ffe066';
     ctx.fillText('[ PRESS ENTER TO BEGIN ]', cx, cy + totalH/2 + 40);
+    canvasMenuTarget(cx-140,cy+totalH/2+22,280,28,openShipSelection);
+    canvasMenuButton('Back [Esc]',24,canvas.height-30,()=>handleMenuKey({key:'Escape'}));
     return;
   }
 
@@ -235,6 +238,7 @@ function drawMenuScreen(){
     ships.forEach((s,i)=>{
       const isSel = i===sel;
       const bx=startX+i*(cardW+cardGap), by=78;
+      canvasMenuTarget(bx,by,cardW,cardH,()=>openVesselRegistration(i,false));
       ctx.fillStyle = isSel ? '#0e1a2e' : '#080810';
       ctx.fillRect(bx,by,cardW,cardH);
       ctx.strokeStyle = isSel ? s.col : '#2a2a4a';
@@ -280,6 +284,7 @@ function drawMenuScreen(){
 
     ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
     ctx.fillText('←/→ navigate    Enter confirm', cx, 78+cardH+22);
+    canvasMenuButton('Back [Esc]',24,canvas.height-30,()=>handleMenuKey({key:'Escape'}));
     return;
   }
 
@@ -315,6 +320,10 @@ function drawMenuScreen(){
 
     drawField('Captain name:', capName,  field==='captain', 148);
     drawField('Ship name:',    shipName, field==='ship',    220);
+    canvasMenuTarget(cx-240,156,480,34,()=>{ MENU_STATE.namingField='captain'; drawMenuScreen(); });
+    canvasMenuTarget(cx-240,228,480,34,()=>{ MENU_STATE.namingField='ship'; drawMenuScreen(); });
+    canvasMenuButton(field==='captain'?'Next [Enter]':'Launch [Enter]',cx+120,274,advanceVesselRegistration);
+    canvasMenuButton('Back [Esc]',cx-240,274,()=>handleMenuKey({key:'Escape'}));
 
     // Hint
     ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
@@ -355,6 +364,12 @@ function drawMenuScreen(){
     const x = cx - btnW/2;
     const y = 178 + i * (btnH + gapY);
     _menuBtnRects.push({i, x, y, w:btnW, h:btnH});
+    canvasMenuTarget(x,y,btnW,btnH,()=>{
+      MENU_STATE.mainSel=i;
+      activateMainMenuOption(o.key.toLowerCase(),false);
+    },{hover:()=>{
+      if(MENU_STATE.mainSel!==i){ MENU_STATE.mainSel=i; drawMenuScreen(); }
+    }});
     ctx.fillStyle= sel ? '#14142a' : '#0e0e1a';
     ctx.fillRect(x,y,btnW,btnH);
     ctx.strokeStyle= sel ? '#6655cc' : '#2a2a4a';
@@ -410,9 +425,7 @@ function drawMenuScreen(){
     ctx.fillStyle = '#445566';
     ctx.fillText('[D]', _dlX + _dlBtnW - 10, _dlY + 22);
     ctx.textAlign = 'left';
-    MENU_STATE._dlBtnRect = { x:_dlX, y:_dlY, w:_dlBtnW, h:_dlBtnH };
-  } else {
-    MENU_STATE._dlBtnRect = null;
+    canvasMenuTarget(_dlX,_dlY,_dlBtnW,_dlBtnH,downloadDesktopApp);
   }
   ctx.textAlign='left';
 }
@@ -432,18 +445,12 @@ function drawOptionsScreen(cx){
     { i:3, label:'Feedback',    right:'F' },
   ];
 
-  MENU_STATE._optRects = [];
-  MENU_STATE._saveBtnY = null;
-  MENU_STATE._feedbackBtnY = null;
-  MENU_STATE._kbEntryY = null;
-
   rows.forEach(row=>{
     const y = startY + row.i*(rowH+rowGap);
     const sel = MENU_STATE.optSel === row.i;
-    MENU_STATE._optRects.push({ i:row.i, x:cx-rowW/2, y, w:rowW, h:rowH });
-    if(row.i===2) MENU_STATE._saveBtnY = y;
-    if(row.i===3) MENU_STATE._feedbackBtnY = y;
-    if(row.i===1) MENU_STATE._kbEntryY = y;
+    canvasMenuTarget(cx-rowW/2,y,rowW,rowH,()=>activateOptionsRow(row.i),{hover:()=>{
+      if(MENU_STATE.optSel!==row.i){ MENU_STATE.optSel=row.i; redrawOptions(); }
+    }});
 
     ctx.fillStyle = sel ? '#14142a' : '#0e0e1a';
     ctx.fillRect(cx-rowW/2, y, rowW, rowH);
@@ -474,6 +481,7 @@ function drawOptionsScreen(cx){
   // Footer
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
   ctx.fillText('↑/↓ select    Enter activate    ESC back', cx, ch-16);
+  canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
 }
 
@@ -503,8 +511,6 @@ function drawKeybindingsScreen(cx){
   ];
 
   const rowH = 32, startY = 110, colLabel = cx-240, colKey = cx+120;
-  MENU_STATE._kbRowRects = [];
-
   BIND_LIST.forEach((bind, i)=>{
     const y = startY + i*rowH;
     const isSel = sel === i;
@@ -539,7 +545,7 @@ function drawKeybindingsScreen(cx){
       ctx.fillText('!', cx+260+8, y+22);
     }
 
-    MENU_STATE._kbRowRects.push({ i, id: bind.id, x: cx-260, y: y-2, w: 520, h: rowH-2 });
+    canvasMenuTarget(cx-260,y-2,520,rowH-2,()=>activateKeybindingRow(i));
   });
 
   // Reset defaults row
@@ -554,313 +560,17 @@ function drawKeybindingsScreen(cx){
   if(isResetSel){ ctx.fillStyle='#ffe066'; ctx.textAlign='left'; ctx.fillText('▶', cx-260+8, resetY+24); }
   ctx.fillStyle = isResetSel ? '#ffffff' : '#cccccc'; ctx.textAlign='left';
   ctx.fillText('Reset all to defaults', cx-260+32, resetY+24);
-  MENU_STATE._kbResetRow = { y: resetY, h: 34 };
+  canvasMenuTarget(cx-260,resetY,520,34,()=>activateKeybindingRow(BIND_LIST.length));
 
   ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
   ctx.fillText('↑/↓ navigate    Enter to remap    ESC back', cx, ch-16);
+  canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
 }
 
 // ─────────────────────────────────────────────────────────────────
 //  MENU KEY HANDLER
 // ─────────────────────────────────────────────────────────────────
-// ── Menu mouse click support ──────────────────────────────────
-canvas.addEventListener('click', e => {
-  if(G !== null && !(G.showOptions) && G.mode !== 'shipcombat' && !(G.mode==='inventory' && G._viewTab==='log')) return; // allow clicks for options, ship combat, and log tab filters
-
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width  / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const mx = (e.clientX - rect.left) * scaleX;
-  const my = (e.clientY - rect.top)  * scaleY;
-
-  // Log tab — filter button clicks
-  if(G !== null && G.mode==='inventory' && G._viewTab==='log'){
-    const FILTERS=LOG_FILTERS;
-    const fBtnW=90, fBtnH=22, fBtnGap=6;
-    const fTotalW=FILTERS.length*(fBtnW+fBtnGap)-fBtnGap;
-    const fStartX=Math.round((canvas.width-fTotalW)/2);
-    const fY=52;
-    FILTERS.forEach((f,i)=>{
-      const fx=fStartX+i*(fBtnW+fBtnGap);
-      if(mx>=fx && mx<=fx+fBtnW && my>=fY && my<=fY+fBtnH){
-        G._logFilter=f.id; G._logScroll=Infinity; renderAll();
-      }
-    });
-    return;
-  }
-
-  // Ship combat — log font size buttons
-  if(G !== null && G.mode === 'shipcombat' && G.shipCombat?._logFontBtnRects){
-    const [btnMinus, btnPlus] = G.shipCombat._logFontBtnRects;
-    const cur = G.shipCombat.logFontSize || 12;
-    if(mx >= btnMinus.x && mx <= btnMinus.x+btnMinus.w && my >= btnMinus.y && my <= btnMinus.y+btnMinus.h){
-      G.shipCombat.logFontSize = Math.max(9, cur - 1);
-      renderAll(); return;
-    }
-    if(mx >= btnPlus.x && mx <= btnPlus.x+btnPlus.w && my >= btnPlus.y && my <= btnPlus.y+btnPlus.h){
-      G.shipCombat.logFontSize = Math.min(16, cur + 1);
-      renderAll(); return;
-    }
-    return; // swallow other clicks in combat so they don't fall through
-  }
-
-  // In-game options — feedback button click
-  if(G !== null && G.showOptions){
-    // Keybindings sub-screen click
-    if(G._kbScreen){
-      const BIND_LIST = ['nw','n','ne','w','e','sw','s','se','wait'];
-      (MENU_STATE._kbRowRects||[]).forEach(r=>{
-        if(mx>=r.x && mx<=r.x+r.w && my>=r.y && my<=r.y+r.h){
-          MENU_STATE._kbSel = r.i;
-          MENU_STATE._rebinding = r.id;
-          renderAll();
-        }
-      });
-      const rr = MENU_STATE._kbResetRow;
-      if(rr && my>=rr.y && my<=rr.y+rr.h){
-        OPTIONS.keybinds=Object.assign({},DEFAULT_KEYBINDS); saveOptions(OPTIONS); renderAll();
-      }
-      return;
-    }
-    let handled = false;
-    (MENU_STATE._optArrowRects||[]).forEach(r => {
-      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        MENU_STATE.optSel = 0;
-        OPTIONS.asciiMode=!OPTIONS.asciiMode;
-        saveOptions(OPTIONS);
-        handled = true;
-      }
-    });
-    (MENU_STATE._optRects||[]).forEach(r => {
-      if(!handled && mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        MENU_STATE.optSel = r.i;
-        if(r.i===0){
-          OPTIONS.asciiMode=!OPTIONS.asciiMode;
-          saveOptions(OPTIONS);
-        }
-        handled = true;
-      }
-    });
-    const saveY = MENU_STATE._saveBtnY;
-    const fcx = canvas.width/2;
-    if(saveY && mx >= fcx-220 && mx <= fcx+220 && my >= saveY && my <= saveY+40){
-      MENU_STATE.optSel = 1;
-      saveToFile();
-      return;
-    }
-    const fbY = MENU_STATE._feedbackBtnY;
-    if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
-      MENU_STATE.optSel = 2;
-      openFeedback();
-      return;
-    }
-    if(handled) renderAll();
-    return;
-  }
-
-  // Options screen — click to toggle item or open feedback
-  if(MENU_STATE.screen === 'options'){
-    let handled = false;
-    (MENU_STATE._optArrowRects||[]).forEach(r => {
-      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        MENU_STATE.optSel = 0;
-        OPTIONS.asciiMode=!OPTIONS.asciiMode;
-        saveOptions(OPTIONS);
-        handled = true;
-      }
-    });
-    (MENU_STATE._optRects||[]).forEach(r => {
-      if(!handled && mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        MENU_STATE.optSel = r.i;
-        if(r.i===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
-        handled = true;
-      }
-    });
-    const saveY = MENU_STATE._saveBtnY;
-    const fcx = canvas.width/2;
-    if(saveY && mx >= fcx-220 && mx <= fcx+220 && my >= saveY && my <= saveY+40){
-      MENU_STATE.optSel = 1;
-      saveToFile();
-      return;
-    }
-    const fbY = MENU_STATE._feedbackBtnY;
-    if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
-      MENU_STATE.optSel = 2;
-      openFeedback();
-      return;
-    }
-    if(handled) drawMenuScreen();
-    return;
-  }
-
-  // Credits screen — clickable link
-  if(MENU_STATE.screen === 'credits' && MENU_STATE._linkY){
-    const lx = MENU_STATE._linkX - MENU_STATE._linkW/2;
-    const ly = MENU_STATE._linkY - 18;
-    if(mx >= lx && mx <= lx + MENU_STATE._linkW && my >= ly && my <= ly + 24){
-      window.open('http://prospector.at/', '_blank');
-      return;
-    }
-  }
-
-  if(MENU_STATE.screen !== 'main') return;
-  if(!MENU_STATE._btnRects || !MENU_STATE._opts) return;
-
-  // Corner download button hit-test
-  if(MENU_STATE._dlBtnRect){
-    const r = MENU_STATE._dlBtnRect;
-    if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-      downloadDesktopApp(); return;
-    }
-  }
-
-  // Build activate function (mirrors handleMenuKey logic)
-  const mainOpts = [];
-  if(MENU_STATE.hasAutosave) mainOpts.push('c');
-  mainOpts.push('n');
-  mainOpts.push('l');
-  mainOpts.push('o');
-  mainOpts.push('x');
-  mainOpts.push('q');
-
-  function activateMainOpt(sel){
-    if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=false; drawMenuScreen(); }
-    else if(sel==='c'){ void continueSavedGame(); }
-    else if(sel==='l'){ loadFromFile(); }
-    else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
-    else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
-    else if(sel==='q'){ quitGame(); }
-  }
-
-  MENU_STATE._btnRects.forEach(btn => {
-    if(mx >= btn.x && mx <= btn.x+btn.w && my >= btn.y && my <= btn.y+btn.h){
-      MENU_STATE.mainSel = btn.i;
-      activateMainOpt(mainOpts[btn.i]);
-    }
-  });
-});
-
-// ── Menu hover highlighting ───────────────────────────────────
-canvas.addEventListener('mousemove', e => {
-  if(G !== null && !(G.showOptions)) return;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width  / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const mx = (e.clientX - rect.left) * scaleX;
-  const my = (e.clientY - rect.top)  * scaleY;
-
-  // In-game options — feedback button hover only
-  if(G !== null && G.showOptions){
-    let hit = false;
-    let newHover = null;
-    (MENU_STATE._optArrowRects||[]).forEach(r => {
-      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        MENU_STATE.optSel = 0;
-        newHover = r.dir === 'left' ? 'opt-left' : 'opt-right';
-        canvas.style.cursor = 'pointer';
-        hit = true;
-      }
-    });
-    (MENU_STATE._optRects||[]).forEach(r => {
-      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        MENU_STATE.optSel = r.i;
-        if(!hit) newHover = r.i;
-        canvas.style.cursor = 'pointer';
-        hit = true;
-      }
-    });
-    const saveY = MENU_STATE._saveBtnY;
-    const fcx = canvas.width/2;
-    if(saveY && mx >= fcx-220 && mx <= fcx+220 && my >= saveY && my <= saveY+40){
-      MENU_STATE.optSel = 1;
-      newHover = 'save';
-      canvas.style.cursor = 'pointer';
-      hit = true;
-    }
-    const fbY = MENU_STATE._feedbackBtnY;
-    if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
-      MENU_STATE.optSel = 2;
-      newHover = 'fb';
-      canvas.style.cursor = 'pointer';
-      hit = true;
-    }
-    if(!hit){ canvas.style.cursor = 'default'; newHover = null; }
-    if(newHover !== MENU_STATE._optHover){ MENU_STATE._optHover = newHover; renderAll(); }
-    return;
-  }
-
-  // Pointer cursor over credits link
-  if(MENU_STATE.screen === 'credits' && MENU_STATE._linkY){
-    const lx = MENU_STATE._linkX - MENU_STATE._linkW/2;
-    const ly = MENU_STATE._linkY - 18;
-    if(mx >= lx && mx <= lx + MENU_STATE._linkW && my >= ly && my <= ly + 24){
-      canvas.style.cursor = 'pointer'; return;
-    }
-    canvas.style.cursor = 'default'; return;
-  }
-
-  // Options screen hover — highlight item + feedback button
-  if(MENU_STATE.screen === 'options'){
-    let hit = false;
-    let newHover = null;
-    (MENU_STATE._optArrowRects||[]).forEach(r => {
-      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        MENU_STATE.optSel = 0;
-        newHover = r.dir === 'left' ? 'opt-left' : 'opt-right';
-        canvas.style.cursor = 'pointer';
-        hit = true;
-      }
-    });
-    (MENU_STATE._optRects||[]).forEach(r => {
-      if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h){
-        if(MENU_STATE.optSel !== r.i){ MENU_STATE.optSel = r.i; }
-        if(!hit) newHover = r.i;
-        canvas.style.cursor = 'pointer';
-        hit = true;
-      }
-    });
-    const saveY = MENU_STATE._saveBtnY;
-    const fcx = canvas.width/2;
-    if(saveY && mx >= fcx-220 && mx <= fcx+220 && my >= saveY && my <= saveY+40){
-      MENU_STATE.optSel = 1;
-      newHover = 'save';
-      canvas.style.cursor = 'pointer';
-      hit = true;
-    }
-    const fbY = MENU_STATE._feedbackBtnY;
-    if(fbY && mx >= fcx-220 && mx <= fcx+220 && my >= fbY && my <= fbY+40){
-      MENU_STATE.optSel = 2;
-      newHover = 'fb';
-      canvas.style.cursor = 'pointer';
-      hit = true;
-    }
-    if(!hit){ canvas.style.cursor = 'default'; newHover = null; }
-    if(newHover !== MENU_STATE._optHover){ MENU_STATE._optHover = newHover; drawMenuScreen(); }
-    return;
-  }
-
-  if(MENU_STATE.screen !== 'main'){ canvas.style.cursor = 'default'; return; }
-  if(!MENU_STATE._btnRects) return;
-  let changed = false;
-  let hovering = false;
-  MENU_STATE._btnRects.forEach(btn => {
-    if(mx >= btn.x && mx <= btn.x+btn.w && my >= btn.y && my <= btn.y+btn.h){
-      hovering = true;
-      if(MENU_STATE.mainSel !== btn.i){ MENU_STATE.mainSel = btn.i; changed = true; }
-    }
-  });
-  if(!hovering && MENU_STATE._dlBtnRect){
-    const r = MENU_STATE._dlBtnRect;
-    if(mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h) hovering = true;
-  }
-  canvas.style.cursor = hovering ? 'pointer' : 'default';
-  if(changed) drawMenuScreen();
-});
-
-canvas.addEventListener('mouseleave', () => {
-});
-
 function drawCreditsScreen(cx){
   const ch = canvas.height;
   ctx.font='bold 31px Courier New'; ctx.fillStyle='#ffdd88'; ctx.textAlign='center';
@@ -879,7 +589,7 @@ function drawCreditsScreen(cx){
     { text:'made by Matthias Mennel', col:'#aaccee', font:'16px Courier New' },
     { text:'', col:'', font:'' },
     { text:'Check it out at:', col:'#556677', font:'15px Courier New' },
-    { text:'http://prospector.at/', col:'#70d8ff', font:'bold 16px Courier New' },
+    { text:'[L] http://prospector.at/', col:'#70d8ff', font:'bold 16px Courier New' },
   ];
 
   let y = 120;
@@ -889,19 +599,109 @@ function drawCreditsScreen(cx){
     ctx.fillStyle = line.col;
     ctx.fillText(line.text, cx, y);
     // Underline and track the clickable link
-    if(line.text==='http://prospector.at/'){
+    if(line.text.startsWith('[L]')){
       const w = ctx.measureText(line.text).width;
       ctx.fillRect(cx - w/2, y+2, w, 1);
-      MENU_STATE._linkY = y;
-      MENU_STATE._linkX = cx;
-      MENU_STATE._linkW = w;
+      canvasMenuTarget(cx-w/2,y-18,w,24,openProspectorCreditsLink);
     }
     y += 26;
   });
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
   ctx.fillText('[ ESC ]  Back to main menu', cx, ch-16);
+  canvasMenuTarget(cx-140,ch-34,280,25,()=>handleMenuKey({key:'Escape'}));
   ctx.textAlign='left';
+}
+
+const MOVEMENT_BINDING_IDS = ['nw','n','ne','w','e','sw','s','se','wait'];
+
+function redrawOptions(){
+  if(G) renderAll(); else drawMenuScreen();
+}
+
+function activateOptionsRow(i){
+  MENU_STATE.optSel=i;
+  if(i===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
+  else if(i===1){
+    MENU_STATE._kbSel=0;
+    MENU_STATE._rebinding=null;
+    if(G) G._kbScreen=true; else MENU_STATE.screen='keybindings';
+  } else if(i===2){ saveToFile(); return; }
+  else { openFeedback(); return; }
+  redrawOptions();
+}
+
+function activateKeybindingRow(i){
+  MENU_STATE._kbSel=i;
+  MENU_STATE._rebinding=MOVEMENT_BINDING_IDS[i] || null;
+  if(!MENU_STATE._rebinding){
+    OPTIONS.keybinds={...DEFAULT_KEYBINDS};
+    saveOptions(OPTIONS);
+  }
+  redrawOptions();
+}
+
+function closeOptionsMenu(){
+  if(MENU_STATE._rebinding) MENU_STATE._rebinding=null;
+  else if(G?._kbScreen){ G._kbScreen=false; MENU_STATE._kbSel=0; }
+  else if(G) G.showOptions=false;
+  else if(MENU_STATE.screen==='keybindings'){ MENU_STATE.screen='options'; MENU_STATE._kbSel=0; }
+  else MENU_STATE.screen='main';
+  redrawOptions();
+}
+
+function toggleGameOptions(){
+  if(!G || G.dead || G.retired || canvasMenuBlocked()) return;
+  G.showOptions=!G.showOptions;
+  if(!G.showOptions){ G._kbScreen=false; MENU_STATE._rebinding=null; }
+  MENU_STATE.optSel=0;
+  renderAll();
+}
+
+function openShipSelection(){
+  MENU_STATE.screen='ship_select';
+  MENU_STATE.shipSel=0;
+  drawMenuScreen();
+}
+
+function openVesselRegistration(index,keyHeld){
+  MENU_STATE.shipSel=index;
+  MENU_STATE.chosenClass=['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE'][index];
+  MENU_STATE.screen='naming';
+  MENU_STATE.namingField='captain';
+  MENU_STATE.captainName='';
+  MENU_STATE.shipName='';
+  MENU_STATE.namingEntryKeyStillHeld=keyHeld;
+  drawMenuScreen();
+}
+
+function advanceVesselRegistration(){
+  const captains=['Yara Voss','Deklan Mire','Sable Orin','Tev Hadra','Cass Weld',
+    'Rook Solan','Lena Quist','Bren Falke','Ziva Thorn','Oskar Dune','Mira Stahl','Colt Vane'];
+  const ships=['Pale Wanderer','Iron Meridian','Silent Drift','Vagrant Star',
+    'Ashen Wake','The Long Haul','Ember Cross','Dustfall','Far Cry','Sable Wind',
+    'Cold Horizon','The Forsaken','Rust & Glory','Unnamed Regret'];
+  if(!MENU_STATE.captainName.trim()) MENU_STATE.captainName=pick(captains);
+  if(MENU_STATE.namingField==='captain'){
+    MENU_STATE.namingField='ship';
+    drawMenuScreen();
+  } else {
+    if(!MENU_STATE.shipName.trim()) MENU_STATE.shipName=pick(ships);
+    initGame(MENU_STATE.chosenClass,MENU_STATE.captainName.trim(),MENU_STATE.shipName.trim());
+  }
+}
+
+function openProspectorCreditsLink(){
+  window.open('http://prospector.at/','_blank','noopener');
+}
+
+function activateMainMenuOption(sel,keyHeld){
+  if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=keyHeld; drawMenuScreen(); }
+  else if(sel==='c'){ void continueSavedGame(); }
+  else if(sel==='l'){ loadFromFile(); }
+  else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
+  else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
+  else if(sel==='q'){ quitGame(); }
 }
 
 function handleMenuKey(e){
@@ -915,14 +715,7 @@ function handleMenuKey(e){
     if(e.key==='ArrowLeft'){  MENU_STATE.shipSel=(MENU_STATE.shipSel-1+count)%count; drawMenuScreen(); return; }
     if(e.key==='ArrowRight'){ MENU_STATE.shipSel=(MENU_STATE.shipSel+1)%count;        drawMenuScreen(); return; }
     if(e.key==='Enter'){
-      const ids=['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE'];
-      MENU_STATE.chosenClass  = ids[MENU_STATE.shipSel||0];
-      MENU_STATE.screen       = 'naming';
-      MENU_STATE.namingField  = 'captain';
-      MENU_STATE.captainName  = '';
-      MENU_STATE.shipName     = '';
-      MENU_STATE.namingEntryKeyStillHeld = true;
-      drawMenuScreen();
+      openVesselRegistration(MENU_STATE.shipSel||0,true);
       return;
     }
     if(e.key==='Escape'){ MENU_STATE.screen='intro'; drawMenuScreen(); return; }
@@ -941,41 +734,34 @@ function handleMenuKey(e){
 
   if(MENU_STATE.screen==='credits'){
     if(e.key==='Escape'){ MENU_STATE.screen='main'; drawMenuScreen(); return; }
+    if(k==='l') openProspectorCreditsLink();
     return;
   }
 
   if(MENU_STATE.screen==='options'){
-    if(e.key==='Escape'){ MENU_STATE.screen='main'; MENU_STATE._optHover=null; drawMenuScreen(); return; }
+    if(e.key==='Escape'){ closeOptionsMenu(); return; }
     if(e.key==='f'||e.key==='F'){ openFeedback(); return; }
     if(e.key==='s'||e.key==='S'){ saveToFile(); return; }
-    if(e.key==='k'||e.key==='K'){ MENU_STATE.screen='keybindings'; MENU_STATE._kbSel=0; MENU_STATE._rebinding=null; drawMenuScreen(); return; }
+    if(e.key==='k'||e.key==='K'){ activateOptionsRow(1); return; }
     if(e.key==='ArrowUp'||e.key==='ArrowDown'){
       const maxOpt = 3;
       MENU_STATE.optSel = Number.isInteger(MENU_STATE.optSel) ? MENU_STATE.optSel : 0;
       MENU_STATE.optSel = e.key==='ArrowUp'
         ? (MENU_STATE.optSel + maxOpt) % (maxOpt + 1)
         : (MENU_STATE.optSel + 1) % (maxOpt + 1);
-      MENU_STATE._optHover = null;
       drawMenuScreen();
       return;
     }
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
-      if(MENU_STATE.optSel===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); drawMenuScreen(); }
+      if(MENU_STATE.optSel===0) activateOptionsRow(0);
       return;
     }
-    if(e.key===' '||e.key==='Enter'){
-      if(MENU_STATE.optSel===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
-      else if(MENU_STATE.optSel===1){ MENU_STATE.screen='keybindings'; MENU_STATE._kbSel=0; MENU_STATE._rebinding=null; }
-      else if(MENU_STATE.optSel===2){ saveToFile(); return; }
-      else { openFeedback(); return; }
-      drawMenuScreen();
-    }
+    if(e.key===' '||e.key==='Enter') activateOptionsRow(MENU_STATE.optSel);
     return;
   }
 
   if(MENU_STATE.screen==='keybindings'){
-    const BIND_LIST = ['nw','n','ne','w','e','sw','s','se','wait'];
-    const totalRows = BIND_LIST.length + 1; // +1 for reset row
+    const totalRows = MOVEMENT_BINDING_IDS.length + 1;
     if(MENU_STATE._rebinding){
       if(e.key==='Escape'){ MENU_STATE._rebinding=null; drawMenuScreen(); return; }
       const blocked=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','Enter','F5','Tab'];
@@ -988,7 +774,7 @@ function handleMenuKey(e){
       MENU_STATE._rebinding = null;
       drawMenuScreen(); return;
     }
-    if(e.key==='Escape'){ MENU_STATE.screen='options'; MENU_STATE._kbSel=0; drawMenuScreen(); return; }
+    if(e.key==='Escape'){ closeOptionsMenu(); return; }
     if(e.key==='ArrowUp'){
       MENU_STATE._kbSel = ((MENU_STATE._kbSel||0) - 1 + totalRows) % totalRows;
       drawMenuScreen(); return;
@@ -998,20 +784,16 @@ function handleMenuKey(e){
       drawMenuScreen(); return;
     }
     if(e.key==='Enter'||e.key===' '){
-      const sel = MENU_STATE._kbSel || 0;
-      if(sel === BIND_LIST.length){
-        OPTIONS.keybinds = Object.assign({}, DEFAULT_KEYBINDS);
-        saveOptions(OPTIONS);
-      } else {
-        MENU_STATE._rebinding = BIND_LIST[sel];
-      }
-      drawMenuScreen(); return;
+      activateKeybindingRow(MENU_STATE._kbSel||0); return;
     }
     return;
   }
 
   // Intro screen — handled on keyup (separate listener below)
-  if(MENU_STATE.screen==='intro') return;
+  if(MENU_STATE.screen==='intro'){
+    if(e.key==='Escape'){ MENU_STATE.screen='main'; drawMenuScreen(); }
+    return;
+  }
 
   // Main menu — build option list to match what's drawn
   const mainOpts=[];
@@ -1023,14 +805,7 @@ function handleMenuKey(e){
   mainOpts.push('q');
   if(MENU_STATE.mainSel===undefined) MENU_STATE.mainSel=0;
 
-  function activateMainOpt(sel){
-    if(sel==='n'){ MENU_STATE.screen='intro'; MENU_STATE.introOpenedAt=Date.now(); MENU_STATE.introEntryKeyStillHeld=true; drawMenuScreen(); }
-    else if(sel==='c'){ void continueSavedGame(); }
-    else if(sel==='l'){ loadFromFile(); }
-    else if(sel==='o'){ MENU_STATE.screen='options'; MENU_STATE.optSel=0; drawMenuScreen(); }
-    else if(sel==='x'){ MENU_STATE.screen='credits'; drawMenuScreen(); }
-    else if(sel==='q'){ quitGame(); }
-  }
+  const activateMainOpt=sel=>activateMainMenuOption(sel,true);
 
   if(e.key==='ArrowUp'){
     MENU_STATE.mainSel=(MENU_STATE.mainSel-1+mainOpts.length)%mainOpts.length;

@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — 0.28 experimental.19 adds mouse and keyboard menu controls
+
+Released on `experiment/expedition-legacy`.
+
+- Added click targets to main menu setup, options and keybindings, station services, dialogue, inventory and crew selection, cargo inspection, radio trade, barter, casino menus, and the debug palette directory. Mouse and keyboard use the same actions. Long crew lists scroll to the selected person.
+- Added mouse buttons for Inventory and Options, keyboard activation for HUD and save-notice buttons, and keyboard log text sizing. Cargo hover is a preview, with details accessible by click or **X**.
+- The HUD compass remains the pointer movement and wait control with normal step effects. Menus block compass movement while open. Direct tile interaction, pickup commands, and combat firing use gameplay keys.
+- The build, all 47 repository tests, and all 13 headless Edge suites passed. The input scenarios cover scaled canvas clicks, station refueling, patrol replies, mouse and keyboard barter, crew and cargo, and the compass exception. Existing saves require no migration.
+
 ## 2026-11-05 — 0.28 experimental.18 compacts the crew sidebar
 
 Released on `experiment/expedition-legacy`.

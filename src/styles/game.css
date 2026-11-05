@@ -400,6 +400,17 @@ canvas {
   position: relative;
 }
 #persist-bar .ck { color: #666; }
+.hud-menu-btn {
+  background: #121a24;
+  border: 1px solid #38475a;
+  border-radius: 2px;
+  color: #aaccee;
+  padding: 2px 5px;
+  font: 12px 'Courier New', monospace;
+  cursor: pointer;
+}
+.hud-menu-btn:hover, .hud-menu-btn:focus-visible { border-color: #aaddff; }
+.hud-menu-btn:disabled { opacity: 0.45; cursor: default; }
 #persist-hints {
   flex: 1;
   min-width: 0;

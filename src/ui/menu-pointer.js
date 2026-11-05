@@ -1,0 +1,65 @@
+// Menus register hit areas in canvas coordinates as they draw.
+const canvasMenuTargets = [];
+let canvasMenuScroll = null;
+
+function resetCanvasMenu(){
+  canvasMenuTargets.length = 0;
+  canvasMenuScroll = null;
+  canvas.removeAttribute('title');
+  canvas.style.cursor = '';
+}
+
+function canvasMenuTarget(x,y,w,h,activate,{hover,title}={}){
+  canvasMenuTargets.push({x,y,w,h,activate,hover,title});
+}
+
+function canvasMenuButton(label,x,y,activate){
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 12px Courier New';
+  const w = Math.ceil(ctx.measureText(label).width) + 16;
+  ctx.fillStyle = '#0e1721'; ctx.fillRect(x,y,w,22);
+  ctx.strokeStyle = '#3a5268'; ctx.lineWidth = 1; ctx.strokeRect(x,y,w,22);
+  ctx.fillStyle = '#aaddff'; ctx.fillText(label,x+8,y+15);
+  ctx.restore();
+  canvasMenuTarget(x,y,w,22,activate);
+}
+
+function canvasMenuBlocked(){
+  return AUTOSAVE_STATE.transition || AUTOSAVE_STATE.loading || G?.forcedMove?.active ||
+    document.getElementById('minimap-overlay').classList.contains('visible') ||
+    document.getElementById('feedback-overlay').style.display==='flex' || BARTER.active;
+}
+
+function canvasMenuHit(event){
+  if(canvasMenuBlocked() || !canvasMenuTargets.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = (event.clientX-rect.left)*canvas.width/rect.width;
+  const y = (event.clientY-rect.top)*canvas.height/rect.height;
+  return canvasMenuTargets.find(target=>x>=target.x && x<target.x+target.w && y>=target.y && y<target.y+target.h);
+}
+
+canvas.addEventListener('click',event=>{
+  if(event.button===0) canvasMenuHit(event)?.activate?.();
+});
+canvas.addEventListener('mousemove',event=>{
+  const target = canvasMenuHit(event);
+  target?.hover?.();
+  canvas.style.cursor = target?.activate ? 'pointer' : '';
+  const title = target?.title || '';
+  if(canvas.title!==title) canvas.title = title;
+});
+canvas.addEventListener('mouseleave',()=>{
+  canvas.removeAttribute('title');
+  canvas.style.cursor = '';
+});
+canvas.addEventListener('wheel',event=>{
+  if(!canvasMenuScroll || !event.deltaY || canvasMenuBlocked()) return;
+  event.preventDefault();
+  canvasMenuScroll(Math.sign(event.deltaY));
+},{passive:false});
+
+// Pointer clicks should not leave Enter and Space aimed at a HUD control.
+document.addEventListener('click',event=>{
+  if(event.detail>0) event.target.closest('button[data-menu-control]')?.blur();
+},true);

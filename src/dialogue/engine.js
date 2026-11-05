@@ -152,6 +152,14 @@ function enterDialogueNode(nodeId){
   }
 }
 
+function moveDialogueSelection(step){
+  const dlg = G.dialogue;
+  dlg.sel = Math.max(0,Math.min(dialogueVisibleOptions().length-1,(dlg.sel||0)+step));
+  if(dlg.sel < (dlg.optScroll||0)) dlg.optScroll = dlg.sel;
+  if(step>0 && dlg.sel >= (dlg.optScroll||0)+3) dlg.optScroll = Math.max(0,dlg.sel-2);
+  renderAll();
+}
+
 function chooseDialogueOption(idx){
   if(!G.dialogue) return;
   const opts = dialogueVisibleOptions();

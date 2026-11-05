@@ -72,25 +72,19 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
   }
 })();
 
-// ── Compass click handlers ───────────────────────────────────────
-(function(){
-  const grid = document.getElementById('compass-grid');
-  grid.addEventListener('mousedown', e=>{
-    if(!G || G.dead || G.retired || G.examine || G.rangeTarget) return;
-    if(G.forcedMove?.active){ e.preventDefault(); return; }
-    if(G.mode !== 'galaxy' && G.mode !== 'planet') return;
-    const btn = e.target.closest('.cmp-btn');
-    if(!btn) return;
-    e.preventDefault();
-    const dx = btn.dataset.dx;
-    const dy = btn.dataset.dy;
-    if(dx === undefined){
-      // centre "wait" button
-      if(G.mode==='planet') doWaitPlanet();
-      else doWaitGalaxy();
-      return;
-    }
-    tryMove(parseInt(dx), parseInt(dy));
-  });
-})();
+// The compass is the only pointer control that can move or wait in the world.
+document.getElementById('compass-grid').addEventListener('mousedown',event=>{
+  if(event.button!==0 || !G || G.dead || G.retired || canvasMenuBlocked() ||
+    G.showOptions || G.dialogue || G.examine || G.rangeTarget || G._itemAimMode ||
+    G._voidPrompt || G.stranded?.rescuePhase==='offer' || DEBUG.on) return;
+  if(G.mode!=='galaxy' && G.mode!=='planet') return;
+  const direction = event.target.closest('.cmp-btn');
+  if(!direction) return;
+  event.preventDefault();
+  const {dx,dy} = direction.dataset;
+  if(G.stranded) doStrandedWait();
+  else if(dx!==undefined) tryMove(Number(dx),Number(dy));
+  else if(G.mode==='planet') doWaitPlanet();
+  else doWaitGalaxy();
+});
 

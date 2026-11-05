@@ -27,7 +27,7 @@
         <div id="minimap-legend-rows"></div>
       </div>
     </div>
-    <div id="minimap-overlay-hint"><span class="ck">ESC</span> close map</div>
+    <button id="minimap-overlay-hint" class="hud-menu-btn" onclick="closeGalaxyMinimapOverlay()"><span class="ck">ESC</span> close map</button>
   </div>
 
   <!-- HUD — SHIP HP and FUEL moved to left gauge panel, O2 also in gauge panel -->
@@ -83,8 +83,8 @@
       <div class="s-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>Log</span>
         <span style="display:flex;gap:3px;">
-          <button onclick="adjustLogFont(-1)" style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">−</button>
-          <button onclick="adjustLogFont(1)"  style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">+</button>
+          <button data-menu-control aria-label="Decrease log text size" onclick="adjustLogFont(-1)" style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">−</button>
+          <button data-menu-control aria-label="Increase log text size" onclick="adjustLogFont(1)" style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">+</button>
         </span>
       </div>
       <div id="log-list"></div>
@@ -94,7 +94,7 @@
   <!-- Message bar -->
   <div id="msg-bar">
     <span id="msg-bar-text"></span>
-    <button id="msg-bar-dismiss" onclick="dismissMsg()" title="Dismiss">✕</button>
+    <button id="msg-bar-dismiss" data-menu-control onclick="dismissMsg()" aria-label="Dismiss alert" title="Dismiss">✕</button>
   </div>
   <!-- Contextual actions — rebuilt by renderContextBar() each turn -->
   <div id="ctx-bar"></div>
@@ -103,7 +103,7 @@
     <div id="persist-hints">
       <div><span class="ck">WASD</span> cardinal move</div>
       <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
-      <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
+      <div><button class="hud-menu-btn" data-menu-control id="inventory-menu-btn" onclick="toggleInventoryMenu()">[I] Inventory / Crew / Ship</button> <button class="hud-menu-btn" data-menu-control id="options-menu-btn" onclick="toggleGameOptions()">[O] Options</button> <span class="ck">X</span> examine</div>
       <div><span class="ck">Enter</span> interact / dock / land</div>
       <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
       <div><span class="ck">ESC</span> back / close</div>
@@ -127,7 +127,7 @@
       <div id="galaxy-minimap-panel">
         <canvas id="galaxy-minimap" width="208" height="70"></canvas>
       </div>
-      <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
+      <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
   <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>__GAME_VERSION_LABEL__</span></div>
@@ -171,7 +171,8 @@
       <!-- Footer -->
       <div class="barter-footer">
         <div id="barter-value-info" style="flex:1;font-size:12px;color:#667788;"></div>
-        <div id="barter-confirm-hint" style="font-size:12px;color:#445566;">[Tab] Confirm Trade</div>
+        <button id="barter-confirm-hint" class="hud-menu-btn" onclick="confirmBarterTrade()">[Tab] Confirm Trade</button>
+        <button class="hud-menu-btn" onclick="closeBarterOverlay()">[Esc] Close</button>
       </div>
     </div>
   </div>
@@ -180,9 +181,9 @@
 
 <div id="save-notice" role="alert" hidden>
   <span id="save-notice-text"></span>
-  <button id="save-retry" onclick="retryAutosave()">Retry</button>
-  <button id="save-load-newer" onclick="continueSavedGame()" hidden>Load newer save</button>
-  <button onclick="saveToFile()">Export save</button>
-  <button id="save-notice-dismiss" onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
+  <button id="save-retry" data-menu-control onclick="retryAutosave()">Retry</button>
+  <button id="save-load-newer" data-menu-control onclick="continueSavedGame()" hidden>Load newer save</button>
+  <button data-menu-control onclick="saveToFile()">Export save</button>
+  <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
 

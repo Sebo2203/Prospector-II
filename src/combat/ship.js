@@ -548,6 +548,12 @@ function doShipRetreat(){
 }
 
 // -- Draw ship combat overlay -------------------------------------
+function adjustCombatLogFont(step){
+  const combat = G.shipCombat;
+  combat.logFontSize = Math.max(9,Math.min(16,(combat.logFontSize||12)+step));
+  renderAll();
+}
+
 function drawShipCombatOverlay(){
   const sc=G.shipCombat;
   if(!sc) return;
@@ -671,7 +677,8 @@ function drawShipCombatOverlay(){
   const szBtnW=22, szBtnH=16, szBtnY=logY+4;
   const szBtnMinus = { x: cw-PAD*2-szBtnW*2-6, y: szBtnY, w: szBtnW, h: szBtnH };
   const szBtnPlus  = { x: cw-PAD*2-szBtnW-2,   y: szBtnY, w: szBtnW, h: szBtnH };
-  sc._logFontBtnRects = [szBtnMinus, szBtnPlus];
+  if(logFontSize>9) canvasMenuTarget(szBtnMinus.x,szBtnMinus.y,szBtnW,szBtnH,()=>adjustCombatLogFont(-1));
+  if(logFontSize<16) canvasMenuTarget(szBtnPlus.x,szBtnPlus.y,szBtnW,szBtnH,()=>adjustCombatLogFont(1));
 
   // Draw minus button
   const canDecrease = logFontSize > 9;

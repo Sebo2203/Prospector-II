@@ -78,6 +78,7 @@ function drawRetirementScreen(){
 
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#ffe066';
   ctx.fillText('[ ENTER  or  SPACE ]  →  Main Menu', cx, ch-30);
+  canvasMenuTarget(cx-190,ch-49,380,29,()=>void returnToMainMenuFromGame());
   ctx.textAlign='left';
 }
 
@@ -213,6 +214,7 @@ function drawGameOverOverlay(){
   ctx.font='bold 16px Courier New';
   ctx.fillStyle='#ffe066';
   ctx.fillText('[ ENTER  or  SPACE ]  →  Main Menu', cw/2, ch-30);
+  canvasMenuTarget(cw/2-190,ch-49,380,29,()=>void returnToMainMenuFromGame());
 
   ctx.textAlign='left';
 }

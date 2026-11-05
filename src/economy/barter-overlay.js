@@ -82,7 +82,7 @@ function renderBarterOverlay(){
       const cargoTag = isCargo
         ? `<span style="color:${checked?'#ffaa33':'#445566'};font-size:10px;letter-spacing:0.5px;">CARGO</span>`
         : '';
-      return `<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:default;">
+      return `<div data-barter-row="${i}" style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:pointer;">
         <span style="color:${checked?'#ffe066':'#333'};font-size:13px;width:12px;">${checked?'▶':'·'}</span>
         <span class="barter-item-name" style="color:${col};">${htmlEsc(item.name)}</span>
         ${cargoTag}
@@ -106,7 +106,7 @@ function renderBarterOverlay(){
       const cargoTag = isCargo
         ? `<span style="color:${checked?'#55cc88':'#334455'};font-size:10px;letter-spacing:0.5px;">CARGO</span>`
         : '';
-      return `<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:default;">
+      return `<div data-barter-row="${i}" style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:${bg};cursor:pointer;">
         <span style="color:${checked?'#90f0a0':'#333'};font-size:13px;width:12px;">${checked?'▶':'·'}</span>
         <span class="barter-item-name" style="color:${col};">${htmlEsc(stock.name)}</span>
         ${cargoTag}
@@ -241,6 +241,28 @@ function confirmBarterTrade(){
   closeBarterOverlay();
 }
 
+function toggleBarterSelection(){
+  const player = BARTER.side==='player';
+  const list = player ? BARTER.playerItems : BARTER.civItems;
+  const selected = player ? BARTER.playerSel : BARTER.civSel;
+  const marked = player ? BARTER.offered : BARTER.wanted;
+  if(list[selected]){
+    if(marked.has(selected)) marked.delete(selected);
+    else marked.add(selected);
+  }
+  renderBarterOverlay();
+}
+
+document.getElementById('barter-panel').addEventListener('click',event=>{
+  const row = event.target.closest('[data-barter-row]');
+  if(!row || !BARTER.active || AUTOSAVE_STATE.transition) return;
+  const player = row.parentElement.id==='barter-player-list';
+  BARTER.side=player?'player':'civ';
+  if(player) BARTER.playerSel=Number(row.dataset.barterRow);
+  else BARTER.civSel=Number(row.dataset.barterRow);
+  toggleBarterSelection();
+});
+
 function handleBarterKey(e){
   if(!BARTER.active) return;
   const { playerItems, civItems } = BARTER;
@@ -273,14 +295,7 @@ function handleBarterKey(e){
   }
   if(key === 'Enter' || key === ' '){
     e.preventDefault();
-    if(BARTER.side === 'player' && playerItems.length){
-      const i = BARTER.playerSel;
-      BARTER.offered.has(i) ? BARTER.offered.delete(i) : BARTER.offered.add(i);
-    } else if(BARTER.side === 'civ' && civItems.length){
-      const i = BARTER.civSel;
-      BARTER.wanted.has(i) ? BARTER.wanted.delete(i) : BARTER.wanted.add(i);
-    }
-    renderBarterOverlay(); return;
+    toggleBarterSelection(); return;
   }
 }
 

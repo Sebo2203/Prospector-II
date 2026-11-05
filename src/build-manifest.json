@@ -59,6 +59,7 @@
     "src/world/visibility-and-daylight.js",
     "src/world/exploration-and-trails.js",
     "src/ui/log-and-keybindings.js",
+    "src/ui/menu-pointer.js",
     "src/rendering/dispatch.js",
     "src/rendering/minimap.js",
     "src/rendering/dialogue-overlays.js",
