@@ -1025,7 +1025,55 @@ canvas {
   margin-top: 8px;
 }
 .s-title:first-child { margin-top: 0; }
-.crew-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 13px; }
+.crew-strip {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.crew-badge {
+  flex: 0 0 24px;
+  height: 26px;
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr 3px;
+  align-items: center;
+  padding: 1px 3px 3px;
+  border: 1px solid #35413b;
+  border-radius: 3px;
+  background: #171b1a;
+  color: #80e0a0;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+}
+.crew-badge-low { color: #ffc46b; border-color: #5e4730; }
+.crew-badge-critical { color: #ff7474; border-color: #733b42; }
+.crew-badge-meter { height: 3px; background: #3a3a3a; }
+.crew-badge-meter::before {
+  content: "";
+  display: block;
+  width: var(--crew-hp);
+  min-width: 2px;
+  height: 100%;
+  background: currentColor;
+}
+.crew-badge-status {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  color: #f3b9ff;
+  font-size: 9px;
+  line-height: 1;
+  animation: crew-status-pulse 1.6s ease-in-out infinite alternate;
+}
+@keyframes crew-status-pulse {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crew-badge-status { animation: none; }
+}
 .log-entry {
   color: #777; font-size: var(--log-font, 13px); margin-bottom: 2px;
   border-left: 2px solid #333; padding-left: 4px; line-height: 1.3;
@@ -1530,7 +1578,7 @@ canvas {
       <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.17</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.18</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1587,8 +1635,8 @@ canvas {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.17';
-const GAME_VERSION_LABEL = 'v0.28 experimental.17';
+const GAME_VERSION = '0.28.0-experimental.18';
+const GAME_VERSION_LABEL = 'v0.28 experimental.18';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -6549,13 +6597,13 @@ const RADIO_CHATTER = [
   '...first time out here? You\'ll either love it or never come back...',
 ];
 const CREW_ROLES = {
-  captain:    { label:'Captain',   col:'#ffe066', hp:30, maxHp:30, atk:2, def:0, special:true  },
-  scout:      { label:'Navigator', col:'#70d8ff', hp:22, maxHp:22, atk:1, def:0, special:true  },
-  engineer:   { label:'Engineer',  col:'#ffaa44', hp:25, maxHp:25, atk:1, def:0, special:true  },
-  scientist:  { label:'Scientist', col:'#88ffcc', hp:20, maxHp:20, atk:1, def:0, special:true  },
-  medic:      { label:'Medic',     col:'#ff6688', hp:20, maxHp:20, atk:1, def:0, special:false },
-  mercenary:  { label:'Mercenary', col:'#cc88ff', hp:28, maxHp:28, atk:1, def:0, special:false },
-  redshirt:   { label:'Redshirt',  col:'#ff4444', hp:26, maxHp:26, atk:1, def:0, special:false },
+  captain:    { label:'Captain',   badge:'C', col:'#ffe066', hp:30, maxHp:30, atk:2, def:0, special:true  },
+  scout:      { label:'Navigator', badge:'N', col:'#70d8ff', hp:22, maxHp:22, atk:1, def:0, special:true  },
+  engineer:   { label:'Engineer',  badge:'E', col:'#ffaa44', hp:25, maxHp:25, atk:1, def:0, special:true  },
+  scientist:  { label:'Scientist', badge:'S', col:'#88ffcc', hp:20, maxHp:20, atk:1, def:0, special:true  },
+  medic:      { label:'Medic',     badge:'+', col:'#ff6688', hp:20, maxHp:20, atk:1, def:0, special:false },
+  mercenary:  { label:'Mercenary', badge:'m', col:'#cc88ff', hp:28, maxHp:28, atk:1, def:0, special:false },
+  redshirt:   { label:'Redshirt',  badge:'r', col:'#ff4444', hp:26, maxHp:26, atk:1, def:0, special:false },
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -26754,6 +26802,36 @@ function renderCrewDialogueContextSidebar(){
   return html;
 }
 
+function renderCrewStrip(){
+  const living = G.crew.filter(c=>c.hp>0);
+  if(!living.length) return '<div style="color:#f07070;font-size:13px">All crew dead!</div>';
+
+  const ordered = [
+    ...living.filter(c=>CREW_ROLES[c.role]?.special),
+    ...living.filter(c=>!CREW_ROLES[c.role]?.special),
+  ];
+  const badges = ordered.map(c=>{
+    const role = CREW_ROLES[c.role];
+    const maxHp = c.maxHp>0 ? c.maxHp : c.hp;
+    const fraction = Math.min(1,c.hp/maxHp);
+    const health = fraction<0.3 ? 'critical' : fraction<0.6 ? 'low' : 'good';
+    const conditions = visibleCrewStatusList(c).map(status=>{
+      const label = CREW_STATUS_DEFS[status.id]?.label || status.id || 'Condition';
+      const level = status.intensity ?? status.severity ?? 1;
+      return level>1 ? label+' (level '+level+')' : label;
+    });
+    const details = htmlEsc([c.name || 'Unknown', role?.label || 'Crew',
+      c.hp+'/'+maxHp+' HP'+(health==='critical'?' (critical)':''),
+      ...conditions].join(' · '));
+    const marker = conditions.length ? '<span class="crew-badge-status" aria-hidden="true">!</span>' : '';
+    return `<div class="crew-badge crew-badge-${health}" role="listitem" title="${details}" aria-label="${details}" style="--crew-hp:${fraction*100}%">
+      <span aria-hidden="true">${htmlEsc(role?.badge || '?')}</span>${marker}
+      <span class="crew-badge-meter" aria-hidden="true"></span>
+    </div>`;
+  });
+  return `<div class="crew-strip" role="list" aria-label="Living crew">${badges.join('')}</div>`;
+}
+
 function renderSidebar(){
   if(G.dialogue?.id === 'crew_basic' || G.dialogue?.id === 'captain_log'){
     document.querySelectorAll('#sidebar .s-title').forEach(el=>el.style.display='');
@@ -26986,49 +27064,7 @@ function renderSidebar(){
   // Restore section titles when not examining
   document.querySelectorAll('#sidebar .s-title').forEach(el=>el.style.display='');
 
-  // Crew — filter out dead members (hp<=0) for display clarity
-  const living=G.crew.filter(c=>c.hp>0);
-  if(!living.length){
-    document.getElementById('crew-list').innerHTML = '<div style="color:#f07070;font-size: 13px">All crew dead!</div>';
-  } else {
-    // Specials first, then grunts grouped by role
-    const specials = living.filter(c=>CREW_ROLES[c.role]?.special);
-    const grunts   = living.filter(c=>!CREW_ROLES[c.role]?.special);
-    // Group grunts by role
-    const gruntGroups = {};
-    grunts.forEach(c=>{ gruntGroups[c.role]=(gruntGroups[c.role]||[]); gruntGroups[c.role].push(c); });
-
-    let html = '';
-    specials.forEach(c=>{
-      const p=c.hp/c.maxHp;
-      const cl=p<0.3?'cr':p<0.6?'co':'cg';
-      const roleData=CREW_ROLES[c.role];
-      const st = crewStatusSummary(c);
-      html+=`<div class="crew-row"><span style="color:${roleData.col}">${roleData.label}${st?' <span style="color:#d488ff">'+st+'</span>':''}</span><span class="${cl}" style="font-size: 13px">${c.hp}/${c.maxHp}</span></div>`;
-    });
-    Object.entries(gruntGroups).forEach(([role, members])=>{
-      const roleData=CREW_ROLES[role];
-      const avgHpPct = members.reduce((s,c)=>s+c.hp/c.maxHp,0)/members.length;
-      const cl=avgHpPct<0.3?'cr':avgHpPct<0.6?'co':'cg';
-      const label = members.length>1 ? roleData.label+' ×'+members.length : roleData.label;
-      const hpStr = members.length>1 ? members.map(c=>c.hp).join('/') : members[0].hp+'/'+members[0].maxHp;
-      const groupedStatuses = new Map();
-      members.forEach(c=>{
-        visibleCrewStatusList(c).forEach(s=>{
-          const def = CREW_STATUS_DEFS[s.id] || { short:(s.id||'?').slice(0,3).toUpperCase() };
-          const val = s.intensity ?? s.severity ?? 1;
-          const text = def.short + (val > 1 ? val : '');
-          groupedStatuses.set(text, (groupedStatuses.get(text)||0) + 1);
-        });
-      });
-      const statusSummary = [...groupedStatuses.entries()]
-        .map(([text,count])=>text+(count>1?'×'+count:''))
-        .join(' ');
-      const st = statusSummary ? ' <span style="color:#d488ff">'+statusSummary+'</span>' : '';
-      html+=`<div class="crew-row"><span style="color:${roleData.col}">${label}${st}</span><span class="${cl}" style="font-size: 13px">${hpStr}</span></div>`;
-    });
-    document.getElementById('crew-list').innerHTML = html;
-  }
+  document.getElementById('crew-list').innerHTML = renderCrewStrip();
 
   // Inventory hidden from sidebar — shown in dedicated inventory overlay only
 

@@ -61,6 +61,86 @@ const assert = require('node:assert/strict');
     }
     await mapButton.evaluate(button => button.blur());
 
+    const crewList = page.locator('#crew-list');
+    const badges = crewList.locator('.crew-badge');
+    assert.equal(await badges.count(), 4);
+    await page.evaluate(() => {
+      window.qaStartingCrew = G.crew;
+      G.crew = [
+        ...G.crew.map(person => ({ ...person, statuses: {} })),
+        randomCrewMember('medic'),
+        ...Array.from({length: 6}, () => randomCrewMember('mercenary')),
+        randomCrewMember('redshirt'),
+      ];
+      G.crew[5].name = 'Merc & "One"';
+      G.crew[5].hp = 4;
+      G.crew[6].hp = 12;
+      applyCrewStatus(G.crew[5], 'bleeding', { amount: 2, silent: true });
+      applyCrewStatus(G.crew[5], 'broken_arm', { silent: true });
+      applyCrewStatus(G.crew[2], 'hallucination', { silent: true });
+      applyCrewStatus(G.crew[4], 'stunned', { duration: 0, silent: true });
+      renderAll();
+    });
+    assert.deepEqual(await badges.evaluateAll(items => items.map(item => item.firstElementChild.textContent)),
+      ['C', 'N', 'E', 'S', '+', 'm', 'm', 'm', 'm', 'm', 'm', 'r']);
+    assert.equal(await badges.nth(5).getAttribute('title'),
+      'Merc & "One" · Mercenary · 4/28 HP (critical) · Bleeding (level 2) · Broken Arm');
+    assert.match(await badges.nth(5).getAttribute('class'), /crew-badge-critical/);
+    assert.match(await badges.nth(6).getAttribute('class'), /crew-badge-low/);
+    assert.match(await badges.nth(7).getAttribute('class'), /crew-badge-good/);
+    assert.ok(await badges.nth(5).evaluate(badge => {
+      const meter = badge.querySelector('.crew-badge-meter');
+      const fill = parseFloat(getComputedStyle(meter, '::before').width);
+      return fill > 0 && fill < meter.clientWidth;
+    }));
+    const condition = crewList.locator('.crew-badge-status');
+    assert.equal(await condition.count(), 1);
+    assert.equal(await condition.evaluate(el => getComputedStyle(el).animationName), 'crew-status-pulse');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    assert.equal(await condition.evaluate(el => getComputedStyle(el).animationName), 'none');
+    assert.equal(await condition.isVisible(), true);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    for(const viewport of [{width: 1400, height: 720}, {width: 800, height: 600}]){
+      await page.setViewportSize(viewport);
+      assert.ok(await badges.evaluateAll(items => {
+        const row = items[0].parentElement;
+        const firstTop = items[0].getBoundingClientRect().top;
+        return items.every(item => item.getBoundingClientRect().top === firstTop) && row.scrollWidth <= row.clientWidth;
+      }), 'all twelve badges fit on one row');
+    }
+    await page.setViewportSize({width: 1400, height: 720});
+    await page.locator('#sidebar').screenshot({path: artifactPath('Crew-sidebar.png')});
+    await page.evaluate(() => {
+      removeCrewStatus(G.crew[5], 'bleeding', true);
+      removeCrewStatus(G.crew[5], 'broken_arm', true);
+      renderAll();
+    });
+    assert.equal(await condition.count(), 0);
+    assert.match(await badges.nth(5).getAttribute('class'), /crew-badge-critical/);
+    await page.evaluate(() => {
+      G.crew[5].hp = 0;
+      renderAll();
+    });
+    assert.equal(await badges.count(), 11);
+    await page.evaluate(() => {
+      G.crew = [];
+      renderSidebar();
+    });
+    assert.match(await crewList.textContent(), /All crew dead!/);
+    await page.evaluate(() => {
+      G.crew = window.qaStartingCrew;
+      renderAll();
+    });
+    await page.keyboard.press('i');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('x');
+    assert.match(await crewList.textContent(), /MORALE.*STATUS/s);
+    assert.equal(await badges.count(), 0);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(() => G.mode), 'galaxy');
+    assert.equal(await badges.count(), 4);
+
     const banner = page.locator('#msg-bar');
     const actions = page.locator('#ctx-bar');
     await page.evaluate(() => {
@@ -202,6 +282,6 @@ const assert = require('node:assert/strict');
     assert.equal(await page.evaluate(() => G.inventory.some(item => item.name.startsWith('Trade good 27 '))), true);
     assert.equal(await banner.isVisible(), false);
     assert.deepEqual(errors, []);
-    console.log('PASS: map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and keyboard barter at three viewport sizes.');
+    console.log('PASS: compact crew status, map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and keyboard barter at three viewport sizes.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });

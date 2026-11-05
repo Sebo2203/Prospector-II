@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — 0.28 experimental.18 compacts the crew sidebar
+
+Released on `experiment/expedition-legacy`.
+
+- Replaced the vertical crew summary with one role badge and health meter per living crew member. All 12 supported crew fit on one line, with individual health colors for repeated roles. A pulsing exclamation mark shows an active known condition. Reduced motion keeps the marker steady. Hover shows the person's name, exact HP, and known conditions. The detailed Crew view still carries the full roster.
+- The build, all 47 repository tests, and five headless Edge suites passed. The interface check covered a full 12-person row at 800×600 and 1400×720, low and critical HP, condition visibility and recovery, reduced motion, crew loss, and the detailed Crew view. Existing saves require no migration.
+
 ## 2026-11-05 — 0.28 experimental.17 fixes map reopening during dialogue
 
 Released on `experiment/expedition-legacy`.

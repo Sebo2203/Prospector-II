@@ -16,12 +16,12 @@ const RADIO_CHATTER = [
   '...first time out here? You\'ll either love it or never come back...',
 ];
 const CREW_ROLES = {
-  captain:    { label:'Captain',   col:'#ffe066', hp:30, maxHp:30, atk:2, def:0, special:true  },
-  scout:      { label:'Navigator', col:'#70d8ff', hp:22, maxHp:22, atk:1, def:0, special:true  },
-  engineer:   { label:'Engineer',  col:'#ffaa44', hp:25, maxHp:25, atk:1, def:0, special:true  },
-  scientist:  { label:'Scientist', col:'#88ffcc', hp:20, maxHp:20, atk:1, def:0, special:true  },
-  medic:      { label:'Medic',     col:'#ff6688', hp:20, maxHp:20, atk:1, def:0, special:false },
-  mercenary:  { label:'Mercenary', col:'#cc88ff', hp:28, maxHp:28, atk:1, def:0, special:false },
-  redshirt:   { label:'Redshirt',  col:'#ff4444', hp:26, maxHp:26, atk:1, def:0, special:false },
+  captain:    { label:'Captain',   badge:'C', col:'#ffe066', hp:30, maxHp:30, atk:2, def:0, special:true  },
+  scout:      { label:'Navigator', badge:'N', col:'#70d8ff', hp:22, maxHp:22, atk:1, def:0, special:true  },
+  engineer:   { label:'Engineer',  badge:'E', col:'#ffaa44', hp:25, maxHp:25, atk:1, def:0, special:true  },
+  scientist:  { label:'Scientist', badge:'S', col:'#88ffcc', hp:20, maxHp:20, atk:1, def:0, special:true  },
+  medic:      { label:'Medic',     badge:'+', col:'#ff6688', hp:20, maxHp:20, atk:1, def:0, special:false },
+  mercenary:  { label:'Mercenary', badge:'m', col:'#cc88ff', hp:28, maxHp:28, atk:1, def:0, special:false },
+  redshirt:   { label:'Redshirt',  badge:'r', col:'#ff4444', hp:26, maxHp:26, atk:1, def:0, special:false },
 };
 
