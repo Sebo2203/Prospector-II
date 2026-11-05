@@ -45,7 +45,7 @@ Output is under ignored `qa/artifacts/`: progress, action/event trace, ending sc
 
 For interrupted-controller development, `retirement -- --resume /absolute/path/to/checkpoint.json` restores the generated game, pilot and RNG state through the native save parser/installer. It never loads a checkpoint by default and rejects dead/retired careers. Resume is for continuing a recorded run, not replaying a loss; disclose it in any report. The action limit counts total selections including those before resume.
 
-Known pilot limits: it can mishandle bleeding, recruiting, civilization warnings and physically honoring withdrawal; the older policy can loop on dialogue and retreat too late. Input selections and game turns are different quantities. Review the trace and [historical reports](../docs/retirement-attempt-2-2026-10-31.md) before attributing a poor run to balance. Improving a controller must not silently change game rules or erase consequences.
+Known pilot limits: it can mishandle bleeding, recruiting, civilization warnings and physically honoring withdrawal; the older policy can loop on dialogue and retreat too late. Input selections and game turns are different quantities. Review the trace and [historical reports](../docs/archive/README.md) before attributing a poor run to balance. Improving a controller must not silently change game rules or erase consequences.
 
 ## Regression scenarios
 

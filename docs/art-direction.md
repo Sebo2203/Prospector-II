@@ -59,10 +59,12 @@ Rows are zero-based. Scout uses ships row 0; Corvette row 3; Bulk Freighter row 
 5. For directional pixel art, prefer authored frames. Keep stationary portraits and the moving hull consistent.
 6. For the next planetary pass, finish a complete biome's ground, transitions, obstacles, inhabitants and interactables together. Reduce ground noise and reserve strong contrast for meaningful objects. This is a future pass, not a completed terrain overhaul.
 
-## Validation and limits
+## Original ship pass validation
 
-All **44 repository tests** pass, including native frame bounds, matte removal, black/interior-color preservation, tiny-fragment handling, compass selection, role mapping and reproducible generated assets. Build checks verify that the bundled HTML matches the modular sources.
+The experimental.10 ship pass recorded **44 passing repository tests**, including native frame bounds, matte removal, black/interior-color preservation, tiny-fragment handling, compass selection, role mapping and reproducible generated assets. Build checks verify that the bundled HTML matches the modular sources.
 
 Separate headless Edge checks exercised **384 combinations** of eight hulls, eight headings, three backgrounds and two opacities. **152,064 source-transparent pixel positions** retained the exact underlying background. Partial source alpha and black pixels were retained; drawing restored the caller's alpha/smoothing state. Integration checks exercised player headings in the native galaxy renderer, all four existing palette roles, matching combat portraits, sensor/radio concealment and ASCII rendering. Full palette interaction, rebuilding, autosave isolation and exact return-to-career checks also passed without JavaScript errors.
 
 Static comparison sheets and game screenshots were visually inspected, including native ship selection and station hull-change previews. These checks establish compositing and integration correctness; they do not replace feedback on silhouette recognition during human play. No manual desktop playthrough or completed planetary art pass is claimed. No save migration is needed.
+
+Run the maintained `ships`, `ship-previews`, and `stations` suites to check current art. [Browser test setup](../qa/README.md)

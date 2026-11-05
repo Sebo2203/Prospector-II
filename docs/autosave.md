@@ -1,4 +1,4 @@
-# Autosaves and recovery — experimental.7
+# Autosaves and recovery
 
 The game saves locally in your browser or desktop app. The bottom status line says **Saving…**, **Saved**, or **AUTOSAVE FAILED**. Success appears after the storage transaction commits. The redundant turn counter has been removed from this indicator; saved turn metadata and recovery details are retained.
 
@@ -23,10 +23,8 @@ The debug playground does not write a sandbox save. It retains the original care
 - The integration point still follows `renderAll` while the broader action/turn refactor is pending. This reduces writes but does not eliminate serialization caused by all UI state changes. Full world snapshots are still serialized; map deltas and a broader versioned world-state schema remain future work if measurements justify them.
 - Keep `SAVE_KEY` as a legacy input, not a mirror of the durable store. Await `autoSave`, `loadFromStorage` and `loadAndRender` when a confirmed result is required. Use `readStoredAutosave` for inspection/export; do not assume localStorage contains the latest game. Preserve transaction atomicity and debug-world exclusion.
 
-## Validation
+## Verify save behavior
 
-Five new repository tests cover integrity/recovery, invalid/debug snapshot rejection, overlapping/coalesced write order, failure/retry and unavailable storage. The complete suite has 36 passing tests.
+Run `npm test` for save integrity, recovery, write ordering, and failure handling. Run `npm --prefix qa test -- autosave` for IndexedDB recovery, legacy imports, large saves, file export, stale windows, and save-before-transition behavior. [Browser test setup](../qa/README.md)
 
-A local headless Edge harness uses actual IndexedDB. It aborts transactions, checks unchanged primary/backup records, exports unsaved progress, retries, damages the primary, migrates a legacy save, compares file/storage repairs and rejects invalid import. It generates real planet maps beyond the old localStorage quota, reloads the page and uses actual Continue input to verify turn, map count and map checksum. One checked run restored 210 maps in a 10,124,288-character snapshot. Checks also cover stale windows, native quit invocation after commit, menu input during a pending save and browser-close detection. The native quit call was mocked; this does not claim manual desktop playtesting or survival through arbitrary operating-system failures.
-
-Existing palette, log, science-contract and spatial rescue checks are retained. The combat/dialogue entity-reference reload defect, shared turn rules, dry aquatic worlds and morale-zero defect from the foundation review are separate open work.
+The original experimental.7 validation is recorded in the [changelog](../CHANGELOG.md#2026-10-31--028-experimental7-durable-autosaves-and-recovery). The [roadmap](roadmap.md#the-foundation-already-in-the-game) tracks related follow-up work.

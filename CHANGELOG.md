@@ -2,7 +2,7 @@
 
 This is the ongoing record of meaningful changes to Prospector II. Newest work comes first. Entries distinguish implemented behavior from planned work and record the reason, validation, save impact and remaining limits. Git history contains the exact file changes.
 
-The experimental entries below were backfilled on October 31, 2026 from commits and the existing development notes. Historical validation describes checks recorded for those changes; it does not imply every old version was rerun during the backfill. Earlier development remains in [the historical changelog](Changelog%20Prospector%20II.txt) and Git history.
+Early experimental entries were backfilled on October 31, 2026 from commits and the existing development notes. Historical validation describes checks recorded for those changes; it does not imply every old version was rerun during the backfill. Earlier development remains in [the historical changelog](docs/archive/Changelog%20Prospector%20II.txt) and Git history.
 
 ## How we maintain this record
 
@@ -23,11 +23,19 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-05 — Reorganize the project documentation
+
+Documentation update on `experiment/expedition-legacy` for experimental.15.
+
+- Shortened the README to downloads and navigation. The [documentation index](docs/README.md) groups player, development, testing, and planning guides. The handoff links to the maintained build and testing instructions. The expedition guide covers current log, survey, research, and rescue mechanics.
+- Moved seven dated reports and older handoff or release records to the [archive](docs/archive/README.md). Updated references and pinned the foundation review’s source links to the commit it reviewed. Corrected the roadmap and debug guide to describe fixed Mercy placement, and directed readers to the checked-in browser suites.
+- Verified local links, heading anchors, and historical source references. The generated build check and `git diff --check` passed. The HTML, source, package metadata, and save behavior match experimental.15.
+
 ## 2026-11-05 — 0.28 experimental.15 removes the in-game changelog
 
 Released on `experiment/expedition-legacy`.
 
-- Removed the main menu Change Log button, its V shortcut, the embedded release notes screen and its scroll handlers. Release history lives in the repository documentation. The v0.25 and v0.2 summaries from the menu are now in the [historical changelog](Changelog%20Prospector%20II.txt).
+- Removed the main menu Change Log button, its V shortcut, the embedded release notes screen and its scroll handlers. Release history lives in the repository documentation. The v0.25 and v0.2 summaries from the menu are now in the [historical changelog](docs/archive/Changelog%20Prospector%20II.txt).
 - Rebuilt the standalone HTML with the experimental.15 version and synchronized desktop metadata. All 47 repository tests, the generated build check, and the Edge menu/version and autosave suites passed. Browser checks covered keyboard and mouse navigation with and without a save, the retired shortcut, and saved-game Continue. Inspected the main menu screenshot and checked the runtime sources and generated HTML for remaining changelog references. Packaged desktop builds were outside the scope of this check.
 - Existing saves open without migration. This change only removes the release notes screen and its controls.
 
@@ -73,7 +81,7 @@ Branch: `fix/experimental-save-indicator`, targeting `experiment/expedition-lega
 Branch: `fix/experimental-save-indicator`, targeting `experiment/expedition-legacy`; follow-up to `0.28.0-experimental.11`, no new release or public build.
 
 - Removed the redundant turn counter from the bottom saved indicator: it now reads `Saved`. `Saving…`, `AUTOSAVE FAILED`, the debug protection message, failure/retry/export controls and saved turn metadata are unchanged. Rebuilt the single-file HTML from source and updated [the autosave guide](docs/autosave.md).
-- Investigated Mercy against experimental tip `3e80186`. Experimental.9 (`8b236ff`) replaced experimental.8's galaxy-wide random placement with a 1-in-1,000 roll per newly charted eligible empty sector in actual movement sensor reveals. A successful roll creates the wreck nearby; no minimum distance or turn delay exists. Early nearby discovery is permitted, not a placement bug. Opening reveals do not roll; existing saves retain old incidents. The exact observed player's encounter cannot be diagnosed without its save. [Current rules and source links](docs/experiment.md) explain the distinction. No encounter generation, reveal, probability, turn, combat or rescue behavior changed.
+- Investigated Mercy against experimental tip `3e80186`. Experimental.9 (`8b236ff`) replaced experimental.8's galaxy-wide random placement with a 1-in-1,000 roll per newly charted eligible empty sector in actual movement sensor reveals. A successful roll creates the wreck nearby; no minimum distance or turn delay exists. Early nearby discovery is permitted, not a placement bug. Opening reveals do not roll; existing saves retain old incidents. The exact observed player's encounter cannot be diagnosed without its save. [Current rules](docs/experiment.md#mercy-of-dawn) explain the distinction. No encounter generation, reveal, probability, turn, combat or rescue behavior changed.
 - Validation: `npm run build`, all 45 `npm test` tests and generated-source checks passed; `git diff --check` passed. Headless `encounters` and `autosave` suites passed using installed Edge after the bundled Chromium download failed. Added assertions for exact Saved/Saving/failure badge text during real commits, pending saves, transaction failure and retry. Encounter checks covered 12 clean openings, winning/losing rolls, native movement, no rerolls, uniqueness, save/load and debug boarding. Actual IndexedDB checks retained recovery, stale-window protection, export and a 7,207,008-character / 155-map reload with no JavaScript errors. These are controlled scenarios, not a human desktop playthrough or encounter-frequency balance study.
 - Saves: no format, keys, migration or reset changes. Existing locations and rescue progress remain intact. Main, published releases and packaged executables are untouched. Remaining: wider discovery-frequency playtesting and the existing foundation findings.
 
@@ -122,7 +130,7 @@ Branch: `experiment/expedition-legacy`; main unchanged.
 
 - Removed the guaranteed galaxy-generation placement and startup coordinates/marker from experimental.8. Normal movement now rolls a 1-in-1,000 encounter chance for each newly charted eligible empty sector in the actual sensor reveal. A hit creates one nearby wreck and records its distress signal. There is no guaranteed travel/turn threshold; known sectors cannot be farmed by backtracking. Initial station reveal, remote drones and debug worlds do not roll. The palette retains its explicit, boardable Mercy sample.
 - Kept occupied cells, objects and borders protected, the first-boarding air clock unchanged and existing incidents unique. No other gameplay balance, combat or dialogue changes were made for testing.
-- Completed a [second retirement attempt](docs/retirement-attempt-2-2026-10-31.md): Mercy was first discovered on turn 290; the Scout reached turn 5067 and 3842 credits before its remaining crew died on a territorial world. It did not retire. The private pilot used earlier ship retreats, but mishandled surface warnings, bleeding and crew replacement. One checkpoint continuation corrected a repeated dialogue-selection loop without reversing losses; inflated input counts and the test limits are disclosed.
+- Completed a [second retirement attempt](docs/archive/retirement-attempt-2-2026-10-31.md): Mercy was first discovered on turn 290; the Scout reached turn 5067 and 3842 credits before its remaining crew died on a territorial world. It did not retire. The private pilot used earlier ship retreats, but mishandled surface warnings, bleeding and crew replacement. One checkpoint continuation corrected a repeated dialogue-selection loop without reversing losses; inflated input counts and the test limits are disclosed.
 - Validation: all 40 tests and build checks passed. Headless checks covered 12 clean openings, losing/winning discovery rolls, actual movement/sensor range, repeat-visit suppression, one signal and durable save/load. Palette coverage, interactions and restoration passed; 15 rescue regressions traversed 869 real steps. Neither these scenarios nor the career captured JavaScript errors. No manual desktop playthrough is claimed.
 - Saves: schema unchanged; already-created incidents and historical messages remain in older saves. Fresh careers have no startup Mercy encounter. Previously charted areas are not rerolled. Remaining: wider encounter-frequency playtesting, a more competent full-game pilot and the existing foundation findings; successful wealthy retirement remains unproven.
 
@@ -131,7 +139,7 @@ Branch: `experiment/expedition-legacy`; main unchanged.
 Branch: `experiment/expedition-legacy`; main unchanged.
 
 - Removed Mercy of Dawn's four-to-seven-tile starting-distance band. Fresh encounters choose uniformly among eligible interior VOID cells across the galaxy, excluding the player and existing ships or loot. No object is overwritten; a full galaxy safely omits the incident. Initial distress coordinates, the marker and the first-boarding air clock remain. Repeatable testing stays in the debug galaxy palette.
-- Recorded a [long retirement attempt](docs/long-career-2026-10-31.md): one normal seeded Scout career, 3,752 native actions / 3,354 turns, 20 expeditions, one completed science contract, one survivor delivery and 3,719 ending credits. A Dreadnought destroyed the ship before the chosen 10,000-credit target. The report separates the pilot's late retreat from balance conclusions; it does not claim successful retirement.
+- Recorded a [long retirement attempt](docs/archive/long-career-2026-10-31.md): one normal seeded Scout career, 3,752 native actions / 3,354 turns, 20 expeditions, one completed science contract, one survivor delivery and 3,719 ending credits. A Dreadnought destroyed the ship before the chosen 10,000-credit target. The report separates the pilot's late retreat from balance conclusions; it does not claim successful retirement.
 - Validation: 39 tests/build checks passed, including 100 seeded locations, occupied positions, saved-location stability and a full galaxy. Headless palette factories/interactions, reset, save isolation and exact career restoration passed. Fifteen rescue scenarios passed with 866 actual surface steps and no JavaScript errors; the long career also had no JavaScript errors. No manual native playthrough is claimed.
 - Saves: no schema changes; existing position/progress is preserved. New careers use random placement. No balance or combat mechanics were changed for the simulation.
 - Remaining: enemy-strength-aware retreat in the private pilot; inconsistent action clocks and other foundation findings. The run additionally exposed negative crew-loss reporting on the death screen. Other survivors' postmortem state is separated from player knowledge in the report.
@@ -140,7 +148,7 @@ Branch: `experiment/expedition-legacy`; main unchanged.
 
 Branch: `experiment/expedition-legacy`; played `692bcf5`, experimental.7. Documentation only.
 
-- Recorded three fresh native-action careers in [the playthrough report](docs/playthroughs-2026-10-31.md): Scout early retirement on turn 325 with 993 credits and one survivor delivered; Freighter destruction on turn 194 after repeated escapes, fuel exhaustion and refused surrender; Corvette early retirement on turn 260 with 462 credits, repaired life support and two deliveries.
+- Recorded three fresh native-action careers in [the playthrough report](docs/archive/playthroughs-2026-10-31.md): Scout early retirement on turn 325 with 993 credits and one survivor delivered; Freighter destruction on turn 194 after repeated escapes, fuel exhaustion and refused surrender; Corvette early retirement on turn 260 with 462 credits, repaired life support and two deliveries.
 - Used revealed information, normal resources and real actions with debug off. Corrected pilot-control mistakes during calibration and replayed the same predetermined seeds; did not reverse final outcomes through reloads. The report distinguishes early-retirement policy, incomplete objectives and pilot mistakes from game defects and balance evidence.
 - Validation: all three final runs ended through native retirement/death paths, below their safety action ceiling, with no captured JavaScript/input errors. Retained action/event traces, screenshots and final save files locally. This is not a statistical hull comparison or proof of full 10,000-credit careers. No gameplay code, save format or version changed.
 
@@ -159,7 +167,7 @@ Branch: `experiment/expedition-legacy`.
 
 Branch: `experiment/expedition-legacy`. Reviewed gameplay commit `616d819`; game version remains `0.28.0-experimental.6`.
 
-- Added a [foundation review](docs/foundation-review-2026-10-31.md) distinguishing current strengths, reproduced defects, architectural risks, feature readiness and recommended work order. Findings are open; this pass does not fix gameplay.
+- Added a [foundation review](docs/archive/foundation-review-2026-10-31.md) distinguishing current strengths, reproduced defects, architectural risks, feature readiness and recommended work order. Findings are open; this pass does not fix gameplay.
 - Reproduced silent autosave quota failure during generated-world growth, detached combat/dialogue entities after reload, divergent file/storage migrations, an invalid import replacing the active state, inconsistent action/oxygen/status clocks, dry aquatic civilizations and zero-morale defaulting to 55.
 - Validation: all 31 repository tests/build checks passed. Existing headless palette/log scenarios, 54 fixture-assisted contract completions and 15 rescue scenarios with 858 surface steps passed. New controlled review scenarios and a seeded 40-world aquatic generation matrix supplied the defect evidence. Human whole-career balance and native desktop playtesting were not performed.
 - Recommended persistence/identity repairs, shared turn progression and ordinary generation invariants before more connected content. Added a roadmap reference to the review; recommendations are not completed milestones.
@@ -208,7 +216,7 @@ Branch: `experiment/expedition-legacy`. [Commit 0fbbc0e](https://github.com/Sebo
 - Retired completed research ships through normal world ticks and restored shared contact-marker references after loading. Counted sample, survey and bulk-market proceeds consistently as gross career earnings.
 - Added active job details and contract history to LOG → RECORDS. Kept rewards, prices and general combat/resource balance unchanged while repairing the existing career loop.
 - Validation: 26 tests passed, plus real station transactions and 54 fixture-assisted contract completions across all three hulls with save/load between jobs; physical research-console recovery and rescue/log regressions were also checked. This establishes tested accounting and persistence, not whole-career balance.
-- Saves: older research data retains legacy compatibility; new contracts require matching provenance. Remaining: full career costs, recovery, combat readiness and pacing. Details: [career-loop polish](docs/development-pass.md).
+- Saves: older research data retains legacy compatibility; new contracts require matching provenance. Remaining: full career costs, recovery, combat readiness and pacing. Details: [career-loop polish](docs/archive/development-pass.md).
 
 ## 2026-10-31 — 0.28 experimental.3: integrate records into the existing log
 
@@ -247,4 +255,4 @@ Branch: `experiment/expedition-legacy`. [Commit d38db07](https://github.com/Sebo
 - Preserved the old `dev-build` and `modular-source-experiment` tips under archive tags and removed the redundant branches. Closed the obsolete modular-extraction draft PR.
 - Promoted the exact pre-experiment development snapshot to main at the owner's request: modular sources, walkable casinos, repair/refuel sounds and the preceding gameplay fixes. Experimental gameplay remains on `experiment/expedition-legacy`.
 - Validation: recorded original tips and compared the promoted snapshot with the archived development files. Saves: the promotion itself does not introduce an experimental save migration.
-- Earlier changes: [historical changelog](Changelog%20Prospector%20II.txt), [branch history](docs/branch-history.md) and Git history. GitHub Pages follows main; selecting another GitHub branch does not change the hosted game.
+- Earlier changes: [historical changelog](docs/archive/Changelog%20Prospector%20II.txt), [branch history](docs/branch-history.md) and Git history. GitHub Pages follows main; selecting another GitHub branch does not change the hosted game.

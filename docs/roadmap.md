@@ -2,7 +2,9 @@
 
 Prospector II should become a turn-based expedition roguelite about making a living at the edge of a changing sector. A run starts with a vulnerable ship, a small crew, and practical work: survey, trade, salvage, research, or fight. The player can retire with what they earned, or stay long enough to uncover ancient places, meet another spacefaring people, and decide what happens when the sector faces a crisis. The ending should remember the places visited, people helped or harmed, and dangers left unresolved.
 
-This is a destination and an order of work, not a promise to put every idea from the original comments into one release. The comments in `src/html/legacy-design-notes.html` supply the strange worlds, ships, and threats below. Their implementation labels are historical: current code is the source of truth.
+The design follows Matthias Mennel’s *Prospector*. Captains earn their living through exploration, trade, research, salvage, and combat, then choose when to retire. Preserve the five civilization tiers and their distinct rules for language, gifts, aid, permission, and boundaries. The original design notes supply many of the worlds and threats below. [Original manual](https://ruzzoli.de/roguelikes/shrine/prospector/manual.html) · [Manual PDF](https://ruzzoli.de/roguelikes/shrine/prospector/Manual.pdf) · [Historical design notes](../src/html/legacy-design-notes.html)
+
+The milestones below describe planned work. See the [expedition guide](experiment.md) for current mechanics and the [changelog](../CHANGELOG.md) for shipped changes.
 
 ## What a complete run should feel like
 
@@ -17,7 +19,9 @@ For example, a surveyor could answer a quarantine ship's call, carry a sick pass
 
 ## The foundation already in the game
 
-The [October 31 foundation review](foundation-review-2026-10-31.md) records reproduced save, turn-progression and generation defects, feature readiness and recommended prerequisites for the larger arcs below. Its proposed fixes are not yet implemented.
+The original foundation review identified save failures, disconnected entity references, inconsistent action clocks, dry aquatic worlds, and a zero-morale fallback. Experimental.7 addressed autosave capacity, failure recovery, and file/storage compatibility. Browser regression scripts now run in the repository’s test workflow. [Foundation review](archive/foundation-review-2026-10-31.md) · [Autosaves](autosave.md) · [Testing](../qa/README.md)
+
+Follow up on combat and dialogue references after reload, action timing, aquatic generation, and morale before expanding the larger story arcs. Validate encounter readability and the whole-career economy with complete runs. The archived retirement attempts ended below their wealth target and record where the test pilot struggled. [Playthrough reports](archive/README.md)
 
 The modular `src/` tree already contains a generated galaxy, planets and civilizations, surface exploration, ship and ground combat, crew conditions and morale, stations, science work, saves, and several authored encounter types. Ringworlds, ruined ringworlds, bloom worlds, nuclear-war worlds, and talking trees have code now, despite older comments describing them as plans. The roadmap should deepen and connect these systems before adding another long list of isolated encounters.
 
@@ -30,13 +34,11 @@ The modular `src/` tree already contains a generated galaxy, planets and civiliz
 | Artemis launcher and ship equipment | The launcher lacks ammunition, and damage/repair is not yet a meaningful ship-management loop. |
 | Six authored humanity outcomes | Retirement skips the sector-outcome screen; outcomes need to follow run history instead of a random selection. |
 
-## Release 0.27 — The expedition remembers
+## Implemented foundation — the expedition remembers
 
-Make the sector legible before making it bigger. Add a saved **captain's log** with discovered systems and bodies, scan findings, civilization notes, unsold survey work, active leads, and a compact history of major decisions. The log should distinguish a rumor from something confirmed. Unknown places remain unknown. A separate event history lets later encounters and endings react to facts without parsing prose from the log.
+The integrated log records known discoveries, survey work, science leads, and survivor outcomes. Mercy of Dawn connects a distress lead to boarding, treatment, transport, and station delivery. Its location is set during galaxy generation and revealed by sensors. This incident is the pattern for later stories with choices, costs, and persistent aftermath. [Expedition guide](experiment.md)
 
-Build one complete incident on that foundation: the **Quarantine Ship**. A distress signal leads to a drifting vessel with an illness and a valuable cargo. The captain can rescue survivors, isolate them, strip the ship, or leave. The crew's health and morale, the next station's response, and the log should reflect the choice. The ship is a small enough story to establish the pattern for every later authored encounter: lead → discovery → informed choice → immediate cost → delayed response.
-
-**Exit:** Leave the incident, save and reload, then encounter a later consequence that agrees with the log. The first implementation slice is the shared log/history data and view; the second is this incident.
+Next, use playtesting to assess rescue actions, lighting, pressure, ferry trips, and medical tradeoffs. Extend those patterns into the sealed ringworld, robot factory, and Apollo’s Sanctuary below.
 
 ## Release 0.32 — A ship and crew worth bringing home
 
@@ -100,12 +102,4 @@ The old comments have enough ideas for years of additions: a prison planet that 
 
 ## How to build it
 
-Deliver each release through small, reviewable vertical slices. For an authored encounter, the slice includes discovery, choice, response, departure, save/reload, and any promised later consequence. Document the new state before adding it to saves, keep older saves readable, and test the actual player path in a browser. Edit `src/`, rebuild `index.html`, and run the build checks for gameplay changes. Preserve the current classic-script/shared-global order and turn rules unless a feature explicitly changes them. Keep private playtester material out of the public repository.
-
-## Encounter availability — experimental.9
-
-Mercy of Dawn now occurs through a chance discovery while ordinary galaxy movement charts new empty sectors; it is no longer a guaranteed opening mission. Its full debug palette scenario remains available. The second retirement attempt is recorded in [the career report](retirement-attempt-2-2026-10-31.md); successful wealthy retirement and broader balance remain unproven.
-
-## Art direction — experimental.10
-
-The first ship pass imports original Prospector hulls, fixes transparent compositing, adds separate civilian silhouettes and uses native player direction frames. See [art direction](art-direction.md) for sources, maintenance and checks. Planetary biome cohesion, terrain transitions and wider visual consistency remain future work.
+Deliver each milestone as a playable slice that includes discovery, choice, response, departure, save and reload, and any promised later consequence. Use the [contributor rules](../AGENTS.md) and [testing guide](../qa/README.md) to verify the player path. For ongoing work on terrain transitions and planetary visual cohesion, see [art direction](art-direction.md).

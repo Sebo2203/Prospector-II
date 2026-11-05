@@ -1,66 +1,51 @@
-# Expedition Legacy experiment
+# Expedition guide
 
-This branch develops a complete captain's career in the spirit of Matthias Mennel's original Prospector, retaining Prospector II's existing systems. It begins from the latest modular development code, including walkable casinos, interior salvage fixes, synthesized repair/refuel sounds and the desktop wrapper.
+These rules apply to the active experimental build. [Download instructions](../README.md#play)
 
-## Direction
+## The captain’s log
 
-The original's manual describes a freelance captain earning retirement money through exploration, resource and data sales, trading, or piracy. A vulnerable ship and a crew with distinct expertise make expeditions risky. Strange worlds and ancient remains reward curiosity. Retirement is the captain's decision, rather than a mandatory final battle.
+Open **I → LOG** for history. Major discoveries and rescue events appear in ALL and MISSION. **6 / RECORDS** shows survey progress, unsold survey value, known civilization relationships, and survivor records. The log keeps known discoveries in the save. Repeated scans update the existing finding. Use **J** in the ship inventory tab to jettison cargo.
 
-Sources: [Mennel's manual 1.1, reproduced from the original release](https://ruzzoli.de/roguelikes/shrine/prospector/manual.html), [original manual PDF](https://ruzzoli.de/roguelikes/shrine/prospector/Manual.pdf). The similarly named game by Mathias Kaindl is a different game and is not the reference for this experiment.
+## Science work and survey sales
 
-The project vision recovered from earlier development discussions adds a living sector, richer planetary civilizations, mechanical consequences for dialogue, walkable inhabited locations, authored mysteries, and an ending that remembers the run. Keep the five civilization tiers and their different contact rules, language, gifts, aid, permissions and boundaries. Preserve surface exploration, crew conditions and morale, trade, science, salvage, combat and the retirement economy.
+The Science Office offers renewable contracts. Check **I → LOG → RECORDS** for the active job, reward, required specimens, last reported coordinates, and delivery destination. If you lose the delivery box or decide the job is impractical, relinquish it at the Science Office. The next job becomes available after the cooldown.
 
-Build depth by connecting these systems. New stories should offer clues before costs, support different hulls, permit retreat, and leave persistent facts. Avoid making every career follow the same story. Larger crises should begin through discovery, with visible stakes and deadlines; there is no hidden universe-wide failure timer at character creation.
+Survey income comes from planetary scans and exploration. The office counts their combined coverage and pays for new findings since the last sale. Civilization contracts pay separately from ordinary survey sales. The office reserves active contract specimens when buying samples.
 
-## Playable now
+## Mercy of Dawn
 
-Current release: see [package.json](../package.json), the version source for the build.
+Ship sensors and sensor drones can reveal the wreck at its fixed location. A fresh galaxy places it once among eligible empty interior sectors, outside the opening station reveals and clear of ships, loot, and other objects. The distress signal records its coordinates in the log. Fly there and press **Enter** to board its persistent 32-by-20 deck. Existing careers keep their original wreck location and encounter history.
 
-**Palette previews:** The Void Royale and derelict samples now use their actual galaxy-object art and boarding paths. Planetary and civilization exhibits show body previews from the orbital renderer, with station/cave art for those contexts. Dedicated star samples retain their stars. Rebuild an already-open sandbox with Shift+B → Shift+F2; see the [playground guide](debug-playground.md).
-
-**Ship art:** original Prospector hulls now have clean transparency and native eight-way player frames. Trader, cargo, science and patrol silhouettes are distinct; tints preserve the background, and role hulls match combat portraits. The original sheet sources, credits and visual conventions are documented in [art direction](art-direction.md). This pass establishes the ship style; planetary art is still a separate future pass.
-
-**Fixed galaxy encounter:** Mercy of Dawn is placed once during galaxy generation, uniformly among eligible interior VOID sectors across the map. Opening station reveals, existing objects, the player, other ships and loot are excluded. Exploration no longer rolls a spawn chance. The hidden wreck is an existing DERELICT cell; ordinary sensors (including remote drones) reveal it using the normal nebula-aware visibility rules. Detection records its coordinates and one distress signal, without moving it or starting its air clock. No startup coordinates or LOG record reveal its hidden location. Its explicit debug sample remains boardable.
-
-**Autosave reliability:** saves now use durable browser storage with a previous recovery copy, visible failure notices and retry/export controls. Large saves, legacy imports and save-before-menu/quit paths are checked. See the [autosave guide](autosave.md). Other open foundation findings are tracked in the [technical review](foundation-review-2026-10-31.md).
-
-**Change from experimental.9–11:** those builds created Mercy at the first successful 1-in-1,000 exploration roll, so an early nearby wreck was expected. Experimental.12 removes that rule at the user's request and selects the location at generation instead. [Galaxy generation](../src/world/galaxy-generation.js) calls [placement](../src/missions/quarantine-ship.js) after charting the opening stations. Later reveals only detect that saved location; there is no encounter RNG in exploration. Placement is galaxy-wide, with no narrow band around the starting station; it is outside opening visibility but has no additional minimum travel distance. Old saved incidents remain where they were, and old worlds without Mercy do not receive a new one during exploration. Start a fresh career for the new generation rule.
-
-**Debug playground:** open Shift+B, then F2 for the galaxy palette or F3 for the surface gallery. F6 searches 340 catalog-derived samples and scenarios; F4 restores the original career. Shift+F2 rebuilds the test worlds, and F7 toggles NPC simulation. The sandbox cannot overwrite career saves. See the [playground guide](debug-playground.md) for controls, contextual building scenarios and future-content maintenance. This pass also ensures research objectives spawn on reachable deck tiles and aquatic debug contact has an actual sea.
-
-Use the existing **I → LOG** menu for history. Major discoveries and rescue events appear in ALL and MISSION; **6 / RECORDS** adds current survey progress, unsold survey value, known civilization relationships and survivor records. Existing scrolling, keyboard navigation and mouse filter controls apply. Long messages wrap instead of being cut off. Records live in the save; repeated scans update a finding without repeating the first-discovery entry. Generated but unobserved places remain excluded. The separate popup, J shortcut, context button and popup styling have been removed. J still performs the game's existing cargo jettison action in the ship inventory tab.
-
-During exploration you may receive an incomplete distress transmission from **Mercy of Dawn** when sensors reveal its predetermined sector. Generation excludes the border, opening station reveals, other objects, the player and existing ships or loot. The transmitted coordinates use the same one-based display as the galaxy HUD. Fly there and press **Enter** to board a persistent 32 by 20 deck. Existing saves retain already-created encounters and historical messages; start a fresh career to see the revised opening. The earlier four-choice resolution menu remains removed.
+### Rescue details and spoilers
 
 The bridge, medical stores, cargo hold, engineering compartment and sealed isolation ward connect through pressure hatches. Emergency lighting, fog of war and line of sight govern discovery. Survivors are visible individuals with positions, health and transport state. Their exact room positions vary within the authored layout.
 
-**Interaction:** move normally; Enter operates the equipment underfoot, opens an adjacent closed hatch, or assists/releases a nearby survivor. X examines visible equipment and people. T gives medical care to an adjacent survivor. P deploys a recovered isolation pod. At the engineering pump, R manually restores temporary pressure. L departs only from your own airlock. There are no remotely selectable rescue outcomes.
+### Interaction
 
-**Survival:** the wreck begins with 180 turns of reserve air when first boarded. Time continues during movement, work, waiting and travel after retreat. At zero reserve, crew suit oxygen matters and survivors left without a pod take progressive asphyxiation damage. The ordinary oxygen gauge reflects the actual atmosphere. Repairing life support stops depletion; the manual pump only buys time. A recovered coupling or an ordinary repair kit fixes the pump, while engineering skill of at least 3 permits a three-turn bypass without consuming either item.
+Move normally. Enter operates the equipment underfoot, opens an adjacent closed hatch, or assists/releases a nearby survivor. X examines visible equipment and people. T gives medical care to an adjacent survivor. P deploys a recovered isolation pod. At the engineering pump, R manually restores temporary pressure. L departs only from your own airlock.
 
-**People and equipment:** Mira can walk, Rowan needs an injury stabilized or two crew to carry them, and Ilya is infectious. A medikit stabilizes the injury; a medic with skill 3 can improvise a splint over three turns. Antibiotics treat the infection. Those supplies are ordinary inventory items and can instead be spent on your crew. Two folded pods can be recovered from stores. Carrying one casualty or pod at a time requires two living crew. A set-down pod cannot move by itself.
+### Survival
 
-**Exposure:** contaminated ward tiles expose crew whose suits are absent or punctured; intact flight suits protect against the air. Reconnecting the local scrubber removes that environmental exposure. An untreated passenger in shared ship quarters can infect the crew during travel. These exposures enter the existing crew infection and disease system; there is no new station-wide epidemic simulation.
+The wreck begins with 180 turns of reserve air when first boarded. Time continues during movement, work, waiting and travel after retreat. At zero reserve, crew suit oxygen matters and survivors left without a pod take progressive asphyxiation damage. The ordinary oxygen gauge reflects the actual atmosphere. Repairing life support stops depletion. The manual pump buys time. A recovered coupling or an ordinary repair kit fixes the pump, while engineering skill of at least 3 permits a three-turn bypass without consuming either item.
 
-**Transport:** assisted survivors path through open, passable tiles one cardinal step per turn. Carried survivors remain with the away team. They enter your ship only at the airlock. Normal passenger capacity equals unused crew bunks plus one emergency berth, with a minimum of one. Pods occupy real cargo slots and protect occupants from shared-air exposure. A small hull may require return trips; repairing life support makes that practical. Full holds or berths leave people physically aboard the wreck. Jettisoning an occupied pod records the passenger as lost, not delivered. Departure leaves untransported followers and carried casualties at their actual deck positions.
+### People and equipment
 
-**Aftermath:** docking at a major station transfers only actual onboard passengers to medical care, pays 100 cr per person and improves standing once per delivery. Loading a save or redocking cannot repeat a payment. Recovered instruments are a normal cargo commodity, sold through the existing station market, not an incident button that creates credits. There is no automatic salvage fine or omniscient station inquiry. The log records observations and actions; it does not disclose predetermined outcome prices. Deaths out of sight remain unconfirmed until observed. The retirement record counts delivered and still-onboard survivors.
+Mira can walk, Rowan needs an injury stabilized or two crew to carry them, and Ilya is infectious. A medikit stabilizes the injury; a medic with skill 3 can improvise a splint over three turns. Antibiotics treat the infection. Those supplies are ordinary inventory items and can instead be spent on your crew. Two folded pods can be recovered from stores. Carrying one casualty or pod at a time requires two living crew. A set-down pod cannot move by itself.
 
-**Saves:** all deck, door, supply, repair, survivor and passenger state persists in ordinary saves. Older saves without this encounter remain playable. Resolved incidents from experimental.1 retain their history and cannot be replayed for new rewards. Start fresh to experience the new ship. The Windows experiment has a separate app identifier from the regular game.
+### Exposure
 
-Two existing defects surfaced while exercising the encounter: planet waiting failed to advance the global turn, and cardinal line-of-sight rays could drift along the wrong axis. Both are corrected in this branch. A previously undefined casino-departure variable in lift-off is also corrected. These changes do not update main.
+Contaminated ward tiles expose crew whose suits are absent or punctured; intact flight suits protect against the air. Reconnecting the local scrubber removes that environmental exposure. An untreated passenger in shared ship quarters can infect the crew during travel. These exposures use the crew infection and disease system.
 
-## What follows
+### Transport
 
-1. Human playtesting of the spatial incident: clarity of local actions, lighting, time pressure, ferry trips and medical tradeoffs. Tune those observations before adding another encounter.
-2. Connect log leads to the sealed ringworld, robot factory and Apollo's Sanctuary; each gets a return visit and a persistent aftermath.
-3. Expand the renewable career work introduced in experimental.4, then connect faction news and first contact beyond a single planet.
-4. Develop opt-in sector crises and a fact-driven final sector account. Existing random humanity outcomes are not yet wired to this history.
+Assisted survivors path through open, passable tiles one cardinal step per turn. Carried survivors remain with the away team. They enter your ship only at the airlock. Normal passenger capacity equals unused crew bunks plus one emergency berth, with a minimum of one. Pods occupy real cargo slots and protect occupants from shared-air exposure. Repair life support before making return trips with a small hull. Full holds or berths leave people physically aboard the wreck. Jettisoning an occupied pod records the passenger as lost. Departure leaves untransported followers and carried casualties at their actual deck positions.
 
-The broader [roadmap](roadmap.md) remains the destination; these items are planned rather than implemented.
+### Aftermath
 
-## Validation
+Docking at a major station transfers only actual onboard passengers to medical care, pays 100 cr per person and improves standing once per delivery. Loading a save or redocking cannot repeat a payment. Sell recovered instruments through the station market. The log records observed conditions and actions. Deaths out of sight remain unconfirmed until observed. The retirement record counts delivered and still-onboard survivors.
 
-`npm run build` assembles `src/` into `index.html`; `npm test` checks the build and targeted behavior. Tests traverse 100 generated decks for reachability, check closed hatches and survivor movement, resource depletion across serialization, berth and cargo limits, lost pods, once-only delivery and cardinal/diagonal visibility.
+### Saves
 
-A separate local headless harness runs the complete built game in Edge. It starts scenarios at the wreck but walks the interior using real movement and interaction functions. Its scenarios cover all three hulls, a complete treated rescue and flight to a station, physically carried injured survivors, small-ship capacity and return trips, isolation pods, actual storage and file loading mid-rescue, real inventory jettison, ordinary-market salvage sales, missing equipment, breached-suit infection and lethal life-support neglect. The test setup suppresses unrelated galaxy pirate interception to isolate encounter behavior; it does not prove survival through every sector encounter. The harness stays outside the public tree, consistent with the earlier tooling cleanup. These checks establish the tested rules and paths; human playtesting is still needed to judge pacing, readability, balance and enjoyment.
+All deck, door, supply, repair, survivor and passenger state persists in ordinary saves. Older saves without this encounter remain playable. Resolved incidents from experimental.1 retain their history and cannot be replayed for new rewards. A fresh career uses the current wreck placement rules.
+
+Use the Mercy sample in the [debug playground](debug-playground.md) to practice boarding and rescue. The maintained [encounter and rescue checks](../qa/README.md#regression-scenarios) cover detection, boarding, survivor movement, and save recovery.

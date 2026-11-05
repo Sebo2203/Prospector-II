@@ -18,7 +18,7 @@ The experiment starts from `dev-build` (`e3ffe10`) and retains the history of `m
 | `modular-source-experiment` | `archive/modular-source-experiment-2026-10-31` | `ef756f54e9285aa99d24467ae8389e7a5d6ea600` |
 | `dev-build` | `archive/dev-build-2026-10-31` | `e3ffe10` |
 
-The obsolete modular extraction draft PR is closed once the consolidated experimental branch is published. The old `Development handoff.txt` is historical; use this branch and the README for current instructions.
+The [September handoff](archive/Development%20handoff.txt) describes the old `dev-build` workflow. See the [current handoff](handoff.md) for the consolidated branch.
 
 To inspect an archived version, create a local branch from its tag, for example:
 
@@ -26,4 +26,4 @@ To inspect an archived version, create a local branch from its tag, for example:
 git switch -c inspect-old-dev archive/dev-build-2026-10-31
 ```
 
-Switching branches in GitHub does not switch GitHub Pages. To play this experiment, download this branch's ZIP, extract it, and open its `index.html`; or build its desktop source. The main-branch download remains the public release.
+GitHub Pages serves `main`. The [README](../README.md#play) links to the public release and the experimental HTML.
