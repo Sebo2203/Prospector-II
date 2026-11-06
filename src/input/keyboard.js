@@ -73,7 +73,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   const menuControl = e.target.closest?.('button[data-menu-control]');
-  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey) && (e.key==='Enter'||e.key===' ')){
+  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey || menuControl.id==='shortcut-toggle') && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
     if(!e.repeat) menuControl.click();
     return;

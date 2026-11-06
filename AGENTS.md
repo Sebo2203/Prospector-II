@@ -8,7 +8,7 @@
 - Check callers as well as definitions. New biomes affect generation, creatures, tile/ASCII rendering and scans; crew statuses affect ticking, combat, UI and saves; dialogue changes affect state, available options and barter.
 - Reserve the full-width message banner for specific critical conditions that require immediate action. Send routine events, NPC speech, and radio traffic to the sidebar log.
 - Support keyboard and mouse play through the same game actions. The compass handles pointer movement, wait, and cursor placement. Use explicit context controls for interaction, pickup commands, and firing. Direct clicks on world tiles, items, and targets remain passive. Keep essential information available through keyboard selection or examination. Hover is a preview.
-- Keep the persistent shortcut legend muted and static, with no buttons or hover styling.
+- Keep the shortcut legend collapsed by default. Its key labels use muted, static text. Place the toggle beside the legend.
 - Run `npm test` after building. For runtime changes, open the built HTML in a browser and check the affected behavior. Syntax/build checks alone do not establish gameplay correctness.
 - `npm run verify:migration` audits the initial extraction against the recorded original HTML hash. It is deliberately separate from normal tests because later gameplay edits should change that hash.
 - `src/html/legacy-design-notes.html` is an unchanged historical comment embedded in the release for exact migration parity. Some descriptions and line references are outdated; current code and `docs/architecture.md` take precedence.

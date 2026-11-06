@@ -95,6 +95,7 @@ function showMenu(){
   MENU_STATE.mainSel = 0;
   G = null;
   // Hide all game UI — only canvas visible
+  document.getElementById('game-escape').hidden = true;
   document.getElementById('hud').style.display         = 'none';
   document.getElementById('gauge-panel').style.display = 'none';
   document.getElementById('sidebar').style.display     = 'none';
@@ -132,6 +133,7 @@ function showMenu(){
 
 function restoreGameUI(){
   setGameCanvasMode();
+  document.getElementById('game-escape').hidden = false;
   document.getElementById('hud').style.display         = '';
   document.getElementById('gauge-panel').style.display = '';
   document.getElementById('sidebar').style.display     = '';
@@ -139,6 +141,12 @@ function restoreGameUI(){
   document.getElementById('ctx-bar').style.display     = '';
   document.getElementById('persist-bar').style.display = '';
   document.getElementById('version-tag').style.display = '';
+}
+
+function toggleShortcutLegend(){
+  const legend = document.getElementById('persist-hints');
+  legend.hidden = !legend.hidden;
+  document.getElementById('shortcut-toggle').setAttribute('aria-expanded',String(!legend.hidden));
 }
 
 async function returnToMainMenuFromGame(){

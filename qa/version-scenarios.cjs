@@ -50,6 +50,7 @@ const assert = require('node:assert/strict');
     await page.screenshot({ path: artifactPath('Version-labels.png') });
     await page.evaluate(() => returnToMainMenuFromGame());
     await page.waitForFunction(() => MENU_STATE.screen === 'main' && MENU_STATE.hasAutosave);
+    assert.equal(await page.locator('#game-escape').isVisible(),false);
     await checkMainMenu(['C', 'N', 'L', 'O', 'X', 'Q']);
     assert.deepEqual(errors, []);
     console.log('PASS: version labels, main menu keyboard and mouse routes with and without a save, and retired V shortcut.');

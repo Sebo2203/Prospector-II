@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.23 collapses the shortcut legend
+
+Released on `experiment/expedition-legacy`.
+
+- Hid the gray shortcut legend by default. The **Shortcuts** button opens or closes the reference by mouse or keyboard. The top-left **ESC** button appears during play. The title and setup screens use their own navigation.
+- All 47 repository tests and three headless Edge suites passed. Checked the toggle, the scaled footer, and Escape visibility at startup, during setup and play, and after returning to the main menu. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.22 makes context actions clickable
 
 Released on `experiment/expedition-legacy`.

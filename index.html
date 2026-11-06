@@ -1248,6 +1248,20 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   cursor: pointer;
 }
 .hud-menu-btn:hover, .hud-menu-btn:focus-visible { border-color: #aaddff; }
+#persist-shortcuts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+#shortcut-toggle {
+  flex-shrink: 0;
+  background: #17181d;
+  color: #999da7;
+  border-color: #383a40;
+}
+#shortcut-toggle:hover, #shortcut-toggle:focus-visible { border-color: #999da7; }
 #persist-hints {
   flex: 1;
   min-width: 0;
@@ -1257,6 +1271,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   gap: 5px 14px;
   overflow: hidden;
 }
+#persist-hints[hidden] { display: none; }
 #hud-tools {
   flex-shrink: 0;
   display: flex;
@@ -1486,7 +1501,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
 </head>
 <body>
 <div id="root">
-  <button type="button" id="game-escape" class="hud-menu-btn" data-game-key="Escape" data-menu-control aria-label="Escape">ESC</button>
+  <button type="button" id="game-escape" class="hud-menu-btn" data-game-key="Escape" data-menu-control aria-label="Escape" hidden>ESC</button>
   <button type="button" id="pointer-keys-toggle" class="hud-menu-btn" data-menu-control hidden>On-screen keys</button>
   <div id="pointer-keys" aria-label="On-screen keys" hidden></div>
 
@@ -1587,16 +1602,19 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   </div>
   <!-- Contextual actions — rebuilt by renderContextBar() each turn -->
   <div id="ctx-bar"></div>
-  <!-- Persistent global hints — never changes -->
+  <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="persist-hints">
-      <div><span class="ck">WASD</span> cardinal move</div>
-      <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
-      <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
-      <div><span class="ck">Enter</span> interact / dock / land</div>
-      <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
-      <div><span class="ck">ESC</span> back / close</div>
-      <div><span class="ck">.</span> wait / repair (galaxy)</div>
+    <div id="persist-shortcuts">
+      <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
+      <div id="persist-hints" hidden>
+        <div><span class="ck">WASD</span> cardinal move</div>
+        <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
+        <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
+        <div><span class="ck">Enter</span> interact / dock / land</div>
+        <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
+        <div><span class="ck">ESC</span> back / close</div>
+        <div><span class="ck">.</span> wait / repair (galaxy)</div>
+      </div>
     </div>
     <div id="hud-tools">
       <!-- 8-dir compass — always visible, functional in galaxy/planet modes -->
@@ -1619,7 +1637,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.22</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.23</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1677,8 +1695,8 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.22';
-const GAME_VERSION_LABEL = 'v0.28 experimental.22';
+const GAME_VERSION = '0.28.0-experimental.23';
+const GAME_VERSION_LABEL = 'v0.28 experimental.23';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -33566,7 +33584,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   const menuControl = e.target.closest?.('button[data-menu-control]');
-  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey) && (e.key==='Enter'||e.key===' ')){
+  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey || menuControl.id==='shortcut-toggle') && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
     if(!e.repeat) menuControl.click();
     return;
@@ -35535,6 +35553,7 @@ function showMenu(){
   MENU_STATE.mainSel = 0;
   G = null;
   // Hide all game UI — only canvas visible
+  document.getElementById('game-escape').hidden = true;
   document.getElementById('hud').style.display         = 'none';
   document.getElementById('gauge-panel').style.display = 'none';
   document.getElementById('sidebar').style.display     = 'none';
@@ -35572,6 +35591,7 @@ function showMenu(){
 
 function restoreGameUI(){
   setGameCanvasMode();
+  document.getElementById('game-escape').hidden = false;
   document.getElementById('hud').style.display         = '';
   document.getElementById('gauge-panel').style.display = '';
   document.getElementById('sidebar').style.display     = '';
@@ -35579,6 +35599,12 @@ function restoreGameUI(){
   document.getElementById('ctx-bar').style.display     = '';
   document.getElementById('persist-bar').style.display = '';
   document.getElementById('version-tag').style.display = '';
+}
+
+function toggleShortcutLegend(){
+  const legend = document.getElementById('persist-hints');
+  legend.hidden = !legend.hidden;
+  document.getElementById('shortcut-toggle').setAttribute('aria-expanded',String(!legend.hidden));
 }
 
 async function returnToMainMenuFromGame(){

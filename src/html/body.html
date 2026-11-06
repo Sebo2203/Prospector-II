@@ -1,6 +1,6 @@
 
 <div id="root">
-  <button type="button" id="game-escape" class="hud-menu-btn" data-game-key="Escape" data-menu-control aria-label="Escape">ESC</button>
+  <button type="button" id="game-escape" class="hud-menu-btn" data-game-key="Escape" data-menu-control aria-label="Escape" hidden>ESC</button>
   <button type="button" id="pointer-keys-toggle" class="hud-menu-btn" data-menu-control hidden>On-screen keys</button>
   <div id="pointer-keys" aria-label="On-screen keys" hidden></div>
 
@@ -101,16 +101,19 @@
   </div>
   <!-- Contextual actions — rebuilt by renderContextBar() each turn -->
   <div id="ctx-bar"></div>
-  <!-- Persistent global hints — never changes -->
+  <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="persist-hints">
-      <div><span class="ck">WASD</span> cardinal move</div>
-      <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
-      <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
-      <div><span class="ck">Enter</span> interact / dock / land</div>
-      <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
-      <div><span class="ck">ESC</span> back / close</div>
-      <div><span class="ck">.</span> wait / repair (galaxy)</div>
+    <div id="persist-shortcuts">
+      <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
+      <div id="persist-hints" hidden>
+        <div><span class="ck">WASD</span> cardinal move</div>
+        <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
+        <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
+        <div><span class="ck">Enter</span> interact / dock / land</div>
+        <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
+        <div><span class="ck">ESC</span> back / close</div>
+        <div><span class="ck">.</span> wait / repair (galaxy)</div>
+      </div>
     </div>
     <div id="hud-tools">
       <!-- 8-dir compass — always visible, functional in galaxy/planet modes -->
