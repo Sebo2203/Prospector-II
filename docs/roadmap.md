@@ -31,6 +31,7 @@ The modular `src/` tree already contains a generated galaxy, planets and civiliz
 | Crew health, disease, hallucinations, and morale | These need readable warnings, recovery choices, and occasional story consequences. |
 | Civilizations and station interactions | Local state needs to feed sector news, diplomacy, access, and endings. |
 | Science contracts | Experimental.4 added renewable work and recovery from blocked jobs; larger expeditions and whole-career balance still need work. |
+| Tactical ship combat | Experimental.45 added positional combat, cover, exhaust, and fleet encounters. Encounter pacing, weapon balance, and further ship systems need playtesting. |
 | Artemis launcher and ship equipment | The launcher lacks ammunition, and damage/repair is not yet a meaningful ship-management loop. |
 | Six authored humanity outcomes | Retirement skips the sector-outcome screen; outcomes need to follow run history instead of a random selection. |
 

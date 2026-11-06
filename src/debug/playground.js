@@ -15,8 +15,11 @@ function debugBuildPaletteGalaxyObject(id,x,y){
   const neutral={TRADER:'trader',CARGO_SHIP:'cargo',SCIENCE_SHIP:'science',PATROL:'patrol'}[id];
   if(neutral) G.neutralShips.push({x,y,type:neutral,name,speed:1,rescueCost:0,fuelGift:40,destBase:0,destX:x,destY:y,
     homeX:x,homeY:y,patrolRoute:[{x,y}],patrolIdx:0,rescuing:false,alive:true});
-  else if(id==='PIRATE') G.pirates.push({x,y,name:'Palette Pirate',alive:true,hp:50,maxHp:50,atk:6,engineRating:2,
-    shields:0,maxShields:0,guns:1,pirateType:'guard',homeX:x,homeY:y,lastMove:0});
+  else if(id==='PIRATE' || id==='PIRATE_WING'){
+    const names=id==='PIRATE' ? ['Palette Pirate'] : ['Pirate Lead','Pirate Wingmate'];
+    for(const name of names) G.pirates.push({x,y,name,alive:true,hp:50,maxHp:50,atk:6,engineRating:2,
+      shields:0,maxShields:0,guns:1,pirateType:'guard',homeX:x,homeY:y,lastMove:0});
+  }
   else if(id.startsWith('STRANDED_')||id==='RESEARCH_SHIP'){
     const type=id==='STRANDED_ALIVE'?'alive':id==='RESEARCH_SHIP'?'research':'dead';
     const ship={x,y,type,name,mapKey:x+','+y+':palette-ship',fuel:0,fuelCost:20,credits:200,age:0};
@@ -59,7 +62,7 @@ function debugEnterPalette(area='galaxy',rebuild=false){
       expedition:{version:1,events:[],surveys:{},quarantine:null},scienceJob:{active:null,completedTypes:[],cooldownUntil:0},
       debugPalette:{simulate:false,entries:[],surfaceKey:'debug:surface'}});
     G.crew=Object.keys(CREW_ROLES).map(role=>randomCrewMember(role));
-    G.shipStats=buildShipStats('BULK_FREIGHTER');G.shipStats.cargoCapacity=100;G.shipStats.maxCrew=100;
+    G.shipStats=buildShipStats('BULK_FREIGHTER',{weapons:1});G.shipStats.cargoCapacity=100;G.shipStats.maxCrew=100;
     G.maxFuel=1000;G.fuel=1000;G.ship={x:3,y:3,hp:1000,maxHp:1000};G.oxygen=100;G.credits=100000;
     G.installedModules=['tractor_beam','fuel_scoop','mining_drill'];G.installedWeapons=['railgun'];
     Object.assign(DEBUG,{infiniteFuel:true,infiniteHull:true,infiniteOxy:true,infiniteCrewHp:true,fullVision:true,shipInvisible:true,preScan:1});

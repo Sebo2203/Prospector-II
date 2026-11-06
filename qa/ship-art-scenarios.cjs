@@ -45,7 +45,10 @@ const {chromium}=require('./runtime.cjs'),fs=require('node:fs'),path=require('no
   for(const type of Object.keys(SHIP_ROLE_ART)){
    const art=neutralShipArt({type}),npc=G.neutralShips.find(n=>n.type===type);if(!npc)throw Error('Palette role missing');
    debugPaletteVisit('galaxy:'+({trader:'TRADER',cargo:'CARGO_SHIP',science:'SCIENCE_SHIP',patrol:'PATROL'}[type]));G.ship.x-=1;calls.length=0;drawGalaxy();if(!calls.includes(tintedSpriteImage(IMG[art.sprite],art.tint)))throw Error('Role hull missing on galaxy');
-   startShipCombat(npc);calls.length=0;drawShipCombatOverlay();if(!calls.includes(tintedSpriteImage(IMG[art.sprite],art.tint)))throw Error('Combat role differs from map');G.mode='galaxy';G.shipCombat=null;
+   startShipCombat(npc);calls.length=0;drawShipCombatOverlay();
+   const enemy=G.shipCombat.enemies[0], frame=shipDirectionKey(art.sprite,enemy.dx,enemy.dy);
+   if(!calls.includes(tintedSpriteImage(IMG[frame],art.tint)))throw Error('Combat role differs from map');
+   G.mode='galaxy';G.shipCombat=null;
   }
   // Independent fog/radio scenario: no role silhouette leaks beyond sensor range.
   const sample=G.neutralShips.find(n=>n.type==='science');G.neutralShips=[sample];G.pirates=[];DEBUG.fullVision=false;G.shipStats.sensorRange=1;G.ship.x=sample.x-3;G.ship.y=sample.y;G.visited.fill(true);calls.length=0;drawGalaxy();const art=neutralShipArt(sample);if(calls.includes(tintedSpriteImage(IMG[art.sprite],art.tint)))throw Error('Role silhouette leaked beyond sensors');

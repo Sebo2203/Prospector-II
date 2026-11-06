@@ -96,10 +96,18 @@ document.addEventListener('keydown', e=>{
 
     // Ship combat owns its action keys before WASD movement can swallow them.
     if(G.mode==='shipcombat' && !G.showOptions && !G.dialogue){
-      if(e.key==='f'||e.key==='F'){ doShipFire(); return; }
-      if(e.key==='r'||e.key==='R'){ doShipRetreat(); return; }
-      if(e.key==='s'||e.key==='S'){ doShipSurrender(); return; }
-      if(e.key==='Escape'){ const _eng=G.shipStats?.engineRating||1; addLog('Use [R] to retreat (costs '+Math.max(5,12-_eng*2)+' fuel), [S] to surrender, or [F] to fire.','li'); renderAll(); return; }
+      const key=e.key.toLowerCase();
+      if(key==='f'){ doShipFire(); return; }
+      if(key==='r'){ doShipRetreat(); return; }
+      if(key==='h'){ if(!e.repeat) doShipSurrender(); return; }
+      if(e.key==='Tab'){ e.preventDefault(); cycleShipCombatTarget(e.shiftKey?-1:1); return; }
+      if(/^[1-5]$/.test(e.key) && !e.code.startsWith('Numpad')){ selectShipCombatWeapon(Number(e.key)-1); return; }
+      if(e.key==='Escape'){
+        G.shipCombat.surrenderWarned = false;
+        addLog('Use the compass or movement keys. Fire [F], select target [Tab], or disengage at the map edge [R].','li');
+        renderAll();
+        return;
+      }
     }
     if(G.mode==='radio' && !G.showOptions && !G.dialogue){
       const rows = radioTradeRows();
@@ -500,7 +508,6 @@ document.addEventListener('keydown', e=>{
 
     // ESC
     if(e.key==='Escape'){
-      if(G.mode==='shipcombat'){ const _eng=G.shipStats?.engineRating||1; addLog('Use [R] to retreat (costs '+Math.max(5,12-_eng*2)+' fuel), [S] to surrender, or [F] to fire.','li'); renderAll(); return; }
       if(G.mode==='inventory'){ closeInventoryMenu(); return; }
       if(G.mode==='planet' && G._voidPrompt){ G._voidPrompt=null; addLog('No.','lm'); renderAll(); return; }
       if(G.mode==='galaxy' && G.stranded?.rescuePhase==='offer'){ doDeclineRescue(); return; }
@@ -661,15 +668,7 @@ document.addEventListener('keydown', e=>{
       }
     }
 
-    if(e.key==='r'||e.key==='R'){
-      if(G.mode==='shipcombat'){ doShipRetreat(); return; }
-      return;
-    }
-    if((e.key==='s'||e.key==='S') && G.mode==='shipcombat'){
-      doShipSurrender(); return;
-    }
     if(e.key==='f'||e.key==='F'){
-      if(G.mode==='shipcombat'){ doShipFire(); return; }
       if(G.mode==='galaxy'){
         const p=G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
         if(p){ startShipCombat(p); return; }

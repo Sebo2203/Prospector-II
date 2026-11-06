@@ -98,6 +98,8 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/combat/ground-and-enemies.js](../src/combat/ground-and-enemies.js) | 434 |
 | [src/ships/gas-entities-and-pirates.js](../src/ships/gas-entities-and-pirates.js) | 294 |
 | [src/combat/ship.js](../src/combat/ship.js) | 761 |
+| [src/combat/ship-tactics.js](../src/combat/ship-tactics.js) | Added later: tactical arena, movement, weapon timing, exhaust, and enemy actions |
+| [src/rendering/ship-combat.js](../src/rendering/ship-combat.js) | Added later: tactical arena display, contacts, and weapons |
 | [src/economy/radio-trade.js](../src/economy/radio-trade.js) | 87 |
 | [src/actions/interaction-and-landing.js](../src/actions/interaction-and-landing.js) | 313 |
 | [src/actions/survey-and-scan.js](../src/actions/survey-and-scan.js) | 331 |

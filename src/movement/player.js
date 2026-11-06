@@ -1,6 +1,7 @@
 function tryMove(dx,dy,confirmed){
   confirmed = !!confirmed;
   if(G.dead||G.retired) return;
+  if(G.mode==='shipcombat'){ moveShipInCombat(dx,dy); return; }
   // Track last movement direction for sprite rotation
   if(dx!==0||dy!==0) G.ship.facing = {dx, dy};
 

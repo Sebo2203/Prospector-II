@@ -10,6 +10,14 @@ Open Inventory with **I** or Options with **O**, or click their context buttons.
 
 Use **Shift+Z** to dive or surface, **Shift+O** to refill oxygen at the ship, and **Shift+X** to release a tow. These commands also appear as context actions when available.
 
+## Tactical ship combat
+
+Ship encounters open a turn-based combat map. Nearby pirates or hostile patrols can fight as a group of up to four ships. Use movement keys or the compass to fly one tile. Asteroids are optional cover and block both movement and shots. Amber exhaust is hazardous to any ship that crosses it. Stronger engines leave more damaging exhaust that lasts longer.
+
+Click a target or press **Tab** to cycle contacts. Click a weapon or use its displayed number to select it, then press **F** or click **Fire**. A second click on the mouse-selected target also fires. The weapon panel shows its range, whether cover blocks the shot, and the remaining cooldown. Moving and waiting both give weapons time to reload and let opponents act.
+
+Fly to an edge and use **R** to disengage. Enemies with a clear shot and a ready weapon can fire once as you leave. Use **H** to offer surrender. Pirates may take cargo and credits, and patrols warn you before a second press confirms arrest. The encounter uses local rounds and resumes galaxy travel when it ends.
+
 ## Crew at a glance
 
 The sidebar shows one badge per living crew member. **C** is Captain, **N** Navigator, **E** Engineer, **S** Scientist, **+** Medic, **m** Mercenary, and **r** Redshirt. The meter shows remaining HP in green, amber below 60%, and red below 30%. A pulsing **!** marks an active condition and stays still with reduced motion enabled. Hover for the crew member's name, exact HP, and known conditions. Open **I → CREW** for the full roster.

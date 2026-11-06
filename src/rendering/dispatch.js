@@ -28,7 +28,6 @@ function drawCanvas(){
   } else if(G.mode==='system'){
     drawSystemView();
   } else if(G.mode==='shipcombat'){
-    drawGalaxy();
     drawShipCombatOverlay();
   } else if(G.mode==='casino'){
     if(G.planets[G.curPlanet]?.isCasino) drawPlanet(); else drawGalaxy();

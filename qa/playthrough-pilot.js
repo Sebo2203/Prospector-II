@@ -272,14 +272,32 @@ window.installPlaythroughPilot=function(profile){
   }
   if(G.mode==='shipcombat'){
    p.combatRounds++;
-   const enemy=G.shipCombat.pirate,enemyVolley=(enemy.atk+3)*(enemy.guns||1);
-   const ownVolley=G.installedWeapons.reduce((total,id)=>total+(SHIP_WEAPONS[id]?.maxDmg||0),0);
-   const outmatched=enemyVolley>ownVolley*1.4||enemy.hp>G.ship.hp*1.4;
-   const retreatCost=Math.max(5,12-G.shipStats.engineRating*2)*(G.shipCombat.isDevourer?2:1);
-   if(!ownVolley||outmatched||G.ship.hp<Math.max(G.ship.maxHp*0.6,enemyVolley*2)){
-    if(G.fuel>=retreatCost+dist(G.ship,nearestBase())+3)act('Attempt ship retreat',()=>doShipRetreat());
-    else act('Offer surrender',()=>doShipSurrender());
-   }else act('Fire ship weapons',()=>doShipFire());return;
+   const combat=G.shipCombat, own=combat.player, target=combat.enemies[combat.target];
+   const weapons=shipCombatWeapons();
+   const enemyVolley=livingShipCombatEnemies(combat).reduce((sum,enemy)=>sum+(enemy.ship.atk+3)*(enemy.ship.guns??1),0);
+   const bestDamage=Math.max(0,...weapons.map(entry=>entry.weapon.maxDmg));
+   const retreat=!bestDamage||enemyVolley>bestDamage*1.4||G.ship.hp<Math.max(G.ship.maxHp*0.6,enemyVolley*2);
+   const course=(point,allowTarget=false)=>route(own,point,COMBAT_MAP.width,COMBAT_MAP.height,(x,y)=>{
+    const tile={x,y};
+    return shipCombatOpen(combat,tile)||(allowTarget&&x===point.x&&y===point.y)
+     ? 1+(shipCombatPlasma(combat,tile)?.damage||0) : Infinity;
+   });
+   if(retreat && shipCombatEscapeReady(combat)){act('Disengage',()=>doShipRetreat());return;}
+   if(retreat && shipCombatEdge(own) && G.ship.hp>enemyVolley){act('Disengage under fire',()=>doShipRetreat());return;}
+   if(retreat && G.fuel>0){
+    const edges=[{x:0,y:own.y},{x:COMBAT_MAP.width-1,y:own.y},{x:own.x,y:0},{x:own.x,y:COMBAT_MAP.height-1}];
+    const exit=edges.map(point=>course(point)).filter(path=>path?.first).sort((a,b)=>a.g-b.g)[0];
+    if(exit){act('Move toward combat edge',()=>tryMove(...exit.first));return;}
+   }
+   const ready=weapons.findIndex(entry=>shipCombatWeaponStatus(combat,entry)==='Ready');
+   if(ready>=0){act('Fire ship weapon',()=>{combat.weapon=ready;doShipFire();});return;}
+   if(!bestDamage){act('Offer surrender',()=>doShipSurrender());return;}
+   if(G.fuel>0 && (!shipCombatShotClear(combat,own,target)||!weapons.some(entry=>shipCombatDistance(own,target)<=entry.weapon.range))){
+    const approach=course(target,true);
+    if(approach?.first){act('Close to firing range',()=>tryMove(...approach.first));return;}
+   }
+   act('Wait in ship combat',()=>advanceShipCombat());
+   return;
   }
   if(G.mode==='base'){station();return;}
   if(G.mode==='system'){system();return;}

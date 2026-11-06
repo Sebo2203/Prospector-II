@@ -104,7 +104,7 @@ document.getElementById('compass-grid').addEventListener('mousedown',event=>{
     activateGameKey('', 'Numpad'+(5-3*Number(dy)+Number(dx)));
     return;
   }
-  if(G.mode!=='galaxy' && G.mode!=='planet') return;
+  if(G.mode!=='galaxy' && G.mode!=='planet' && G.mode!=='shipcombat') return;
   if(G.stranded) doStrandedWait();
   else if(dx!==undefined) tryMove(Number(dx),Number(dy));
   else if(G.mode==='planet') doWaitPlanet();

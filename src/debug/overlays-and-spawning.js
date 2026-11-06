@@ -5,7 +5,7 @@ const DEBUG_GALAXY_OBJ_TYPES = [
   { id:'DERELICT',      label:'Derelict',      col:'#6688aa' },
   { id:'PIRATE_BASE',   label:'Pirate Base',   col:'#bb3311' },
   ...['BASE','WAYPOINT','CASINO','NEBULA_PINK','NEBULA_BLUE','GAS_WRAITH','GAS_DEVOURER',
-    'TRADER','CARGO_SHIP','SCIENCE_SHIP','PATROL','PIRATE','STRANDED_ALIVE','STRANDED_DEAD','RESEARCH_SHIP','NEBULA_LOOT','QUARANTINE']
+    'TRADER','CARGO_SHIP','SCIENCE_SHIP','PATROL','PIRATE','PIRATE_WING','STRANDED_ALIVE','STRANDED_DEAD','RESEARCH_SHIP','NEBULA_LOOT','QUARANTINE']
     .map(id=>({id,label:id.replaceAll('_',' '),col:'#88bbcc',place:(x,y)=>debugBuildPaletteGalaxyObject(id,x,y)})),
 ];
 

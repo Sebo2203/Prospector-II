@@ -75,6 +75,10 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
    const result=await page.evaluate(id=>{
      debugPaletteVisit(id);
      if(id.startsWith('galaxy:')){
+       if(id==='galaxy:PIRATE_WING'){
+         activateGameKey('f');
+         if(G.shipCombat?.enemies.length!==2) throw Error('Pirate wing did not start a two-ship fight');
+       }
        if(id==='galaxy:RESEARCH_SHIP'){
          const s=G.debugPalette.researchShip;G.scienceJob.active={type:'research_ship',id:'palette-research',target:{mapKey:s.mapKey},reward:900};
        }

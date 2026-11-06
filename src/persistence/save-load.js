@@ -211,6 +211,7 @@ function installSaveSnapshot(loaded){
       if(!c.statuses) c.statuses = {};
     });
     ensureCrewStatusState();
+    restoreShipCombatArena();
     return G;
   }catch(error){G=before;throw error;}
 }

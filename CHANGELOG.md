@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.45 adds tactical ship combat
+
+Released on `experiment/expedition-legacy`.
+
+- Replaced the ship-to-ship volley screen with a turn-based arena. Fly with the compass or movement keys, select an enemy and a weapon, and manage range and reloads. Optional asteroids block movement and fire. Engine exhaust harms any ship that crosses it. Stronger engines leave more damaging, longer-lived trails.
+- Nearby pirates or hostile patrols can join the same fight, up to four opponents. Disengage at an edge. Enemies with a ready weapon and clear shot can fire once as you leave. Surrender uses **H**, leaving **S** available for movement. Added the **PIRATE WING** Debug Palette sample.
+- Encounters resume from saves with their positions, cooldowns, and hazards. Older combat saves start the tactical map with their existing opponent, hull, and shields. The first balance pass needs human playtesting.
+- All 47 repository tests and seven headless Edge suites passed. Checked a wing encounter with cover and an unarmed freighter disengagement in installed Firefox.
+
 ## 2026-11-07 — 0.28 experimental.44 removes scan seams and repeating terrain grain
 
 Released on `experiment/expedition-legacy`.

@@ -49,6 +49,8 @@ Known pilot limits: it can mishandle bleeding, recruiting, civilization warnings
 
 ## Regression scenarios
 
+Run `npm --prefix qa test -- ship-combat` for the tactical arena. It checks keyboard and compass movement, mouse targeting, cover and exhaust, multi-ship combat, saves, disengagement, and surrender.
+
 ```sh
 npm --prefix qa test
 npm --prefix qa test -- palette previews encounters

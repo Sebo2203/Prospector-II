@@ -57,6 +57,7 @@ function doFuelScoop(context){
 }
 
 function doWaitGalaxy(){
+  if(G.mode==='shipcombat'){ advanceShipCombat(); return; }
   if(G.mode!=='galaxy'||G.dead||G.retired) return;
   G._bonusMoves = 0;
   G.turn++;

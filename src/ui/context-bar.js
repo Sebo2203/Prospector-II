@@ -71,21 +71,21 @@ function renderContextBar(){
     btns.push(btn('X / ESC','Exit examine','info','Escape'));
 
   } else if(G.mode==='shipcombat'){
-    const combatSS = G.shipStats || buildShipStats('LIGHT_SCOUT');
-    const combatWpns = (G.installedWeapons||[]).filter(id=>id&&SHIP_WEAPONS[id]&&!SHIP_WEAPONS[id].placeholder);
-    if(combatWpns.length > 0){
-      const label = combatWpns.map(id=>SHIP_WEAPONS[id].name).join('+');
-      btns.push(btn('F','Fire '+label,'danger'));
-    } else if(combatSS.weaponSlots === 0){
-      btns.push(btn('!','No weapon slots — RETREAT','danger'));
-    } else {
-      btns.push(btn('!','No weapons installed — RETREAT','danger'));
+    const combat = G.shipCombat;
+    const entry = shipCombatWeapons()[combat.weapon];
+    if(entry) btns.push(btn('F','Fire '+entry.weapon.name,'danger'));
+    else btns.push(btn('!','Unarmed','warn'));
+    if(livingShipCombatEnemies(combat).length>1) btns.push(btn('Tab','Next target','info','Tab'));
+    if(shipCombatEdge(combat.player)){
+      const safe = shipCombatEscapeReady(combat);
+      btns.push(btn('R',safe?'Disengage':'Disengage under fire',safe?'info':'warn'));
+    } else btns.push(btn('R','Disengage at map edge','info'));
+    if(combat.isNeutralTarget && combat.pirate.type==='patrol'){
+      btns.push(btn('H',combat.surrenderWarned?'Confirm arrest':'Surrender to patrol','warn'));
+    } else if(!combat.isNeutralTarget && !combat.pirate._homeCluster){
+      const terms = getPirateSurrenderTerms(combat.pirate);
+      btns.push(btn('H','Surrender ('+terms.creditTake+' cr + '+terms.cargoCount+' cargo)','warn'));
     }
-    const retreatFuel = Math.max(5, 12 - (combatSS.engineRating||1)*2);
-    const retreatPct  = Math.round(Math.min(95, 35 + (combatSS.engineRating||1)*15));
-    btns.push(btn('R','Retreat ('+retreatFuel+' fuel, '+retreatPct+'% chance)','info'));
-    const terms = getPirateSurrenderTerms(G.shipCombat?.pirate || {});
-    btns.push(btn('S','Surrender (50% credits + '+terms.cargoCount+' cargo)','warn'));
 
   } else if(G.mode==='galaxy'){
     const cell = G.galaxy[G.ship.y][G.ship.x];
