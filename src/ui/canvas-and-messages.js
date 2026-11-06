@@ -17,6 +17,22 @@ function fitCanvasToDisplay(surface,paint,width,height){
   return resized;
 }
 
+// Both terrain views share device-pixel edges without changing logical tile coordinates.
+function terrainTileGrid(paint){
+  const frame = paint.getTransform();
+  const xEdges = Array.from({length:VIEW_W+1}, (_,i)=>Math.round(i*TS*frame.a+frame.e));
+  const yEdges = Array.from({length:VIEW_H+1}, (_,i)=>Math.round(i*TS*frame.d+frame.f));
+  return {
+    align(vx, vy){
+      const left = xEdges[vx], top = yEdges[vy];
+      const scaleX = (xEdges[vx+1]-left)/TS;
+      const scaleY = (yEdges[vy+1]-top)/TS;
+      paint.setTransform(scaleX,0,0,scaleY,left-vx*TS*scaleX,top-vy*TS*scaleY);
+    },
+    restore(){ paint.setTransform(frame); },
+  };
+}
+
 // ── Log font size control ─────────────────────────────────────
 let _logFontSize = 13;
 function adjustLogFont(delta){

@@ -9,10 +9,7 @@ function drawScanView(){
   const floorSprite = TILE[floorTileType]?.sprite || 'earth_floor';
   const floorAscii  = ASCII[floorSprite] || {bg:'#0a1a08', fg:'#2a5a1a'};
   function drawScanBaseFloor(tileType, sx, sy, bg){
-    const info = TILE[tileType];
-    if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx, sx, sy);
-    else if(OPTIONS.asciiMode) drawAsciiTile(tileType, sx, sy, bg);
-    else drawSprite(info?.sprite || tileType, sx, sy, bg);
+    drawTerrainFloor(tileType,sx,sy,scCamX+sx/TS,scCamY+sy/TS,bg);
   }
 
   // Draw all tiles, using scanMask for visibility
@@ -25,13 +22,15 @@ function drawScanView(){
   const scCamX = Math.max(0, Math.min(_W - VIEW_W, scx - Math.floor(VIEW_W/2)));
   const scCamY = Math.max(0, Math.min(_H - VIEW_H, scy - Math.floor(VIEW_H/2)));
   canvasMapView={camX:scCamX,camY:scCamY,width:_W,height:_H};
+  const terrain = terrainTileGrid(ctx);
   for(let vy=0;vy<VIEW_H;vy++){
     const y = scCamY+vy;
     if(y<0||y>=_H) continue;
     for(let vx=0;vx<VIEW_W;vx++){
       const x = scCamX+vx;
       if(x<0||x>=_W) continue;
-      const sx=(x-scCamX)*TS, sy=(y-scCamY)*TS;
+      const sx=vx*TS, sy=vy*TS;
+      terrain.align(vx,vy);
       if(!mask || !mask[y*_W+x]){
         ctx.fillStyle='#04040c'; ctx.fillRect(sx,sy,TS,TS);
         continue;
@@ -146,13 +145,14 @@ function drawScanView(){
             drawSpriteDarkMatteKeyed(sp, sx, sy, floorAscii.bg);
           }
         } else {
-          drawSprite(sp, sx, sy, floorAscii.bg);
+          drawTerrainSprite(sp,sx,sy,x,y,floorAscii.bg);
         }
       } else {
         drawScanBaseFloor(floorTileType, sx, sy, floorAscii.bg);
       }
     }
   }
+  terrain.restore();
 
   if(Number.isInteger(G.scanCursorX) && Number.isInteger(G.scanCursorY)){
     const valid = canLandAt(pdata, G.scanCursorX, G.scanCursorY);
@@ -173,9 +173,13 @@ function drawScanView(){
   if(pdata.smokeClouds){
     pdata.smokeClouds.forEach(c=>{
       if(!pdata.scanMask || !pdata.scanMask[c.y*PW(pdata)+c.x]) return;
+      const vx = c.x-scCamX, vy = c.y-scCamY;
+      if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H) return;
+      terrain.align(vx,vy);
       ctx.fillStyle='rgba(20,14,8,0.85)';
-      ctx.fillRect((c.x-scCamX)*TS, (c.y-scCamY)*TS, TS, TS);
+      ctx.fillRect(vx*TS,vy*TS,TS,TS);
     });
+    terrain.restore();
   }
 
   // HUD label

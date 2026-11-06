@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.44 removes scan seams and repeating terrain grain
+
+Released on `experiment/expedition-legacy`.
+
+- Applied the same device-pixel tile alignment to walking and landing scans in every biome. Fog, smoke, and terrain share those edges in both Sprites and ASCII.
+- Varied the sampling of the existing sand and snow textures by world position so their repeating grain no longer forms bands at fractional window scales.
+- Reproduced the frozen scan seams and sand bands in experimental.43. Verified the fixes in installed Firefox at multiple window sizes and display densities, and with all 47 repository tests and five headless Edge suites. Existing saves require no migration.
+
 ## 2026-11-07 — 0.28 experimental.43 fixes Firefox minimap layout and surface seams
 
 Released on `experiment/expedition-legacy`.

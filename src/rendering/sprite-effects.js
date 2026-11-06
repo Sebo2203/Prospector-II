@@ -17,6 +17,36 @@ function drawSpriteGraphic(target,key,x,y,fallbackColor){
   }
 }
 
+const TERRAIN_GRAIN_TEXTURES = new Set(['desert_floor','frozen_floor']);
+const WRAPPED_TERRAIN_TEXTURES = new WeakMap();
+function drawTerrainSprite(key, x, y, mx, my, fallbackColor){
+  const source = IMG[key];
+  if(OPTIONS.asciiMode || !TERRAIN_GRAIN_TEXTURES.has(key) || !(source?.naturalWidth || source instanceof HTMLCanvasElement)){
+    drawSprite(key,x,y,fallbackColor);
+    return;
+  }
+
+  // Sample the original grain from different offsets to break up tile repetition.
+  // World coordinates keep the grain fixed as the camera moves.
+  let texture = WRAPPED_TERRAIN_TEXTURES.get(source);
+  if(!texture){
+    texture = document.createElement('canvas');
+    texture.width = texture.height = TS*2;
+    const paint = texture.getContext('2d');
+    for(const dy of [0,TS]) for(const dx of [0,TS]) paint.drawImage(source,dx,dy,TS,TS);
+    WRAPPED_TERRAIN_TEXTURES.set(source,texture);
+  }
+  const phase = Math.imul(mx+1,0x9e3779b1) ^ Math.imul(my+1,0x85ebca77);
+  ctx.drawImage(texture,(phase>>>0)%TS,(phase>>>16)%TS,TS,TS,x,y,TS,TS);
+}
+
+function drawTerrainFloor(tileType, x, y, mx, my, fallbackColor){
+  const info = TILE[tileType];
+  if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx,x,y);
+  else if(OPTIONS.asciiMode) drawAsciiTile(tileType,x,y,fallbackColor);
+  else drawTerrainSprite(info?.sprite || tileType,x,y,mx,my,fallbackColor);
+}
+
 const CHROMA_SPRITE_CACHE = {};
 function drawSpriteChromaKeyed(key, x, y, fallbackColor){
   if(OPTIONS.asciiMode){

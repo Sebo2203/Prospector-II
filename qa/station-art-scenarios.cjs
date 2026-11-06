@@ -164,42 +164,61 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    const paint=flat.getContext('2d');
    paint.fillStyle='#99bbdd';
    paint.fillRect(0,0,TS,TS);
-   IMG.frozen_floor=flat;
-   ASCII.frozen_floor={...ASCII.frozen_floor,ch:' '};
-   const grid=Array.from({length:VIEW_H},()=>Array.from({length:VIEW_W},()=>({type:'FROZEN_FLOOR'})));
-   const visited=Array(VIEW_W*VIEW_H).fill(true), lit=visited.map(()=>false);
-   G.curPlanet='qa:terrain';
-   G.planets[G.curPlanet]={grid,width:VIEW_W,height:VIEW_H,biome:'FROZEN',
-    planetTurn:2*(BIOMES.FROZEN.dayLength||20),visited,lit};
-   G.player={x:18,y:14};
-   G.mode='planet';
    const counts=[];
-   for(const ascii of [false,true]){
-    OPTIONS.asciiMode=ascii;
-    for(const revealed of [false,true]){
-     visited.fill(revealed);
-     drawCanvas();
-     const {a,d}=ctx.getTransform();
-     const pixels=ctx.getImageData(1,1,Math.floor(7*TS*a)-2,Math.floor(7*TS*d)-2).data;
-     const colors=new Set();
-     for(let i=0;i<pixels.length;i+=4){
-      if(pixels[i+3]!==255) throw Error('Surface contains a transparent pixel between opaque tiles');
-      colors.add(pixels.slice(i,i+3).join(','));
+   for(const biome of ['FROZEN','DESERT']){
+    const floor=BIOMES[biome].floor, sprite=TILE[floor].sprite;
+    const realSprite=IMG[sprite], realAscii=ASCII[sprite];
+    IMG[sprite]=flat;
+    ASCII[sprite]={...realAscii,ch:' '};
+    const grid=Array.from({length:VIEW_H},()=>Array.from({length:VIEW_W},()=>({type:floor})));
+    const visible=Array(VIEW_W*VIEW_H).fill(true), lit=visible.map(()=>false);
+    G.curPlanet=G.scanViewKey='qa:terrain';
+    G.planets[G.curPlanet]={grid,width:VIEW_W,height:VIEW_H,biome,spawnX:18,spawnY:14,
+     planetTurn:2*(BIOMES[biome].dayLength||20),visited:visible,scanMask:visible,lit};
+    G.player={x:18,y:14};
+    G.scanCursorX=18;G.scanCursorY=14;
+    for(const mode of ['planet','scanview']) for(const ascii of [false,true]){
+     G.mode=mode;
+     OPTIONS.asciiMode=ascii;
+     for(const revealed of [false,true]){
+      visible.fill(revealed);
+      drawCanvas();
+      const {a,d}=ctx.getTransform();
+      const pixels=ctx.getImageData(1,Math.ceil(2*TS*d),Math.floor(7*TS*a)-2,Math.floor(7*TS*d)-2).data;
+      const colors=new Set();
+      for(let i=0;i<pixels.length;i+=4){
+       if(pixels[i+3]!==255) throw Error(biome+' '+mode+' has a transparent pixel between opaque tiles');
+       colors.add(pixels.slice(i,i+3).join(','));
+      }
+      counts.push(colors.size);
      }
-     counts.push(colors.size);
     }
+    IMG[sprite]=realSprite;
+    ASCII[sprite]=realAscii;
    }
    return counts;
   });
-  assert.deepEqual(terrain,[1,1,1,1],'surface fog and shaded floors have no tile seams in either render mode');
+  assert.deepEqual(terrain,Array(16).fill(1),'walking and scanning share seamless fog and floors in both render modes');
   await page.setViewportSize({width:1400,height:720});
   await page.waitForFunction(()=>{
    const mini=document.getElementById('galaxy-minimap');
-   return mini.getBoundingClientRect().width===mini.width;
+   return mini.getBoundingClientRect().width===mini.width && canvas.width===canvasWidth;
   });
+  assert.ok(await page.evaluate(()=>{
+   G.mode='planet';
+   OPTIONS.asciiMode=false;
+   const data=G.planets[G.curPlanet];
+   return ['FROZEN','DESERT'].every(biome=>{
+    data.biome=biome;
+    for(const row of data.grid) for(const cell of row) cell.type=BIOMES[biome].floor;
+    drawCanvas();
+    const first=ctx.getImageData(0,2*TS,TS,TS).data, second=ctx.getImageData(TS,2*TS,TS,TS).data;
+    return first.some((channel,i)=>channel!==second[i]);
+   });
+  }), 'adjacent snow and sand tiles sample different grain from the original textures');
   await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap.png')});
   report.checks.push(...chart,'full map fits native and scaled windows','seamless galaxy backgrounds at fractional scaling',
-   'small map fits between compass and button','seamless fog and shaded floors on the surface');
+   'small map fits between compass and button','seamless walking and scan terrain','world-anchored snow and sand grain');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,errors},null,2));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

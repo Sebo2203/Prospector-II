@@ -53,7 +53,7 @@ In **Options → UI Style**, choose **Cockpit** for the instrument finish or **C
 
 From experimental.34, the title menus, playfield canvas, and full galaxy chart draw at the displayed pixel density. Canvas sprite images use nearest-neighbor sampling. The HTML HUD, sidebar, and overlays are laid out at the fitted scale in browsers with CSS zoom support.
 
-The context bar uses the shortcut legend's muted gray for the general Examine, Inventory, and Options buttons. Local actions and warnings retain their accents. The galaxy view uses an opaque space background and pixel-aligned fog boundaries at fractional scales. On surfaces, adjacent terrain, fog, and lighting use shared device-pixel edges so their tile boundaries do not show through.
+The context bar uses the shortcut legend's muted gray for the general Examine, Inventory, and Options buttons. Local actions and warnings retain their accents. The galaxy view uses an opaque space background and pixel-aligned fog boundaries at fractional scales. Walking and landing scans share the same device-pixel tile edges for all biomes. Sand and snow sample the original textures at offsets tied to world coordinates so their grain does not repeat in a grid.
 
 The context bar wraps actions onto a second row and scrolls vertically if more space is needed. The orbital view reserves space for both rows and an alert, so planets and text stay at the same scale. Other views can shrink to fit the available space while keeping their aspect ratio. In-game panels use the context bar for shared keyboard hints and keep local instructions for controls the bar does not show.
 

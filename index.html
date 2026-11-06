@@ -1819,7 +1819,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
     <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
     <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
-    <div id="version-tag"><span>v0.28 experimental.43</span><span id="save-state" role="status" aria-live="polite"></span></div>
+    <div id="version-tag"><span>v0.28 experimental.44</span><span id="save-state" role="status" aria-live="polite"></span></div>
   </div>
 
   <!-- Canvas + Gauges + Sidebar -->
@@ -1982,8 +1982,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.43';
-const GAME_VERSION_LABEL = 'v0.28 experimental.43';
+const GAME_VERSION = '0.28.0-experimental.44';
+const GAME_VERSION_LABEL = 'v0.28 experimental.44';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -2110,6 +2110,22 @@ function fitCanvasToDisplay(surface,paint,width,height){
   paint.setTransform(pixelWidth/width,0,0,pixelHeight/height,0,0);
   paint.imageSmoothingEnabled=false;
   return resized;
+}
+
+// Both terrain views share device-pixel edges without changing logical tile coordinates.
+function terrainTileGrid(paint){
+  const frame = paint.getTransform();
+  const xEdges = Array.from({length:VIEW_W+1}, (_,i)=>Math.round(i*TS*frame.a+frame.e));
+  const yEdges = Array.from({length:VIEW_H+1}, (_,i)=>Math.round(i*TS*frame.d+frame.f));
+  return {
+    align(vx, vy){
+      const left = xEdges[vx], top = yEdges[vy];
+      const scaleX = (xEdges[vx+1]-left)/TS;
+      const scaleY = (yEdges[vy+1]-top)/TS;
+      paint.setTransform(scaleX,0,0,scaleY,left-vx*TS*scaleX,top-vy*TS*scaleY);
+    },
+    restore(){ paint.setTransform(frame); },
+  };
 }
 
 // ── Log font size control ─────────────────────────────────────
@@ -2572,6 +2588,36 @@ function drawSpriteGraphic(target,key,x,y,fallbackColor){
     target.fillStyle = fallbackColor;
     target.fillRect(x, y, TS, TS);
   }
+}
+
+const TERRAIN_GRAIN_TEXTURES = new Set(['desert_floor','frozen_floor']);
+const WRAPPED_TERRAIN_TEXTURES = new WeakMap();
+function drawTerrainSprite(key, x, y, mx, my, fallbackColor){
+  const source = IMG[key];
+  if(OPTIONS.asciiMode || !TERRAIN_GRAIN_TEXTURES.has(key) || !(source?.naturalWidth || source instanceof HTMLCanvasElement)){
+    drawSprite(key,x,y,fallbackColor);
+    return;
+  }
+
+  // Sample the original grain from different offsets to break up tile repetition.
+  // World coordinates keep the grain fixed as the camera moves.
+  let texture = WRAPPED_TERRAIN_TEXTURES.get(source);
+  if(!texture){
+    texture = document.createElement('canvas');
+    texture.width = texture.height = TS*2;
+    const paint = texture.getContext('2d');
+    for(const dy of [0,TS]) for(const dx of [0,TS]) paint.drawImage(source,dx,dy,TS,TS);
+    WRAPPED_TERRAIN_TEXTURES.set(source,texture);
+  }
+  const phase = Math.imul(mx+1,0x9e3779b1) ^ Math.imul(my+1,0x85ebca77);
+  ctx.drawImage(texture,(phase>>>0)%TS,(phase>>>16)%TS,TS,TS,x,y,TS,TS);
+}
+
+function drawTerrainFloor(tileType, x, y, mx, my, fallbackColor){
+  const info = TILE[tileType];
+  if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx,x,y);
+  else if(OPTIONS.asciiMode) drawAsciiTile(tileType,x,y,fallbackColor);
+  else drawTerrainSprite(info?.sprite || tileType,x,y,mx,my,fallbackColor);
 }
 
 const CHROMA_SPRITE_CACHE = {};
@@ -15543,22 +15589,9 @@ function drawPlanet(){
 
   // Helper: map tile (mx,my) → screen pixel (sx,sy)
   function tileToScreen(mx, my){ return [(mx-camX)*TS, (my-camY)*TS]; }
-  // Neighboring tiles share device-pixel edges, including their darkness and fog.
-  // Keep the logical coordinates used by terrain art and pointer targets.
-  const frameTransform = ctx.getTransform();
-  const xEdges = Array.from({length:VIEW_W+1}, (_,i)=>Math.round(i*TS*frameTransform.a+frameTransform.e));
-  const yEdges = Array.from({length:VIEW_H+1}, (_,i)=>Math.round(i*TS*frameTransform.d+frameTransform.f));
-  function alignTerrainTile(vx, vy, sx, sy){
-    const left = xEdges[vx], top = yEdges[vy];
-    const scaleX = (xEdges[vx+1]-left)/TS;
-    const scaleY = (yEdges[vy+1]-top)/TS;
-    ctx.setTransform(scaleX, 0, 0, scaleY, left-sx*scaleX, top-sy*scaleY);
-  }
+  const terrain = terrainTileGrid(ctx);
   function drawBaseFloor(tileType, sx, sy, bg){
-    const info = TILE[tileType];
-    if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx, sx, sy);
-    else if(OPTIONS.asciiMode) drawAsciiTile(tileType, sx, sy, bg);
-    else drawSprite(info?.sprite || tileType, sx, sy, bg);
+    drawTerrainFloor(tileType,sx,sy,camX+sx/TS,camY+sy/TS,bg);
   }
 
   for(let vy=0;vy<VIEW_H;vy++){
@@ -15568,7 +15601,7 @@ function drawPlanet(){
       const x = camX + vx;
       if(x<0||x>=W) continue;
       const [sx,sy] = tileToScreen(x,y);
-      alignTerrainTile(vx, vy, sx, sy);
+      terrain.align(vx,vy);
       // Fog of war
       if(!pdata.visited || !pdata.visited[y*W+x]){
         if(pdata.isAncientStation){
@@ -15725,7 +15758,7 @@ function drawPlanet(){
               drawSpriteDarkMatteKeyed(sp, sx, sy, bgAscii.bg);
             }
           } else {
-            drawSprite(sp, sx, sy, bgAscii.bg);
+            drawTerrainSprite(sp,sx,sy,x,y,bgAscii.bg);
           }
         }
       }
@@ -15778,7 +15811,7 @@ function drawPlanet(){
       }
     }
   }
-  ctx.setTransform(frameTransform);
+  terrain.restore();
 
   if(pdata.isQuarantine) drawQuarantinePeople(pdata,camX,camY);
   // ── Scanner second pass — draw ? on top of darkness for scanned deposits ──
@@ -15813,7 +15846,7 @@ function drawPlanet(){
     if(edist >= 1.5 && !hasLOS(e.x, e.y)) return;
     const [esx,esy] = tileToScreen(e.x, e.y);
     if(esx<0||esx>=canvasWidth||esy<0||esy>=canvasHeight) return;
-    alignTerrainTile(e.x-camX, e.y-camY, esx, esy);
+    terrain.align(e.x-camX,e.y-camY);
     // Draw the actual tile underneath the enemy, not just the biome default floor,
     // so NPCs overlay on forests, civ buildings, etc. rather than erasing them.
     if(e.shipboardAlien){
@@ -15869,7 +15902,7 @@ function drawPlanet(){
       drawSprite(sp, esx, esy, e.colour||'#882200');
     }
   });
-  ctx.setTransform(frameTransform);
+  terrain.restore();
   const [psx,psy] = tileToScreen(px,py);
 
   // ── Jetpack propellant trail ───────────────────────────────────
@@ -15905,14 +15938,14 @@ function drawPlanet(){
       const [csx,csy] = tileToScreen(c.x, c.y);
       const vx = c.x-camX, vy = c.y-camY;
       if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H) return;
-      alignTerrainTile(vx, vy, csx, csy);
+      terrain.align(vx,vy);
       drawSprite(c.sprite, csx, csy, null);
       if(darkAlpha > 0.1){
         ctx.fillStyle = `rgba(${darkR},${darkG},${darkB},${(darkAlpha*0.15).toFixed(2)})`;
         ctx.fillRect(csx, csy, TS, TS);
       }
     });
-    ctx.setTransform(frameTransform);
+    terrain.restore();
   }
 
   // ── Mist cloud rendering (ancient ruins) ─────────────────────
@@ -16154,10 +16187,7 @@ function drawScanView(){
   const floorSprite = TILE[floorTileType]?.sprite || 'earth_floor';
   const floorAscii  = ASCII[floorSprite] || {bg:'#0a1a08', fg:'#2a5a1a'};
   function drawScanBaseFloor(tileType, sx, sy, bg){
-    const info = TILE[tileType];
-    if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx, sx, sy);
-    else if(OPTIONS.asciiMode) drawAsciiTile(tileType, sx, sy, bg);
-    else drawSprite(info?.sprite || tileType, sx, sy, bg);
+    drawTerrainFloor(tileType,sx,sy,scCamX+sx/TS,scCamY+sy/TS,bg);
   }
 
   // Draw all tiles, using scanMask for visibility
@@ -16170,13 +16200,15 @@ function drawScanView(){
   const scCamX = Math.max(0, Math.min(_W - VIEW_W, scx - Math.floor(VIEW_W/2)));
   const scCamY = Math.max(0, Math.min(_H - VIEW_H, scy - Math.floor(VIEW_H/2)));
   canvasMapView={camX:scCamX,camY:scCamY,width:_W,height:_H};
+  const terrain = terrainTileGrid(ctx);
   for(let vy=0;vy<VIEW_H;vy++){
     const y = scCamY+vy;
     if(y<0||y>=_H) continue;
     for(let vx=0;vx<VIEW_W;vx++){
       const x = scCamX+vx;
       if(x<0||x>=_W) continue;
-      const sx=(x-scCamX)*TS, sy=(y-scCamY)*TS;
+      const sx=vx*TS, sy=vy*TS;
+      terrain.align(vx,vy);
       if(!mask || !mask[y*_W+x]){
         ctx.fillStyle='#04040c'; ctx.fillRect(sx,sy,TS,TS);
         continue;
@@ -16291,13 +16323,14 @@ function drawScanView(){
             drawSpriteDarkMatteKeyed(sp, sx, sy, floorAscii.bg);
           }
         } else {
-          drawSprite(sp, sx, sy, floorAscii.bg);
+          drawTerrainSprite(sp,sx,sy,x,y,floorAscii.bg);
         }
       } else {
         drawScanBaseFloor(floorTileType, sx, sy, floorAscii.bg);
       }
     }
   }
+  terrain.restore();
 
   if(Number.isInteger(G.scanCursorX) && Number.isInteger(G.scanCursorY)){
     const valid = canLandAt(pdata, G.scanCursorX, G.scanCursorY);
@@ -16318,9 +16351,13 @@ function drawScanView(){
   if(pdata.smokeClouds){
     pdata.smokeClouds.forEach(c=>{
       if(!pdata.scanMask || !pdata.scanMask[c.y*PW(pdata)+c.x]) return;
+      const vx = c.x-scCamX, vy = c.y-scCamY;
+      if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H) return;
+      terrain.align(vx,vy);
       ctx.fillStyle='rgba(20,14,8,0.85)';
-      ctx.fillRect((c.x-scCamX)*TS, (c.y-scCamY)*TS, TS, TS);
+      ctx.fillRect(vx*TS,vy*TS,TS,TS);
     });
+    terrain.restore();
   }
 
   // HUD label
