@@ -446,6 +446,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   gap: 14px;
 }
 #shortcut-toggle {
+  align-self: flex-start;
   flex-shrink: 0;
   background: #17181d;
   color: #999da7;
@@ -462,6 +463,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   overflow: hidden;
 }
 #persist-hints[hidden] { display: none; }
+#gc.map-targeting { cursor: crosshair; }
 #hud-tools {
   flex-shrink: 0;
   display: flex;

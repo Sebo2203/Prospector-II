@@ -1,6 +1,8 @@
 // Menus register hit areas in canvas coordinates as they draw.
 const canvasMenuTargets = [];
 let canvasMenuScroll = null;
+let canvasMapView = null;
+let pointerFireAim = null;
 
 function resetCanvasMenu(){
   canvasMenuTargets.length = 0;
@@ -31,16 +33,60 @@ function canvasMenuBlocked(){
     document.getElementById('feedback-overlay').style.display==='flex' || BARTER.active;
 }
 
+function canvasPointerPoint(event){
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x:(event.clientX-rect.left)*canvas.width/rect.width,
+    y:(event.clientY-rect.top)*canvas.height/rect.height,
+  };
+}
+
 function canvasMenuHit(event){
   if(canvasMenuBlocked() || !canvasMenuTargets.length) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (event.clientX-rect.left)*canvas.width/rect.width;
-  const y = (event.clientY-rect.top)*canvas.height/rect.height;
+  const {x,y} = canvasPointerPoint(event);
   return canvasMenuTargets.find(target=>x>=target.x && x<target.x+target.w && y>=target.y && y<target.y+target.h);
 }
 
+function canvasMapMode(){
+  if(!canvasMapView || !G || G.dead || G.retired || G.showOptions || G.dialogue ||
+     G.stranded || G._itemAimMode || G._voidPrompt || G.forcedMove?.active || DEBUG.on) return;
+  if(G.mode==='scanview') return 'landing';
+  if(G.mode==='planet' && G.rangeTarget) return 'fire';
+  if((G.mode==='planet'||G.mode==='galaxy') && G.examine) return 'examine';
+}
+
+function activateCanvasMapTile(event){
+  const mode=canvasMapMode();
+  if(!mode || canvasMenuBlocked()) return;
+  const point=canvasPointerPoint(event);
+  const col=Math.floor(point.x/TS), row=Math.floor(point.y/TS);
+  if(col<0 || row<0 || col>=VIEW_W || row>=VIEW_H) return;
+  const {camX,camY,width,height}=canvasMapView;
+  const x=camX+col, y=camY+row;
+  if(x>=width || y>=height) return;
+
+  if(mode==='landing'){
+    G.scanCursorX=x;
+    G.scanCursorY=y;
+  } else if(mode==='examine'){
+    G.examine={x,y};
+  } else {
+    const aim=G.rangeTarget;
+    if(pointerFireAim===aim && aim.x===x && aim.y===y){
+      activateGameKey('Enter');
+      return;
+    }
+    G.rangeTarget={x,y};
+    pointerFireAim=G.rangeTarget;
+  }
+  renderAll();
+}
+
 canvas.addEventListener('click',event=>{
-  if(event.button===0) canvasMenuHit(event)?.activate?.();
+  if(event.button!==0) return;
+  const target=canvasMenuHit(event);
+  if(target?.activate) target.activate();
+  else activateCanvasMapTile(event);
 });
 canvas.addEventListener('mousemove',event=>{
   const target = canvasMenuHit(event);

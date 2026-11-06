@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.24 adds map targeting by mouse
+
+Released on `experiment/expedition-legacy`.
+
+- Moved **Shortcuts** up to the footer divider. Map clicks now select tiles in galaxy and planet Examine views and in landing scans. Landing still requires confirmation. In ground firing mode, a click aims and a second click on the same tile fires through the existing ranged action.
+- All 47 repository tests and five headless Edge suites passed. Tested scaled map coordinates, idle map clicks, landing at the selected site, and the two-click firing sequence. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.23 collapses the shortcut legend
 
 Released on `experiment/expedition-legacy`.

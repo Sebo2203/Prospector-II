@@ -44,7 +44,7 @@ function renderContextBar(){
     if(dialogueAllowsEscape()) btns.push(btn('ESC','Close dialogue','info'));
 
   } else if(G.rangeTarget){
-    btns.push(btn('Compass','Aim cursor','info'));
+    btns.push(btn('Click','Aim, then click the same tile to fire','info'));
     btns.push(btn('Enter','Fire','danger'));
     btns.push(btn('Tab','Next shooter','info','Tab'));
     btns.push(btn('ESC','Cancel','info'));
@@ -54,7 +54,7 @@ function renderContextBar(){
   } else if(G._voidPrompt){
     btns.push(btn('Y','Step into void','danger'),btn('N','Stay here','info'));
   } else if(G.examine){
-    btns.push(btn('Move','Move cursor','info'));
+    btns.push(btn('Click','Examine tile','info'));
     const creature = G.mode === 'planet' ? creatureExamineTarget() : null;
     const civTarget = G.mode === 'planet' ? civilizationExamineTarget() : null;
     if(creature && canCommunicateWithCreature(creature)) btns.push(btn('T','Communicate','good'));
@@ -199,7 +199,7 @@ function renderContextBar(){
 
   } else if(G.mode==='scanview'){
     const pdata=G.planets[G.scanViewKey];
-    btns.push(btn('Compass','Select landing site','info'));
+    btns.push(btn('Click','Select landing site','info'));
     if(pdata && canLandAt(pdata,G.scanCursorX ?? pdata.spawnX,G.scanCursorY ?? pdata.spawnY)){
       btns.push(btn('Enter','Land at selected site','good'));
     }

@@ -112,6 +112,8 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
 
     const legend=page.locator('#persist-hints');
     const toggle=page.locator('#shortcut-toggle');
+    const footer=await page.locator('#persist-bar').boundingBox();
+    assert.ok((await toggle.boundingBox()).y-footer.y<10);
     assert.equal(await legend.isVisible(),false);
     assert.equal(await toggle.getAttribute('aria-expanded'),'false');
     await toggle.click();
@@ -206,6 +208,15 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     const before = await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn]);
     await click(480,220);
     assert.deepEqual(await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn]),before);
+    await action(/\[X\] Examine/).click();
+    await click(5*24+12,6*24+12);
+    const examined = await page.evaluate(()=>({
+      x:Math.max(0,Math.min(MAP_W-VIEW_W,G.ship.x-Math.floor(VIEW_W/2)))+5,
+      y:Math.max(0,Math.min(MAP_H-VIEW_H,G.ship.y-Math.floor(VIEW_H/2)))+6,
+    }));
+    assert.deepEqual(await page.evaluate(()=>G.examine),examined);
+    assert.deepEqual(await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn]),before);
+    await escape.click();
     await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
     assert.equal(await page.evaluate(()=>G.ship.x),before[0]+1);
     const wait = page.locator('.cmp-center');
@@ -224,6 +235,8 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     await action(/\[X\] Examine/).click();
     await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
     assert.equal(await page.evaluate(()=>G.examine.x),snapshot[0]+1);
+    await click(2*24+12,3*24+12);
+    assert.deepEqual(await page.evaluate(()=>G.examine),{x:2,y:3});
     assert.deepEqual(await page.evaluate(()=>[G.player.x,G.player.y,G.turn,G.inventory.length]),snapshot);
     await escape.click();
     assert.equal(await page.evaluate(()=>G.examine),null);
@@ -250,10 +263,46 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     const cursor = await page.evaluate(()=>[G.scanCursorX,PW(G.planets[G.scanViewKey])]);
     await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
     assert.equal(await page.evaluate(()=>G.scanCursorX),Math.min(cursor[0]+1,cursor[1]-1));
-    await escape.click();
-    assert.equal(await mode(),'system');
-    await action(/Land on/).click();
+    const site=await page.evaluate(()=>{
+      const data=G.planets[G.scanViewKey];
+      const camX=Math.max(0,Math.min(PW(data)-VIEW_W,G.scanCursorX-Math.floor(VIEW_W/2)));
+      const camY=Math.max(0,Math.min(PH(data)-VIEW_H,G.scanCursorY-Math.floor(VIEW_H/2)));
+      for(let row=1;row<VIEW_H-1;row++) for(let col=0;col<VIEW_W;col++){
+        const x=camX+col,y=camY+row;
+        if((x!==G.scanCursorX || y!==G.scanCursorY) && canLandAt(data,x,y)) return {x,y,col,row};
+      }
+      throw Error('No alternate visible landing site');
+    });
+    await click(site.col*24+12,site.row*24+12);
+    assert.equal(await mode(),'scanview');
+    assert.deepEqual(await page.evaluate(()=>[G.scanCursorX,G.scanCursorY]),[site.x,site.y]);
+    await action(/Land at selected site/).click();
     assert.equal(await mode(),'planet');
+    assert.deepEqual(await page.evaluate(()=>[G.player.x,G.player.y]),[site.x,site.y]);
+
+    await page.evaluate(()=>{
+      G.crew[0].weapon='Pistol';
+      G.crew[0].weaponUsable='gun';
+      G.enemies[G.curPlanet]=[];
+      renderAll();
+    });
+    await action(/Fire ranged weapon/).click();
+    const shot=await page.evaluate(()=>{
+      const data=G.planets[G.curPlanet];
+      const {x,y}=G.player;
+      const camX=Math.max(0,Math.min(PW(data)-VIEW_W,x-Math.floor(VIEW_W/2)));
+      const camY=Math.max(0,Math.min(PH(data)-VIEW_H,y-Math.floor(VIEW_H/2)));
+      const tx=x+1<PW(data)?x+1:x-1;
+      const ty=G.rangeTarget.y;
+      return {x:tx,y:ty,col:tx-camX,row:ty-camY,turn:G.turn};
+    });
+    await press(shot.x>site.x?'ArrowRight':'ArrowLeft');
+    assert.deepEqual(await page.evaluate(()=>G.rangeTarget),{x:shot.x,y:shot.y});
+    await click(shot.col*24+12,shot.row*24+12);
+    assert.equal(await page.evaluate(()=>G.turn),shot.turn);
+    await click(shot.col*24+12,shot.row*24+12);
+    assert.equal(await page.evaluate(()=>G.turn),shot.turn+1);
+    assert.equal(await page.evaluate(()=>G.rangeTarget),null);
 
     await page.evaluate(()=>{
       debugPaletteVisit('galaxy:PATROL');

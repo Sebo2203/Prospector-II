@@ -24,6 +24,7 @@ function drawPlanet(){
   // Camera — centre on player, clamped to map bounds
   const camX = Math.max(0, Math.min(W - VIEW_W, px - Math.floor(VIEW_W/2)));
   const camY = Math.max(0, Math.min(H - VIEW_H, py - Math.floor(VIEW_H/2)));
+  canvasMapView={camX,camY,width:W,height:H};
 
   // Continuous vision radius — 10 at peak day, 1 at peak night
   let vr = planetVisionRadius(G.curPlanet);

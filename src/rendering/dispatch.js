@@ -17,6 +17,7 @@ function renderAll(){
 
 function drawCanvas(){
   resetCanvasMenu();
+  canvasMapView=null;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if(G.mode==='planet'){
@@ -73,5 +74,8 @@ function drawCanvas(){
   if(DEBUG.on && DEBUG.itemSubMenu) drawDebugItemSubMenu();
   if(DEBUG.on && DEBUG.galaxyReport) drawDebugGalaxyReportPopup();
   drawDebugPaletteDirectory();
+  const mapMode=canvasMapMode();
+  if(mapMode!=='fire') pointerFireAim=null;
+  canvas.classList.toggle('map-targeting',!!mapMode);
 }
 

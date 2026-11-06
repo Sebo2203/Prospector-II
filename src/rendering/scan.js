@@ -24,6 +24,7 @@ function drawScanView(){
   const scy = G.scanCursorY ?? pdata.spawnY;
   const scCamX = Math.max(0, Math.min(_W - VIEW_W, scx - Math.floor(VIEW_W/2)));
   const scCamY = Math.max(0, Math.min(_H - VIEW_H, scy - Math.floor(VIEW_H/2)));
+  canvasMapView={camX:scCamX,camY:scCamY,width:_W,height:_H};
   for(let vy=0;vy<VIEW_H;vy++){
     const y = scCamY+vy;
     if(y<0||y>=_H) continue;
@@ -183,7 +184,7 @@ function drawScanView(){
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#70d8ff'; ctx.textAlign='center';
   ctx.fillText('SATELLITE SCAN  -  '+pKey.split(':')[0].replace(',',' ').toUpperCase()+'  -  '+B.name.toUpperCase(), cw/2, 15);
   ctx.font='14px Courier New'; ctx.fillStyle='#334455';
-  ctx.fillText('[ Arrows ] Move landing zone    [ Enter ] Land    [ ESC ] Back', cw/2, ch-8);
+  ctx.fillText('Click or use arrows to select    [ Enter ] Land    [ ESC ] Back', cw/2, ch-8);
   ctx.textAlign='left';
 }
 

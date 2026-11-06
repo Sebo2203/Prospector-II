@@ -455,6 +455,7 @@ document.addEventListener('keydown', e=>{
     if((e.key==='f'||e.key==='F') && G.mode==='planet' && !G.examine){
       if(G.rangeTarget){
         // F pressed while in fire mode = fire
+        pointerFireAim=null;
         doRangedFire(); return;
       }
       const best = getBestRangedWeapon();
@@ -477,9 +478,10 @@ document.addEventListener('keydown', e=>{
     // ── Fire mode cursor movement ─────────────────────────────────
     if(G.rangeTarget && G.mode==='planet'){
       if(e.key==='Escape'){ G.rangeTarget=null; renderAll(); return; }
-      if(e.key==='Enter'||e.key===' '){ doRangedFire(); return; }
+      if(e.key==='Enter'||e.key===' '){ pointerFireAim=null; doRangedFire(); return; }
       if(e.key==='Tab' || e.key==='q' || e.key==='Q' || e.key==='e' || e.key==='E'){
         e.preventDefault();
+        pointerFireAim=null;
         if(cycleRangedShooter(e.key==='q' || e.key==='Q' ? -1 : 1)) renderAll();
         return;
       }
@@ -495,6 +497,7 @@ document.addEventListener('keydown', e=>{
       let dd = fireDirs[e.key] || (e.code in numpadFire ? numpadFire[e.code] : null);
       if(dd){
         e.preventDefault();
+        pointerFireAim=null;
         const pdata = G.planets[G.curPlanet];
         G.rangeTarget.x = Math.max(0, Math.min(PW(pdata)-1, G.rangeTarget.x+dd[0]));
         G.rangeTarget.y = Math.max(0, Math.min(PH(pdata)-1, G.rangeTarget.y+dd[1]));

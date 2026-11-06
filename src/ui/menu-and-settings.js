@@ -159,6 +159,8 @@ async function returnToMainMenuFromGame(){
 
 function drawMenuScreen(){
   resetCanvasMenu();
+  canvasMapView=null;
+  canvas.classList.remove('map-targeting');
   renderPointerKeys();
   ctx.fillStyle='#050510';
   ctx.fillRect(0,0,canvas.width,canvas.height);

@@ -10,6 +10,7 @@ function drawGalaxy(){
   // Camera: centre the viewport on the ship, clamped to map edges
   const camX = Math.max(0, Math.min(MAP_W - VIEW_W, G.ship.x - Math.floor(VIEW_W/2)));
   const camY = Math.max(0, Math.min(MAP_H - VIEW_H, G.ship.y - Math.floor(VIEW_H/2)));
+  canvasMapView={camX,camY,width:MAP_W,height:MAP_H};
   const paletteBodies=G.debugPalette?new Set(G.debugPalette.entries
     .filter(entry=>entry.kind==='biome'||entry.kind==='civilization')
     .map(entry=>entry.x+','+entry.y)):null;
