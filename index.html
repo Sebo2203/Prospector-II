@@ -1335,10 +1335,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
-  flex-shrink: 0;
-  height: 96px;
+  flex: 1 0 96px;
   min-height: 96px;
-  max-height: 96px;
   overflow: hidden;
   align-items: stretch;
   position: relative;
@@ -1381,6 +1379,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 #gc.map-targeting { cursor: crosshair; }
 #hud-tools {
   flex-shrink: 0;
+  align-self: flex-end;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -1835,7 +1834,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.36</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.37</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1893,8 +1892,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.36';
-const GAME_VERSION_LABEL = 'v0.28 experimental.36';
+const GAME_VERSION = '0.28.0-experimental.37';
+const GAME_VERSION_LABEL = 'v0.28 experimental.37';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{

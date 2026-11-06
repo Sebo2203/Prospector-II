@@ -525,10 +525,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
-  flex-shrink: 0;
-  height: 96px;
+  flex: 1 0 96px;
   min-height: 96px;
-  max-height: 96px;
   overflow: hidden;
   align-items: stretch;
   position: relative;
@@ -571,6 +569,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 #gc.map-targeting { cursor: crosshair; }
 #hud-tools {
   flex-shrink: 0;
+  align-self: flex-end;
   display: flex;
   align-items: center;
   justify-content: flex-start;

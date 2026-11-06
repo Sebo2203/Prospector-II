@@ -54,16 +54,35 @@ const assert = require('node:assert/strict');
     }
     await page.setViewportSize({width:1400,height:720});
 
-    // A long contact name makes both its actions compete for the first row.
-    await page.evaluate(()=>{
-      G.neutralShips=[{type:'patrol',name:'Long-range Station Patrol '.repeat(3).trim(),x:G.ship.x+1,y:G.ship.y}];
-      renderAll();
-    });
     const optionsButton=page.locator('#ctx-bar button[data-game-key="o"]');
+    const toolPosition=()=>page.evaluate(()=>{
+      const tools=document.getElementById('hud-tools').getBoundingClientRect();
+      const status=document.getElementById('version-tag').getBoundingClientRect();
+      return {left:tools.left,top:tools.top,bottomGap:status.top-tools.bottom};
+    });
     for(const [width,height] of [[1400,720],[800,600]]){
       await page.setViewportSize({width,height});
       await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<1,width);
-      await page.evaluate(()=>showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300'));
+      await page.evaluate(()=>{
+        G.neutralShips=[];
+        renderContextBar();
+        hideMsg();
+      });
+      const anchor=await toolPosition();
+      assert.ok(anchor.bottomGap>0,'footer tools stay above the version strip');
+      // A long contact name makes both its actions compete for the first row.
+      await page.evaluate(()=>{
+        G.neutralShips=[{type:'patrol',name:'Long-range Station Patrol '.repeat(3).trim(),x:G.ship.x+1,y:G.ship.y}];
+        renderAll();
+        hideMsg();
+      });
+      for(const alert of [false,true]){
+        if(alert) await page.evaluate(()=>showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300'));
+        const position=await toolPosition();
+        for(const key of Object.keys(anchor)){
+          assert.ok(Math.abs(position[key]-anchor[key])<0.1,'footer tools hold position when actions wrap or an alert appears');
+        }
+      }
       await page.waitForFunction(()=>canvas.width===Math.round(canvas.getBoundingClientRect().width*devicePixelRatio));
       const layout=await page.evaluate(()=>{
         const rect=id=>document.getElementById(id).getBoundingClientRect();

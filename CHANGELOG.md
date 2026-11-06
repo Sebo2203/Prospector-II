@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.37 anchors the compass
+
+Released on `experiment/expedition-legacy`.
+
+- Anchored the compass, minimap, and map button above the save and version strip. The footer absorbs the remaining height as context actions wrap and alerts appear.
+- All 47 repository tests and four headless Edge suites passed. The anchor check reproduced the movement on experimental.36 and verified the controls stay in place at 1400×720 and 800×600. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.36 wraps context actions and removes repeated hints
 
 Released on `experiment/expedition-legacy`.
