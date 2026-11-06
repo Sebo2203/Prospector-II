@@ -4,7 +4,7 @@ function drawSystemView(){
   if(!cell || (cell.type!=='SYSTEM' && cell.type!=='ROGUE_PLANET')) return;
   const isRogue = cell.type === 'ROGUE_PLANET';
   const ST = isRogue ? null : (STAR_TYPES[cell.starType] || STAR_TYPES.YELLOW);
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const cx = cw/2;
 
   ctx.fillStyle='#03030a';

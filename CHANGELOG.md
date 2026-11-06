@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.34 sharpens in-game text
+
+Released on `experiment/expedition-legacy`.
+
+- The shared game canvas and full galaxy map now draw at the displayed pixel density, including text in station menus, inventory, dialogue, combat, scan views, and map markers. Sprite images retain nearest-neighbor sampling. The HUD, sidebar, and HTML overlays use layout scaling where supported.
+- Kept the save and version strip at the bottom under fractional scaling, removed seams from the chart's fog, and removed the overlapping hints at the foot of in-game Options.
+- All 47 repository tests and all 13 headless Edge suites passed across runs. The first full run timed out in the ship-art suite, which passed on rerun. Checked fractional viewports, pointer targets, and an open chart during an emulated display-density change. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.33 adds a Classic UI setting
 
 Released on `experiment/expedition-legacy`.

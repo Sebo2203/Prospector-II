@@ -1,5 +1,5 @@
 function drawRetirementScreen(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const tier = RETIREMENT_TIERS.find(t=>G.credits>=t.min&&G.credits<=t.max)||RETIREMENT_TIERS[0];
 
   // Background
@@ -83,24 +83,15 @@ function drawRetirementScreen(){
 }
 
 function drawInGameOptions(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
   const cx=cw/2;
-  if(G._kbScreen){
-    drawKeybindingsScreen(cx);
-  } else {
-    drawOptionsScreen(cx);
-    ctx.fillStyle='rgba(0,0,0,0.92)';
-    ctx.fillRect(cx-300, ch-60, 600, 50);
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    ctx.fillText('Up/Down select   Left/Right change   Enter activate',cx,ch-36);
-    ctx.fillText('F feedback   ESC close options',cx,ch-18);
-    ctx.textAlign='left';
-  }
+  if(G._kbScreen) drawKeybindingsScreen(cx);
+  else drawOptionsScreen(cx);
 }
 
 function drawGameOverOverlay(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const isJailed = !!G.jailed;
 
   // ── Special screen: C4 destroyed the ship, crew stranded on a planet ─────

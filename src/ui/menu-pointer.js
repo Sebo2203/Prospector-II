@@ -36,8 +36,8 @@ function canvasMenuBlocked(){
 function canvasPointerPoint(event){
   const rect = canvas.getBoundingClientRect();
   return {
-    x:(event.clientX-rect.left)*canvas.clientWidth/rect.width,
-    y:(event.clientY-rect.top)*canvas.clientHeight/rect.height,
+    x:(event.clientX-rect.left)*canvasWidth/rect.width,
+    y:(event.clientY-rect.top)*canvasHeight/rect.height,
   };
 }
 

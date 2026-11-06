@@ -116,7 +116,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    await page.setViewportSize({width,height});
    await page.waitForFunction(()=>{
     const {left,top,right,bottom}=document.getElementById('minimap-overlay-body').getBoundingClientRect();
-    return left>=0&&top>=0&&right<=innerWidth&&bottom<=innerHeight;
+    const map=document.getElementById('galaxy-minimap-large');
+    const bounds=map.getBoundingClientRect();
+    return left>=0&&top>=0&&right<=innerWidth&&bottom<=innerHeight &&
+     map.width===Math.round(bounds.width*devicePixelRatio) &&
+     map.height===Math.round(bounds.height*devicePixelRatio);
    });
    if(width===1400)await page.locator('#minimap-overlay').screenshot({path:artifactPath('Full-galaxy-map.png')});
   }

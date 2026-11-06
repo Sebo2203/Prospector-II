@@ -183,7 +183,7 @@ function drawDebugCivSubMenu(){
   const rows = debugCivSubMenuRows();
   const statusRows = debugCivStatusRows();
   const pad = 10, lh = 22, w = 520;
-  const x = canvas.width - w - 8, y = 8;
+  const x = canvasWidth - w - 8, y = 8;
   const h = pad*2 + (rows.length + statusRows.length + 4)*lh;
   ctx.fillStyle='rgba(0,0,0,0.9)';
   ctx.fillRect(x, y, w, h);
@@ -230,7 +230,7 @@ function drawDebugItemSubMenu(){
   drawDebugItemSubMenu._rightRows = rightRows;
 
   // Fill the entire canvas
-  const x = 0, y = 0, w = canvas.width, h = canvas.height;
+  const x = 0, y = 0, w = canvasWidth, h = canvasHeight;
   const pad = 18, lh = 26, footerH = 28;
   const gap = 16;
   const colW = Math.floor((w - pad * 3 - gap) / 2);
@@ -446,8 +446,8 @@ function drawDebugOverlay(){
     drawDebugItemSubMenu();
     return;
   }
-  const pad = 8, lh = 17, w = Math.min(560,canvas.width-16);
-  const x = canvas.width - w - 8, y = 8;
+  const pad = 8, lh = 17, w = Math.min(560,canvasWidth-16);
+  const x = canvasWidth - w - 8, y = 8;
 
   const items = [
     { key:'1', label:'Infinite Fuel',           val: DEBUG.infiniteFuel    },
@@ -462,7 +462,7 @@ function drawDebugOverlay(){
 
   // Title, eight toggles, eleven existing actions, three palette rows and close.
   const totalRows = 24;
-  const h = Math.min(canvas.height-16,pad*2 + totalRows*lh);
+  const h = Math.min(canvasHeight-16,pad*2 + totalRows*lh);
 
   ctx.fillStyle='rgba(0,0,0,0.82)';
   ctx.fillRect(x, y, w, h);
@@ -575,10 +575,10 @@ function drawDebugGalaxyReportPopup(){
   const rows = buildDebugGalaxyReportRows();
   const w = 660, pad = 16, lh = 22;
   const h = pad*2 + 46 + rows.length*lh + 26;
-  const x = Math.floor((canvas.width - w)/2);
-  const y = Math.floor((canvas.height - h)/2);
+  const x = Math.floor((canvasWidth - w)/2);
+  const y = Math.floor((canvasHeight - h)/2);
   ctx.fillStyle='rgba(0,0,0,0.9)';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillRect(0,0,canvasWidth,canvasHeight);
   ctx.fillStyle='rgba(4,10,18,0.98)';
   ctx.fillRect(x,y,w,h);
   ctx.strokeStyle='#44aaff';

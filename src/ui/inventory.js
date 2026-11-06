@@ -57,7 +57,7 @@ function inventoryItemCanBeUsed(item){
 }
 
 function drawInventoryOverlay(){
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
   ensureCrewMoraleState();
   updateCrewLowMoraleFlags();

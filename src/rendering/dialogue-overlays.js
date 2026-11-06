@@ -1,7 +1,7 @@
 function drawCivilizationBoundaryOverlay(){
   const notice = civilizationActiveBoundaryNotice();
   if(!notice) return;
-  const cw = canvas.width;
+  const cw = canvasWidth;
   const x = Math.round(cw/2 - 260);
   const y = 72;
   const w = 520;
@@ -51,7 +51,7 @@ function drawDialogueOverlay(){
   const def = currentDialogueDef();
   const node = currentDialogueNode();
   if(!dlg || !def || !node) return;
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const w = Math.min(720, cw - 80);
   const h = Math.min(390, ch - 90);
   const x = Math.round((cw - w) / 2);

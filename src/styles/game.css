@@ -11,8 +11,7 @@ html, body {
 
 /*
   #root has a fixed natural size of 1400×720px.
-  JS scales it via transform:scale() to fit the viewport.
-  transform-origin: top left so the translate positions it correctly.
+  JS scales it to fit the viewport and centers it.
 */
 #root {
   --steel-rim: #3e5362;
@@ -36,6 +35,7 @@ html, body {
   max-height: 720px;
   border: 1px solid #333;
   position: absolute;
+  contain: layout;
   top: 0;
   left: 0;
   transform-origin: top left;
@@ -241,8 +241,8 @@ html, body {
 /* Use the existing clearance around the canvas as a recessed display frame. */
 #gc {
   box-shadow: 0 0 0 1px #050a0e, 0 0 0 2px #516370, 0 0 0 4px #15212b;
+  image-rendering: auto;
 }
-#gc.menu-canvas, #gc.options-canvas { image-rendering: auto; }
 canvas {
   display: block;
   image-rendering: pixelated;
@@ -640,7 +640,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   position: static;
   top: auto;
   left: auto;
-  image-rendering: pixelated;
+  image-rendering: auto;
   display: block;
 }
 #minimap-legend {
@@ -678,14 +678,14 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── Version tag ── */
 #version-tag {
   display: flex;
+  position: absolute;
+  inset: auto 0 0;
   align-items: center;
   justify-content: space-between;
-  margin-top: auto;
   padding: 0 12px;
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
-  flex-shrink: 0;
   height: 18px;
   overflow: hidden;
 }

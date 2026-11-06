@@ -30,6 +30,8 @@ This is a source organization step, not a conversion to ES modules. The main gam
 
 `G` is the mutable game state, initialized in `src/core/new-game.js`. Keyboard routing lives in `src/input/keyboard.js`. Actions update state and request rendering; `src/rendering/dispatch.js` selects views, while HUD/sidebar/context controls live under `src/ui/`. Persistent saves and loading are in `src/persistence/save-load.js`. Startup waits for embedded sprites, generates procedural sprites, and displays the menu in `src/core/startup.js`.
 
+The root keeps a 1400×720 logical layout. `src/ui/scaling-and-compass.js` fits it to the viewport with CSS layout zoom, with transform scaling as a fallback. Drawing and pointer hit areas use `canvasWidth` and `canvasHeight`. The main canvas backing dimensions are the displayed size in device pixels and can change on resize or display density changes. Use the backing dimensions for pixel reads and writes.
+
 | Source area | Responsibility |
 | --- | --- |
 | `core`, `input`, `actions`, `movement` | State, startup, controls, player actions and turns |

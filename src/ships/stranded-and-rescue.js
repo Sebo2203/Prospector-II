@@ -139,7 +139,7 @@ function doDeclineRescue(){
 function drawStrandedOverlay(){
   if(!G.stranded) return;
   const st = G.stranded;
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const cx = cw/2;
 
   // Dark tinted panel bottom-left

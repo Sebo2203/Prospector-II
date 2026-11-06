@@ -18,8 +18,7 @@ function renderAll(){
 function drawCanvas(){
   resetCanvasMenu();
   canvasMapView=null;
-  canvas.classList.toggle('options-canvas',!!G.showOptions);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvasWidth,canvasHeight);
 
   if(G.mode==='planet'){
     drawPlanet();
@@ -43,7 +42,7 @@ function drawCanvas(){
 
   if(G.mode==='inventory'){
     ctx.fillStyle='rgba(0,0,0,0.75)';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillRect(0,0,canvasWidth,canvasHeight);
     drawInventoryOverlay();
   }
 

@@ -167,7 +167,7 @@ function drawScanView(){
   }
 
   // Semi-transparent scan overlay tint so it feels like satellite imagery
-  ctx.fillStyle='rgba(0,30,60,0.18)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='rgba(0,30,60,0.18)'; ctx.fillRect(0,0,canvasWidth,canvasHeight);
 
   // Smoke clouds block scan view
   if(pdata.smokeClouds){
@@ -179,7 +179,7 @@ function drawScanView(){
   }
 
   // HUD label
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,cw,22);
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#70d8ff'; ctx.textAlign='center';
   ctx.fillText('SATELLITE SCAN  -  '+pKey.split(':')[0].replace(',',' ').toUpperCase()+'  -  '+B.name.toUpperCase(), cw/2, 15);

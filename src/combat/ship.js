@@ -557,7 +557,7 @@ function adjustCombatLogFont(step){
 function drawShipCombatOverlay(){
   const sc=G.shipCombat;
   if(!sc) return;
-  const cw=canvas.width, ch=canvas.height;  // 960 × 480
+  const cw=canvasWidth, ch=canvasHeight;  // 960 × 480
 
   ctx.fillStyle='rgba(5,2,12,0.96)'; ctx.fillRect(0,0,cw,ch);
 

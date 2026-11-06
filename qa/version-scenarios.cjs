@@ -32,8 +32,8 @@ const assert = require('node:assert/strict');
         const button = MENU_STATE._btnRects[MENU_STATE._opts.findIndex(option => option.key === 'O')];
         const bounds = canvas.getBoundingClientRect();
         return {
-          x: bounds.left + (button.x + button.w / 2) * bounds.width / canvas.clientWidth,
-          y: bounds.top + (button.y + button.h / 2) * bounds.height / canvas.clientHeight,
+          x: bounds.left + (button.x + button.w / 2) * bounds.width / canvasWidth,
+          y: bounds.top + (button.y + button.h / 2) * bounds.height / canvasHeight,
         };
       });
       await page.mouse.click(optionsCenter.x, optionsCenter.y);
@@ -61,13 +61,15 @@ const assert = require('node:assert/strict');
           if(alert) showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300');
           else hideMsg();
           const root=document.getElementById('root'), status=document.getElementById('version-tag');
+          const rootBounds=root.getBoundingClientRect();
           return {
-            inset:(root.getBoundingClientRect().bottom-status.getBoundingClientRect().bottom)*root.offsetWidth/root.getBoundingClientRect().width,
+            inset:rootBounds.bottom-status.getBoundingClientRect().bottom,
+            border:parseFloat(getComputedStyle(root).borderBottomWidth)*rootBounds.width/GAME_W,
             banner:document.getElementById('msg-bar').classList.contains('visible'),
           };
         },alert);
         assert.equal(layout.banner,alert);
-        assert.ok(Math.abs(layout.inset-1)<0.1,'the status strip sits against the inner bottom edge');
+        assert.ok(Math.abs(layout.inset-layout.border)<0.1,'the status strip sits against the inner bottom edge');
       }
     }
     await page.setViewportSize({width:1400,height:720});

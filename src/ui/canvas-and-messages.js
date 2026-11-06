@@ -1,8 +1,19 @@
 // ── Canvas ────────────────────────────────────────────────────────
 const canvas = document.getElementById('gc');
 const ctx    = canvas.getContext('2d');
-canvas.width  = VIEW_W * TS;   // 40 × 24 = 960
-canvas.height = VIEW_H * TS;   // 20 × 24 = 480
+let canvasWidth = VIEW_W * TS;
+let canvasHeight = VIEW_H * TS;
+
+// Render text at the displayed pixel density while keeping draw and input coordinates logical.
+function fitCanvasToDisplay(surface,paint,width,height){
+  const bounds=surface.getBoundingClientRect();
+  const pixelWidth=Math.max(1,Math.round(bounds.width*window.devicePixelRatio));
+  const pixelHeight=Math.max(1,Math.round(bounds.height*window.devicePixelRatio));
+  if(surface.width!==pixelWidth) surface.width=pixelWidth;
+  if(surface.height!==pixelHeight) surface.height=pixelHeight;
+  paint.setTransform(pixelWidth/width,0,0,pixelHeight/height,0,0);
+  paint.imageSmoothingEnabled=false;
+}
 
 // ── Log font size control ─────────────────────────────────────
 let _logFontSize = 13;

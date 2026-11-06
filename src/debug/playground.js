@@ -258,25 +258,25 @@ function handleDebugPaletteKey(e){
 
 function drawDebugPaletteDirectory(){
   if(!DEBUG.paletteMenu)return;
-  ctx.fillStyle='#07101b';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign='left';
+  ctx.fillStyle='#07101b';ctx.fillRect(0,0,canvasWidth,canvasHeight);ctx.textAlign='left';
   ctx.font='bold 18px Courier New';ctx.fillStyle='#ffe066';ctx.fillText('DEBUG PALETTE — SEARCH ALL CONTENT',20,30);
   ctx.font='13px Courier New';ctx.fillStyle='#88bbcc';ctx.fillText('Type to search: '+(DEBUG.paletteSearch||'all')+'  |  Enter visits  |  Esc closes',20,57);
   ctx.fillText('F2 galaxy · F3 surface · F4 career · Shift+F2 rebuild · F7 NPC simulation '+(G.debugPalette.simulate?'ON':'OFF'),20,79);
-  const rows=debugPaletteFilteredEntries(),count=Math.max(1,Math.floor((canvas.height-120)/22));
+  const rows=debugPaletteFilteredEntries(),count=Math.max(1,Math.floor((canvasHeight-120)/22));
   DEBUG.paletteSel=Math.max(0,Math.min(rows.length-1,DEBUG.paletteSel||0));
   const start=Math.max(0,Math.min(DEBUG.paletteSel-Math.floor(count/2),rows.length-count));
   rows.slice(start,start+count).forEach((e,i)=>{
-    canvasMenuTarget(20,94+i*22,canvas.width-40,22,()=>debugPaletteVisit(e.id));
+    canvasMenuTarget(20,94+i*22,canvasWidth-40,22,()=>debugPaletteVisit(e.id));
     ctx.fillStyle=start+i===DEBUG.paletteSel?'#ffe066':'#aabbd0';
-    ctx.fillText((start+i===DEBUG.paletteSel?'> ':'  ')+e.kind.toUpperCase()+' — '+e.label,20,109+i*22,canvas.width-40);
+    ctx.fillText((start+i===DEBUG.paletteSel?'> ':'  ')+e.kind.toUpperCase()+' — '+e.label,20,109+i*22,canvasWidth-40);
   });
   canvasMenuScroll=moveDebugPaletteSelection;
-  canvasMenuButton('Close [Esc]',canvas.width-125,canvas.height-32,()=>{
+  canvasMenuButton('Close [Esc]',canvasWidth-125,canvasHeight-32,()=>{
     DEBUG.paletteMenu=false;
     DEBUG.on=false;
     renderAll();
   });
-  ctx.fillStyle='#88aabb';ctx.fillText(rows.length+' matching samples · Arrow keys select',20,canvas.height-12);
+  ctx.fillStyle='#88aabb';ctx.fillText(rows.length+' matching samples · Arrow keys select',20,canvasHeight-12);
 }
 
 function drawDebugPaletteLabels(){
@@ -298,7 +298,7 @@ function drawDebugPaletteLabels(){
     ctx.fillStyle='#d0e4ef';ctx.fillText(label,(vx+.5)*TS,vy*TS-3);
   }
   ctx.textAlign='left';ctx.fillStyle='#ffe066';ctx.font='12px Courier New';
-  ctx.fillText('TEST WORLD — F4 return · Shift+B / F6 directory',8,canvas.height-8);
+  ctx.fillText('TEST WORLD — F4 return · Shift+B / F6 directory',8,canvasHeight-8);
 }
 
 function drawDebugPaletteBodyIcon(body,x,y){

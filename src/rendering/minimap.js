@@ -104,8 +104,8 @@ function drawGalaxyMinimapToCanvas(mini){
 function drawFullGalaxyMap(){
   const map=document.getElementById('galaxy-minimap-large');
   const c=map.getContext('2d');
-  const {width,height}=map;
-  // Whole pixels keep neighboring fog tiles flush when the artwork is scaled.
+  const width=map.clientWidth, height=map.clientHeight;
+  fitCanvasToDisplay(map,c,width,height);
   const tileSize=Math.floor(Math.min((width-6)/MAP_W,(height-6)/MAP_H));
   const mapW=MAP_W*tileSize, mapH=MAP_H*tileSize;
   const ox=Math.floor((width-mapW)/2), oy=Math.floor((height-mapH)/2);
@@ -117,23 +117,26 @@ function drawFullGalaxyMap(){
   c.beginPath();
   c.rect(ox,oy,mapW,mapH);
   c.clip();
-  c.fillStyle='#04040c';
+  c.fillStyle='#242531';
   c.fillRect(ox,oy,mapW,mapH);
   c.translate(ox,oy);
   c.scale(tileSize/TS,tileSize/TS);
   c.imageSmoothingEnabled=false;
 
+  // Fill the explored footprint in one pass so adjacent sectors have no seams at fractional scales.
+  const explored=new Path2D();
+  const landmarks=[];
   for(let y=0;y<MAP_H;y++){
     for(let x=0;x<MAP_W;x++){
-      if(!DEBUG.fullVision && !G.visited?.[y*MAP_W+x]){
-        c.fillStyle='#242531';
-        c.fillRect(x*TS,y*TS,TS,TS);
-        continue;
-      }
+      if(!DEBUG.fullVision && !G.visited?.[y*MAP_W+x]) continue;
+      explored.rect(x*TS,y*TS,TS,TS);
       const cell=G.galaxy[y]?.[x];
-      if(cell && cell.type!=='VOID') drawGalaxyTile(c,cell,x*TS,y*TS,x,y,true);
+      if(cell && cell.type!=='VOID') landmarks.push({cell,x,y});
     }
   }
+  c.fillStyle='#04040c';
+  c.fill(explored);
+  for(const {cell,x,y} of landmarks) drawGalaxyTile(c,cell,x*TS,y*TS,x,y,true);
   drawGalaxyActors(c,0,0,MAP_W,MAP_H,true);
   c.restore();
 

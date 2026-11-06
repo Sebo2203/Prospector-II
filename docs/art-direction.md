@@ -51,7 +51,7 @@ The save status and version sit at the bottom of the play area. The shortcuts an
 
 In **Options → UI Style**, choose **Cockpit** for the instrument finish or **Classic** for the experimental.27 appearance. The choice applies immediately and is stored in the browser's options. Both styles use the current controls and bottom status strip. **Render Mode** independently switches between sprites and ASCII.
 
-The title menus render at the displayed pixel density. The in-game Options overlay uses normal browser sampling, while the playfield retains pixel-art sampling.
+From experimental.34, the title menus, playfield canvas, and full galaxy chart draw at the displayed pixel density. Canvas sprite images use nearest-neighbor sampling. The HTML HUD, sidebar, and overlays are laid out at the fitted scale in browsers with CSS zoom support.
 
 ## Source organization and reproduction
 

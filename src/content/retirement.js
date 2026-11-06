@@ -759,7 +759,7 @@ const HUMANITY_CODAS_DEAD = [
 // In drawBaseOverlay: add case for b.confirm==='retire_humanity', call this function.
 // In keydown: retire_story → retire_humanity → G.retired=true.
 function drawRetirementHumanityScreen() { // eslint-disable-line no-unused-vars
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const dead = !!G.retirementNoEpilogue;
 
   ctx.fillStyle = 'rgba(0,10,30,0.97)'; ctx.fillRect(0, 0, cw, ch);

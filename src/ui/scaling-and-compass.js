@@ -2,24 +2,36 @@
 //  FULLSCREEN SCALING
 //  Scales #root to fit the viewport while preserving aspect ratio.
 //  The game's natural size is 1400×720. We calculate the scale
-//  factor that fits it into the current window, then use
-//  CSS transform + translate to centre it.
+//  factor that fits it into the current window. Layout zoom lets the
+//  browser paint the HTML text at its displayed size.
 // ─────────────────────────────────────────────────────────────────
 const GAME_W = 1400;
 const GAME_H = 720;
+const supportsLayoutZoom=CSS.supports('zoom','1');
+let fittedPixelRatio;
 
 function scaleToFit(){
+  fittedPixelRatio=window.devicePixelRatio;
   const root  = document.getElementById('root');
   const scaleX = window.innerWidth  / GAME_W;
   const scaleY = window.innerHeight / GAME_H;
   const scale  = Math.min(scaleX, scaleY);
 
-  // Centre the scaled root in the viewport
   const tx = (window.innerWidth  - GAME_W * scale) / 2;
   const ty = (window.innerHeight - GAME_H * scale) / 2;
 
-  root.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  if(supportsLayoutZoom){
+    root.style.zoom=scale;
+    root.style.left=(tx/scale)+'px';
+    root.style.top=(ty/scale)+'px';
+  } else root.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+
+  fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight);
   if(canvas.classList.contains('menu-canvas')) drawMenuScreen();
+  else if(G?.galaxy){
+    drawCanvas();
+    if(document.getElementById('minimap-overlay').classList.contains('visible')) drawFullGalaxyMap();
+  }
 }
 
 window.addEventListener('resize', scaleToFit);
@@ -39,6 +51,7 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     _fpsValue = _fpsFrames;
     _fpsFrames = 0;
     _fpsLast = _now;
+    if(window.devicePixelRatio!==fittedPixelRatio) scaleToFit();
   }
 
   if(G && !G.dead && !G.retired){
@@ -64,10 +77,10 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     if(DEBUG.showFPS){
       ctx.font='bold 14px Courier New';
       ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.fillRect(canvas.width-58,2,56,18);
+      ctx.fillRect(canvasWidth-58,2,56,18);
       ctx.fillStyle='#44ff88';
       ctx.textAlign='right';
-      ctx.fillText(_fpsValue+' fps', canvas.width-4, 16);
+      ctx.fillText(_fpsValue+' fps', canvasWidth-4, 16);
       ctx.textAlign='left';
     }
   }

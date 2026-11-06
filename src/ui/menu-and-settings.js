@@ -71,11 +71,13 @@ function setMenuCanvasMode(){
     wrap.style.maxHeight = '720px';
   }
   canvas.classList.add('menu-canvas');
-  canvas.classList.remove('options-canvas');
+  canvasWidth=GAME_W;
+  canvasHeight=GAME_H;
   canvas.style.width = '1400px';
   canvas.style.height = '720px';
   canvas.style.top = '0';
   canvas.style.left = '0';
+  fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight);
 }
 
 function setGameCanvasMode(){
@@ -94,13 +96,14 @@ function setGameCanvasMode(){
     wrap.style.maxWidth = '';
     wrap.style.maxHeight = '';
   }
-  canvas.width = VIEW_W * TS;
-  canvas.height = VIEW_H * TS;
+  canvasWidth=VIEW_W*TS;
+  canvasHeight=VIEW_H*TS;
   canvas.classList.remove('menu-canvas');
   canvas.style.width = '';
   canvas.style.height = '';
   canvas.style.top = '';
   canvas.style.left = '';
+  fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight);
 }
 
 function showMenu(){
@@ -176,12 +179,6 @@ async function returnToMainMenuFromGame(){
 
 function drawMenuScreen(){
   if(G!==null || !canvas.classList.contains('menu-canvas')) return;
-  const bounds=canvas.getBoundingClientRect();
-  const width=Math.max(1,Math.round(bounds.width*window.devicePixelRatio));
-  const height=Math.max(1,Math.round(bounds.height*window.devicePixelRatio));
-  if(canvas.width!==width) canvas.width=width;
-  if(canvas.height!==height) canvas.height=height;
-  ctx.setTransform(width/GAME_W,0,0,height/GAME_H,0,0);
   resetCanvasMenu();
   canvasMapView=null;
   canvas.classList.remove('map-targeting');
@@ -473,7 +470,7 @@ function drawMenuScreen(){
 }
 
 function drawOptionsScreen(cx){
-  const ch = canvas.clientHeight;
+  const ch = canvasHeight;
   ctx.font='bold 31px Courier New'; ctx.fillStyle='#cccccc'; ctx.textAlign='center';
   ctx.fillText('OPTIONS', cx, 90);
   ctx.fillStyle='#2a2a4a'; ctx.fillRect(cx-200, 106, 400, 1);
@@ -513,14 +510,17 @@ function drawOptionsScreen(cx){
   });
 
   // Footer
-  ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('↑/↓ select    Enter activate    ESC back', cx, ch-16);
+  ctx.font='14px Courier New'; ctx.fillStyle='#8598aa'; ctx.textAlign='center';
+  if(G){
+    ctx.fillText('↑/↓ select    ←/→ change    Enter activate',cx,ch-36);
+    ctx.fillText('F feedback    ESC close options',cx,ch-18);
+  } else ctx.fillText('↑/↓ select    Enter activate    ESC back',cx,ch-16);
   canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
 }
 
 function drawKeybindingsScreen(cx){
-  const ch = canvas.clientHeight;
+  const ch = canvasHeight;
   const kb = OPTIONS.keybinds || DEFAULT_KEYBINDS;
   const rebinding = MENU_STATE._rebinding;
   const sel = MENU_STATE._kbSel || 0;

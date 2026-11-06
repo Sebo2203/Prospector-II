@@ -258,7 +258,7 @@ function casinoFoot(t,cx,ch){ ctx.font='14px Courier New'; ctx.fillStyle='#4a2a6
 function casinoHead(t,cx){ const s=G.casinoStats||{}; ctx.font='bold 22px Courier New'; ctx.fillStyle='#ffcc00'; ctx.textAlign='center'; ctx.fillText(t,cx,108); ctx.font='15px Courier New'; ctx.fillStyle='#9966cc'; ctx.fillText('Balance '+G.credits+' cr  |  Jackpot '+(s.jackpot||1200)+' cr',cx,130); ctx.fillStyle='#2a1a3a'; ctx.fillRect(cx-320,140,640,1); }
 
 function drawCasinoOverlay(){
-  const cw=canvas.width,ch=canvas.height,cx=cw/2,c=ensureCasinoState(),stats=G.casinoStats;
+  const cw=canvasWidth,ch=canvasHeight,cx=cw/2,c=ensureCasinoState(),stats=G.casinoStats;
   ctx.fillStyle='rgba(10,0,20,0.94)'; ctx.fillRect(0,0,cw,ch); ctx.strokeStyle='#6600cc'; ctx.lineWidth=3; ctx.strokeRect(6,6,cw-12,ch-12); ctx.strokeStyle='#aa44ff44'; ctx.lineWidth=1; ctx.strokeRect(10,10,cw-20,ch-20);
   ctx.textAlign='center'; ctx.font='bold 32px Courier New'; ctx.fillStyle='#cc44ff'; ctx.fillText('THE VOID ROYALE',cx,50); ctx.font='16px Courier New'; ctx.fillStyle='#7733aa'; ctx.fillText('Deep Space Entertainment Complex - Est. 2387',cx,72); ctx.fillStyle='#3a1a5a'; ctx.fillRect(cx-320,82,640,1);
   if(c.screen==='main'){

@@ -821,8 +821,7 @@ html, body {
 
 /*
   #root has a fixed natural size of 1400×720px.
-  JS scales it via transform:scale() to fit the viewport.
-  transform-origin: top left so the translate positions it correctly.
+  JS scales it to fit the viewport and centers it.
 */
 #root {
   --steel-rim: #3e5362;
@@ -846,6 +845,7 @@ html, body {
   max-height: 720px;
   border: 1px solid #333;
   position: absolute;
+  contain: layout;
   top: 0;
   left: 0;
   transform-origin: top left;
@@ -1051,8 +1051,8 @@ html, body {
 /* Use the existing clearance around the canvas as a recessed display frame. */
 #gc {
   box-shadow: 0 0 0 1px #050a0e, 0 0 0 2px #516370, 0 0 0 4px #15212b;
+  image-rendering: auto;
 }
-#gc.menu-canvas, #gc.options-canvas { image-rendering: auto; }
 canvas {
   display: block;
   image-rendering: pixelated;
@@ -1450,7 +1450,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   position: static;
   top: auto;
   left: auto;
-  image-rendering: pixelated;
+  image-rendering: auto;
   display: block;
 }
 #minimap-legend {
@@ -1488,14 +1488,14 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── Version tag ── */
 #version-tag {
   display: flex;
+  position: absolute;
+  inset: auto 0 0;
   align-items: center;
   justify-content: space-between;
-  margin-top: auto;
   padding: 0 12px;
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
-  flex-shrink: 0;
   height: 18px;
   overflow: hidden;
 }
@@ -1814,7 +1814,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.33</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.34</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1872,8 +1872,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.33';
-const GAME_VERSION_LABEL = 'v0.28 experimental.33';
+const GAME_VERSION = '0.28.0-experimental.34';
+const GAME_VERSION_LABEL = 'v0.28 experimental.34';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -1986,8 +1986,19 @@ const pick = arr => arr[rnd(arr.length)];
 // ── Canvas ────────────────────────────────────────────────────────
 const canvas = document.getElementById('gc');
 const ctx    = canvas.getContext('2d');
-canvas.width  = VIEW_W * TS;   // 40 × 24 = 960
-canvas.height = VIEW_H * TS;   // 20 × 24 = 480
+let canvasWidth = VIEW_W * TS;
+let canvasHeight = VIEW_H * TS;
+
+// Render text at the displayed pixel density while keeping draw and input coordinates logical.
+function fitCanvasToDisplay(surface,paint,width,height){
+  const bounds=surface.getBoundingClientRect();
+  const pixelWidth=Math.max(1,Math.round(bounds.width*window.devicePixelRatio));
+  const pixelHeight=Math.max(1,Math.round(bounds.height*window.devicePixelRatio));
+  if(surface.width!==pixelWidth) surface.width=pixelWidth;
+  if(surface.height!==pixelHeight) surface.height=pixelHeight;
+  paint.setTransform(pixelWidth/width,0,0,pixelHeight/height,0,0);
+  paint.imageSmoothingEnabled=false;
+}
 
 // ── Log font size control ─────────────────────────────────────
 let _logFontSize = 13;
@@ -10445,7 +10456,7 @@ const HUMANITY_CODAS_DEAD = [
 // In drawBaseOverlay: add case for b.confirm==='retire_humanity', call this function.
 // In keydown: retire_story → retire_humanity → G.retired=true.
 function drawRetirementHumanityScreen() { // eslint-disable-line no-unused-vars
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const dead = !!G.retirementNoEpilogue;
 
   ctx.fillStyle = 'rgba(0,10,30,0.97)'; ctx.fillRect(0, 0, cw, ch);
@@ -13539,8 +13550,8 @@ function canvasMenuBlocked(){
 function canvasPointerPoint(event){
   const rect = canvas.getBoundingClientRect();
   return {
-    x:(event.clientX-rect.left)*canvas.clientWidth/rect.width,
-    y:(event.clientY-rect.top)*canvas.clientHeight/rect.height,
+    x:(event.clientX-rect.left)*canvasWidth/rect.width,
+    y:(event.clientY-rect.top)*canvasHeight/rect.height,
   };
 }
 
@@ -13707,8 +13718,7 @@ function renderAll(){
 function drawCanvas(){
   resetCanvasMenu();
   canvasMapView=null;
-  canvas.classList.toggle('options-canvas',!!G.showOptions);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvasWidth,canvasHeight);
 
   if(G.mode==='planet'){
     drawPlanet();
@@ -13732,7 +13742,7 @@ function drawCanvas(){
 
   if(G.mode==='inventory'){
     ctx.fillStyle='rgba(0,0,0,0.75)';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillRect(0,0,canvasWidth,canvasHeight);
     drawInventoryOverlay();
   }
 
@@ -13875,8 +13885,8 @@ function drawGalaxyMinimapToCanvas(mini){
 function drawFullGalaxyMap(){
   const map=document.getElementById('galaxy-minimap-large');
   const c=map.getContext('2d');
-  const {width,height}=map;
-  // Whole pixels keep neighboring fog tiles flush when the artwork is scaled.
+  const width=map.clientWidth, height=map.clientHeight;
+  fitCanvasToDisplay(map,c,width,height);
   const tileSize=Math.floor(Math.min((width-6)/MAP_W,(height-6)/MAP_H));
   const mapW=MAP_W*tileSize, mapH=MAP_H*tileSize;
   const ox=Math.floor((width-mapW)/2), oy=Math.floor((height-mapH)/2);
@@ -13888,23 +13898,26 @@ function drawFullGalaxyMap(){
   c.beginPath();
   c.rect(ox,oy,mapW,mapH);
   c.clip();
-  c.fillStyle='#04040c';
+  c.fillStyle='#242531';
   c.fillRect(ox,oy,mapW,mapH);
   c.translate(ox,oy);
   c.scale(tileSize/TS,tileSize/TS);
   c.imageSmoothingEnabled=false;
 
+  // Fill the explored footprint in one pass so adjacent sectors have no seams at fractional scales.
+  const explored=new Path2D();
+  const landmarks=[];
   for(let y=0;y<MAP_H;y++){
     for(let x=0;x<MAP_W;x++){
-      if(!DEBUG.fullVision && !G.visited?.[y*MAP_W+x]){
-        c.fillStyle='#242531';
-        c.fillRect(x*TS,y*TS,TS,TS);
-        continue;
-      }
+      if(!DEBUG.fullVision && !G.visited?.[y*MAP_W+x]) continue;
+      explored.rect(x*TS,y*TS,TS,TS);
       const cell=G.galaxy[y]?.[x];
-      if(cell && cell.type!=='VOID') drawGalaxyTile(c,cell,x*TS,y*TS,x,y,true);
+      if(cell && cell.type!=='VOID') landmarks.push({cell,x,y});
     }
   }
+  c.fillStyle='#04040c';
+  c.fill(explored);
+  for(const {cell,x,y} of landmarks) drawGalaxyTile(c,cell,x*TS,y*TS,x,y,true);
   drawGalaxyActors(c,0,0,MAP_W,MAP_H,true);
   c.restore();
 
@@ -14017,7 +14030,7 @@ function closeGalaxyMinimapOverlay(){
 function drawCivilizationBoundaryOverlay(){
   const notice = civilizationActiveBoundaryNotice();
   if(!notice) return;
-  const cw = canvas.width;
+  const cw = canvasWidth;
   const x = Math.round(cw/2 - 260);
   const y = 72;
   const w = 520;
@@ -14067,7 +14080,7 @@ function drawDialogueOverlay(){
   const def = currentDialogueDef();
   const node = currentDialogueNode();
   if(!dlg || !def || !node) return;
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const w = Math.min(720, cw - 80);
   const h = Math.min(390, ch - 90);
   const x = Math.round((cw - w) / 2);
@@ -14729,7 +14742,7 @@ function drawSystemView(){
   if(!cell || (cell.type!=='SYSTEM' && cell.type!=='ROGUE_PLANET')) return;
   const isRogue = cell.type === 'ROGUE_PLANET';
   const ST = isRogue ? null : (STAR_TYPES[cell.starType] || STAR_TYPES.YELLOW);
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const cx = cw/2;
 
   ctx.fillStyle='#03030a';
@@ -15678,7 +15691,7 @@ function drawPlanet(){
     if(edist > vr) return;
     if(edist >= 1.5 && !hasLOS(e.x, e.y)) return;
     const [esx,esy] = tileToScreen(e.x, e.y);
-    if(esx<0||esx>=canvas.width||esy<0||esy>=canvas.height) return;
+    if(esx<0||esx>=canvasWidth||esy<0||esy>=canvasHeight) return;
     // Draw the actual tile underneath the enemy, not just the biome default floor,
     // so NPCs overlay on forests, civ buildings, etc. rather than erasing them.
     if(e.shipboardAlien){
@@ -15829,7 +15842,7 @@ function drawPlanet(){
   const inForest = pdata.grid[py]?.[px]?.type === 'EARTH_FOREST';
   if(inForest){
     ctx.fillStyle = 'rgba(8,22,6,0.60)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     drawPlayerPawn(psx, psy);
   }
 
@@ -15837,14 +15850,14 @@ function drawPlanet(){
   if(inSmoke){
     const overlayCol = isToxicBiome ? 'rgba(10,25,8,0.55)' : 'rgba(22,14,8,0.55)';
     ctx.fillStyle = overlayCol;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     drawPlayerPawn(psx, psy);
   }
 
   // ── Mist darkness overlay (standing in mist) ─────────────────
   if(inMist){
     ctx.fillStyle = 'rgba(80,90,76,0.35)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     drawPlayerPawn(psx, psy);
   }
 
@@ -15852,14 +15865,14 @@ function drawPlanet(){
   if(pdata.isUnderwater){
     const pulse = Math.sin(Date.now()/900) * 0.04;
     ctx.fillStyle = `rgba(0,18,34,${(0.32 + pulse).toFixed(2)})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     ctx.strokeStyle='rgba(70,160,190,0.10)';
     ctx.lineWidth=1;
-    for(let yy = -TS; yy < canvas.height + TS; yy += TS*2){
+    for(let yy = -TS; yy < canvasHeight + TS; yy += TS*2){
       const off = Math.sin(Date.now()/1200 + yy*0.02) * 10;
       ctx.beginPath();
       ctx.moveTo(off, yy);
-      ctx.quadraticCurveTo(canvas.width*0.35, yy+6, canvas.width+off, yy-4);
+      ctx.quadraticCurveTo(canvasWidth*0.35, yy+6, canvasWidth+off, yy-4);
       ctx.stroke();
     }
     drawPlayerPawn(psx, psy);
@@ -15874,7 +15887,7 @@ function drawPlanet(){
       const age = now - f.born;
       const fade = Math.max(0, 1 - age / TOTAL_MS);
       const [fsx, fsy] = tileToScreen(f.x, f.y);
-      if(fsx<-TS||fsy<-TS||fsx>canvas.width||fsy>canvas.height) return;
+      if(fsx<-TS||fsy<-TS||fsx>canvasWidth||fsy>canvasHeight) return;
       ctx.save();
       ctx.globalAlpha = fade;
       if(OPTIONS.asciiMode){
@@ -15908,7 +15921,7 @@ function drawPlanet(){
       const fade = age > path.length * FRAME_MS ? Math.max(0, 1 - (age - path.length * FRAME_MS) / HOLD_MS) : 1;
       const p = path[frame];
       const [bsx, bsy] = tileToScreen(p.x, p.y);
-      if(bsx<-TS||bsy<-TS||bsx>canvas.width||bsy>canvas.height) return;
+      if(bsx<-TS||bsy<-TS||bsx>canvasWidth||bsy>canvasHeight) return;
       ctx.save();
       ctx.globalAlpha = fade;
       if(OPTIONS.asciiMode){
@@ -16172,7 +16185,7 @@ function drawScanView(){
   }
 
   // Semi-transparent scan overlay tint so it feels like satellite imagery
-  ctx.fillStyle='rgba(0,30,60,0.18)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='rgba(0,30,60,0.18)'; ctx.fillRect(0,0,canvasWidth,canvasHeight);
 
   // Smoke clouds block scan view
   if(pdata.smokeClouds){
@@ -16184,7 +16197,7 @@ function drawScanView(){
   }
 
   // HUD label
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,cw,22);
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#70d8ff'; ctx.textAlign='center';
   ctx.fillText('SATELLITE SCAN  -  '+pKey.split(':')[0].replace(',',' ').toUpperCase()+'  -  '+B.name.toUpperCase(), cw/2, 15);
@@ -17268,7 +17281,7 @@ function addPurchasedPawnItem(item){
 
 
 function drawBaseOverlay(){
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
 
   const b = G.base;
@@ -17834,7 +17847,7 @@ function inventoryItemCanBeUsed(item){
 }
 
 function drawInventoryOverlay(){
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
   ensureCrewMoraleState();
   updateCrewLowMoraleFlags();
@@ -19304,7 +19317,7 @@ function casinoFoot(t,cx,ch){ ctx.font='14px Courier New'; ctx.fillStyle='#4a2a6
 function casinoHead(t,cx){ const s=G.casinoStats||{}; ctx.font='bold 22px Courier New'; ctx.fillStyle='#ffcc00'; ctx.textAlign='center'; ctx.fillText(t,cx,108); ctx.font='15px Courier New'; ctx.fillStyle='#9966cc'; ctx.fillText('Balance '+G.credits+' cr  |  Jackpot '+(s.jackpot||1200)+' cr',cx,130); ctx.fillStyle='#2a1a3a'; ctx.fillRect(cx-320,140,640,1); }
 
 function drawCasinoOverlay(){
-  const cw=canvas.width,ch=canvas.height,cx=cw/2,c=ensureCasinoState(),stats=G.casinoStats;
+  const cw=canvasWidth,ch=canvasHeight,cx=cw/2,c=ensureCasinoState(),stats=G.casinoStats;
   ctx.fillStyle='rgba(10,0,20,0.94)'; ctx.fillRect(0,0,cw,ch); ctx.strokeStyle='#6600cc'; ctx.lineWidth=3; ctx.strokeRect(6,6,cw-12,ch-12); ctx.strokeStyle='#aa44ff44'; ctx.lineWidth=1; ctx.strokeRect(10,10,cw-20,ch-20);
   ctx.textAlign='center'; ctx.font='bold 32px Courier New'; ctx.fillStyle='#cc44ff'; ctx.fillText('THE VOID ROYALE',cx,50); ctx.font='16px Courier New'; ctx.fillStyle='#7733aa'; ctx.fillText('Deep Space Entertainment Complex - Est. 2387',cx,72); ctx.fillStyle='#3a1a5a'; ctx.fillRect(cx-320,82,640,1);
   if(c.screen==='main'){
@@ -19635,7 +19648,7 @@ function doDeclineRescue(){
 function drawStrandedOverlay(){
   if(!G.stranded) return;
   const st = G.stranded;
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const cx = cw/2;
 
   // Dark tinted panel bottom-left
@@ -20219,7 +20232,7 @@ function doRangedFire(){
 
 
 function drawRetirementScreen(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const tier = RETIREMENT_TIERS.find(t=>G.credits>=t.min&&G.credits<=t.max)||RETIREMENT_TIERS[0];
 
   // Background
@@ -20303,24 +20316,15 @@ function drawRetirementScreen(){
 }
 
 function drawInGameOptions(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
   const cx=cw/2;
-  if(G._kbScreen){
-    drawKeybindingsScreen(cx);
-  } else {
-    drawOptionsScreen(cx);
-    ctx.fillStyle='rgba(0,0,0,0.92)';
-    ctx.fillRect(cx-300, ch-60, 600, 50);
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    ctx.fillText('Up/Down select   Left/Right change   Enter activate',cx,ch-36);
-    ctx.fillText('F feedback   ESC close options',cx,ch-18);
-    ctx.textAlign='left';
-  }
+  if(G._kbScreen) drawKeybindingsScreen(cx);
+  else drawOptionsScreen(cx);
 }
 
 function drawGameOverOverlay(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const isJailed = !!G.jailed;
 
   // ── Special screen: C4 destroyed the ship, crew stranded on a planet ─────
@@ -20624,7 +20628,7 @@ function drawDebugCivSubMenu(){
   const rows = debugCivSubMenuRows();
   const statusRows = debugCivStatusRows();
   const pad = 10, lh = 22, w = 520;
-  const x = canvas.width - w - 8, y = 8;
+  const x = canvasWidth - w - 8, y = 8;
   const h = pad*2 + (rows.length + statusRows.length + 4)*lh;
   ctx.fillStyle='rgba(0,0,0,0.9)';
   ctx.fillRect(x, y, w, h);
@@ -20671,7 +20675,7 @@ function drawDebugItemSubMenu(){
   drawDebugItemSubMenu._rightRows = rightRows;
 
   // Fill the entire canvas
-  const x = 0, y = 0, w = canvas.width, h = canvas.height;
+  const x = 0, y = 0, w = canvasWidth, h = canvasHeight;
   const pad = 18, lh = 26, footerH = 28;
   const gap = 16;
   const colW = Math.floor((w - pad * 3 - gap) / 2);
@@ -20887,8 +20891,8 @@ function drawDebugOverlay(){
     drawDebugItemSubMenu();
     return;
   }
-  const pad = 8, lh = 17, w = Math.min(560,canvas.width-16);
-  const x = canvas.width - w - 8, y = 8;
+  const pad = 8, lh = 17, w = Math.min(560,canvasWidth-16);
+  const x = canvasWidth - w - 8, y = 8;
 
   const items = [
     { key:'1', label:'Infinite Fuel',           val: DEBUG.infiniteFuel    },
@@ -20903,7 +20907,7 @@ function drawDebugOverlay(){
 
   // Title, eight toggles, eleven existing actions, three palette rows and close.
   const totalRows = 24;
-  const h = Math.min(canvas.height-16,pad*2 + totalRows*lh);
+  const h = Math.min(canvasHeight-16,pad*2 + totalRows*lh);
 
   ctx.fillStyle='rgba(0,0,0,0.82)';
   ctx.fillRect(x, y, w, h);
@@ -21016,10 +21020,10 @@ function drawDebugGalaxyReportPopup(){
   const rows = buildDebugGalaxyReportRows();
   const w = 660, pad = 16, lh = 22;
   const h = pad*2 + 46 + rows.length*lh + 26;
-  const x = Math.floor((canvas.width - w)/2);
-  const y = Math.floor((canvas.height - h)/2);
+  const x = Math.floor((canvasWidth - w)/2);
+  const y = Math.floor((canvasHeight - h)/2);
   ctx.fillStyle='rgba(0,0,0,0.9)';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillRect(0,0,canvasWidth,canvasHeight);
   ctx.fillStyle='rgba(4,10,18,0.98)';
   ctx.fillRect(x,y,w,h);
   ctx.strokeStyle='#44aaff';
@@ -31867,7 +31871,7 @@ function adjustCombatLogFont(step){
 function drawShipCombatOverlay(){
   const sc=G.shipCombat;
   if(!sc) return;
-  const cw=canvas.width, ch=canvas.height;  // 960 × 480
+  const cw=canvasWidth, ch=canvasHeight;  // 960 × 480
 
   ctx.fillStyle='rgba(5,2,12,0.96)'; ctx.fillRect(0,0,cw,ch);
 
@@ -32139,7 +32143,7 @@ function executeRadioTrade(id){
 }
 
 function drawRadioOverlay(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const ns = G.radio?.ship;
   if(!ns){ G.mode='galaxy'; return; }
   const rows = radioTradeRows();
@@ -34970,25 +34974,25 @@ function handleDebugPaletteKey(e){
 
 function drawDebugPaletteDirectory(){
   if(!DEBUG.paletteMenu)return;
-  ctx.fillStyle='#07101b';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign='left';
+  ctx.fillStyle='#07101b';ctx.fillRect(0,0,canvasWidth,canvasHeight);ctx.textAlign='left';
   ctx.font='bold 18px Courier New';ctx.fillStyle='#ffe066';ctx.fillText('DEBUG PALETTE — SEARCH ALL CONTENT',20,30);
   ctx.font='13px Courier New';ctx.fillStyle='#88bbcc';ctx.fillText('Type to search: '+(DEBUG.paletteSearch||'all')+'  |  Enter visits  |  Esc closes',20,57);
   ctx.fillText('F2 galaxy · F3 surface · F4 career · Shift+F2 rebuild · F7 NPC simulation '+(G.debugPalette.simulate?'ON':'OFF'),20,79);
-  const rows=debugPaletteFilteredEntries(),count=Math.max(1,Math.floor((canvas.height-120)/22));
+  const rows=debugPaletteFilteredEntries(),count=Math.max(1,Math.floor((canvasHeight-120)/22));
   DEBUG.paletteSel=Math.max(0,Math.min(rows.length-1,DEBUG.paletteSel||0));
   const start=Math.max(0,Math.min(DEBUG.paletteSel-Math.floor(count/2),rows.length-count));
   rows.slice(start,start+count).forEach((e,i)=>{
-    canvasMenuTarget(20,94+i*22,canvas.width-40,22,()=>debugPaletteVisit(e.id));
+    canvasMenuTarget(20,94+i*22,canvasWidth-40,22,()=>debugPaletteVisit(e.id));
     ctx.fillStyle=start+i===DEBUG.paletteSel?'#ffe066':'#aabbd0';
-    ctx.fillText((start+i===DEBUG.paletteSel?'> ':'  ')+e.kind.toUpperCase()+' — '+e.label,20,109+i*22,canvas.width-40);
+    ctx.fillText((start+i===DEBUG.paletteSel?'> ':'  ')+e.kind.toUpperCase()+' — '+e.label,20,109+i*22,canvasWidth-40);
   });
   canvasMenuScroll=moveDebugPaletteSelection;
-  canvasMenuButton('Close [Esc]',canvas.width-125,canvas.height-32,()=>{
+  canvasMenuButton('Close [Esc]',canvasWidth-125,canvasHeight-32,()=>{
     DEBUG.paletteMenu=false;
     DEBUG.on=false;
     renderAll();
   });
-  ctx.fillStyle='#88aabb';ctx.fillText(rows.length+' matching samples · Arrow keys select',20,canvas.height-12);
+  ctx.fillStyle='#88aabb';ctx.fillText(rows.length+' matching samples · Arrow keys select',20,canvasHeight-12);
 }
 
 function drawDebugPaletteLabels(){
@@ -35010,7 +35014,7 @@ function drawDebugPaletteLabels(){
     ctx.fillStyle='#d0e4ef';ctx.fillText(label,(vx+.5)*TS,vy*TS-3);
   }
   ctx.textAlign='left';ctx.fillStyle='#ffe066';ctx.font='12px Courier New';
-  ctx.fillText('TEST WORLD — F4 return · Shift+B / F6 directory',8,canvas.height-8);
+  ctx.fillText('TEST WORLD — F4 return · Shift+B / F6 directory',8,canvasHeight-8);
 }
 
 function drawDebugPaletteBodyIcon(body,x,y){
@@ -35826,11 +35830,13 @@ function setMenuCanvasMode(){
     wrap.style.maxHeight = '720px';
   }
   canvas.classList.add('menu-canvas');
-  canvas.classList.remove('options-canvas');
+  canvasWidth=GAME_W;
+  canvasHeight=GAME_H;
   canvas.style.width = '1400px';
   canvas.style.height = '720px';
   canvas.style.top = '0';
   canvas.style.left = '0';
+  fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight);
 }
 
 function setGameCanvasMode(){
@@ -35849,13 +35855,14 @@ function setGameCanvasMode(){
     wrap.style.maxWidth = '';
     wrap.style.maxHeight = '';
   }
-  canvas.width = VIEW_W * TS;
-  canvas.height = VIEW_H * TS;
+  canvasWidth=VIEW_W*TS;
+  canvasHeight=VIEW_H*TS;
   canvas.classList.remove('menu-canvas');
   canvas.style.width = '';
   canvas.style.height = '';
   canvas.style.top = '';
   canvas.style.left = '';
+  fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight);
 }
 
 function showMenu(){
@@ -35931,12 +35938,6 @@ async function returnToMainMenuFromGame(){
 
 function drawMenuScreen(){
   if(G!==null || !canvas.classList.contains('menu-canvas')) return;
-  const bounds=canvas.getBoundingClientRect();
-  const width=Math.max(1,Math.round(bounds.width*window.devicePixelRatio));
-  const height=Math.max(1,Math.round(bounds.height*window.devicePixelRatio));
-  if(canvas.width!==width) canvas.width=width;
-  if(canvas.height!==height) canvas.height=height;
-  ctx.setTransform(width/GAME_W,0,0,height/GAME_H,0,0);
   resetCanvasMenu();
   canvasMapView=null;
   canvas.classList.remove('map-targeting');
@@ -36228,7 +36229,7 @@ function drawMenuScreen(){
 }
 
 function drawOptionsScreen(cx){
-  const ch = canvas.clientHeight;
+  const ch = canvasHeight;
   ctx.font='bold 31px Courier New'; ctx.fillStyle='#cccccc'; ctx.textAlign='center';
   ctx.fillText('OPTIONS', cx, 90);
   ctx.fillStyle='#2a2a4a'; ctx.fillRect(cx-200, 106, 400, 1);
@@ -36268,14 +36269,17 @@ function drawOptionsScreen(cx){
   });
 
   // Footer
-  ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('↑/↓ select    Enter activate    ESC back', cx, ch-16);
+  ctx.font='14px Courier New'; ctx.fillStyle='#8598aa'; ctx.textAlign='center';
+  if(G){
+    ctx.fillText('↑/↓ select    ←/→ change    Enter activate',cx,ch-36);
+    ctx.fillText('F feedback    ESC close options',cx,ch-18);
+  } else ctx.fillText('↑/↓ select    Enter activate    ESC back',cx,ch-16);
   canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
 }
 
 function drawKeybindingsScreen(cx){
-  const ch = canvas.clientHeight;
+  const ch = canvasHeight;
   const kb = OPTIONS.keybinds || DEFAULT_KEYBINDS;
   const rebinding = MENU_STATE._rebinding;
   const sel = MENU_STATE._kbSel || 0;
@@ -36649,24 +36653,36 @@ function handleMenuKey(e){
 //  FULLSCREEN SCALING
 //  Scales #root to fit the viewport while preserving aspect ratio.
 //  The game's natural size is 1400×720. We calculate the scale
-//  factor that fits it into the current window, then use
-//  CSS transform + translate to centre it.
+//  factor that fits it into the current window. Layout zoom lets the
+//  browser paint the HTML text at its displayed size.
 // ─────────────────────────────────────────────────────────────────
 const GAME_W = 1400;
 const GAME_H = 720;
+const supportsLayoutZoom=CSS.supports('zoom','1');
+let fittedPixelRatio;
 
 function scaleToFit(){
+  fittedPixelRatio=window.devicePixelRatio;
   const root  = document.getElementById('root');
   const scaleX = window.innerWidth  / GAME_W;
   const scaleY = window.innerHeight / GAME_H;
   const scale  = Math.min(scaleX, scaleY);
 
-  // Centre the scaled root in the viewport
   const tx = (window.innerWidth  - GAME_W * scale) / 2;
   const ty = (window.innerHeight - GAME_H * scale) / 2;
 
-  root.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  if(supportsLayoutZoom){
+    root.style.zoom=scale;
+    root.style.left=(tx/scale)+'px';
+    root.style.top=(ty/scale)+'px';
+  } else root.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+
+  fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight);
   if(canvas.classList.contains('menu-canvas')) drawMenuScreen();
+  else if(G?.galaxy){
+    drawCanvas();
+    if(document.getElementById('minimap-overlay').classList.contains('visible')) drawFullGalaxyMap();
+  }
 }
 
 window.addEventListener('resize', scaleToFit);
@@ -36686,6 +36702,7 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     _fpsValue = _fpsFrames;
     _fpsFrames = 0;
     _fpsLast = _now;
+    if(window.devicePixelRatio!==fittedPixelRatio) scaleToFit();
   }
 
   if(G && !G.dead && !G.retired){
@@ -36711,10 +36728,10 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     if(DEBUG.showFPS){
       ctx.font='bold 14px Courier New';
       ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.fillRect(canvas.width-58,2,56,18);
+      ctx.fillRect(canvasWidth-58,2,56,18);
       ctx.fillStyle='#44ff88';
       ctx.textAlign='right';
-      ctx.fillText(_fpsValue+' fps', canvas.width-4, 16);
+      ctx.fillText(_fpsValue+' fps', canvasWidth-4, 16);
       ctx.textAlign='left';
     }
   }

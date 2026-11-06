@@ -58,7 +58,7 @@ function executeRadioTrade(id){
 }
 
 function drawRadioOverlay(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const ns = G.radio?.ship;
   if(!ns){ G.mode='galaxy'; return; }
   const rows = radioTradeRows();

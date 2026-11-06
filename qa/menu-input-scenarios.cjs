@@ -13,7 +13,7 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     const game = page.locator('#gc');
     async function point(x,y){
       const rect = await game.boundingBox();
-      const size = await game.evaluate(el=>({width:el.clientWidth,height:el.clientHeight}));
+      const size = await page.evaluate(()=>({width:canvasWidth,height:canvasHeight}));
       return [rect.x+x*rect.width/size.width,rect.y+y*rect.height/size.height];
     }
     async function click(x,y){ await page.mouse.click(...await point(x,y)); }
@@ -99,10 +99,29 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await page.locator('#h-vessel').isVisible(),false);
     assert.equal(await page.locator('#gauge-fuel .gauge-bar-wrap').evaluate(el=>el.offsetWidth),26);
     assert.equal(await page.locator('#fuel-fill').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 136, 0)');
-    assert.equal(await game.evaluate(el=>getComputedStyle(el).imageRendering),'pixelated');
+    const display=()=>page.evaluate(()=>{
+      const bounds=canvas.getBoundingClientRect(), matrix=ctx.getTransform();
+      return {
+        width:canvas.width,height:canvas.height,logicalWidth:canvasWidth,logicalHeight:canvasHeight,
+        displayWidth:Math.round(bounds.width*devicePixelRatio),displayHeight:Math.round(bounds.height*devicePixelRatio),
+        scaleX:matrix.a,scaleY:matrix.d,smoothing:ctx.imageSmoothingEnabled,
+      };
+    });
+    const turnBeforeResize=await page.evaluate(()=>G.turn);
+    for(const viewport of [{width:1400,height:720},{width:1000,height:620}]){
+      await page.setViewportSize(viewport);
+      await page.waitForFunction(()=>canvas.width===Math.round(canvas.getBoundingClientRect().width*devicePixelRatio));
+      const {width,height,logicalWidth,logicalHeight,displayWidth,displayHeight,scaleX,scaleY,smoothing}=await display();
+      assert.deepEqual([logicalWidth,logicalHeight],[960,480]);
+      assert.deepEqual([width,height],[displayWidth,displayHeight]);
+      assert.ok(Math.abs(scaleX-width/logicalWidth)<1e-6 && Math.abs(scaleY-height/logicalHeight)<1e-6);
+      assert.equal(smoothing,false);
+    }
+    assert.equal(await page.evaluate(()=>G.turn),turnBeforeResize);
     await page.screenshot({path:artifactPath('Classic-UI.png')});
     await action(/\[O\] Options/).click();
     assert.equal(await game.evaluate(el=>getComputedStyle(el).imageRendering),'auto');
+    await page.screenshot({path:artifactPath('In-game-options.png')});
     await press('ArrowDown');
     await press('ArrowRight');
     assert.equal(await page.locator('#root').getAttribute('data-ui-style'),'cockpit');
