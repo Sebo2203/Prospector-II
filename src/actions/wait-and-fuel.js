@@ -128,6 +128,8 @@ function doWaitPlanet(turnAlreadyAdvanced=false){
     pdata.planetTurn++;
     const _vrAfterW  = _rawVrW(pdata.planetTurn % _cycw);
     _checkPhaseMessages(_vrBeforeW, _vrAfterW, pdata.biome);
+    // Refresh the current sight mask even when the crew stays on the same tile.
+    revealPlanet(G.curPlanet, G.player.x, G.player.y);
   }
 
   // Oxygen drain, including underwater maps. Shared with tryMove()/doCombat() —

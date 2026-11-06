@@ -12,7 +12,12 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => initGame('LIGHT_SCOUT', 'Interface QA', 'Interface QA'));
     await page.waitForFunction(() => G?.galaxy && G.log.some(entry => entry.msg.includes('Ready for departure')));
     assert.equal(await page.locator('#h-mode').textContent(), 'NAVIGATION');
-    assert.equal(await page.locator('#h-vessel').textContent(), 'Interface QA');
+    assert.deepEqual(await page.locator('#sidebar > .s-title').allTextContents().then(titles=>titles.map(title=>title.trim().split(/\s+/).slice(0,2).join(' '))),
+      ['Crew Status','Comms Log']);
+    for(const panel of ['#hud','#sidebar','#persist-bar']){
+      assert.equal(await page.locator(panel).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(17, 17, 17)');
+      assert.equal(await page.locator(panel).evaluate(el=>getComputedStyle(el).backgroundImage),'none');
+    }
     const log=page.locator('#log-list .log-entry').first();
     const logSize=await log.evaluate(entry=>getComputedStyle(entry).fontSize);
     await page.getByRole('button',{name:'Increase log text size'}).click();
@@ -35,8 +40,8 @@ const assert = require('node:assert/strict');
         const hull=document.getElementById('g-hull').getBoundingClientRect();
         return display.clientWidth===960 && display.clientHeight===480 &&
           display.offsetTop===6 && display.offsetLeft===6 &&
-          hull.bottom<=main.bottom && document.getElementById('hull-ticks').offsetWidth>0;
-      }), 'the bezel keeps the full canvas and both gauges visible');
+          hull.bottom<=main.bottom && document.getElementById('fuel-ticks').offsetWidth>0;
+      }), 'the dark layout keeps the full canvas and both gauges visible');
       await page.screenshot({path:artifactPath('Cockpit-'+width+'.png')});
     }
     await page.setViewportSize({width:1400,height:720});

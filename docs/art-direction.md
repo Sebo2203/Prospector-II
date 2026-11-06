@@ -43,11 +43,9 @@ The HUD minimap fits the whole galaxy. From experimental.26, it uses darker expl
 
 From experimental.27, the sidebar map frame fits the width of the chart at its existing scale. Close the full map with the top-left **ESC** control or the **Escape** or **M** key.
 
-## Cockpit frame
+## Flight interface
 
-From experimental.28, the main display sits in a thin dark-steel bezel. Fuel, hull, and oxygen use inset instruments with segmented bars and quarter marks. The frame uses the existing margin around the play area, and the gauges retain their numeric readouts and warning thresholds.
-
-From experimental.29, the status rail carries the vessel name and a readout for the current display. The crew and comms console, map housing, and control deck share the same finish. Buttons use a raised face and a recessed pressed state. Standard gauge readings use cool tones, with warm colors for caution and critical readings. The control locations and shortcuts stay the same, and the reduced-motion preference keeps gauge warnings steady.
+From experimental.30, the HUD, gauge panel, map surround, and control deck use the original dark surfaces. The display readout keeps the navigation, orbital view, orbital scan, surface, and station names. The sidebar keeps the Crew Status and Comms Log sections in the dark palette. The reduced-motion preference keeps gauge warnings steady.
 
 ## Source organization and reproduction
 

@@ -32,14 +32,13 @@
     </div>
   </div>
 
-  <!-- Cockpit status rail -->
+  <!-- HUD — SHIP HP and FUEL moved to left gauge panel, O2 also in gauge panel -->
   <div id="hud">
     <div class="hud-box" id="h-phase-box" style="display:none"><div class="hud-label">TIME</div><div class="hud-val" id="h-phase">—</div></div>
     <div class="hud-box"><div class="hud-label">CREDITS</div><div class="hud-val cy" id="h-creds">500</div></div>
     <div class="hud-box"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
     <div class="hud-box"><div class="hud-label">TURN</div><div class="hud-val cy" id="h-turn">1</div></div>
     <div class="hud-box"><div class="hud-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
-    <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
   </div>
 
   <!-- Canvas + Gauges + Sidebar -->
@@ -52,18 +51,17 @@
         <div class="gauge-label">FUEL</div>
         <div class="gauge-bar-wrap">
           <div class="gauge-ticks" id="fuel-ticks" aria-hidden="true"></div>
-          <div class="gauge-fill" id="fuel-fill" style="height:100%;background:#48cdb6;"></div>
+          <div class="gauge-fill" id="fuel-fill" style="height:100%;background:#ff8800;"></div>
         </div>
-        <div class="gauge-val cc" id="g-fuel">100</div>
+        <div class="gauge-val co" id="g-fuel">100</div>
       </div>
       <!-- Hull gauge (space only) -->
       <div class="gauge-wrap" id="gauge-hull">
         <div class="gauge-label">HULL</div>
         <div class="gauge-bar-wrap">
-          <div class="gauge-ticks" id="hull-ticks" aria-hidden="true"></div>
-          <div class="gauge-fill" id="hull-fill" style="height:100%;background:#67bcdd;"></div>
+          <div class="gauge-fill" id="hull-fill" style="height:100%;background:#44aaff;"></div>
         </div>
-        <div class="gauge-val cc" id="g-hull">100</div>
+        <div class="gauge-val cg" id="g-hull">100</div>
       </div>
       <!-- Oxygen gauge (planet only) -->
       <div class="gauge-wrap" id="gauge-oxy" style="display:none">
@@ -124,7 +122,7 @@
           <div class="cmp-btn" data-dx="0"  data-dy="-1" title="N">↑</div>
           <div class="cmp-btn" data-dx="1"  data-dy="-1" title="NE">↗</div>
           <div class="cmp-btn" data-dx="-1" data-dy="0"  title="W">←</div>
-          <div class="cmp-btn cmp-center"   title="Wait">WAIT</div>
+          <div class="cmp-btn cmp-center"   title="Wait">·</div>
           <div class="cmp-btn" data-dx="1"  data-dy="0"  title="E">→</div>
           <div class="cmp-btn" data-dx="-1" data-dy="1"  title="SW">↙</div>
           <div class="cmp-btn" data-dx="0"  data-dy="1"  title="S">↓</div>

@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.30 restores dark panels and updates sight while waiting
+
+Released on `experiment/expedition-legacy`.
+
+- Waiting on the surface now refreshes the sight mask after advancing the planet clock. Visibility contracts as daylight fades and expands as it returns, even on the ship tile. Previously explored terrain remains charted.
+- Restored the original dark HUD, gauges, and controls from before the cockpit trial. Kept the display mode names and the Crew Status and Comms Log panels, with darker sidebar framing. See [Flight interface](docs/art-direction.md#flight-interface).
+- All 47 repository tests and six headless Edge suites passed. The wait regression reproduced on experimental.29 and passed at dusk and dawn using both the compass and keyboard. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.29 finishes the cockpit styling
 
 Released on `experiment/expedition-legacy`.

@@ -58,8 +58,8 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 
 | Suite | Coverage |
 | --- | --- |
-| `interface` | Cockpit display and gauge fit, mouse and keyboard log sizing, twelve-person crew row and individual health and status, galaxy map focus and patrol replies, actionable banners, Mercy action hints, and keyboard barter at three window sizes |
-| `menu-input` | On-screen naming, context actions for docking, radio, combat, and item use, shared Escape behavior, compass waiting and cursor movement, crew and cargo at a scaled viewport |
+| `interface` | Dark HUD and gauge fit, mouse and keyboard log sizing, twelve-person crew row and individual health and status, galaxy map focus and patrol replies, actionable banners, Mercy action hints, and keyboard barter at three window sizes |
+| `menu-input` | On-screen naming, context actions for docking, radio, combat, and item use, shared Escape behavior, compass waiting and cursor movement, day-night visibility while waiting on a ship, crew and cargo at a scaled viewport |
 | `stations` | Station and wreck transparency, boarding and career restoration, full galaxy map art and fog in ASCII mode, and whole-galaxy minimap markers and fog |
 | `version` | Version labels, main menu keyboard and mouse navigation with and without a save, and retired changelog shortcut |
 | `palette` | Runtime catalog coverage, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |

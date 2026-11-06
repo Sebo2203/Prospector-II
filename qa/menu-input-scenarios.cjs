@@ -283,6 +283,46 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await page.locator('#h-mode').textContent(),'SURFACE');
     assert.deepEqual(await page.evaluate(()=>[G.player.x,G.player.y]),[site.x,site.y]);
 
+    // Isolate a three-tile sight line from the real landed ship at dusk and dawn.
+    for(const brightening of [false,true]){
+      const before=await page.evaluate(brightening=>{
+        const data=G.planets[G.curPlanet], {x,y}=G.player;
+        if(data.grid[y][x].type!=='SHIP') throw Error('Wait fixture must start on the ship');
+        const fullVision=DEBUG.fullVision;
+        DEBUG.fullVision=false;
+        const step=x+3<PW(data)?1:-1;
+        for(let distance=1;distance<=3;distance++) data.grid[y][x+step*distance]={type:'EARTH_FLOOR'};
+        G.enemies[G.curPlanet]=[];
+        const day=BIOMES[data.biome].dayLength;
+        const start=brightening?3*day:2*day, end=start+day;
+        const radius=()=>Math.round(planetVisionRadius(G.curPlanet));
+        for(let t=start;t<end;t++){
+          data.planetTurn=t;
+          const previous=radius();
+          data.planetTurn=t+1;
+          const next=radius();
+          if(previous===(brightening?2:3)&&next===(brightening?3:2)){
+            data.planetTurn=t;
+            revealPlanet(G.curPlanet,x,y);
+            const index=y*PW(data)+x+step*3;
+            return {x,y,index,turn:G.turn,planetTurn:t,fullVision,lit:data.lit[index]};
+          }
+        }
+        throw Error('Could not find the day-night visibility boundary');
+      },brightening);
+      assert.equal(before.lit,!brightening);
+      if(brightening) await press('.');
+      else await page.locator('.cmp-center').click();
+      const after=await page.evaluate(({index,fullVision})=>{
+        DEBUG.fullVision=fullVision;
+        const data=G.planets[G.curPlanet];
+        return {x:G.player.x,y:G.player.y,turn:G.turn,planetTurn:data.planetTurn,lit:data.lit[index],visited:data.visited[index]};
+      },before);
+      assert.deepEqual(after,{
+        x:before.x,y:before.y,turn:before.turn+1,planetTurn:before.planetTurn+1,lit:brightening,visited:true
+      },'waiting on the ship refreshes sight and preserves discovered terrain');
+    }
+
     await page.evaluate(()=>{
       G.crew[0].weapon='Pistol';
       G.crew[0].weaponUsable='gun';

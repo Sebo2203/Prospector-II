@@ -1,6 +1,5 @@
 function renderHUD(){
   document.getElementById('h-creds').textContent=G.credits;
-  document.getElementById('h-vessel').textContent=G.shipName || 'Unnamed Vessel';
 
   // ── Left gauge panel — swap based on mode ────────────────────
   const onPlanet = (G.mode==='planet');
@@ -32,19 +31,19 @@ function renderHUD(){
     const fuelPct  = Math.max(0, Math.min(1, G.fuel/G.maxFuel));
     const fuelFill = document.getElementById('fuel-fill');
     fuelFill.style.height = Math.round(fuelPct*100)+'%';
-    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'#48cdb6';
+    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'#ff8800';
     const gFuel = document.getElementById('g-fuel');
     gFuel.textContent = Math.round(G.fuel);
-    gFuel.className   = 'gauge-val '+(fuelPct<0.2?'cr':fuelPct<0.6?'co':'cc');
+    gFuel.className   = 'gauge-val '+(fuelPct<0.2?'cr':fuelPct<0.4?'co':'co');
 
     // Hull gauge
     const hullPct  = Math.max(0, Math.min(1, G.ship.hp/G.ship.maxHp));
     const hullFill = document.getElementById('hull-fill');
     hullFill.style.height = Math.round(hullPct*100)+'%';
-    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'#67bcdd';
+    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'#44aaff';
     const gHull = document.getElementById('g-hull');
     gHull.textContent = G.ship.hp;
-    gHull.className   = 'gauge-val '+(hullPct<0.25?'cr':hullPct<0.5?'co':'cc');
+    gHull.className   = 'gauge-val '+(hullPct<0.25?'cr':hullPct<0.5?'co':'cg');
   }
 
   document.getElementById('h-turn').textContent=G.turn;
