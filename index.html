@@ -833,6 +833,7 @@ html, body {
   --key-pressed: #101e29;
   --shortcut-text: #919aa2;
   --shortcut-key: #a7adb2;
+  --status-height: 18px;
   --fuel-normal: #48cdb6;
   --hull-normal: #67bcdd;
   background: #0a0a0f;
@@ -843,6 +844,7 @@ html, body {
   flex-direction: column;
   width: 1400px;
   height: 720px;
+  padding-bottom: var(--status-height);
   min-height: 720px;
   max-height: 720px;
   border: 1px solid #333;
@@ -932,10 +934,10 @@ html, body {
 /* ── Main area: gauges | canvas | sidebar ── */
 #main {
   display: flex;
-  flex-shrink: 0;
+  flex-shrink: 1;
   overflow: hidden;
-  height: 560px;
-  min-height: 492px;
+  height: 492px;
+  min-height: 0;
   max-height: 492px;
 }
 
@@ -944,8 +946,7 @@ html, body {
   width: 64px;
   min-width: 64px;
   max-width: 64px;
-  height: 492px;
-  min-height: 492px;
+  height: 100%;
   max-height: 492px;
   background: #0d0d16;
   border-right: 1px solid #080c11;
@@ -964,6 +965,7 @@ html, body {
   align-items: center;
   gap: 4px;
   width: 54px;
+  min-height: 0;
   padding: 7px 4px;
   background: linear-gradient(#252f38, #1a222b);
   border: 1px solid #0a1016;
@@ -1003,6 +1005,7 @@ html, body {
 .gauge-bar-wrap {
   width: 36px;
   height: 170px;
+  min-height: 0;
   background: linear-gradient(90deg, #141e26 0 5px, #090f16 5px 25px, #162029 25px);
   border: 1px solid #364550;
   border-top-color: #0a0f14;
@@ -1040,13 +1043,14 @@ html, body {
 
 #canvas-wrap {
   width: 972px;
-  height: 560px;
+  height: 100%;
   min-width: 972px;
-  min-height: 560px;
   max-width: 972px;
-  max-height: 560px;
   background: #0a0a0f;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
 }
@@ -1054,6 +1058,12 @@ html, body {
 #gc {
   box-shadow: 0 0 0 1px #050a0e, 0 0 0 2px #516370, 0 0 0 4px #15212b;
   image-rendering: auto;
+}
+#gc:not(.menu-canvas) {
+  position: static;
+  width: auto;
+  height: calc(100% - 12px);
+  aspect-ratio: 2 / 1;
 }
 canvas {
   display: block;
@@ -1068,8 +1078,7 @@ canvas {
 /* ── Sidebar ── */
 #sidebar {
   width: 362px;
-  height: 492px;
-  min-height: 492px;
+  height: 100%;
   max-height: 492px;
   flex-shrink: 0;
   background: #111;
@@ -1239,20 +1248,21 @@ canvas {
 #msg-bar-dismiss:hover { border-color: #888; color: #aaa; }
 /* ── Contextual action bar ── */
 #ctx-bar {
-  padding: 4px 12px;
+  padding: 7px 12px;
   background: #0e0e1a;
   border-top: 1px solid var(--steel-rim);
   font-size: 14px;
   display: flex;
   gap: 6px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   flex-shrink: 0;
-  height: 38px;
   min-height: 38px;
-  max-height: 38px;
-  overflow-x: auto;
+  max-height: 70px;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: thin;
   align-items: center;
+  align-content: safe center;
 }
 .ctx-btn {
   flex-shrink: 0;
@@ -1264,7 +1274,8 @@ canvas {
   font-family: 'Courier New', Courier, monospace;
   color: #aaa;
   cursor: default;
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .ctx-btn .ck { color: #ffe066; font-weight: bold; }
 .ctx-btn.danger { border-color: #5a2a2a; color: #f09090; }
@@ -1506,7 +1517,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
-  height: 18px;
+  height: var(--status-height);
   overflow: hidden;
 }
 #save-state { color: #558877; }
@@ -1824,7 +1835,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.35</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.36</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1882,8 +1893,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.35';
-const GAME_VERSION_LABEL = 'v0.28 experimental.35';
+const GAME_VERSION = '0.28.0-experimental.36';
+const GAME_VERSION_LABEL = 'v0.28 experimental.36';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -2004,10 +2015,12 @@ function fitCanvasToDisplay(surface,paint,width,height){
   const bounds=surface.getBoundingClientRect();
   const pixelWidth=Math.max(1,Math.round(bounds.width*window.devicePixelRatio));
   const pixelHeight=Math.max(1,Math.round(bounds.height*window.devicePixelRatio));
+  const resized=surface.width!==pixelWidth||surface.height!==pixelHeight;
   if(surface.width!==pixelWidth) surface.width=pixelWidth;
   if(surface.height!==pixelHeight) surface.height=pixelHeight;
   paint.setTransform(pixelWidth/width,0,0,pixelHeight/height,0,0);
   paint.imageSmoothingEnabled=false;
+  return resized;
 }
 
 // ── Log font size control ─────────────────────────────────────
@@ -14224,10 +14237,6 @@ function drawDialogueOverlay(){
     }
   }
 
-  ctx.font='12px Courier New';
-  ctx.fillStyle='#445566';
-  ctx.textAlign='center';
-  ctx.fillText('↑/↓ select   Enter choose   1-9 quick choose   ESC close', x+w/2, y+h-14);
   ctx.restore();
   if(dialogueAllowsEscape()) canvasMenuButton('Close [Esc]',x+w-108,y+h-30,()=>{
     G.dialogue = null;
@@ -16219,12 +16228,10 @@ function drawScanView(){
   }
 
   // HUD label
-  const cw=canvasWidth, ch=canvasHeight;
+  const cw=canvasWidth;
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,cw,22);
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#70d8ff'; ctx.textAlign='center';
   ctx.fillText('SATELLITE SCAN  -  '+pKey.split(':')[0].replace(',',' ').toUpperCase()+'  -  '+B.name.toUpperCase(), cw/2, 15);
-  ctx.font='14px Courier New'; ctx.fillStyle='#334455';
-  ctx.fillText('Click or use arrows to select    [ Enter ] Land    [ ESC ] Back', cw/2, ch-8);
   ctx.textAlign='left';
 }
 
@@ -17454,9 +17461,6 @@ function drawBaseOverlay(){
       ctx.fillText('▼ more', cw/2, BLDG_BOT - 2);
     }
 
-    // Footer
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-
   } else if(b.screen === 'sub'){
     canvasMenuScroll = step=>handleStationKey(step<0?'ArrowUp':'ArrowDown');
     const bldg = STATION_BUILDINGS[b.sel];
@@ -17528,9 +17532,6 @@ function drawBaseOverlay(){
       ctx.fillText('▼ more', cw/2, LIST_BOT + 12);
     }
 
-    // Footer
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-
   } else if(b.screen === 'recruit'){
     const HIRE_ROLES = [
       { key:'scout',     cost:200, label:'Navigator', desc:'Explorer, pilot & scanner. Starts NAV '+Math.floor(3/2)+' SCI '+Math.floor(3/2)+' CBT '+Math.floor(1/2)+' SOC '+Math.floor(1/2) },
@@ -17575,7 +17576,6 @@ function drawBaseOverlay(){
     ctx.fillStyle = canAfford ? '#ffaa44' : '#662222';
     ctx.fillText(canAfford ? '[ ENTER ]  Hire '+HIRE_ROLES[sel]?.label+' for '+HIRE_ROLES[sel]?.cost+' cr' : 'Not enough credits', cx, listTop+HIRE_ROLES.length*rowH+16);
     if(canAfford) canvasMenuTarget(cx-250,listTop+HIRE_ROLES.length*rowH,500,22,()=>handleStationKey('Enter'));
-    ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   Enter confirm   ESC back', cx, ch-14);
 
   } else if(b.screen === 'installweapon'){
     {
@@ -17626,7 +17626,6 @@ function drawBaseOverlay(){
       ctx.fillStyle='#ff9944'; ctx.fillText('[ ENTER ]  Install '+selW.name+' for '+selW.cost+' cr', cx, listTop+weapons.length*rowH+16);
       canvasMenuTarget(cx-250,listTop+weapons.length*rowH,500,22,()=>handleStationKey('Enter'));
     }
-    ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   ESC cancel', cx, ch-14);
     }
   } else if(b.screen === 'changehull'){
     const HULL_IDS = ['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE'];
@@ -17724,8 +17723,6 @@ function drawBaseOverlay(){
       ctx.fillText('[ ENTER ]  Purchase '+selCls.hullType+' for '+HULL_COST+' cr', cx, 62+260+22);
       canvasMenuTarget(cx-250,62+260+6,500,22,()=>handleStationKey('Enter'));
     }
-    ctx.font='13px Courier New'; ctx.fillStyle='#334455';
-    ctx.fillText('← → navigate   ESC cancel', cx, ch-14);
   }
 
   canvasMenuButton(b.screen==='main'?'Undock [Esc]':'Back [Esc]',40,ch-27,back);
@@ -18413,7 +18410,7 @@ function drawInventoryOverlay(){
         ctx.font = '12px Courier New';
         ctx.fillStyle = '#445566';
         ctx.textAlign = 'center';
-        ctx.fillText('↑/↓ select cargo    J  jettison selected unit', cw/2, hintY);
+        ctx.fillText('↑/↓ select cargo', cw/2, hintY);
         ctx.textAlign = 'left';
       }
     }
@@ -18565,12 +18562,7 @@ function drawInventoryOverlay(){
   // Footer hint
   if(tab==='log'){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    ctx.fillText('←/→ tabs   ↑/↓ scroll   Shift+↑/↓ fast   [1-6] filter   ESC close', cw/2, ch-14);
-    ctx.textAlign='left';
-  } else if(tab !== 'ship'){
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    const extra = tab === 'crew' && G._equipGunIdx === undefined && G._equipArmorIdx === undefined ? '    X channel/log' : '';
-    ctx.fillText('←/→ switch tab    ↑/↓ select'+extra+'    ESC close', cw/2, ch-14);
+    ctx.fillText('↑/↓ scroll   Shift+↑/↓ fast   [1-6] filter', cw/2, ch-14);
     ctx.textAlign='left';
   }
 }
@@ -28544,7 +28536,7 @@ function renderContextBar(){
 
   } else if(G.mode==='scanview'){
     const pdata=G.planets[G.scanViewKey];
-    btns.push(btn('Click','Select landing site','info'));
+    btns.push(btn('Click / Arrows','Select landing site','info'));
     if(pdata && canLandAt(pdata,G.scanCursorX ?? pdata.spawnX,G.scanCursorY ?? pdata.spawnY)){
       btns.push(btn('Enter','Land at selected site','good'));
     }
@@ -28742,13 +28734,6 @@ function renderContextBar(){
   }
   bar.innerHTML = btns.join('');
 }
-
-document.getElementById('ctx-bar').addEventListener('wheel',event=>{
-  const bar=event.currentTarget;
-  if(!event.deltaY || bar.scrollWidth<=bar.clientWidth) return;
-  event.preventDefault();
-  bar.scrollLeft+=event.deltaY;
-},{passive:false});
 function crewAlive(){ return G.crew.some(c=>c.hp>0); }
 
 function atmosphereBiomeKey(key){
@@ -32192,8 +32177,6 @@ function drawRadioOverlay(){
     ctx.font='12px Courier New'; ctx.fillStyle=row.disabled?'#443322':'#777766';
     ctx.fillText(row.detail, cw/2-40, y-2);
   });
-  ctx.textAlign='center'; ctx.font='13px Courier New'; ctx.fillStyle='#445566';
-  ctx.fillText('Up/Down select   Enter trade   Esc close channel', cw/2, ch-14);
   canvasMenuButton('Close [Esc]',40,ch-28,()=>executeRadioTrade('close'));
   ctx.textAlign='left';
 }
@@ -36294,7 +36277,7 @@ function drawOptionsScreen(cx){
   ctx.font='14px Courier New'; ctx.fillStyle='#8598aa'; ctx.textAlign='center';
   if(G){
     ctx.fillText('↑/↓ select    ←/→ change    Enter activate',cx,ch-36);
-    ctx.fillText('F feedback    ESC close options',cx,ch-18);
+    ctx.fillText('F feedback',cx,ch-18);
   } else ctx.fillText('↑/↓ select    Enter activate    ESC back',cx,ch-16);
   canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
@@ -36378,7 +36361,7 @@ function drawKeybindingsScreen(cx){
   canvasMenuTarget(cx-260,resetY,520,34,()=>activateKeybindingRow(BIND_LIST.length));
 
   ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('↑/↓ navigate    Enter to remap    ESC back', cx, ch-16);
+  ctx.fillText(G?'↑/↓ navigate    Enter to remap':'↑/↓ navigate    Enter to remap    ESC back', cx, ch-16);
   canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
 }
@@ -36709,6 +36692,10 @@ function scaleToFit(){
 
 window.addEventListener('resize', scaleToFit);
 scaleToFit();
+new ResizeObserver(()=>{
+  if(G?.galaxy && !canvas.classList.contains('menu-canvas') &&
+     fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight)) drawCanvas();
+}).observe(canvas);
 
 // Lightweight animation loop — only redraws when stranded (SOS pulse)
 // ── FPS counter state ────────────────────────────────────────────

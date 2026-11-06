@@ -601,7 +601,7 @@ function drawInventoryOverlay(){
         ctx.font = '12px Courier New';
         ctx.fillStyle = '#445566';
         ctx.textAlign = 'center';
-        ctx.fillText('↑/↓ select cargo    J  jettison selected unit', cw/2, hintY);
+        ctx.fillText('↑/↓ select cargo', cw/2, hintY);
         ctx.textAlign = 'left';
       }
     }
@@ -753,12 +753,7 @@ function drawInventoryOverlay(){
   // Footer hint
   if(tab==='log'){
     ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    ctx.fillText('←/→ tabs   ↑/↓ scroll   Shift+↑/↓ fast   [1-6] filter   ESC close', cw/2, ch-14);
-    ctx.textAlign='left';
-  } else if(tab !== 'ship'){
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    const extra = tab === 'crew' && G._equipGunIdx === undefined && G._equipArmorIdx === undefined ? '    X channel/log' : '';
-    ctx.fillText('←/→ switch tab    ↑/↓ select'+extra+'    ESC close', cw/2, ch-14);
+    ctx.fillText('↑/↓ scroll   Shift+↑/↓ fast   [1-6] filter', cw/2, ch-14);
     ctx.textAlign='left';
   }
 }

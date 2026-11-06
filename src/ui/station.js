@@ -150,9 +150,6 @@ function drawBaseOverlay(){
       ctx.fillText('▼ more', cw/2, BLDG_BOT - 2);
     }
 
-    // Footer
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-
   } else if(b.screen === 'sub'){
     canvasMenuScroll = step=>handleStationKey(step<0?'ArrowUp':'ArrowDown');
     const bldg = STATION_BUILDINGS[b.sel];
@@ -224,9 +221,6 @@ function drawBaseOverlay(){
       ctx.fillText('▼ more', cw/2, LIST_BOT + 12);
     }
 
-    // Footer
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-
   } else if(b.screen === 'recruit'){
     const HIRE_ROLES = [
       { key:'scout',     cost:200, label:'Navigator', desc:'Explorer, pilot & scanner. Starts NAV '+Math.floor(3/2)+' SCI '+Math.floor(3/2)+' CBT '+Math.floor(1/2)+' SOC '+Math.floor(1/2) },
@@ -271,7 +265,6 @@ function drawBaseOverlay(){
     ctx.fillStyle = canAfford ? '#ffaa44' : '#662222';
     ctx.fillText(canAfford ? '[ ENTER ]  Hire '+HIRE_ROLES[sel]?.label+' for '+HIRE_ROLES[sel]?.cost+' cr' : 'Not enough credits', cx, listTop+HIRE_ROLES.length*rowH+16);
     if(canAfford) canvasMenuTarget(cx-250,listTop+HIRE_ROLES.length*rowH,500,22,()=>handleStationKey('Enter'));
-    ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   Enter confirm   ESC back', cx, ch-14);
 
   } else if(b.screen === 'installweapon'){
     {
@@ -322,7 +315,6 @@ function drawBaseOverlay(){
       ctx.fillStyle='#ff9944'; ctx.fillText('[ ENTER ]  Install '+selW.name+' for '+selW.cost+' cr', cx, listTop+weapons.length*rowH+16);
       canvasMenuTarget(cx-250,listTop+weapons.length*rowH,500,22,()=>handleStationKey('Enter'));
     }
-    ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   ESC cancel', cx, ch-14);
     }
   } else if(b.screen === 'changehull'){
     const HULL_IDS = ['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE'];
@@ -420,8 +412,6 @@ function drawBaseOverlay(){
       ctx.fillText('[ ENTER ]  Purchase '+selCls.hullType+' for '+HULL_COST+' cr', cx, 62+260+22);
       canvasMenuTarget(cx-250,62+260+6,500,22,()=>handleStationKey('Enter'));
     }
-    ctx.font='13px Courier New'; ctx.fillStyle='#334455';
-    ctx.fillText('← → navigate   ESC cancel', cx, ch-14);
   }
 
   canvasMenuButton(b.screen==='main'?'Undock [Esc]':'Back [Esc]',40,ch-27,back);

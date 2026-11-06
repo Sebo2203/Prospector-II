@@ -36,6 +36,10 @@ function scaleToFit(){
 
 window.addEventListener('resize', scaleToFit);
 scaleToFit();
+new ResizeObserver(()=>{
+  if(G?.galaxy && !canvas.classList.contains('menu-canvas') &&
+     fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight)) drawCanvas();
+}).observe(canvas);
 
 // Lightweight animation loop — only redraws when stranded (SOS pulse)
 // ── FPS counter state ────────────────────────────────────────────

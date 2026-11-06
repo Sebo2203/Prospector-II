@@ -54,6 +54,38 @@ const assert = require('node:assert/strict');
     }
     await page.setViewportSize({width:1400,height:720});
 
+    // A long contact name makes both its actions compete for the first row.
+    await page.evaluate(()=>{
+      G.neutralShips=[{type:'patrol',name:'Long-range Station Patrol '.repeat(3).trim(),x:G.ship.x+1,y:G.ship.y}];
+      renderAll();
+    });
+    const optionsButton=page.locator('#ctx-bar button[data-game-key="o"]');
+    for(const [width,height] of [[1400,720],[800,600]]){
+      await page.setViewportSize({width,height});
+      await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<1,width);
+      await page.evaluate(()=>showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300'));
+      await page.waitForFunction(()=>canvas.width===Math.round(canvas.getBoundingClientRect().width*devicePixelRatio));
+      const layout=await page.evaluate(()=>{
+        const rect=id=>document.getElementById(id).getBoundingClientRect();
+        const bar=document.getElementById('ctx-bar');
+        const rows=new Set(Array.from(bar.children,item=>item.offsetTop));
+        return {
+          rows:rows.size,
+          horizontalOverflow:bar.scrollWidth>bar.clientWidth,
+          verticalOverflow:bar.scrollHeight>bar.clientHeight,
+          canvasFits:rect('gc').bottom<=rect('main').bottom && Math.abs(rect('gc').width-2*rect('gc').height)<1,
+          gaugesFit:rect('g-hull').bottom<=rect('main').bottom,
+          controlsFit:rect('compass-grid').top>=rect('ctx-bar').bottom && rect('minimap-max-btn').bottom<=rect('version-tag').top,
+        };
+      });
+      assert.deepEqual(layout,{rows:2,horizontalOverflow:false,verticalOverflow:false,canvasFits:true,gaugesFit:true,controlsFit:true});
+      if(width===1400) await page.screenshot({path:artifactPath('Wrapped-context.png')});
+      await optionsButton.click();
+      assert.equal(await page.evaluate(()=>G.showOptions),true);
+      await page.keyboard.press('Escape');
+    }
+    await page.setViewportSize({width:1400,height:720});
+
     // Put a patrol in range, then use the real map controls and hail/reply keys.
     await page.evaluate(() => {
       G.neutralShips = [{ type: 'patrol', name: 'QA Station Patrol', x: G.ship.x + 1, y: G.ship.y }];

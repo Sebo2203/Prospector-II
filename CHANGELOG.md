@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.36 wraps context actions and removes repeated hints
+
+Released on `experiment/expedition-legacy`.
+
+- Context actions wrap onto a second row. Longer lists scroll vertically. When a critical banner and the second row share the screen, the playfield fits the available height and the footer controls stay visible.
+- Removed repeated keyboard hints from dialogue, radio trade, stations, inventory, landing scans, and in-game Options. Screen-specific instructions and clickable Back and Close controls remain available.
+- All 47 repository tests and six headless Edge suites passed. Verified both context rows, alert and footer fit, and second-row input at 1400×720 and 800×600. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.35 quiets routine actions and removes galaxy seams
 
 Released on `experiment/expedition-legacy`.

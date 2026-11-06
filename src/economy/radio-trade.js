@@ -85,8 +85,6 @@ function drawRadioOverlay(){
     ctx.font='12px Courier New'; ctx.fillStyle=row.disabled?'#443322':'#777766';
     ctx.fillText(row.detail, cw/2-40, y-2);
   });
-  ctx.textAlign='center'; ctx.font='13px Courier New'; ctx.fillStyle='#445566';
-  ctx.fillText('Up/Down select   Enter trade   Esc close channel', cw/2, ch-14);
   canvasMenuButton('Close [Esc]',40,ch-28,()=>executeRadioTrade('close'));
   ctx.textAlign='left';
 }

@@ -513,7 +513,7 @@ function drawOptionsScreen(cx){
   ctx.font='14px Courier New'; ctx.fillStyle='#8598aa'; ctx.textAlign='center';
   if(G){
     ctx.fillText('↑/↓ select    ←/→ change    Enter activate',cx,ch-36);
-    ctx.fillText('F feedback    ESC close options',cx,ch-18);
+    ctx.fillText('F feedback',cx,ch-18);
   } else ctx.fillText('↑/↓ select    Enter activate    ESC back',cx,ch-16);
   canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
@@ -597,7 +597,7 @@ function drawKeybindingsScreen(cx){
   canvasMenuTarget(cx-260,resetY,520,34,()=>activateKeybindingRow(BIND_LIST.length));
 
   ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText('↑/↓ navigate    Enter to remap    ESC back', cx, ch-16);
+  ctx.fillText(G?'↑/↓ navigate    Enter to remap':'↑/↓ navigate    Enter to remap    ESC back', cx, ch-16);
   canvasMenuButton('Back [Esc]',24,ch-30,closeOptionsMenu);
   ctx.textAlign='left';
 }

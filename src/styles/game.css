@@ -23,6 +23,7 @@ html, body {
   --key-pressed: #101e29;
   --shortcut-text: #919aa2;
   --shortcut-key: #a7adb2;
+  --status-height: 18px;
   --fuel-normal: #48cdb6;
   --hull-normal: #67bcdd;
   background: #0a0a0f;
@@ -33,6 +34,7 @@ html, body {
   flex-direction: column;
   width: 1400px;
   height: 720px;
+  padding-bottom: var(--status-height);
   min-height: 720px;
   max-height: 720px;
   border: 1px solid #333;
@@ -122,10 +124,10 @@ html, body {
 /* ── Main area: gauges | canvas | sidebar ── */
 #main {
   display: flex;
-  flex-shrink: 0;
+  flex-shrink: 1;
   overflow: hidden;
-  height: 560px;
-  min-height: 492px;
+  height: 492px;
+  min-height: 0;
   max-height: 492px;
 }
 
@@ -134,8 +136,7 @@ html, body {
   width: 64px;
   min-width: 64px;
   max-width: 64px;
-  height: 492px;
-  min-height: 492px;
+  height: 100%;
   max-height: 492px;
   background: #0d0d16;
   border-right: 1px solid #080c11;
@@ -154,6 +155,7 @@ html, body {
   align-items: center;
   gap: 4px;
   width: 54px;
+  min-height: 0;
   padding: 7px 4px;
   background: linear-gradient(#252f38, #1a222b);
   border: 1px solid #0a1016;
@@ -193,6 +195,7 @@ html, body {
 .gauge-bar-wrap {
   width: 36px;
   height: 170px;
+  min-height: 0;
   background: linear-gradient(90deg, #141e26 0 5px, #090f16 5px 25px, #162029 25px);
   border: 1px solid #364550;
   border-top-color: #0a0f14;
@@ -230,13 +233,14 @@ html, body {
 
 #canvas-wrap {
   width: 972px;
-  height: 560px;
+  height: 100%;
   min-width: 972px;
-  min-height: 560px;
   max-width: 972px;
-  max-height: 560px;
   background: #0a0a0f;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
 }
@@ -244,6 +248,12 @@ html, body {
 #gc {
   box-shadow: 0 0 0 1px #050a0e, 0 0 0 2px #516370, 0 0 0 4px #15212b;
   image-rendering: auto;
+}
+#gc:not(.menu-canvas) {
+  position: static;
+  width: auto;
+  height: calc(100% - 12px);
+  aspect-ratio: 2 / 1;
 }
 canvas {
   display: block;
@@ -258,8 +268,7 @@ canvas {
 /* ── Sidebar ── */
 #sidebar {
   width: 362px;
-  height: 492px;
-  min-height: 492px;
+  height: 100%;
   max-height: 492px;
   flex-shrink: 0;
   background: #111;
@@ -429,20 +438,21 @@ canvas {
 #msg-bar-dismiss:hover { border-color: #888; color: #aaa; }
 /* ── Contextual action bar ── */
 #ctx-bar {
-  padding: 4px 12px;
+  padding: 7px 12px;
   background: #0e0e1a;
   border-top: 1px solid var(--steel-rim);
   font-size: 14px;
   display: flex;
   gap: 6px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   flex-shrink: 0;
-  height: 38px;
   min-height: 38px;
-  max-height: 38px;
-  overflow-x: auto;
+  max-height: 70px;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: thin;
   align-items: center;
+  align-content: safe center;
 }
 .ctx-btn {
   flex-shrink: 0;
@@ -454,7 +464,8 @@ canvas {
   font-family: 'Courier New', Courier, monospace;
   color: #aaa;
   cursor: default;
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .ctx-btn .ck { color: #ffe066; font-weight: bold; }
 .ctx-btn.danger { border-color: #5a2a2a; color: #f09090; }
@@ -696,7 +707,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
-  height: 18px;
+  height: var(--status-height);
   overflow: hidden;
 }
 #save-state { color: #558877; }

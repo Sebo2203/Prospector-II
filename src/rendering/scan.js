@@ -179,12 +179,10 @@ function drawScanView(){
   }
 
   // HUD label
-  const cw=canvasWidth, ch=canvasHeight;
+  const cw=canvasWidth;
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,cw,22);
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#70d8ff'; ctx.textAlign='center';
   ctx.fillText('SATELLITE SCAN  -  '+pKey.split(':')[0].replace(',',' ').toUpperCase()+'  -  '+B.name.toUpperCase(), cw/2, 15);
-  ctx.font='14px Courier New'; ctx.fillStyle='#334455';
-  ctx.fillText('Click or use arrows to select    [ Enter ] Land    [ ESC ] Back', cw/2, ch-8);
   ctx.textAlign='left';
 }
 

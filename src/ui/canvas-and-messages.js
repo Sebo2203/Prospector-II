@@ -9,10 +9,12 @@ function fitCanvasToDisplay(surface,paint,width,height){
   const bounds=surface.getBoundingClientRect();
   const pixelWidth=Math.max(1,Math.round(bounds.width*window.devicePixelRatio));
   const pixelHeight=Math.max(1,Math.round(bounds.height*window.devicePixelRatio));
+  const resized=surface.width!==pixelWidth||surface.height!==pixelHeight;
   if(surface.width!==pixelWidth) surface.width=pixelWidth;
   if(surface.height!==pixelHeight) surface.height=pixelHeight;
   paint.setTransform(pixelWidth/width,0,0,pixelHeight/height,0,0);
   paint.imageSmoothingEnabled=false;
+  return resized;
 }
 
 // ── Log font size control ─────────────────────────────────────

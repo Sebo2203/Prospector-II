@@ -185,10 +185,6 @@ function drawDialogueOverlay(){
     }
   }
 
-  ctx.font='12px Courier New';
-  ctx.fillStyle='#445566';
-  ctx.textAlign='center';
-  ctx.fillText('↑/↓ select   Enter choose   1-9 quick choose   ESC close', x+w/2, y+h-14);
   ctx.restore();
   if(dialogueAllowsEscape()) canvasMenuButton('Close [Esc]',x+w-108,y+h-30,()=>{
     G.dialogue = null;

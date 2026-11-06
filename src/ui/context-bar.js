@@ -199,7 +199,7 @@ function renderContextBar(){
 
   } else if(G.mode==='scanview'){
     const pdata=G.planets[G.scanViewKey];
-    btns.push(btn('Click','Select landing site','info'));
+    btns.push(btn('Click / Arrows','Select landing site','info'));
     if(pdata && canLandAt(pdata,G.scanCursorX ?? pdata.spawnX,G.scanCursorY ?? pdata.spawnY)){
       btns.push(btn('Enter','Land at selected site','good'));
     }
@@ -397,10 +397,3 @@ function renderContextBar(){
   }
   bar.innerHTML = btns.join('');
 }
-
-document.getElementById('ctx-bar').addEventListener('wheel',event=>{
-  const bar=event.currentTarget;
-  if(!event.deltaY || bar.scrollWidth<=bar.clientWidth) return;
-  event.preventDefault();
-  bar.scrollLeft+=event.deltaY;
-},{passive:false});
