@@ -12,7 +12,7 @@ Existing `prospector_autosave` localStorage saves remain readable. Continue appl
 
 Saves belong to the browser profile/site or desktop app's local storage; they are not cloud saves. Exported JSON remains the portable backup. Browser storage has finite capacity and can be disabled or cleared; failures are now reported instead of silently ignored. Abrupt process termination can still lose progress that has not committed. Closing during a pending or failed save requests the browser's unsaved-progress warning.
 
-The debug playground retains the original career. Choose **Playground → Return to Career** to restore it.
+The Debug Palette retains the original career. Choose **Debug Palette → Return to Career** to restore it.
 
 ## Implementation and maintenance
 

@@ -1,6 +1,6 @@
 // ── Debug item spawn catalog ─────────────────────────────────────────────────
 // Grouped by category. Each item has the full inventory object to push.
-// LEFT column: inventory items (consumables, weapons, armor, field samples, botanicals, special)
+// Inventory items (consumables, weapons, armor, field samples, botanicals, special).
 const DEBUG_ITEM_CATALOG = [
   { cat:'Consumables', items:[
     { name:'Medikit',              col:'#ff6688', desc:'Restores 10 HP to most injured crew.',             value:0,   usable:'medikit' },
@@ -83,11 +83,21 @@ const DEBUG_ITEM_CATALOG = [
   ]},
 ];
 
-// RIGHT column: cargo commodities (spawned into G.cargo — listed by COMMODITIES key)
+// Display categories for the original cargo catalog.
 const DEBUG_CARGO_CATALOG = [
   { cat:'Station Goods', items:['ammo','food','luxuries','microelec'] },
   { cat:'Cultural Goods', items:['pelts','herbs','carvings','seeds','fabric','totems','medicine'] },
   { cat:'Industrial',     items:['ore','rations','lenses','reagents','parts','solvents','metal','instruments','datadrives'] },
   { cat:'Mineral Ore',    items:['ore_fe','ore_cu','ore_si','ore_ti','ore_au','ore_pt','ore_ur','ore_xc'] },
 ];
+
+function debugCargoEntries(){
+  const knownCategories = new Map(DEBUG_CARGO_CATALOG.flatMap(({cat, items})=>items.map(id=>[id, cat])));
+  const oreIds = new Set(Object.values(ORE_TYPES).map(ore=>ore.id));
+  return Object.entries(COMMODITIES).map(([id, commodity])=>({
+    id,
+    label:commodity.name,
+    category:commodity.debugCategory || knownCategories.get(id) || (oreIds.has(id) ? 'Mineral Ore' : 'Other Commodities'),
+  }));
+}
 

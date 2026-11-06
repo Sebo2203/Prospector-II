@@ -10,12 +10,16 @@ test('every galaxy generator tile type has a palette representative',()=>{
   assert.ok(registered.has('QUARANTINE'));
 });
 test('surface and scenario catalogs are obtained from runtime content definitions',()=>{
-  const c=vm.createContext({TILE:{NEW_TEST_TERRAIN:{pass:true}},DEBUG_ITEM_CATALOG:[{items:[{name:'New test item',usable:'new_test'}]}],
+  const c=vm.createContext({TILE:{NEW_TEST_TERRAIN:{pass:true}},MINERAL_SAMPLE_TYPES:[],ORE_TYPES:{},
     IMPLANT_CATALOG:[],CORP_ITEM_POOLS:{corp:[{name:'New store item',usable:'store_test'}]},PAWN_ITEM_POOL:[],MEDBAY_ITEM_POOL:[],
     COMMODITIES:{new_cargo:{name:'New cargo'}},CREATURE_BODY_TYPES:[{key:'new_body',label:'New creature'}],HOSTILE_BODY_TYPES:[]});
+  vm.runInContext(read('debug/item-catalog.js'),c);
+  vm.runInContext("DEBUG_ITEM_CATALOG.push({cat:'New category',items:[{name:'New test item',usable:'new_test'}]})",c);
   vm.runInContext(read('debug/playground.js'),c);
   const rows=c.debugSurfaceSampleDefinitions();
   for(const label of ['NEW_TEST_TERRAIN','New test item','New store item','New cargo','New creature']) assert.ok(rows.some(e=>e.label===label),label);
+  assert.equal(rows.find(e=>e.label==='New test item').category,'Gear — New category');
+  assert.equal(rows.find(e=>e.label==='New cargo').category,'Cargo — Other Commodities');
   assert.equal(new Set(rows.map(e=>e.id)).size,rows.length);
 });
 test('aquatic maps without spawn coordinates use a finite passable landing point',()=>{

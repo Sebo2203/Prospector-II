@@ -16,6 +16,7 @@ function renderAll(){
 }
 
 function drawCanvas(){
+  document.getElementById('main').classList.toggle('orbital-display', G.mode==='system');
   resetCanvasMenu();
   canvasMapView=null;
   ctx.clearRect(0,0,canvasWidth,canvasHeight);

@@ -47,7 +47,7 @@ From experimental.27, the sidebar map frame fits the width of the chart at its e
 
 From experimental.31, the broad surfaces behind the cockpit instruments and controls use the original dark palette. The individual readouts, vessel plate, segmented gauges, crew and comms console, compass keys, and map frames use the cockpit finish. The display readout names the current view, including navigation, orbital view, orbital scan, surface, and stations. The reduced-motion preference keeps gauge warnings steady.
 
-The save status and version sit at the bottom of the play area. The shortcuts and status strip share the same dark background, and the status strip stays at the bottom when an alert appears.
+The version and save status sit in the top-right of the HUD. The shortcuts area uses the dark game background.
 
 In **Options → UI Style**, choose **Cockpit** for the instrument finish or **Classic** for the experimental.27 appearance. The choice applies immediately and is stored in the browser's options. Both styles use the current controls and bottom status strip. **Render Mode** independently switches between sprites and ASCII.
 
@@ -55,9 +55,9 @@ From experimental.34, the title menus, playfield canvas, and full galaxy chart d
 
 The context bar uses the shortcut legend's muted gray for the general Examine, Inventory, and Options buttons. Local actions and warnings retain their accents. The galaxy view uses an opaque space background and pixel-aligned fog boundaries at fractional scales.
 
-The context bar wraps actions onto a second row and scrolls vertically if more space is needed. The playfield can shrink to fit an alert and a wrapped bar while keeping its full aspect ratio. In-game panels use the context bar for shared keyboard hints and keep local instructions for controls the bar does not show.
+The context bar wraps actions onto a second row and scrolls vertically if more space is needed. The orbital view reserves space for both rows and an alert, so planets and text stay at the same scale. Other views can shrink to fit the available space while keeping their aspect ratio. In-game panels use the context bar for shared keyboard hints and keep local instructions for controls the bar does not show.
 
-The compass and map controls sit above the save and version strip, which has its own row. Their position stays fixed when context actions wrap or an alert appears.
+The compass and map controls stay anchored at the bottom when context actions wrap or an alert appears.
 
 ## Source organization and reproduction
 

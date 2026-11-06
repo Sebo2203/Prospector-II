@@ -58,11 +58,10 @@ const assert = require('node:assert/strict');
     const toolPosition=()=>page.evaluate(()=>{
       const tools=document.getElementById('hud-tools').getBoundingClientRect();
       const footer=document.getElementById('persist-bar').getBoundingClientRect();
-      const status=document.getElementById('version-tag').getBoundingClientRect();
       const scale=document.getElementById('root').getBoundingClientRect().width/GAME_W;
-      if(footer.bottom>status.top+0.1 || (status.top-tools.bottom)/scale<11.5)
-        throw Error('The footer and status need separate rows with room below the tools');
-      return {left:tools.left,top:tools.top,bottomGap:status.top-tools.bottom};
+      if((footer.bottom-tools.bottom)/scale<11.5)
+        throw Error('The footer needs room below the tools');
+      return {left:tools.left,top:tools.top};
     });
     for(const [width,height] of [[1400,720],[800,600],[640,480]]){
       await page.setViewportSize({width,height});
@@ -97,7 +96,7 @@ const assert = require('node:assert/strict');
           verticalOverflow:bar.scrollHeight>bar.clientHeight,
           canvasFits:rect('gc').bottom<=rect('main').bottom && Math.abs(rect('gc').width-2*rect('gc').height)<1,
           gaugesFit:rect('g-hull').bottom<=rect('main').bottom,
-          controlsFit:rect('compass-grid').top>=rect('ctx-bar').bottom && rect('minimap-max-btn').bottom<=rect('version-tag').top,
+          controlsFit:rect('compass-grid').top>=rect('ctx-bar').bottom && rect('minimap-max-btn').bottom<=rect('persist-bar').bottom,
         };
       });
       assert.deepEqual(layout,{rows:2,horizontalOverflow:false,verticalOverflow:false,canvasFits:true,gaugesFit:true,controlsFit:true});
@@ -106,6 +105,38 @@ const assert = require('node:assert/strict');
       assert.equal(await page.evaluate(()=>G.showOptions),true);
       await page.keyboard.press('Escape');
     }
+    await page.setViewportSize({width:1400,height:720});
+
+    // A long destination name wraps the real orbital action bar.
+    const previousCell = await page.evaluate(()=>{
+      const row=G.galaxy[G.ship.y], original=row[G.ship.x];
+      row[G.ship.x]={type:'SYSTEM',name:'Layout QA',starType:'YELLOW',planets:[
+        debugPaletteDescriptor('HABITABLE','Near World'), debugPaletteDescriptor('FROZEN','Outer World'),
+      ]};
+      doInteract();
+      return original;
+    });
+    assert.equal(await page.evaluate(()=>G.mode),'system');
+    for(const width of [1400,800]){
+      await page.setViewportSize({width,height:width===1400?720:600});
+      await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<1,width);
+      let initial;
+      for(const [wrap,alert] of [[false,false],[true,false],[false,true],[true,true]]){
+        const {bounds,rows} = await page.evaluate(({wrap,alert})=>{
+          G.galaxy[G.ship.y][G.ship.x].planets[0].name = wrap ? 'Long Range Settlement '.repeat(4).trim() : 'Near World';
+          renderContextBar();
+          if(alert) showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300');
+          else hideMsg();
+          const {left,top,width,height}=canvas.getBoundingClientRect();
+          return {bounds:{left,top,width,height},rows:new Set(Array.from(document.querySelector('#ctx-bar').children,item=>item.offsetTop)).size};
+        },{wrap,alert});
+        assert.equal(rows,wrap?2:1);
+        initial ??= bounds;
+        assert.deepEqual(bounds,initial,'orbital canvas stays fixed with wrapped actions and an alert');
+      }
+    }
+    await page.keyboard.press('Escape');
+    await page.evaluate(cell=>{G.galaxy[G.ship.y][G.ship.x]=cell;renderAll();},previousCell);
     await page.setViewportSize({width:1400,height:720});
 
     // Put a patrol in range, then use the real map controls and hail/reply keys.

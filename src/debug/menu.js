@@ -72,7 +72,7 @@ debugPlaygroundButton.addEventListener('click', ()=>{
 function showDebugMenu(page, confirmation){
   const titles = {
     tools:'Debug Tools', items:'Spawn Gear and Cargo', civilization:'Civilization',
-    directory:'Find a Playground Sample', report:'Galaxy Spawn Report', confirm:'Confirm Debug Action',
+    directory:'Find a Debug Palette Sample', report:'Galaxy Spawn Report', confirm:'Confirm Debug Action',
   };
   debugDialog.classList.toggle('debug-catalog', page==='items' || page==='directory');
   document.getElementById('debug-title').textContent = titles[page];
@@ -179,7 +179,7 @@ function drawDebugTools(){
     'Replace the current surface map and its inhabitants?', 'Regenerate Surface',
     ()=>debugLogAction(debugRegenWithAncientRuins)), !onSurface);
 
-  const playground = debugSection(grid, 'Playground');
+  const playground = debugSection(grid, 'Debug Palette');
   toggles.after(playground);
   const sandbox = G.debugPalette;
   debugElement('p', sandbox ? 'Disposable test world' : 'Open a test world with its own crew and ship.', playground);
@@ -202,8 +202,8 @@ function drawDebugTools(){
       simulation.textContent = sandbox.simulate ? 'Pause NPCs' : 'Run NPCs Live';
     };
     updateSimulationLabel();
-    debugButton(playground, 'Rebuild Playground', ()=>debugConfirm('tools',
-      'Discard changes in the playground and rebuild both galleries?', 'Rebuild Galleries',
+    debugButton(playground, 'Rebuild Palette', ()=>debugConfirm('tools',
+      'Discard changes in the test world and rebuild both galleries?', 'Rebuild Galleries',
       ()=>enterDebugGallery('galaxy', true)));
     debugButton(playground, 'Return to Career', ()=>debugReturnFromPalette());
   }
@@ -217,22 +217,35 @@ function enterDebugGallery(area, rebuild=false){
 }
 
 function debugSearchList(rows, placeholder, activate){
-  const search = debugElement('input', '', debugContent);
+  const groups = new Map();
+  for(const row of rows){
+    if(!groups.has(row.category)) groups.set(row.category, []);
+    groups.get(row.category).push(row);
+  }
+  const filters = debugElement('div', '', debugContent);
+  filters.className = 'debug-filters';
+  const search = debugElement('input', '', filters);
   search.type = 'search';
   search.placeholder = placeholder;
   search.setAttribute('aria-label', placeholder);
+  const category = debugSelect(filters, 'Category',
+    [['','All categories'], ...Array.from(groups.keys(), name=>[name,name])], '', updateResults);
   const results = debugElement('div', '', debugContent);
   results.className = 'debug-results';
   function updateResults(){
     const query = search.value.toLowerCase().trim();
-    const matching = rows.filter(row=>row.search.toLowerCase().includes(query));
     results.replaceChildren();
     results.scrollTop = 0;
-    if(!matching.length) debugElement('p', 'No matches', results);
-    for(const row of matching){
-      const button = debugButton(results, row.label, ()=>activate(row));
-      debugElement('small', row.group, button);
+    for(const [name, entries] of groups){
+      if(category.value && name!==category.value) continue;
+      const matching = entries.filter(row=>(name+' '+row.label+' '+(row.id || '')).toLowerCase().includes(query));
+      if(!matching.length) continue;
+      const section = debugSection(results, name);
+      const cards = debugElement('div', '', section);
+      cards.className = 'debug-result-cards';
+      for(const row of matching) debugButton(cards, row.label, ()=>activate(row));
     }
+    if(!results.children.length) debugElement('p', 'No matches', results);
   }
   search.addEventListener('input', updateResults);
   updateResults();
@@ -242,19 +255,16 @@ function drawDebugItemList(){
   debugElement('p', '', debugContent).id = 'debug-action-status';
   const rows = [
     ...DEBUG_ITEM_CATALOG.flatMap(({cat, items})=>items.map(item=>({
-      item, type:'inventory', group:cat, label:item.name, search:cat+' '+item.name,
+      item, type:'inventory', category:'Gear — '+cat, label:item.name,
     }))),
-    ...DEBUG_CARGO_CATALOG.flatMap(({cat, items})=>items.map(item=>({
-      item, type:'cargo', group:'Cargo / '+cat, label:COMMODITIES[item]?.name || item,
-      search:'cargo '+cat+' '+(COMMODITIES[item]?.name || item),
-    }))),
+    ...debugCargoEntries().map(({id,label,category})=>({id, item:id, type:'cargo', category:'Cargo — '+category, label})),
   ];
   debugSearchList(rows, 'Filter gear or cargo', row=>debugLogAction(()=>debugSpawnItem(row)));
 }
 
 function drawDebugSampleDirectory(){
   const rows = G.debugPalette.entries.map(entry=>({
-    ...entry, group:entry.kind, search:entry.kind+' '+entry.label+' '+entry.id,
+    ...entry, category:entry.category || entry.kind,
   }));
   debugSearchList(rows, 'Filter samples', row=>debugPaletteVisit(row.id));
 }

@@ -82,7 +82,7 @@ function debugPaletteNavigateHome(area){
   } else {G.mode='galaxy';G.curPlanet='';}
   closeDebugMenu();
   debugPlaygroundButton.hidden=false;
-  restoreGameUI();addLog('DEBUG PLAYGROUND — Use the Playground button to search samples or return to your career. NPCs '+(G.debugPalette.simulate?'live.':'paused.'),'li');renderAll();
+  restoreGameUI();addLog('DEBUG PALETTE — Use the Debug Palette button to find samples or return to your career. NPCs '+(G.debugPalette.simulate?'live.':'paused.'),'li');renderAll();
 }
 
 function debugReturnFromPalette(render=true){
@@ -105,11 +105,11 @@ function debugBuildGalaxyPalette(){
     const pos=slot();G.bases=[{x:pos.x-2,y:pos.y,name:'Starbase Alpha'}];
     DEBUG.spawnGalaxyObj=i;G.mode='galaxy';debugSpawnGalaxyObj();
     if(G.galaxy[pos.y][pos.x].type==='VOID' && !G.galaxy[pos.y][pos.x].name)throw Error('Missing galaxy factory: '+definition.id);
-    G.debugPalette.entries.push({id:'galaxy:'+definition.id,kind:'galaxy',label:definition.label,...pos});
+    G.debugPalette.entries.push({id:'galaxy:'+definition.id,kind:'galaxy',category:'Galaxy Objects',label:definition.label,...pos});
   });
   for(const [star,definition] of Object.entries(STAR_TYPES)){
     const pos=slot();G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:definition.label,starType:star,planets:[debugPaletteDescriptor('HABITABLE',definition.label+' world')]};
-    G.debugPalette.entries.push({id:'star:'+star,kind:'galaxy',label:definition.label,...pos});
+    G.debugPalette.entries.push({id:'star:'+star,kind:'galaxy',category:'Star Types',label:definition.label,...pos});
   }
   for(const biome of Object.keys(BIOMES)){
     const pos=slot(),label=BIOMES[biome].name||biome;
@@ -119,35 +119,35 @@ function debugBuildGalaxyPalette(){
     if(biome==='CASINO')generateCasinoStationMap('casino:'+pos.x+','+pos.y);
     else if(biome==='DERELICT')generateDerelict(pos.x+','+pos.y);
     else if(biome!=='GAS_GIANT')getOrCreateScanPlanetData(pos.x+','+pos.y+':0',biome,'full');
-    G.debugPalette.entries.push({id:'biome:'+biome,kind:'biome',biome,label,...pos});
+    G.debugPalette.entries.push({id:'biome:'+biome,kind:'biome',category:'Planet Biomes',biome,label,...pos});
   }
   for(const tier of CIV_TIERS)for(const aggression of CIV_AGGRESSION){
     const pos=slot(),label=tier.label+' / '+aggression;
     G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor('HABITABLE',label)]};
-    G.debugPalette.entries.push({id:'civ:'+tier.id+':'+aggression,kind:'civilization',tier:tier.id,aggression,species:'Mammalian',label,...pos});
+    G.debugPalette.entries.push({id:'civ:'+tier.id+':'+aggression,kind:'civilization',category:'Civilization Tiers',tier:tier.id,aggression,species:'Mammalian',label,...pos});
   }
   for(const species of CIV_SPECIES_TYPES){
     const pos=slot(),label=species+' contact';
     G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor('HABITABLE',label)]};
-    G.debugPalette.entries.push({id:'species:'+species,kind:'civilization',tier:'information',aggression:'Passive',species,label,...pos});
+    G.debugPalette.entries.push({id:'species:'+species,kind:'civilization',category:'Civilization Species',tier:'information',aggression:'Passive',species,label,...pos});
   }
   G.bases=[];for(let y=0;y<MAP_H;y++)for(let x=0;x<MAP_W;x++)if(G.galaxy[y][x].type==='BASE')G.bases.push({x,y,name:G.galaxy[y][x].name});
 }
 
 function debugSurfaceSampleDefinitions(){
   const galaxyTypes=new Set(['VOID','NEBULA','SYSTEM','BASE','CASINO','PIRATE_BASE']);
-  const rows=Object.keys(TILE).filter(type=>!galaxyTypes.has(type)).map(type=>({id:'tile:'+type,kind:'tile',label:type,type}));
-  for(const group of DEBUG_ITEM_CATALOG)for(const item of group.items)rows.push({id:'item:'+group.cat+':'+item.name,kind:'item',label:item.name,item});
-  for(const item of IMPLANT_CATALOG)rows.push({id:'implant:'+item.id,kind:'item',label:item.name,item:{name:item.name,col:'#88bbff',value:0,usable:'implant_'+item.id,desc:item.desc||item.detail||'Implant'}});
+  const rows=Object.keys(TILE).filter(type=>!galaxyTypes.has(type)).map(type=>({id:'tile:'+type,kind:'tile',category:'Terrain and Structures',label:type,type}));
+  for(const group of DEBUG_ITEM_CATALOG)for(const item of group.items)rows.push({id:'item:'+group.cat+':'+item.name,kind:'item',category:'Gear — '+group.cat,label:item.name,item});
+  for(const item of IMPLANT_CATALOG)rows.push({id:'implant:'+item.id,kind:'item',category:'Gear — Implants',label:item.name,item:{name:item.name,col:'#88bbff',value:0,usable:'implant_'+item.id,desc:item.desc||item.detail||'Implant'}});
   const known=new Set(rows.filter(e=>e.item).map(e=>(e.item.usable||'')+'|'+e.item.name));
   for(const item of [...Object.values(CORP_ITEM_POOLS).flat(),...PAWN_ITEM_POOL,...MEDBAY_ITEM_POOL]){
     const identity=(item.usable||'')+'|'+item.name;if(known.has(identity))continue;known.add(identity);
-    rows.push({id:'shop:'+identity,kind:'item',label:item.name,item:{...item,desc:item.desc||item.detail||item.name,value:item.value||0}});
+    rows.push({id:'shop:'+identity,kind:'item',category:'Gear — Store Items',label:item.name,item:{...item,desc:item.desc||item.detail||item.name,value:item.value||0}});
   }
-  for(const id of Object.keys(COMMODITIES))rows.push({id:'cargo:'+id,kind:'cargo',label:COMMODITIES[id].name,commodity:id});
-  for(const body of CREATURE_BODY_TYPES)rows.push({id:'creature:'+body.key,kind:'creature',label:body.label,body,hostile:false});
-  for(const body of HOSTILE_BODY_TYPES)rows.push({id:'hostile:'+body.key,kind:'creature',label:body.label,body,hostile:true});
-  rows.push({id:'npc:gunner',kind:'gunner',label:'Gunner alien'});
+  for(const {id,label,category} of debugCargoEntries())rows.push({id:'cargo:'+id,kind:'cargo',category:'Cargo — '+category,label,commodity:id});
+  for(const body of CREATURE_BODY_TYPES)rows.push({id:'creature:'+body.key,kind:'creature',category:'Creatures',label:body.label,body,hostile:false});
+  for(const body of HOSTILE_BODY_TYPES)rows.push({id:'hostile:'+body.key,kind:'creature',category:'Hostile Creatures',label:body.label,body,hostile:true});
+  rows.push({id:'npc:gunner',kind:'gunner',category:'Hostile Creatures',label:'Gunner alien'});
   return rows;
 }
 

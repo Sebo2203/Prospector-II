@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.40 stabilizes orbit and groups debug catalogs
+
+Released on `experiment/expedition-legacy`.
+
+- Moved the version and save status to the top-right HUD. Orbit reserves room for wrapped context actions and alerts, so the system map keeps the same scale. The compass and map controls stay anchored below.
+- Restored gear and cargo category headings and added a category filter to both the spawner and sample directory. Categories follow the runtime catalogs. New commodities appear even before a specific category is assigned. The sandbox controls use **Debug Palette** again.
+- All 47 repository tests and six headless Edge suites passed. Reproduced the orbital resize on experimental.39 and verified fixed bounds at 1400×720 and 800×600. Verified category filtering and future catalog additions in both menus. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.39 makes the debug tools clickable
 
 Released on `experiment/expedition-legacy`.

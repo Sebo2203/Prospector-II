@@ -8,8 +8,8 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  await page.waitForFunction(()=>G?.galaxy && G.log.some(e=>e.msg.includes('Ready for departure')));
  const button = name => page.getByRole('button',{name,exact:typeof name==='string'});
  const click = name => button(name).click();
- const tools = () => click('Playground');
- assert.equal(await button('Playground').isVisible(),false);
+ const tools = () => click('Debug Palette');
+ assert.equal(await button('Debug Palette').isVisible(),false);
  await page.keyboard.press('Shift+B');
  const original=await page.evaluate(()=>JSON.stringify(G));
  await page.keyboard.press('ArrowRight');
@@ -72,6 +72,11 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  await click('Add 1,000 Credits');
  assert.equal(await page.evaluate(()=>G.credits),credits+1000);
  await click('Spawn Gear or Cargo');
+ const categories=page.getByRole('combobox',{name:'Category'});
+ await categories.selectOption('Gear — Weapons');
+ assert.ok(await page.getByRole('heading',{name:'Gear — Weapons'}).isVisible());
+ assert.equal(await button('Medikit').count(),0);
+ await categories.selectOption('Gear — Consumables');
  await page.getByRole('searchbox',{name:'Filter gear or cargo'}).fill('medikit');
  const inventoryCount=await page.evaluate(()=>G.inventory.length);
  await button(/medikit/i).first().click();
@@ -85,6 +90,10 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  assert.equal(await page.evaluate(()=>G.planets[G.curPlanet].civilization.state.hostile),true);
  await click('Back to Tools');
  await click('Find a Sample');
+ await categories.selectOption('Star Types');
+ assert.ok(await page.getByRole('heading',{name:'Star Types'}).isVisible());
+ assert.equal(await button('Pulsar').count(),0);
+ await categories.selectOption('Gear — Consumables');
  await page.getByRole('searchbox',{name:'Filter samples'}).fill('medikit');
  await button(/medikit/i).first().click();
  assert.equal(await page.evaluate(()=>G.mode),'planet');
@@ -98,20 +107,34 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
    TILE.PALETTE_FUTURE_TEST={...TILE.station_floor};
    DEBUG_ITEM_CATALOG.push({cat:'Future test',items:[{name:'Future Test Item',usable:'repair_kit'}]});
    DEBUG_GALAXY_OBJ_TYPES.push({id:'FUTURE_TEST',label:'Future Test Object',place:()=>({type:'DERELICT',name:'Future Test Object'})});
+   COMMODITIES.future_goods={...COMMODITIES.food,id:'future_goods',name:'Future Goods'};
  });
  await tools();
- await click('Rebuild Playground');
+ await click('Rebuild Palette');
  await click('Cancel');
  assert.equal(await page.evaluate(()=>G.debugPalette.entries.some(e=>e.id==='galaxy:FUTURE_TEST')),false);
- await click('Rebuild Playground');
+ await click('Rebuild Palette');
  await click('Rebuild Galleries');
- for(const id of ['tile:PALETTE_FUTURE_TEST','item:Future test:Future Test Item','galaxy:FUTURE_TEST']){
+ for(const id of ['tile:PALETTE_FUTURE_TEST','item:Future test:Future Test Item','galaxy:FUTURE_TEST','cargo:future_goods']){
   assert.equal(await page.evaluate(id=>G.debugPalette.entries.some(e=>e.id===id),id),true);
  }
  await tools();
+ await click('Find a Sample');
+ await categories.selectOption('Gear — Future test');
+ assert.ok(await button('Future Test Item').isVisible());
+ await categories.selectOption('Cargo — Other Commodities');
+ assert.ok(await button('Future Goods').isVisible());
+ await click('Back to Tools');
+ await click('Spawn Gear or Cargo');
+ await categories.selectOption('Gear — Future test');
+ assert.ok(await button('Future Test Item').isVisible());
+ await categories.selectOption('Cargo — Other Commodities');
+ await click('Future Goods');
+ assert.ok(await page.evaluate(()=>G.cargo.some(item=>item.commodityId==='future_goods')));
+ await click('Back to Tools');
  await click('Return to Career');
  assert.equal(await page.evaluate(()=>JSON.stringify(G)),original);
- assert.equal(await button('Playground').isVisible(),false);
+ assert.equal(await button('Debug Palette').isVisible(),false);
  await page.keyboard.press('Shift+B');
  await click('Surface Gallery');
  assert.equal(await page.evaluate(()=>!!G.debugPalette && G.mode==='planet'),true);
@@ -121,6 +144,7 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  await page.evaluate(()=>{
    delete TILE.PALETTE_FUTURE_TEST;
    DEBUG_ITEM_CATALOG.pop();DEBUG_GALAXY_OBJ_TYPES.pop();
+   delete COMMODITIES.future_goods;
    debugEnterPalette('galaxy');
  });
  await tools();

@@ -23,7 +23,10 @@ html, body {
   --key-pressed: #101e29;
   --shortcut-text: #919aa2;
   --shortcut-key: #a7adb2;
-  --status-height: 18px;
+  --hud-height: 46px;
+  --alert-height: 28px;
+  --context-max-height: 70px;
+  --tools-height: 102px;
   --fuel-normal: #48cdb6;
   --hull-normal: #67bcdd;
   background: #0a0a0f;
@@ -57,9 +60,7 @@ html, body {
   align-items: center;
   flex-shrink: 0;
   overflow: hidden;
-  height: 56px;
-  min-height: 46px;
-  max-height: 46px;
+  height: var(--hud-height);
 }
 .hud-box {
   padding: 3px 10px;
@@ -71,6 +72,8 @@ html, body {
 }
 .hud-label { color: var(--plate-label); font-size: 11px; letter-spacing: 1px; }
 .hud-val { font-size: 16px; font-weight: bold; white-space: nowrap; }
+.location-readout { min-width: 0; }
+#h-loc { overflow: hidden; text-overflow: ellipsis; }
 #h-mode::before {
   content: '';
   display: inline-block;
@@ -82,7 +85,6 @@ html, body {
 }
 .vessel-plate {
   margin-left: auto;
-  margin-right: 124px;
   flex: 0 1 230px;
   min-width: 0;
   background: linear-gradient(#344550, #273641);
@@ -109,6 +111,7 @@ html, body {
   z-index: 1001;
 }
 #pointer-keys-toggle { top: 12px; right: 12px; }
+#game-escape:not([hidden]) ~ #pointer-keys-toggle { top: calc(var(--hud-height) + 8px); }
 #pointer-keys {
   bottom: 18px;
   left: 50%;
@@ -128,6 +131,10 @@ html, body {
   height: 492px;
   min-height: 0;
   max-height: 492px;
+}
+#main.orbital-display {
+  /* Keep orbit the same size even with two action rows and an alert. */
+  flex: 0 0 calc(100% - var(--hud-height) - var(--alert-height) - var(--context-max-height) - var(--tools-height));
 }
 
 /* ── Left gauge panel ── */
@@ -414,8 +421,7 @@ canvas {
   background: #1e1b19;
   font-size: 15px;
   color: #ffe066;
-  min-height: 28px;
-  max-height: 28px;
+  height: var(--alert-height);
   border-top: 1px solid currentColor;
   box-shadow: inset 3px 0 currentColor;
   flex-shrink: 0;
@@ -446,7 +452,7 @@ canvas {
   flex-wrap: wrap;
   flex-shrink: 0;
   min-height: 38px;
-  max-height: 70px;
+  max-height: var(--context-max-height);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -524,7 +530,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
-  flex: 1 0 102px;
+  flex: 1 0 var(--tools-height);
   overflow: hidden;
   align-items: stretch;
   position: relative;
@@ -695,11 +701,10 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 }
 /* ── Version tag ── */
 #version-tag {
-  display: flex;
-  flex: 0 0 var(--status-height);
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+  display: grid;
+  grid-template-rows: repeat(2, 1em);
+  gap: 3px;
+  flex-shrink: 0;
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
@@ -708,11 +713,9 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 #save-state { color: #558877; }
 
 #debug-playground-button {
-  position: fixed;
-  top: 10px;
-  right: 10px;
+  position: relative;
   z-index: 1100;
-  cursor: pointer;
+  flex-shrink: 0;
 }
 
 #debug-dialog {
@@ -774,13 +777,17 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 .debug-switches { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr)); }
 .debug-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .debug-field { display: flex; flex-direction: column; gap: 3px; margin: 8px 0 4px; }
-.debug-results {
+.debug-filters { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+#debug-dialog .debug-filters input { flex: 1 1 160px; width: auto; margin: 0; }
+.debug-filters .debug-field { flex: 0 1 230px; min-width: 0; margin: 0; }
+.debug-results { overflow: auto; }
+.debug-results section + section { margin-top: 12px; }
+.debug-results h3 { font-size: 14px; color: #a9d6f2; margin-bottom: 4px; }
+.debug-result-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  align-content: start;
-  overflow: auto;
 }
-#debug-dialog .debug-results button { display: grid; gap: 2px; text-align: left; }
+#debug-dialog .debug-results button { text-align: left; }
 #debug-dialog dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; }
 #debug-action-status:empty { display: none; }
 #debug-action-status:not(:empty) { margin-top: 8px; color: #a0e6b8; }

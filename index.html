@@ -833,7 +833,10 @@ html, body {
   --key-pressed: #101e29;
   --shortcut-text: #919aa2;
   --shortcut-key: #a7adb2;
-  --status-height: 18px;
+  --hud-height: 46px;
+  --alert-height: 28px;
+  --context-max-height: 70px;
+  --tools-height: 102px;
   --fuel-normal: #48cdb6;
   --hull-normal: #67bcdd;
   background: #0a0a0f;
@@ -867,9 +870,7 @@ html, body {
   align-items: center;
   flex-shrink: 0;
   overflow: hidden;
-  height: 56px;
-  min-height: 46px;
-  max-height: 46px;
+  height: var(--hud-height);
 }
 .hud-box {
   padding: 3px 10px;
@@ -881,6 +882,8 @@ html, body {
 }
 .hud-label { color: var(--plate-label); font-size: 11px; letter-spacing: 1px; }
 .hud-val { font-size: 16px; font-weight: bold; white-space: nowrap; }
+.location-readout { min-width: 0; }
+#h-loc { overflow: hidden; text-overflow: ellipsis; }
 #h-mode::before {
   content: '';
   display: inline-block;
@@ -892,7 +895,6 @@ html, body {
 }
 .vessel-plate {
   margin-left: auto;
-  margin-right: 124px;
   flex: 0 1 230px;
   min-width: 0;
   background: linear-gradient(#344550, #273641);
@@ -919,6 +921,7 @@ html, body {
   z-index: 1001;
 }
 #pointer-keys-toggle { top: 12px; right: 12px; }
+#game-escape:not([hidden]) ~ #pointer-keys-toggle { top: calc(var(--hud-height) + 8px); }
 #pointer-keys {
   bottom: 18px;
   left: 50%;
@@ -938,6 +941,10 @@ html, body {
   height: 492px;
   min-height: 0;
   max-height: 492px;
+}
+#main.orbital-display {
+  /* Keep orbit the same size even with two action rows and an alert. */
+  flex: 0 0 calc(100% - var(--hud-height) - var(--alert-height) - var(--context-max-height) - var(--tools-height));
 }
 
 /* ── Left gauge panel ── */
@@ -1224,8 +1231,7 @@ canvas {
   background: #1e1b19;
   font-size: 15px;
   color: #ffe066;
-  min-height: 28px;
-  max-height: 28px;
+  height: var(--alert-height);
   border-top: 1px solid currentColor;
   box-shadow: inset 3px 0 currentColor;
   flex-shrink: 0;
@@ -1256,7 +1262,7 @@ canvas {
   flex-wrap: wrap;
   flex-shrink: 0;
   min-height: 38px;
-  max-height: 70px;
+  max-height: var(--context-max-height);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -1334,7 +1340,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
-  flex: 1 0 102px;
+  flex: 1 0 var(--tools-height);
   overflow: hidden;
   align-items: stretch;
   position: relative;
@@ -1505,11 +1511,10 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 }
 /* ── Version tag ── */
 #version-tag {
-  display: flex;
-  flex: 0 0 var(--status-height);
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+  display: grid;
+  grid-template-rows: repeat(2, 1em);
+  gap: 3px;
+  flex-shrink: 0;
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
@@ -1518,11 +1523,9 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 #save-state { color: #558877; }
 
 #debug-playground-button {
-  position: fixed;
-  top: 10px;
-  right: 10px;
+  position: relative;
   z-index: 1100;
-  cursor: pointer;
+  flex-shrink: 0;
 }
 
 #debug-dialog {
@@ -1584,13 +1587,17 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 .debug-switches { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr)); }
 .debug-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .debug-field { display: flex; flex-direction: column; gap: 3px; margin: 8px 0 4px; }
-.debug-results {
+.debug-filters { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+#debug-dialog .debug-filters input { flex: 1 1 160px; width: auto; margin: 0; }
+.debug-filters .debug-field { flex: 0 1 230px; min-width: 0; margin: 0; }
+.debug-results { overflow: auto; }
+.debug-results section + section { margin-top: 12px; }
+.debug-results h3 { font-size: 14px; color: #a9d6f2; margin-bottom: 4px; }
+.debug-result-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  align-content: start;
-  overflow: auto;
 }
-#debug-dialog .debug-results button { display: grid; gap: 2px; text-align: left; }
+#debug-dialog .debug-results button { text-align: left; }
 #debug-dialog dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; }
 #debug-action-status:empty { display: none; }
 #debug-action-status:not(:empty) { margin-top: 8px; color: #a0e6b8; }
@@ -1807,10 +1814,12 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   <div id="hud">
     <div class="hud-box" id="h-phase-box" style="display:none"><div class="hud-label">TIME</div><div class="hud-val" id="h-phase">—</div></div>
     <div class="hud-box"><div class="hud-label">CREDITS</div><div class="hud-val cy" id="h-creds">500</div></div>
-    <div class="hud-box"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
+    <div class="hud-box location-readout"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
     <div class="hud-box"><div class="hud-label">TURN</div><div class="hud-val cy" id="h-turn">1</div></div>
     <div class="hud-box"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
+    <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
+    <div id="version-tag"><span>v0.28 experimental.40</span><span id="save-state" role="status" aria-live="polite"></span></div>
   </div>
 
   <!-- Canvas + Gauges + Sidebar -->
@@ -1908,7 +1917,6 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.39</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1957,7 +1965,6 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 
 </div><!-- #root -->
 
-<button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Playground</button>
 <dialog id="debug-dialog" aria-labelledby="debug-title">
   <header class="debug-header">
     <h2 id="debug-title"></h2>
@@ -1975,8 +1982,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.39';
-const GAME_VERSION_LABEL = 'v0.28 experimental.39';
+const GAME_VERSION = '0.28.0-experimental.40';
+const GAME_VERSION_LABEL = 'v0.28 experimental.40';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -6022,7 +6029,7 @@ function pickMineralSample(biomeKey){
 
 // ── Debug item spawn catalog ─────────────────────────────────────────────────
 // Grouped by category. Each item has the full inventory object to push.
-// LEFT column: inventory items (consumables, weapons, armor, field samples, botanicals, special)
+// Inventory items (consumables, weapons, armor, field samples, botanicals, special).
 const DEBUG_ITEM_CATALOG = [
   { cat:'Consumables', items:[
     { name:'Medikit',              col:'#ff6688', desc:'Restores 10 HP to most injured crew.',             value:0,   usable:'medikit' },
@@ -6105,13 +6112,23 @@ const DEBUG_ITEM_CATALOG = [
   ]},
 ];
 
-// RIGHT column: cargo commodities (spawned into G.cargo — listed by COMMODITIES key)
+// Display categories for the original cargo catalog.
 const DEBUG_CARGO_CATALOG = [
   { cat:'Station Goods', items:['ammo','food','luxuries','microelec'] },
   { cat:'Cultural Goods', items:['pelts','herbs','carvings','seeds','fabric','totems','medicine'] },
   { cat:'Industrial',     items:['ore','rations','lenses','reagents','parts','solvents','metal','instruments','datadrives'] },
   { cat:'Mineral Ore',    items:['ore_fe','ore_cu','ore_si','ore_ti','ore_au','ore_pt','ore_ur','ore_xc'] },
 ];
+
+function debugCargoEntries(){
+  const knownCategories = new Map(DEBUG_CARGO_CATALOG.flatMap(({cat, items})=>items.map(id=>[id, cat])));
+  const oreIds = new Set(Object.values(ORE_TYPES).map(ore=>ore.id));
+  return Object.entries(COMMODITIES).map(([id, commodity])=>({
+    id,
+    label:commodity.name,
+    category:commodity.debugCategory || knownCategories.get(id) || (oreIds.has(id) ? 'Mineral Ore' : 'Other Commodities'),
+  }));
+}
 
 // ─────────────────────────────────────────────────────────────────
 //  CREW DATA TABLES
@@ -13803,6 +13820,7 @@ function renderAll(){
 }
 
 function drawCanvas(){
+  document.getElementById('main').classList.toggle('orbital-display', G.mode==='system');
   resetCanvasMenu();
   canvasMapView=null;
   ctx.clearRect(0,0,canvasWidth,canvasHeight);
@@ -34317,7 +34335,7 @@ function debugPaletteNavigateHome(area){
   } else {G.mode='galaxy';G.curPlanet='';}
   closeDebugMenu();
   debugPlaygroundButton.hidden=false;
-  restoreGameUI();addLog('DEBUG PLAYGROUND — Use the Playground button to search samples or return to your career. NPCs '+(G.debugPalette.simulate?'live.':'paused.'),'li');renderAll();
+  restoreGameUI();addLog('DEBUG PALETTE — Use the Debug Palette button to find samples or return to your career. NPCs '+(G.debugPalette.simulate?'live.':'paused.'),'li');renderAll();
 }
 
 function debugReturnFromPalette(render=true){
@@ -34340,11 +34358,11 @@ function debugBuildGalaxyPalette(){
     const pos=slot();G.bases=[{x:pos.x-2,y:pos.y,name:'Starbase Alpha'}];
     DEBUG.spawnGalaxyObj=i;G.mode='galaxy';debugSpawnGalaxyObj();
     if(G.galaxy[pos.y][pos.x].type==='VOID' && !G.galaxy[pos.y][pos.x].name)throw Error('Missing galaxy factory: '+definition.id);
-    G.debugPalette.entries.push({id:'galaxy:'+definition.id,kind:'galaxy',label:definition.label,...pos});
+    G.debugPalette.entries.push({id:'galaxy:'+definition.id,kind:'galaxy',category:'Galaxy Objects',label:definition.label,...pos});
   });
   for(const [star,definition] of Object.entries(STAR_TYPES)){
     const pos=slot();G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:definition.label,starType:star,planets:[debugPaletteDescriptor('HABITABLE',definition.label+' world')]};
-    G.debugPalette.entries.push({id:'star:'+star,kind:'galaxy',label:definition.label,...pos});
+    G.debugPalette.entries.push({id:'star:'+star,kind:'galaxy',category:'Star Types',label:definition.label,...pos});
   }
   for(const biome of Object.keys(BIOMES)){
     const pos=slot(),label=BIOMES[biome].name||biome;
@@ -34354,35 +34372,35 @@ function debugBuildGalaxyPalette(){
     if(biome==='CASINO')generateCasinoStationMap('casino:'+pos.x+','+pos.y);
     else if(biome==='DERELICT')generateDerelict(pos.x+','+pos.y);
     else if(biome!=='GAS_GIANT')getOrCreateScanPlanetData(pos.x+','+pos.y+':0',biome,'full');
-    G.debugPalette.entries.push({id:'biome:'+biome,kind:'biome',biome,label,...pos});
+    G.debugPalette.entries.push({id:'biome:'+biome,kind:'biome',category:'Planet Biomes',biome,label,...pos});
   }
   for(const tier of CIV_TIERS)for(const aggression of CIV_AGGRESSION){
     const pos=slot(),label=tier.label+' / '+aggression;
     G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor('HABITABLE',label)]};
-    G.debugPalette.entries.push({id:'civ:'+tier.id+':'+aggression,kind:'civilization',tier:tier.id,aggression,species:'Mammalian',label,...pos});
+    G.debugPalette.entries.push({id:'civ:'+tier.id+':'+aggression,kind:'civilization',category:'Civilization Tiers',tier:tier.id,aggression,species:'Mammalian',label,...pos});
   }
   for(const species of CIV_SPECIES_TYPES){
     const pos=slot(),label=species+' contact';
     G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor('HABITABLE',label)]};
-    G.debugPalette.entries.push({id:'species:'+species,kind:'civilization',tier:'information',aggression:'Passive',species,label,...pos});
+    G.debugPalette.entries.push({id:'species:'+species,kind:'civilization',category:'Civilization Species',tier:'information',aggression:'Passive',species,label,...pos});
   }
   G.bases=[];for(let y=0;y<MAP_H;y++)for(let x=0;x<MAP_W;x++)if(G.galaxy[y][x].type==='BASE')G.bases.push({x,y,name:G.galaxy[y][x].name});
 }
 
 function debugSurfaceSampleDefinitions(){
   const galaxyTypes=new Set(['VOID','NEBULA','SYSTEM','BASE','CASINO','PIRATE_BASE']);
-  const rows=Object.keys(TILE).filter(type=>!galaxyTypes.has(type)).map(type=>({id:'tile:'+type,kind:'tile',label:type,type}));
-  for(const group of DEBUG_ITEM_CATALOG)for(const item of group.items)rows.push({id:'item:'+group.cat+':'+item.name,kind:'item',label:item.name,item});
-  for(const item of IMPLANT_CATALOG)rows.push({id:'implant:'+item.id,kind:'item',label:item.name,item:{name:item.name,col:'#88bbff',value:0,usable:'implant_'+item.id,desc:item.desc||item.detail||'Implant'}});
+  const rows=Object.keys(TILE).filter(type=>!galaxyTypes.has(type)).map(type=>({id:'tile:'+type,kind:'tile',category:'Terrain and Structures',label:type,type}));
+  for(const group of DEBUG_ITEM_CATALOG)for(const item of group.items)rows.push({id:'item:'+group.cat+':'+item.name,kind:'item',category:'Gear — '+group.cat,label:item.name,item});
+  for(const item of IMPLANT_CATALOG)rows.push({id:'implant:'+item.id,kind:'item',category:'Gear — Implants',label:item.name,item:{name:item.name,col:'#88bbff',value:0,usable:'implant_'+item.id,desc:item.desc||item.detail||'Implant'}});
   const known=new Set(rows.filter(e=>e.item).map(e=>(e.item.usable||'')+'|'+e.item.name));
   for(const item of [...Object.values(CORP_ITEM_POOLS).flat(),...PAWN_ITEM_POOL,...MEDBAY_ITEM_POOL]){
     const identity=(item.usable||'')+'|'+item.name;if(known.has(identity))continue;known.add(identity);
-    rows.push({id:'shop:'+identity,kind:'item',label:item.name,item:{...item,desc:item.desc||item.detail||item.name,value:item.value||0}});
+    rows.push({id:'shop:'+identity,kind:'item',category:'Gear — Store Items',label:item.name,item:{...item,desc:item.desc||item.detail||item.name,value:item.value||0}});
   }
-  for(const id of Object.keys(COMMODITIES))rows.push({id:'cargo:'+id,kind:'cargo',label:COMMODITIES[id].name,commodity:id});
-  for(const body of CREATURE_BODY_TYPES)rows.push({id:'creature:'+body.key,kind:'creature',label:body.label,body,hostile:false});
-  for(const body of HOSTILE_BODY_TYPES)rows.push({id:'hostile:'+body.key,kind:'creature',label:body.label,body,hostile:true});
-  rows.push({id:'npc:gunner',kind:'gunner',label:'Gunner alien'});
+  for(const {id,label,category} of debugCargoEntries())rows.push({id:'cargo:'+id,kind:'cargo',category:'Cargo — '+category,label,commodity:id});
+  for(const body of CREATURE_BODY_TYPES)rows.push({id:'creature:'+body.key,kind:'creature',category:'Creatures',label:body.label,body,hostile:false});
+  for(const body of HOSTILE_BODY_TYPES)rows.push({id:'hostile:'+body.key,kind:'creature',category:'Hostile Creatures',label:body.label,body,hostile:true});
+  rows.push({id:'npc:gunner',kind:'gunner',category:'Hostile Creatures',label:'Gunner alien'});
   return rows;
 }
 
@@ -34577,7 +34595,7 @@ debugPlaygroundButton.addEventListener('click', ()=>{
 function showDebugMenu(page, confirmation){
   const titles = {
     tools:'Debug Tools', items:'Spawn Gear and Cargo', civilization:'Civilization',
-    directory:'Find a Playground Sample', report:'Galaxy Spawn Report', confirm:'Confirm Debug Action',
+    directory:'Find a Debug Palette Sample', report:'Galaxy Spawn Report', confirm:'Confirm Debug Action',
   };
   debugDialog.classList.toggle('debug-catalog', page==='items' || page==='directory');
   document.getElementById('debug-title').textContent = titles[page];
@@ -34684,7 +34702,7 @@ function drawDebugTools(){
     'Replace the current surface map and its inhabitants?', 'Regenerate Surface',
     ()=>debugLogAction(debugRegenWithAncientRuins)), !onSurface);
 
-  const playground = debugSection(grid, 'Playground');
+  const playground = debugSection(grid, 'Debug Palette');
   toggles.after(playground);
   const sandbox = G.debugPalette;
   debugElement('p', sandbox ? 'Disposable test world' : 'Open a test world with its own crew and ship.', playground);
@@ -34707,8 +34725,8 @@ function drawDebugTools(){
       simulation.textContent = sandbox.simulate ? 'Pause NPCs' : 'Run NPCs Live';
     };
     updateSimulationLabel();
-    debugButton(playground, 'Rebuild Playground', ()=>debugConfirm('tools',
-      'Discard changes in the playground and rebuild both galleries?', 'Rebuild Galleries',
+    debugButton(playground, 'Rebuild Palette', ()=>debugConfirm('tools',
+      'Discard changes in the test world and rebuild both galleries?', 'Rebuild Galleries',
       ()=>enterDebugGallery('galaxy', true)));
     debugButton(playground, 'Return to Career', ()=>debugReturnFromPalette());
   }
@@ -34722,22 +34740,35 @@ function enterDebugGallery(area, rebuild=false){
 }
 
 function debugSearchList(rows, placeholder, activate){
-  const search = debugElement('input', '', debugContent);
+  const groups = new Map();
+  for(const row of rows){
+    if(!groups.has(row.category)) groups.set(row.category, []);
+    groups.get(row.category).push(row);
+  }
+  const filters = debugElement('div', '', debugContent);
+  filters.className = 'debug-filters';
+  const search = debugElement('input', '', filters);
   search.type = 'search';
   search.placeholder = placeholder;
   search.setAttribute('aria-label', placeholder);
+  const category = debugSelect(filters, 'Category',
+    [['','All categories'], ...Array.from(groups.keys(), name=>[name,name])], '', updateResults);
   const results = debugElement('div', '', debugContent);
   results.className = 'debug-results';
   function updateResults(){
     const query = search.value.toLowerCase().trim();
-    const matching = rows.filter(row=>row.search.toLowerCase().includes(query));
     results.replaceChildren();
     results.scrollTop = 0;
-    if(!matching.length) debugElement('p', 'No matches', results);
-    for(const row of matching){
-      const button = debugButton(results, row.label, ()=>activate(row));
-      debugElement('small', row.group, button);
+    for(const [name, entries] of groups){
+      if(category.value && name!==category.value) continue;
+      const matching = entries.filter(row=>(name+' '+row.label+' '+(row.id || '')).toLowerCase().includes(query));
+      if(!matching.length) continue;
+      const section = debugSection(results, name);
+      const cards = debugElement('div', '', section);
+      cards.className = 'debug-result-cards';
+      for(const row of matching) debugButton(cards, row.label, ()=>activate(row));
     }
+    if(!results.children.length) debugElement('p', 'No matches', results);
   }
   search.addEventListener('input', updateResults);
   updateResults();
@@ -34747,19 +34778,16 @@ function drawDebugItemList(){
   debugElement('p', '', debugContent).id = 'debug-action-status';
   const rows = [
     ...DEBUG_ITEM_CATALOG.flatMap(({cat, items})=>items.map(item=>({
-      item, type:'inventory', group:cat, label:item.name, search:cat+' '+item.name,
+      item, type:'inventory', category:'Gear — '+cat, label:item.name,
     }))),
-    ...DEBUG_CARGO_CATALOG.flatMap(({cat, items})=>items.map(item=>({
-      item, type:'cargo', group:'Cargo / '+cat, label:COMMODITIES[item]?.name || item,
-      search:'cargo '+cat+' '+(COMMODITIES[item]?.name || item),
-    }))),
+    ...debugCargoEntries().map(({id,label,category})=>({id, item:id, type:'cargo', category:'Cargo — '+category, label})),
   ];
   debugSearchList(rows, 'Filter gear or cargo', row=>debugLogAction(()=>debugSpawnItem(row)));
 }
 
 function drawDebugSampleDirectory(){
   const rows = G.debugPalette.entries.map(entry=>({
-    ...entry, group:entry.kind, search:entry.kind+' '+entry.label+' '+entry.id,
+    ...entry, category:entry.category || entry.kind,
   }));
   debugSearchList(rows, 'Filter samples', row=>debugPaletteVisit(row.id));
 }
@@ -35317,7 +35345,7 @@ async function retryAutosave(){
 }
 
 async function saveToFile(){
-  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Playground menu before exporting a save.','li');renderAll();return;}
+  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Debug Palette before exporting a save.','li');renderAll();return;}
   const active=G;
   try {
     const raw = active ? JSON.stringify(active) : (await readStoredAutosave())?.record.raw;
@@ -35425,7 +35453,7 @@ function installSaveSnapshot(loaded){
 }
 
 function loadFromFile(){
-  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Playground menu before loading a save.','li');renderAll();return;}
+  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Debug Palette before loading a save.','li');renderAll();return;}
   const generation=++saveLoadGeneration;
   const input = document.createElement('input');
   input.type  = 'file';

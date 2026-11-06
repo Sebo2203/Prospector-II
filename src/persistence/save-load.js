@@ -108,7 +108,7 @@ async function retryAutosave(){
 }
 
 async function saveToFile(){
-  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Playground menu before exporting a save.','li');renderAll();return;}
+  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Debug Palette before exporting a save.','li');renderAll();return;}
   const active=G;
   try {
     const raw = active ? JSON.stringify(active) : (await readStoredAutosave())?.record.raw;
@@ -216,7 +216,7 @@ function installSaveSnapshot(loaded){
 }
 
 function loadFromFile(){
-  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Playground menu before loading a save.','li');renderAll();return;}
+  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Debug Palette before loading a save.','li');renderAll();return;}
   const generation=++saveLoadGeneration;
   const input = document.createElement('input');
   input.type  = 'file';

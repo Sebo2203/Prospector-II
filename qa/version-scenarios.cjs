@@ -45,7 +45,7 @@ const assert = require('node:assert/strict');
     await page.screenshot({ path: artifactPath('Main-menu.png') });
     await page.evaluate(() => initGame('LIGHT_SCOUT', 'Version QA', 'Version QA'));
     await page.waitForFunction(() => G?.galaxy && G.log.some(e => e.msg.includes('Ready for departure')));
-    assert.equal(await page.locator('#version-tag span').last().textContent(), expected.label);
+    assert.equal(await page.locator('#version-tag span').first().textContent(), expected.label);
     assert.equal(await page.locator('#version-tag').isVisible(), true);
     const tools = page.locator('#persist-bar');
     const status = page.locator('#version-tag');
@@ -60,16 +60,18 @@ const assert = require('node:assert/strict');
         const layout=await page.evaluate(alert=>{
           if(alert) showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300');
           else hideMsg();
-          const root=document.getElementById('root'), status=document.getElementById('version-tag');
+          const root=document.getElementById('root'), hud=document.getElementById('hud'), status=document.getElementById('version-tag');
           const rootBounds=root.getBoundingClientRect();
+          const hudBounds=hud.getBoundingClientRect(), statusBounds=status.getBoundingClientRect();
           return {
-            inset:rootBounds.bottom-status.getBoundingClientRect().bottom,
-            border:parseFloat(getComputedStyle(root).borderBottomWidth)*rootBounds.width/GAME_W,
+            inset:hudBounds.right-statusBounds.right,
+            padding:parseFloat(getComputedStyle(hud).paddingRight)*rootBounds.width/GAME_W,
+            fits:statusBounds.top>=hudBounds.top && statusBounds.bottom<=hudBounds.bottom,
             banner:document.getElementById('msg-bar').classList.contains('visible'),
           };
         },alert);
         assert.equal(layout.banner,alert);
-        assert.ok(Math.abs(layout.inset-layout.border)<0.1,'the status strip sits against the inner bottom edge');
+        assert.ok(layout.fits && Math.abs(layout.inset-layout.padding)<0.1,'version and save status stay in the top-right HUD');
       }
     }
     await page.setViewportSize({width:1400,height:720});
@@ -80,6 +82,6 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#game-escape').isVisible(),false);
     await checkMainMenu(['C', 'N', 'L', 'O', 'X', 'Q']);
     assert.deepEqual(errors, []);
-    console.log('PASS: version labels and bottom footer, main menu keyboard and mouse routes with and without a save, and retired V shortcut.');
+    console.log('PASS: version labels and top-right HUD status, main menu keyboard and mouse routes with and without a save, and retired V shortcut.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });
