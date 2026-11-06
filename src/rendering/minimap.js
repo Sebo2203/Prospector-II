@@ -2,7 +2,7 @@ function renderGalaxyMinimap(){
   const mini = document.getElementById('galaxy-minimap');
   drawGalaxyMinimapToCanvas(mini);
   if(document.getElementById('minimap-overlay')?.classList.contains('visible')){
-    drawGalaxyMinimapToCanvas(document.getElementById('galaxy-minimap-large'));
+    drawFullGalaxyMap();
   }
 }
 
@@ -94,14 +94,59 @@ function drawGalaxyMinimapToCanvas(mini){
   mctx.strokeRect(ox+0.5, oy+0.5, Math.ceil(mapW)-1, Math.ceil(mapH)-1);
 }
 
+function drawFullGalaxyMap(){
+  const map=document.getElementById('galaxy-minimap-large');
+  const c=map.getContext('2d');
+  const {width,height}=map;
+  // Whole pixels keep neighboring fog tiles flush when the artwork is scaled.
+  const tileSize=Math.floor(Math.min((width-6)/MAP_W,(height-6)/MAP_H));
+  const mapW=MAP_W*tileSize, mapH=MAP_H*tileSize;
+  const ox=Math.floor((width-mapW)/2), oy=Math.floor((height-mapH)/2);
+  c.fillStyle='#030307';
+  c.fillRect(0,0,width,height);
+  if(!G?.galaxy) return;
+
+  c.save();
+  c.beginPath();
+  c.rect(ox,oy,mapW,mapH);
+  c.clip();
+  c.fillStyle='#04040c';
+  c.fillRect(ox,oy,mapW,mapH);
+  c.translate(ox,oy);
+  c.scale(tileSize/TS,tileSize/TS);
+  c.imageSmoothingEnabled=false;
+
+  for(let y=0;y<MAP_H;y++){
+    for(let x=0;x<MAP_W;x++){
+      if(!DEBUG.fullVision && !G.visited?.[y*MAP_W+x]){
+        c.fillStyle='#242531';
+        c.fillRect(x*TS,y*TS,TS,TS);
+        continue;
+      }
+      const cell=G.galaxy[y]?.[x];
+      if(cell && cell.type!=='VOID') drawGalaxyTile(c,cell,x*TS,y*TS,x,y,true);
+    }
+  }
+  drawGalaxyActors(c,0,0,MAP_W,MAP_H,true);
+  c.restore();
+
+  const camX=Math.max(0,Math.min(MAP_W-VIEW_W,G.ship.x-Math.floor(VIEW_W/2)));
+  const camY=Math.max(0,Math.min(MAP_H-VIEW_H,G.ship.y-Math.floor(VIEW_H/2)));
+  c.strokeStyle='#445566';
+  c.lineWidth=1;
+  c.strokeRect(ox+camX*tileSize,oy+camY*tileSize,VIEW_W*tileSize,VIEW_H*tileSize);
+  c.strokeStyle='#222238';
+  c.strokeRect(ox+0.5,oy+0.5,mapW-1,mapH-1);
+}
+
 function updateMinimapLegend(){
   const container = document.getElementById('minimap-legend-rows');
   if(!container) return;
 
   // Always-present entries
   const entries = [
-    { col:'#303038', label:'Undiscovered' },
-    { col:'#14141f', label:'Empty space' },
+    { col:'#242531', label:'Undiscovered' },
+    { col:'#04040c', label:'Empty space' },
   ];
 
   // Track which object types have been seen in visited cells
@@ -112,7 +157,7 @@ function updateMinimapLegend(){
   if(G && G.galaxy && G.visited){
     for(let y=0; y<MAP_H; y++){
       for(let x=0; x<MAP_W; x++){
-        if(!G.visited[y*MAP_W+x]) continue;
+        if(!DEBUG.fullVision && !G.visited[y*MAP_W+x]) continue;
         const cell = G.galaxy[y]?.[x];
         if(!cell) continue;
         if(cell.type === 'SYSTEM')     seen.SYSTEM = true;
@@ -131,22 +176,46 @@ function updateMinimapLegend(){
     }
   }
 
-  if(seen.BASE)          entries.push({ col:'#ffe066', label:'Station' });
-  if(seen.SYSTEM)        entries.push({ col:'#ffcc44', label:'Star system' });
-  if(seen.NEBULA_blue)   entries.push({ col:'#2f7fca', label:'Blue nebula' });
-  if(seen.NEBULA_pink)   entries.push({ col:'#8a42aa', label:'Pink nebula' });
-  if(seen.PIRATE_BASE)   entries.push({ col:'#bb3311', label:'Pirate base' });
-  if(seen.DERELICT)      entries.push({ col:'#6688aa', label:'Derelict' });
-  if(seen.CASINO)        entries.push({ col:'#cc44ff', label:'Casino' });
-  if(seen.BLACK_HOLE)    entries.push({ col:'#ff8800', label:'Black hole' });
-  if(seen.ROGUE_PLANET)  entries.push({ col:'#2a3050', label:'Rogue planet' });
-  if(seen.PULSAR)        entries.push({ col:'#00ddaa', label:'Pulsar (radiation hazard)' });
-  // Ship is always present (it's always been "discovered")
-  entries.push({ col:'#70f090', label:'Your ship' });
+  const landmark=(type,label,variant)=>entries.push({label,cell:{type,nebulaVariant:variant}});
+  if(seen.BASE)          landmark('BASE','Station');
+  if(seen.SYSTEM)        landmark('SYSTEM','Star system');
+  if(seen.NEBULA_blue)   landmark('NEBULA','Blue nebula','blue');
+  if(seen.NEBULA_pink)   landmark('NEBULA','Pink nebula','pink');
+  if(seen.PIRATE_BASE)   landmark('PIRATE_BASE','Pirate base');
+  if(seen.DERELICT)      landmark('DERELICT','Derelict');
+  if(seen.CASINO)        landmark('CASINO','Casino');
+  if(seen.BLACK_HOLE)    landmark('BLACK_HOLE','Black hole');
+  if(seen.ROGUE_PLANET)  landmark('ROGUE_PLANET','Rogue planet');
+  if(seen.PULSAR)        landmark('PULSAR','Pulsar');
+  entries.push({ label:'Detected ship',sprite:'ship_trader' },{ label:'Radio contact' });
+  entries.push({ label:'Your ship',sprite:G.shipStats?.sprite || 'player_ship',player:true });
 
-  container.innerHTML = entries.map(e =>
-    `<div class="minimap-legend-row"><span class="minimap-legend-swatch" style="background:${e.col}"></span>${e.label}</div>`
-  ).join('');
+  container.replaceChildren();
+  for(const entry of entries){
+    const row=document.createElement('div');
+    row.className='minimap-legend-row';
+    const icon=document.createElement('canvas');
+    icon.className='minimap-legend-icon';
+    icon.width=icon.height=TS;
+    icon.setAttribute('aria-hidden','true');
+    const paint=icon.getContext('2d');
+    if(entry.col){
+      paint.fillStyle=entry.col;
+      paint.fillRect(2,2,TS-4,TS-4);
+    } else if(entry.cell){
+      drawGalaxyTile(paint,entry.cell,0,0,-1,-1,true);
+    } else if(entry.sprite){
+      if(entry.player){
+        paint.strokeStyle='#70f090';
+        paint.beginPath();
+        paint.arc(TS/2,TS/2,TS/2-1,0,Math.PI*2);
+        paint.stroke();
+      }
+      drawSpriteGraphic(paint,entry.sprite,0,0);
+    } else drawRadioContact(0,0,paint,23);
+    row.append(icon,entry.label);
+    container.append(row);
+  }
 }
 
 function openGalaxyMinimapOverlay(){
@@ -157,7 +226,7 @@ function openGalaxyMinimapOverlay(){
   // Move focus off the opener so gameplay keys cannot activate it after closing.
   ov.focus({preventScroll:true});
   updateMinimapLegend();
-  drawGalaxyMinimapToCanvas(document.getElementById('galaxy-minimap-large'));
+  drawFullGalaxyMap();
 }
 
 function closeGalaxyMinimapOverlay(){

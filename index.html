@@ -1342,7 +1342,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   gap: 14px;
 }
 #minimap-large-panel {
-  width: 920px;
+  width: 1140px;
   height: 654px;
   background: #080810;
   border: 2px solid #2a2a44;
@@ -1353,8 +1353,8 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   box-shadow: inset 0 0 0 1px #050508, 0 0 24px rgba(0,0,0,0.6);
 }
 #galaxy-minimap-large {
-  width: 880px;
-  height: 630px;
+  width: 1100px;
+  height: 636px;
   position: static;
   top: auto;
   left: auto;
@@ -1362,7 +1362,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   display: block;
 }
 #minimap-legend {
-  width: 170px;
+  width: 200px;
   height: 654px;
   box-sizing: border-box;
   background: #080810;
@@ -1387,10 +1387,10 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   gap: 8px;
   white-space: nowrap;
 }
-.minimap-legend-swatch {
-  width: 12px;
-  height: 12px;
-  border: 1px solid #111827;
+.minimap-legend-icon {
+  position: static;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 #minimap-overlay-hint {
@@ -1526,7 +1526,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   <div id="minimap-overlay" tabindex="-1" onclick="if(event.target.id==='minimap-overlay') closeGalaxyMinimapOverlay();">
     <div id="minimap-overlay-body">
       <div id="minimap-large-panel">
-        <canvas id="galaxy-minimap-large" width="880" height="630"></canvas>
+        <canvas id="galaxy-minimap-large" width="1100" height="636"></canvas>
       </div>
       <div id="minimap-legend">
         <div class="minimap-legend-title">GALAXY MAP</div>
@@ -1639,7 +1639,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.24</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.25</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1697,8 +1697,8 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.24';
-const GAME_VERSION_LABEL = 'v0.28 experimental.24';
+const GAME_VERSION = '0.28.0-experimental.25';
+const GAME_VERSION_LABEL = 'v0.28 experimental.25';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -2262,13 +2262,17 @@ function drawSprite(key, x, y, fallbackColor){
     drawAsciiTile(key, x, y, null);
     return;
   }
+  drawSpriteGraphic(ctx,key,x,y,fallbackColor);
+}
+
+function drawSpriteGraphic(target,key,x,y,fallbackColor){
   if(IMG[key] instanceof HTMLCanvasElement){
-    ctx.drawImage(IMG[key], x, y, TS, TS);
+    target.drawImage(IMG[key], x, y, TS, TS);
   } else if(IMG[key] && IMG[key].complete && IMG[key].naturalWidth>0){
-    ctx.drawImage(IMG[key], x, y, TS, TS);
+    target.drawImage(IMG[key], x, y, TS, TS);
   } else if(fallbackColor){
-    ctx.fillStyle = fallbackColor;
-    ctx.fillRect(x, y, TS, TS);
+    target.fillStyle = fallbackColor;
+    target.fillRect(x, y, TS, TS);
   }
 }
 
@@ -2399,20 +2403,19 @@ function tintedSpriteImage(source,tintColor){
   paint.putImageData(data,0,0);colors.set(tintColor,off);return off;
 }
 function drawSpriteTinted(key, x, y, tintColor, opacity=1){
-  if(OPTIONS.asciiMode){
-    drawAsciiTile(key, x, y, null, tintColor);
-    return;
-  }
+  if(!OPTIONS.asciiMode && drawTintedSpriteGraphic(ctx,key,x,y,tintColor,opacity)) return;
+  drawAsciiTile(key, x, y, null, tintColor);
+}
+
+function drawTintedSpriteGraphic(target,key,x,y,tintColor,opacity=1){
   const source=IMG[key];
-  if(source instanceof HTMLCanvasElement || source?.complete && source.naturalWidth>0){
-    ctx.save();
-    ctx.globalAlpha*=opacity;
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(tintedSpriteImage(source,tintColor),Math.round(x),Math.round(y),TS,TS);
-    ctx.restore();
-  } else {
-    drawAsciiTile(key,x,y,null,tintColor);
-  }
+  if(!(source instanceof HTMLCanvasElement || source?.complete && source.naturalWidth>0)) return false;
+  target.save();
+  target.globalAlpha*=opacity;
+  target.imageSmoothingEnabled=false;
+  target.drawImage(tintedSpriteImage(source,tintColor),Math.round(x),Math.round(y),TS,TS);
+  target.restore();
+  return true;
 }
 
 // -- Procedural draw helpers (used for galaxy tiles & effects) ---
@@ -13608,7 +13611,7 @@ function renderGalaxyMinimap(){
   const mini = document.getElementById('galaxy-minimap');
   drawGalaxyMinimapToCanvas(mini);
   if(document.getElementById('minimap-overlay')?.classList.contains('visible')){
-    drawGalaxyMinimapToCanvas(document.getElementById('galaxy-minimap-large'));
+    drawFullGalaxyMap();
   }
 }
 
@@ -13700,14 +13703,59 @@ function drawGalaxyMinimapToCanvas(mini){
   mctx.strokeRect(ox+0.5, oy+0.5, Math.ceil(mapW)-1, Math.ceil(mapH)-1);
 }
 
+function drawFullGalaxyMap(){
+  const map=document.getElementById('galaxy-minimap-large');
+  const c=map.getContext('2d');
+  const {width,height}=map;
+  // Whole pixels keep neighboring fog tiles flush when the artwork is scaled.
+  const tileSize=Math.floor(Math.min((width-6)/MAP_W,(height-6)/MAP_H));
+  const mapW=MAP_W*tileSize, mapH=MAP_H*tileSize;
+  const ox=Math.floor((width-mapW)/2), oy=Math.floor((height-mapH)/2);
+  c.fillStyle='#030307';
+  c.fillRect(0,0,width,height);
+  if(!G?.galaxy) return;
+
+  c.save();
+  c.beginPath();
+  c.rect(ox,oy,mapW,mapH);
+  c.clip();
+  c.fillStyle='#04040c';
+  c.fillRect(ox,oy,mapW,mapH);
+  c.translate(ox,oy);
+  c.scale(tileSize/TS,tileSize/TS);
+  c.imageSmoothingEnabled=false;
+
+  for(let y=0;y<MAP_H;y++){
+    for(let x=0;x<MAP_W;x++){
+      if(!DEBUG.fullVision && !G.visited?.[y*MAP_W+x]){
+        c.fillStyle='#242531';
+        c.fillRect(x*TS,y*TS,TS,TS);
+        continue;
+      }
+      const cell=G.galaxy[y]?.[x];
+      if(cell && cell.type!=='VOID') drawGalaxyTile(c,cell,x*TS,y*TS,x,y,true);
+    }
+  }
+  drawGalaxyActors(c,0,0,MAP_W,MAP_H,true);
+  c.restore();
+
+  const camX=Math.max(0,Math.min(MAP_W-VIEW_W,G.ship.x-Math.floor(VIEW_W/2)));
+  const camY=Math.max(0,Math.min(MAP_H-VIEW_H,G.ship.y-Math.floor(VIEW_H/2)));
+  c.strokeStyle='#445566';
+  c.lineWidth=1;
+  c.strokeRect(ox+camX*tileSize,oy+camY*tileSize,VIEW_W*tileSize,VIEW_H*tileSize);
+  c.strokeStyle='#222238';
+  c.strokeRect(ox+0.5,oy+0.5,mapW-1,mapH-1);
+}
+
 function updateMinimapLegend(){
   const container = document.getElementById('minimap-legend-rows');
   if(!container) return;
 
   // Always-present entries
   const entries = [
-    { col:'#303038', label:'Undiscovered' },
-    { col:'#14141f', label:'Empty space' },
+    { col:'#242531', label:'Undiscovered' },
+    { col:'#04040c', label:'Empty space' },
   ];
 
   // Track which object types have been seen in visited cells
@@ -13718,7 +13766,7 @@ function updateMinimapLegend(){
   if(G && G.galaxy && G.visited){
     for(let y=0; y<MAP_H; y++){
       for(let x=0; x<MAP_W; x++){
-        if(!G.visited[y*MAP_W+x]) continue;
+        if(!DEBUG.fullVision && !G.visited[y*MAP_W+x]) continue;
         const cell = G.galaxy[y]?.[x];
         if(!cell) continue;
         if(cell.type === 'SYSTEM')     seen.SYSTEM = true;
@@ -13737,22 +13785,46 @@ function updateMinimapLegend(){
     }
   }
 
-  if(seen.BASE)          entries.push({ col:'#ffe066', label:'Station' });
-  if(seen.SYSTEM)        entries.push({ col:'#ffcc44', label:'Star system' });
-  if(seen.NEBULA_blue)   entries.push({ col:'#2f7fca', label:'Blue nebula' });
-  if(seen.NEBULA_pink)   entries.push({ col:'#8a42aa', label:'Pink nebula' });
-  if(seen.PIRATE_BASE)   entries.push({ col:'#bb3311', label:'Pirate base' });
-  if(seen.DERELICT)      entries.push({ col:'#6688aa', label:'Derelict' });
-  if(seen.CASINO)        entries.push({ col:'#cc44ff', label:'Casino' });
-  if(seen.BLACK_HOLE)    entries.push({ col:'#ff8800', label:'Black hole' });
-  if(seen.ROGUE_PLANET)  entries.push({ col:'#2a3050', label:'Rogue planet' });
-  if(seen.PULSAR)        entries.push({ col:'#00ddaa', label:'Pulsar (radiation hazard)' });
-  // Ship is always present (it's always been "discovered")
-  entries.push({ col:'#70f090', label:'Your ship' });
+  const landmark=(type,label,variant)=>entries.push({label,cell:{type,nebulaVariant:variant}});
+  if(seen.BASE)          landmark('BASE','Station');
+  if(seen.SYSTEM)        landmark('SYSTEM','Star system');
+  if(seen.NEBULA_blue)   landmark('NEBULA','Blue nebula','blue');
+  if(seen.NEBULA_pink)   landmark('NEBULA','Pink nebula','pink');
+  if(seen.PIRATE_BASE)   landmark('PIRATE_BASE','Pirate base');
+  if(seen.DERELICT)      landmark('DERELICT','Derelict');
+  if(seen.CASINO)        landmark('CASINO','Casino');
+  if(seen.BLACK_HOLE)    landmark('BLACK_HOLE','Black hole');
+  if(seen.ROGUE_PLANET)  landmark('ROGUE_PLANET','Rogue planet');
+  if(seen.PULSAR)        landmark('PULSAR','Pulsar');
+  entries.push({ label:'Detected ship',sprite:'ship_trader' },{ label:'Radio contact' });
+  entries.push({ label:'Your ship',sprite:G.shipStats?.sprite || 'player_ship',player:true });
 
-  container.innerHTML = entries.map(e =>
-    `<div class="minimap-legend-row"><span class="minimap-legend-swatch" style="background:${e.col}"></span>${e.label}</div>`
-  ).join('');
+  container.replaceChildren();
+  for(const entry of entries){
+    const row=document.createElement('div');
+    row.className='minimap-legend-row';
+    const icon=document.createElement('canvas');
+    icon.className='minimap-legend-icon';
+    icon.width=icon.height=TS;
+    icon.setAttribute('aria-hidden','true');
+    const paint=icon.getContext('2d');
+    if(entry.col){
+      paint.fillStyle=entry.col;
+      paint.fillRect(2,2,TS-4,TS-4);
+    } else if(entry.cell){
+      drawGalaxyTile(paint,entry.cell,0,0,-1,-1,true);
+    } else if(entry.sprite){
+      if(entry.player){
+        paint.strokeStyle='#70f090';
+        paint.beginPath();
+        paint.arc(TS/2,TS/2,TS/2-1,0,Math.PI*2);
+        paint.stroke();
+      }
+      drawSpriteGraphic(paint,entry.sprite,0,0);
+    } else drawRadioContact(0,0,paint,23);
+    row.append(icon,entry.label);
+    container.append(row);
+  }
 }
 
 function openGalaxyMinimapOverlay(){
@@ -13763,7 +13835,7 @@ function openGalaxyMinimapOverlay(){
   // Move focus off the opener so gameplay keys cannot activate it after closing.
   ov.focus({preventScroll:true});
   updateMinimapLegend();
-  drawGalaxyMinimapToCanvas(document.getElementById('galaxy-minimap-large'));
+  drawFullGalaxyMap();
 }
 
 function closeGalaxyMinimapOverlay(){
@@ -14160,12 +14232,12 @@ function drawSystemBodyIcon(p,px,py,pCol,scanned){
     }
   }
 }
-function drawRadioContact(x,y){
-  ctx.save();
-  ctx.font='14px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle='#c9b66b';
-  ctx.fillText('?',x+TS/2,y+TS/2);
-  ctx.restore();
+function drawRadioContact(x,y,target=ctx,size=14){
+  target.save();
+  target.font=size+'px Courier New'; target.textAlign='center'; target.textBaseline='middle';
+  target.fillStyle='#c9b66b';
+  target.fillText('?',x+TS/2,y+TS/2);
+  target.restore();
 }
 
 function drawGalaxy(){
@@ -14224,81 +14296,84 @@ function drawGalaxy(){
         }
         ctx.textBaseline='alphabetic'; ctx.textAlign='left';
       } else {
-        // Station artwork composites over the ordinary space layer.
-        if(['BASE','PIRATE_BASE','CASINO','DERELICT'].includes(cell.type)) DRAW.void(ctx,px,py);
-        if(cell.type==='SYSTEM'){
-          drawSystemTile(ctx, px, py, cell.starType);
-        } else if(cell.type==='BASE'){
-          drawSprite('starbase', px, py);
-        } else if(cell.type==='PIRATE_BASE'){
-          const _pb2 = (G.pirateBases||[]).find(b=>b.x===mx&&b.y===my);
-          if(_pb2&&_pb2.destroyed){
-            // Rubble: dark ruin glyph
-            ctx.font='bold '+(TS-4)+'px Courier New'; ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillStyle='#554433'; ctx.fillText('✕',px+TS/2,py+TS/2+1);
-            ctx.textBaseline='alphabetic'; ctx.textAlign='left';
-          } else {
-            // Draw HP bar above base when damaged
-            DRAW.pirate_base(ctx, px, py);
-            if(_pb2&&_pb2.hp<_pb2.maxHp){
-              const hpPct = _pb2.hp/_pb2.maxHp;
-              ctx.fillStyle='#330000'; ctx.fillRect(px,py-4,TS,3);
-              ctx.fillStyle= hpPct>0.5?'#cc4400':'#ff2200';
-              ctx.fillRect(px,py-4,Math.round(TS*hpPct),3);
-            }
-          }
-        } else if(cell.type==='CASINO'){
-          if(OPTIONS.asciiMode){
-            ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
-            ctx.font='bold '+(TS-1)+'px Courier New';
-            ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillStyle='#cc44ff'; ctx.fillText('$',px+TS/2,py+TS/2+1);
-            ctx.textBaseline='alphabetic'; ctx.textAlign='left';
-          } else {
-            DRAW.casino(ctx, px, py);
-          }
-        } else if(cell.type==='DERELICT'){
-          drawDerelictStation(ctx,px,py);
-        } else if(cell.type==='BLACK_HOLE'){
-          DRAW.black_hole(ctx, px, py);
-        } else if(cell.type==='ROGUE_PLANET'){
-          DRAW.rogue_planet(ctx, px, py);
-        } else if(cell.type==='PULSAR'){
-          DRAW.pulsar(ctx, px, py);
-        } else if(cell.type==='NEBULA'){
-          DRAW.nebula(ctx, px, py, cell.nebulaVariant, mx, my);
-        } else if(DRAW[cell.type]){
-          DRAW[cell.type](ctx,px,py);
-        } else {
-          DRAW.void(ctx,px,py);
-        }
+        drawGalaxyTile(ctx,cell,px,py,mx,my);
       }
     }
   }
+  drawGalaxyActors(ctx,camX,camY,VIEW_W,VIEW_H);
+}
+
+function drawGalaxyTile(target,cell,x,y,mx,my,chart=false){
+  // Space sits behind station artwork in the main view. The full map already has a background.
+  if(!chart && ['BASE','PIRATE_BASE','CASINO','DERELICT'].includes(cell.type)) DRAW.void(target,x,y);
+  switch(cell.type){
+    case 'SYSTEM': drawSystemTile(target,x,y,cell.starType); return;
+    case 'BASE': drawSpriteGraphic(target,'starbase',x,y); return;
+    case 'PIRATE_BASE': {
+      const base=(G.pirateBases||[]).find(b=>b.x===mx&&b.y===my);
+      if(base?.destroyed){
+        target.font='bold '+(TS-4)+'px Courier New';
+        target.textAlign='center';
+        target.textBaseline='middle';
+        target.fillStyle='#554433';
+        target.fillText('✕',x+TS/2,y+TS/2+1);
+        target.textBaseline='alphabetic';
+        target.textAlign='left';
+      } else {
+        DRAW.pirate_base(target,x,y);
+        if(!chart && base && base.hp<base.maxHp){
+          const hpPct=base.hp/base.maxHp;
+          target.fillStyle='#330000'; target.fillRect(x,y-4,TS,3);
+          target.fillStyle=hpPct>0.5?'#cc4400':'#ff2200';
+          target.fillRect(x,y-4,Math.round(TS*hpPct),3);
+        }
+      }
+      return;
+    }
+    case 'CASINO': DRAW.casino(target,x,y); return;
+    case 'DERELICT': drawDerelictStation(target,x,y); return;
+    case 'BLACK_HOLE': DRAW.black_hole(target,x,y); return;
+    case 'ROGUE_PLANET':
+      if(chart){
+        target.save();
+        target.filter='brightness(2.4)';
+      }
+      DRAW.rogue_planet(target,x,y);
+      if(chart) target.restore();
+      return;
+    case 'PULSAR': DRAW.pulsar(target,x,y); return;
+    case 'NEBULA': DRAW.nebula(target,x,y,cell.nebulaVariant,mx,my); return;
+    default: (DRAW[cell.type]||DRAW.void)(target,x,y);
+  }
+}
+
+function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
+  const drawPlain=chart?(key,x,y,color)=>drawSpriteGraphic(ctx,key,x,y,color):drawSprite;
+  const drawTinted=chart?(key,x,y,tint,opacity)=>drawTintedSpriteGraphic(ctx,key,x,y,tint,opacity):drawSpriteTinted;
   // Draw pirates. Radio contacts beyond sensor range appear as unknown pings.
   const SENSOR_RANGE = (G.shipStats?.sensorRange ?? 3);
   G.pirates.forEach(p=>{
     if(!p.alive) return;
     const vx = p.x - camX;
     const vy = p.y - camY;
-    if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H) return;
+    if(vx<0||vx>=viewWidth||vy<0||vy>=viewHeight) return;
     const dist = Math.abs(p.x-G.ship.x) + Math.abs(p.y-G.ship.y);
     const rr = radioRange();
     if(!DEBUG.fullVision && dist > rr) return;
     const px = vx*TS, py = vy*TS;
     if(!DEBUG.fullVision && dist > SENSOR_RANGE){
-      drawRadioContact(px,py);
+      drawRadioContact(px,py,ctx,chart?23:14);
       return;
     }
     if(!DEBUG.fullVision && !G.visited[p.y*MAP_W+p.x]) return;
     const _ptint = p.pirateType==='roamer' ? '#aa0066' : '#882200';
-    drawSprite('pirate_ship', px, py, _ptint);
+    drawPlain('pirate_ship', px, py, _ptint);
   });
   // Draw NPC stranded ships — visible within sensor range
   (G.npcStranded||[]).forEach(ss=>{
     if(!DEBUG.fullVision && !G.visited[ss.y*MAP_W+ss.x]) return;
     const svx=ss.x-camX, svy=ss.y-camY;
-    if(svx<0||svx>=VIEW_W||svy<0||svy>=VIEW_H) return;
+    if(svx<0||svx>=viewWidth||svy<0||svy>=viewHeight) return;
     const sdist=Math.abs(ss.x-G.ship.x)+Math.abs(ss.y-G.ship.y);
     if(!DEBUG.fullVision && sdist > SENSOR_RANGE) return;
     const spx=svx*TS, spy=svy*TS;
@@ -14310,10 +14385,10 @@ function drawGalaxy(){
       ctx.strokeStyle='#ffcc00'; ctx.lineWidth=2;
       ctx.beginPath(); ctx.arc(spx+TS/2,spy+TS/2,glowR,0,Math.PI*2); ctx.stroke();
       ctx.globalAlpha=1; ctx.lineWidth=1;
-      drawSpriteTinted('ship_freighter',spx,spy,'#ffcc00',0.9);
+      drawTinted('ship_freighter',spx,spy,'#ffcc00',0.9);
     } else {
       // Dead stranded — dim, no glow, dark tint
-      drawSpriteTinted(ss.type==='research'?'ship_science':'ship_freighter',spx,spy,'#667b8e',0.6);
+      drawTinted(ss.type==='research'?'ship_science':'ship_freighter',spx,spy,'#667b8e',0.6);
       // Static SOS flicker — skip for research/science-job ships whose beacon is off
       if(!ss.noSos && ss.type!=='research' && Math.floor(Date.now()/500)%2===0){
         ctx.globalAlpha=0.5; ctx.strokeStyle='#ff4400'; ctx.lineWidth=1;
@@ -14327,25 +14402,25 @@ function drawGalaxy(){
   (G.neutralShips||[]).forEach(ns=>{
     if(ns.alive===false) return;  // destroyed — don't render wreck
     const vx2 = ns.x - camX, vy2 = ns.y - camY;
-    if(vx2<0||vx2>=VIEW_W||vy2<0||vy2>=VIEW_H) return;
+    if(vx2<0||vx2>=viewWidth||vy2<0||vy2>=viewHeight) return;
     const dist2 = Math.abs(ns.x-G.ship.x) + Math.abs(ns.y-G.ship.y);
     const rr = radioRange();
     if(!DEBUG.fullVision && dist2 > rr) return;
     const px2 = vx2*TS, py2 = vy2*TS;
     if(!DEBUG.fullVision && dist2 > SENSOR_RANGE){
-      drawRadioContact(px2,py2);
+      drawRadioContact(px2,py2,ctx,chart?23:14);
       return;
     }
     if(!DEBUG.fullVision && !G.visited[ns.y*MAP_W+ns.x]) return;
     const art=neutralShipArt(ns);
-    drawSpriteTinted(art.sprite,px2,py2,art.tint);
+    drawTinted(art.sprite,px2,py2,art.tint);
   });
 
   // Draw gas entities — visible within sensor range when player is in/near a nebula
   (G.gasEntities||[]).forEach(ge=>{
     if(!ge.alive) return;
     const gvx = ge.x - camX, gvy = ge.y - camY;
-    if(gvx<0||gvx>=VIEW_W||gvy<0||gvy>=VIEW_H) return;
+    if(gvx<0||gvx>=viewWidth||gvy<0||gvy>=viewHeight) return;
     const gdist = Math.abs(ge.x-G.ship.x)+Math.abs(ge.y-G.ship.y);
     if(!DEBUG.fullVision && gdist > (G.shipStats?.sensorRange ?? 3) + 2) return;
     if(!DEBUG.fullVision && !G.visited[ge.y*MAP_W+ge.x]) return;
@@ -14366,7 +14441,7 @@ function drawGalaxy(){
   (G.nebulaLoot||[]).forEach(loot=>{
     if(!G.visited[loot.y*MAP_W+loot.x] && !DEBUG.fullVision) return;
     const lvx = loot.x - camX, lvy = loot.y - camY;
-    if(lvx<0||lvx>=VIEW_W||lvy<0||lvy>=VIEW_H) return;
+    if(lvx<0||lvx>=viewWidth||lvy<0||lvy>=viewHeight) return;
     const lpx = lvx*TS, lpy = lvy*TS;
     // Gentle slow spin effect using time
     const t = (Date.now() % 3000) / 3000;
@@ -14405,15 +14480,22 @@ function drawGalaxy(){
   });
 
   // Draw player ship
-  const shipPos = getAnimatedShipMapPosition();
+  const shipPos = chart ? G.ship : getAnimatedShipMapPosition();
   const shipVx = shipPos.x - camX;
   const shipVy = shipPos.y - camY;
-  // Original direction frames keep diagonal pixel shapes crisp and inside the tile.
-  (function drawPlayerShipDirectional(){
-    const f = G.ship.facing || {dx:0, dy:-1};
-    const spriteKey = G.shipStats?.sprite || 'player_ship';
+  const f = G.ship.facing || {dx:0, dy:-1};
+  const spriteKey = G.shipStats?.sprite || 'player_ship';
+  if(chart){
+    ctx.strokeStyle='#70f090';
+    ctx.lineWidth=2.5;
+    ctx.beginPath();
+    ctx.arc(shipVx*TS+TS/2,shipVy*TS+TS/2,13,0,Math.PI*2);
+    ctx.stroke();
+    drawSpriteGraphic(ctx,shipDirectionKey(spriteKey,f.dx,f.dy),shipVx*TS,shipVy*TS,'#aab8c8');
+    ctx.lineWidth=1;
+  } else {
     drawDirectionalShip(spriteKey,shipVx*TS,shipVy*TS,f.dx,f.dy);
-  })();
+  }
 
   // SOS pulse ring — drawn AFTER player ship so shipVx/shipVy are defined
   if(G.stranded && G.stranded.sos){
@@ -14433,7 +14515,7 @@ function drawGalaxy(){
   if(G._activeDrones && G._activeDrones.length){
     G._activeDrones.forEach(d=>{
       const dvx = d.x - camX, dvy = d.y - camY;
-      if(dvx<0||dvx>=VIEW_W||dvy<0||dvy>=VIEW_H) return;
+      if(dvx<0||dvx>=viewWidth||dvy<0||dvy>=viewHeight) return;
       const dpx = dvx*TS, dpy = dvy*TS;
       const cx = dpx + TS/2, cy = dpy + TS/2;
       const r = 4;

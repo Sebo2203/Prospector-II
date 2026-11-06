@@ -3,13 +3,17 @@ function drawSprite(key, x, y, fallbackColor){
     drawAsciiTile(key, x, y, null);
     return;
   }
+  drawSpriteGraphic(ctx,key,x,y,fallbackColor);
+}
+
+function drawSpriteGraphic(target,key,x,y,fallbackColor){
   if(IMG[key] instanceof HTMLCanvasElement){
-    ctx.drawImage(IMG[key], x, y, TS, TS);
+    target.drawImage(IMG[key], x, y, TS, TS);
   } else if(IMG[key] && IMG[key].complete && IMG[key].naturalWidth>0){
-    ctx.drawImage(IMG[key], x, y, TS, TS);
+    target.drawImage(IMG[key], x, y, TS, TS);
   } else if(fallbackColor){
-    ctx.fillStyle = fallbackColor;
-    ctx.fillRect(x, y, TS, TS);
+    target.fillStyle = fallbackColor;
+    target.fillRect(x, y, TS, TS);
   }
 }
 
@@ -140,20 +144,19 @@ function tintedSpriteImage(source,tintColor){
   paint.putImageData(data,0,0);colors.set(tintColor,off);return off;
 }
 function drawSpriteTinted(key, x, y, tintColor, opacity=1){
-  if(OPTIONS.asciiMode){
-    drawAsciiTile(key, x, y, null, tintColor);
-    return;
-  }
+  if(!OPTIONS.asciiMode && drawTintedSpriteGraphic(ctx,key,x,y,tintColor,opacity)) return;
+  drawAsciiTile(key, x, y, null, tintColor);
+}
+
+function drawTintedSpriteGraphic(target,key,x,y,tintColor,opacity=1){
   const source=IMG[key];
-  if(source instanceof HTMLCanvasElement || source?.complete && source.naturalWidth>0){
-    ctx.save();
-    ctx.globalAlpha*=opacity;
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(tintedSpriteImage(source,tintColor),Math.round(x),Math.round(y),TS,TS);
-    ctx.restore();
-  } else {
-    drawAsciiTile(key,x,y,null,tintColor);
-  }
+  if(!(source instanceof HTMLCanvasElement || source?.complete && source.naturalWidth>0)) return false;
+  target.save();
+  target.globalAlpha*=opacity;
+  target.imageSmoothingEnabled=false;
+  target.drawImage(tintedSpriteImage(source,tintColor),Math.round(x),Math.round(y),TS,TS);
+  target.restore();
+  return true;
 }
 
 // -- Procedural draw helpers (used for galaxy tiles & effects) ---

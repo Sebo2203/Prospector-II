@@ -46,6 +46,64 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    return {stats,checks:['real alpha and no opaque tile corners','background preserved over space and both nebulae','galaxy and biome derelicts plus Mercy use shared wreck art','native boarding and ASCII retained','exact career restoration'],image:sheet.toDataURL()};
   });
   fs.writeFileSync(artifactPath('Station-art-preview.png'),Buffer.from(report.image.split(',')[1],'base64'));delete report.image;
+  const chart=await page.evaluate(()=>{
+   const points=[
+    {x:27,y:26,type:'BASE'}, {x:31,y:26,type:'SYSTEM',starType:'YELLOW'},
+    {x:35,y:26,type:'DERELICT'}, {x:39,y:26,type:'CASINO'}, {x:43,y:26,type:'PIRATE_BASE'},
+    {x:27,y:30,type:'BLACK_HOLE'}, {x:31,y:30,type:'PULSAR'},
+    {x:35,y:30,type:'ROGUE_PLANET'}, {x:39,y:30,type:'NEBULA',nebulaVariant:'blue'},
+    {x:43,y:30,type:'NEBULA',nebulaVariant:'pink'}
+   ];
+   const hidden={x:55,y:30,type:'DERELICT'};
+   G.ship.x=35;G.ship.y=36;G.shipStats.sensorRange=3;
+   G.galaxy=Array.from({length:MAP_H},()=>Array.from({length:MAP_W},()=>({type:'VOID'})));
+   G.visited.fill(false);
+   for(let y=21;y<42;y++)for(let x=21;x<51;x++)G.visited[y*MAP_W+x]=true;
+   for(const cell of [...points,hidden]) G.galaxy[cell.y][cell.x]=cell;
+   G.pirates=[];G.pirateBases=[];G.npcStranded=[];G.nebulaLoot=[];G.gasEntities=[];G._activeDrones=[];
+   G.neutralShips=[{x:37,y:36,type:'trader'},{x:40,y:36,type:'trader'},{x:45,y:36,type:'trader'}];
+   const small=document.getElementById('galaxy-minimap');
+   renderGalaxyMinimap();
+   const before=small.toDataURL();
+   OPTIONS.asciiMode=true;
+   openGalaxyMinimapOverlay();
+   renderGalaxyMinimap();
+   OPTIONS.asciiMode=false;
+   if(small.toDataURL()!==before) throw Error('Opening the chart changed the small minimap');
+
+   const map=document.getElementById('galaxy-minimap-large');
+   const paint=map.getContext('2d');
+   const tileSize=Math.floor(Math.min((map.width-6)/MAP_W,(map.height-6)/MAP_H));
+   const ox=Math.floor((map.width-MAP_W*tileSize)/2),oy=Math.floor((map.height-MAP_H*tileSize)/2);
+   const colors=(x,y)=>{
+    const pixels=paint.getImageData(Math.ceil(ox+x*tileSize)+1,Math.ceil(oy+y*tileSize)+1,6,6).data;
+    const result=new Set();
+    for(let i=0;i<pixels.length;i+=4)result.add([...pixels.slice(i,i+3)].join(','));
+    return result;
+   };
+   for(const {x,y,type} of points){
+    if(colors(x,y).size<3)throw Error(type+' lacks visible full-map art');
+   }
+   if(!colors(hidden.x,hidden.y).has('36,37,49')||colors(hidden.x,hidden.y).size!==1)
+    throw Error('Unscanned wreck appeared on the full map');
+   if(colors(37,36).size<3||colors(40,36).size<3||colors(45,36).size!==1)
+    throw Error('The full map lost a visible contact or showed one outside radio range');
+   const legend=document.getElementById('minimap-legend-rows');
+   if(legend.querySelectorAll('canvas').length!==15)throw Error('Missing graphical map key entries');
+   return ['ten landmark sprites in ASCII mode','hidden wreck and out-of-range ship concealed',
+    'visible ship and radio contact rendered','small minimap pixels preserved'];
+  });
+  for(const [width,height] of [[1400,720],[800,600]]){
+   await page.setViewportSize({width,height});
+   await page.waitForFunction(()=>{
+    const {left,top,right,bottom}=document.getElementById('minimap-overlay-body').getBoundingClientRect();
+    return left>=0&&top>=0&&right<=innerWidth&&bottom<=innerHeight;
+   });
+   if(width===1400)await page.locator('#minimap-overlay').screenshot({path:artifactPath('Full-galaxy-map.png')});
+  }
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#minimap-overlay').isVisible(),false);
+  report.checks.push(...chart,'full map fits native and scaled windows');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,errors},null,2));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

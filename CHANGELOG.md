@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.25 draws artwork on the full galaxy map
+
+Released on `experiment/expedition-legacy`.
+
+- The full galaxy map now uses compact versions of the galaxy artwork for charted landmarks and visible ships, with an illustrated key and a green ring around the player. It uses artwork in ASCII mode. Fog and sensor limits still apply, with a yellow question mark for unknown radio contacts. The small HUD minimap keeps its color-coded tiles. See [Full galaxy map](docs/art-direction.md#full-galaxy-map).
+- All 47 repository tests and five headless Edge suites passed. A controlled map fixture checked ten landmark types, hidden wrecks, ship contacts, and identical HUD minimap pixels. The overlay fit at 1400×720 and 800×600. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.24 adds map targeting by mouse
 
 Released on `experiment/expedition-legacy`.

@@ -532,7 +532,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   gap: 14px;
 }
 #minimap-large-panel {
-  width: 920px;
+  width: 1140px;
   height: 654px;
   background: #080810;
   border: 2px solid #2a2a44;
@@ -543,8 +543,8 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   box-shadow: inset 0 0 0 1px #050508, 0 0 24px rgba(0,0,0,0.6);
 }
 #galaxy-minimap-large {
-  width: 880px;
-  height: 630px;
+  width: 1100px;
+  height: 636px;
   position: static;
   top: auto;
   left: auto;
@@ -552,7 +552,7 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   display: block;
 }
 #minimap-legend {
-  width: 170px;
+  width: 200px;
   height: 654px;
   box-sizing: border-box;
   background: #080810;
@@ -577,10 +577,10 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   gap: 8px;
   white-space: nowrap;
 }
-.minimap-legend-swatch {
-  width: 12px;
-  height: 12px;
-  border: 1px solid #111827;
+.minimap-legend-icon {
+  position: static;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 #minimap-overlay-hint {

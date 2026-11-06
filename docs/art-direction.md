@@ -35,6 +35,10 @@ From experimental.14, station artwork is composited over the ordinary space laye
 
 Derelict galaxy objects now use original code-authored 24px wreck art: a fractured orbital ring, severed spokes, breached hub, exposed rusty plating and detached debris. `src/rendering/station-art.js` caches this on a transparent canvas. Native derelicts, the derelict biome sample and Mercy use the same renderer; ASCII retains its existing glyph. No generated bitmap or external art source is required. The existing stations and wrecks keep their interactions, names, placement and saves.
 
+## Full galaxy map
+
+From experimental.25, the full map opened with **M** or the HUD map button draws discovered objects with the same artwork as the galaxy view at nine pixels per sector before window scaling. A green ring marks the player ship. Identified ships use their hull art and unidentified radio contacts use a yellow `?`. Unscanned sectors remain covered. The map has an illustrated key and uses graphics even in ASCII mode. The small HUD minimap keeps its color-coded tiles.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.
