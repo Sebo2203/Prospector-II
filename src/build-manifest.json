@@ -60,6 +60,7 @@
     "src/world/exploration-and-trails.js",
     "src/ui/log-and-keybindings.js",
     "src/ui/menu-pointer.js",
+    "src/ui/pointer-keys.js",
     "src/rendering/dispatch.js",
     "src/rendering/minimap.js",
     "src/rendering/dialogue-overlays.js",

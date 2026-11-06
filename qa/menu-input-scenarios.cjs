@@ -18,6 +18,8 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     }
     async function click(x,y){ await page.mouse.click(...await point(x,y)); }
     async function press(key){ await page.keyboard.press(key); }
+    const action = text=>page.locator('#ctx-bar button').filter({hasText:text}).first();
+    const escape = page.locator('#game-escape');
     const menuScreen = ()=>page.evaluate(()=>MENU_STATE.screen);
     const mode = ()=>page.evaluate(()=>G.mode);
 
@@ -32,7 +34,8 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await menuScreen(),'keybindings');
     await click(700,153);
     assert.equal(await page.evaluate(()=>MENU_STATE._rebinding),'n');
-    await press('k');
+    await page.locator('#pointer-keys-toggle').click();
+    await page.locator('#pointer-keys [data-code="KeyK"]').click();
     assert.equal(await page.evaluate(()=>OPTIONS.keybinds.n),'KeyK');
     await click(700,419);
     assert.equal(await page.evaluate(()=>OPTIONS.keybinds.n),'KeyW');
@@ -62,14 +65,15 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     await click(700,160);
     assert.equal(await menuScreen(),'naming');
     await game.screenshot({path:artifactPath('Vessel-registration.png')});
-    await page.keyboard.type('Pointer QA');
+    await page.locator('#pointer-keys-toggle').click();
+    for(const key of ['p','i','l','o','t']) await page.locator('#pointer-keys').getByRole('button',{name:key,exact:true}).click();
     await click(857,367);
-    await page.keyboard.type('Menu Ship');
+    for(const key of ['s','h','i','p']) await page.locator('#pointer-keys').getByRole('button',{name:key,exact:true}).click();
     await click(857,367);
     await page.waitForFunction(()=>G?.galaxy && G.log.some(entry=>entry.msg.includes('Ready for departure')));
-    assert.deepEqual(await page.evaluate(()=>[G.shipStats.classId,G.shipName]),['BULK_FREIGHTER','Menu Ship']);
+    assert.deepEqual(await page.evaluate(()=>[G.shipStats.classId,G.crew.find(c=>c.role==='captain').name,G.shipName]),['BULK_FREIGHTER','pilot','ship']);
 
-    await press('Enter');
+    await action(/Dock at Starbase/).click();
     assert.equal(await mode(),'base');
     await page.evaluate(()=>{ G.fuel=G.maxFuel-5; renderAll(); });
     await click(200,65);
@@ -78,21 +82,27 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await page.evaluate(()=>G.base.hangarSub),'maintenance');
     await click(200,102);
     assert.equal(await page.evaluate(()=>G.fuel),await page.evaluate(()=>G.maxFuel));
-    await press('Escape');
-    await click(83,463);
+    await escape.click();
+    await escape.click();
     assert.equal(await mode(),'galaxy');
 
     await page.evaluate(()=>{
       G.neutralShips=[{type:'patrol',name:'Pointer Patrol',x:G.ship.x+1,y:G.ship.y}];
       renderAll();
     });
-    await press('h');
+    await action(/Hail Pointer Patrol/).click();
     const patrolTurn = await page.evaluate(()=>G.turn);
     await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
     assert.equal(await page.evaluate(()=>G.turn),patrolTurn);
-    await click(350,313);
+    await action(/\[↓\] Select reply/).click();
+    await action(/Ask about threats/).click();
     assert.equal(await page.evaluate(()=>G.dialogue.node),'threats');
-    await press('Escape');
+    await escape.click();
+    assert.equal(await page.evaluate(()=>G.dialogue),null);
+    await page.locator('#minimap-max-btn').click();
+    assert.equal(await page.locator('#minimap-overlay').isVisible(),true);
+    await escape.click();
+    assert.equal(await page.locator('#minimap-overlay').isVisible(),false);
 
     const legend=page.locator('#persist-hints');
     assert.equal(await legend.locator('button,a,[tabindex],[onclick]').count(),0);
@@ -105,24 +115,38 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
       assert.equal(await mode(),'galaxy');
       assert.equal(await page.evaluate(()=>!!G.showOptions),false);
     }
-    await press('o');
+    await action(/\[O\] Options/).click();
     assert.equal(await page.evaluate(()=>G.showOptions),true);
     await click(480,211);
     assert.equal(await page.evaluate(()=>G._kbScreen),true);
     await press('Escape');
-    await press('Escape');
+    await click(480,309);
+    assert.equal(await page.locator('#feedback-overlay').isVisible(),true);
+    await page.locator('#feedback-msg').click();
+    await page.locator('#pointer-keys-toggle').click();
+    await page.locator('#pointer-keys').getByRole('button',{name:'a',exact:true}).click();
+    assert.equal(await page.locator('#feedback-msg').inputValue(),'a');
+    await escape.click();
+    assert.equal(await page.locator('#feedback-overlay').isVisible(),false);
+    assert.equal(await page.evaluate(()=>G.showOptions),true);
+    await escape.click();
     assert.equal(await page.evaluate(()=>G.showOptions),false);
 
     await page.evaluate(()=>{
       const extra=['scientist','medic','mercenary','mercenary','mercenary','mercenary','mercenary','mercenary','redshirt'];
       G.crew.push(...extra.map(randomCrewMember));
+      G.crew[0].hp=5;
+      G.inventory=[{name:'Medikit',usable:'medikit',col:'#88ff88'}];
+      G._viewInvSel=0;
       G.cargo=[
         {name:'Sample A',col:'#aaffaa',desc:'Mineral sample A.'},
         {name:'Sample B',col:'#aaaaff',desc:'Mineral sample B.'},
       ];
       renderAll();
     });
-    await press('i');
+    await action(/\[I\] Inventory/).click();
+    await action(/Use Medikit/).click();
+    assert.ok(await page.evaluate(()=>G.crew[0].hp>5 && !G.inventory.length));
     await click(420,20);
     assert.equal(await page.evaluate(()=>G._viewTab),'crew');
     await click(125,130);
@@ -154,21 +178,34 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await page.evaluate(()=>G._cargoExamine),false);
     await press('x');
     assert.match(await page.locator('#crew-list').textContent(),/Mineral sample B/);
-    await press('Escape');
-    await press('Escape');
+    await escape.click();
+    assert.equal(await mode(),'inventory');
+    await escape.click();
 
     const before = await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn]);
     await click(480,220);
     assert.deepEqual(await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn]),before);
     await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
     assert.equal(await page.evaluate(()=>G.ship.x),before[0]+1);
+    const wait = page.locator('.cmp-center');
+    const turnBeforeWait=await page.evaluate(()=>G.turn);
+    await wait.hover();
+    assert.equal(await wait.evaluate(el=>getComputedStyle(el).cursor),'pointer');
+    await wait.click();
+    assert.equal(await page.evaluate(()=>G.turn),turnBeforeWait+1);
 
     await page.evaluate(()=>{ debugEnterPalette('galaxy'); debugPaletteVisit('galaxy:CASINO'); });
-    await press('Enter');
+    await action(/Dock at The Void Royale/).click();
     assert.equal(await mode(),'planet');
     const snapshot = await page.evaluate(()=>[G.player.x,G.player.y,G.turn,G.inventory.length]);
     await click(480,220);
     assert.deepEqual(await page.evaluate(()=>[G.player.x,G.player.y,G.turn,G.inventory.length]),snapshot);
+    await action(/\[X\] Examine/).click();
+    await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
+    assert.equal(await page.evaluate(()=>G.examine.x),snapshot[0]+1);
+    assert.deepEqual(await page.evaluate(()=>[G.player.x,G.player.y,G.turn,G.inventory.length]),snapshot);
+    await escape.click();
+    assert.equal(await page.evaluate(()=>G.examine),null);
     await page.evaluate(()=>{
       G.mode='casino';
       ensureCasinoState();
@@ -184,6 +221,19 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     await press('1');
     assert.equal(await page.evaluate(()=>G.casino.poker.hold[0]),false);
 
+    await page.evaluate(()=>debugPaletteVisit('biome:HABITABLE'));
+    await action(/Enter orbit/).click();
+    assert.equal(await mode(),'system');
+    await action(/View scan/).click();
+    assert.equal(await mode(),'scanview');
+    const cursor = await page.evaluate(()=>[G.scanCursorX,PW(G.planets[G.scanViewKey])]);
+    await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
+    assert.equal(await page.evaluate(()=>G.scanCursorX),Math.min(cursor[0]+1,cursor[1]-1));
+    await escape.click();
+    assert.equal(await mode(),'system');
+    await action(/Land on/).click();
+    assert.equal(await mode(),'planet');
+
     await page.evaluate(()=>{
       debugPaletteVisit('galaxy:PATROL');
       G.shipStats=buildShipStats('ATTACK_CORVETTE');
@@ -196,6 +246,13 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     const font = await page.evaluate(()=>G.shipCombat.logFontSize);
     await press('=');
     assert.equal(await page.evaluate(()=>G.shipCombat.logFontSize),font+1);
+    await page.evaluate(()=>{
+      const fire=doShipFire;
+      window.qaFireCount=0;
+      doShipFire=()=>{ qaFireCount++; fire(); };
+    });
+    await action(/Fire Pulse Laser/).click();
+    assert.equal(await page.evaluate(()=>qaFireCount),1);
 
     assert.deepEqual(errors,[]);
     console.log('PASS: pointer and keyboard menu actions, large crews, cargo details, modal isolation and the compass exception.');

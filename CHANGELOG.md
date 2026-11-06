@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.22 makes context actions clickable
+
+Released on `experiment/expedition-legacy`.
+
+- Made context actions and the top-left ESC button use the existing shortcut routing. Added mouse entry points for Inventory and Options in the context bar, item-use actions, and clickable selection arrows. The gray shortcut legend remains a reference.
+- Gave the compass Wait tile a pointer cursor and hover highlight. Compass directions now also control the examine, aim, and landing cursors. World tiles remain passive.
+- Added on-screen keys for vessel registration, feedback text, and common movement bindings. Added Shift+Z for diving or surfacing, Shift+O for shipboard oxygen refill, and Shift+X to release a tow. Escape cancels void and rescue prompts through either input method.
+- All 47 repository tests and 13 headless Edge suites passed. The input scenarios covered on-screen naming, station and patrol actions, map and feedback dismissal, item use, scan and landing controls, and firing. Existing saves require no migration.
+
 ## 2026-11-05 — 0.28 experimental.21 restores the gray shortcut legend
 
 Released on `experiment/expedition-legacy`.

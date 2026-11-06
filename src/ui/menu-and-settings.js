@@ -151,6 +151,7 @@ async function returnToMainMenuFromGame(){
 
 function drawMenuScreen(){
   resetCanvasMenu();
+  renderPointerKeys();
   ctx.fillStyle='#050510';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   // Starfield
@@ -679,6 +680,14 @@ function openVesselRegistration(index,keyHeld){
   MENU_STATE.captainName='';
   MENU_STATE.shipName='';
   MENU_STATE.namingEntryKeyStillHeld=keyHeld;
+  drawMenuScreen();
+}
+
+function editVesselName(key){
+  const field=MENU_STATE.namingField==='captain'?'captainName':'shipName';
+  const value=MENU_STATE[field]||'';
+  if(key==='Backspace') MENU_STATE[field]=value.slice(0,-1);
+  else if(value.length<20) MENU_STATE[field]=value+key;
   drawMenuScreen();
 }
 

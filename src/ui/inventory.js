@@ -51,6 +51,11 @@ function inventoryEquipType(item){
   if(key==='stim_pack') return 'stim';
 }
 
+function inventoryItemCanBeUsed(item){
+  return ['medikit','trauma_kit','mild_antidepressants','iodine_pills','antibiotics','oxytank','morale_drug',
+    'grapple','jetpack','capture_net','contain_crate','field_rations','rad_flush','sensor_drone','repair_kit'].includes(item?.usable);
+}
+
 function drawInventoryOverlay(){
   const cw = canvas.width, ch = canvas.height;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);

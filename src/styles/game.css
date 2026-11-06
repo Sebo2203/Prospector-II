@@ -36,7 +36,7 @@ html, body {
 #hud {
   display: flex;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 12px 6px 62px;
   background: #111;
   border-bottom: 1px solid #333;
   font-size: 15px;
@@ -53,6 +53,28 @@ html, body {
 .hud-val { font-size: 16px; font-weight: bold; }
 .cy { color: #ffe066; } .cg { color: #70f090; } .co { color: #ffaa44; }
 .cr { color: #f07070; } .cc { color: #70d8ff; }
+#game-escape {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1001;
+  min-width: 38px;
+}
+#pointer-keys-toggle, #pointer-keys {
+  position: absolute;
+  z-index: 1001;
+}
+#pointer-keys-toggle { top: 12px; right: 12px; }
+#pointer-keys {
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px;
+  border: 1px solid #38475a;
+  background: #0e0e18;
+}
+#pointer-keys > div { display: flex; justify-content: center; gap: 4px; margin: 4px; }
+#pointer-keys button { min-width: 32px; min-height: 26px; }
 
 /* ── Main area: gauges | canvas | sidebar ── */
 #main {
@@ -314,10 +336,12 @@ canvas {
   height: 38px;
   min-height: 38px;
   max-height: 38px;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: thin;
   align-items: center;
 }
 .ctx-btn {
+  flex-shrink: 0;
   background: #1a1a2e;
   border: 1px solid #3a3a5a;
   border-radius: 3px;
@@ -337,6 +361,11 @@ canvas {
 .ctx-btn.info .ck { color: #70d8ff; }
 .ctx-btn.warn   { border-color: #66501a; color: #ddaa44; }
 .ctx-btn.warn .ck { color: #ffcc55; }
+button.ctx-btn { cursor: pointer; }
+button.ctx-btn:hover, button.ctx-btn:focus-visible {
+  border-color: currentColor;
+  background: #24243a;
+}
 /* ── 8-dir Mouse Compass ── */
 #compass-wrap {
   flex-shrink: 0;
@@ -376,10 +405,9 @@ canvas {
 .cmp-btn.cmp-center {
   background: #0a0a12;
   color: #1a1a2a;
-  cursor: default;
   font-size: 7px;
 }
-.cmp-btn.cmp-center:hover { background: #0a0a12; border-color: #252535; color: #1a1a2a; }
+.cmp-btn.cmp-center:hover { color: #88aacc; }
 
 /* ── Persistent global bar ── */
 #persist-bar {

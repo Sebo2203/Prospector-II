@@ -846,7 +846,7 @@ html, body {
 #hud {
   display: flex;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 12px 6px 62px;
   background: #111;
   border-bottom: 1px solid #333;
   font-size: 15px;
@@ -863,6 +863,28 @@ html, body {
 .hud-val { font-size: 16px; font-weight: bold; }
 .cy { color: #ffe066; } .cg { color: #70f090; } .co { color: #ffaa44; }
 .cr { color: #f07070; } .cc { color: #70d8ff; }
+#game-escape {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1001;
+  min-width: 38px;
+}
+#pointer-keys-toggle, #pointer-keys {
+  position: absolute;
+  z-index: 1001;
+}
+#pointer-keys-toggle { top: 12px; right: 12px; }
+#pointer-keys {
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px;
+  border: 1px solid #38475a;
+  background: #0e0e18;
+}
+#pointer-keys > div { display: flex; justify-content: center; gap: 4px; margin: 4px; }
+#pointer-keys button { min-width: 32px; min-height: 26px; }
 
 /* ── Main area: gauges | canvas | sidebar ── */
 #main {
@@ -1124,10 +1146,12 @@ canvas {
   height: 38px;
   min-height: 38px;
   max-height: 38px;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: thin;
   align-items: center;
 }
 .ctx-btn {
+  flex-shrink: 0;
   background: #1a1a2e;
   border: 1px solid #3a3a5a;
   border-radius: 3px;
@@ -1147,6 +1171,11 @@ canvas {
 .ctx-btn.info .ck { color: #70d8ff; }
 .ctx-btn.warn   { border-color: #66501a; color: #ddaa44; }
 .ctx-btn.warn .ck { color: #ffcc55; }
+button.ctx-btn { cursor: pointer; }
+button.ctx-btn:hover, button.ctx-btn:focus-visible {
+  border-color: currentColor;
+  background: #24243a;
+}
 /* ── 8-dir Mouse Compass ── */
 #compass-wrap {
   flex-shrink: 0;
@@ -1186,10 +1215,9 @@ canvas {
 .cmp-btn.cmp-center {
   background: #0a0a12;
   color: #1a1a2a;
-  cursor: default;
   font-size: 7px;
 }
-.cmp-btn.cmp-center:hover { background: #0a0a12; border-color: #252535; color: #1a1a2a; }
+.cmp-btn.cmp-center:hover { color: #88aacc; }
 
 /* ── Persistent global bar ── */
 #persist-bar {
@@ -1458,6 +1486,9 @@ canvas {
 </head>
 <body>
 <div id="root">
+  <button type="button" id="game-escape" class="hud-menu-btn" data-game-key="Escape" data-menu-control aria-label="Escape">ESC</button>
+  <button type="button" id="pointer-keys-toggle" class="hud-menu-btn" data-menu-control hidden>On-screen keys</button>
+  <div id="pointer-keys" aria-label="On-screen keys" hidden></div>
 
   <!-- Feedback overlay -->
   <div id="feedback-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;">
@@ -1588,7 +1619,7 @@ canvas {
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.21</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.22</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1646,8 +1677,8 @@ canvas {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.21';
-const GAME_VERSION_LABEL = 'v0.28 experimental.21';
+const GAME_VERSION = '0.28.0-experimental.22';
+const GAME_VERSION_LABEL = 'v0.28 experimental.22';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -13351,6 +13382,81 @@ canvas.addEventListener('wheel',event=>{
 document.addEventListener('click',event=>{
   if(event.detail>0) event.target.closest('button[data-menu-control]')?.blur();
 },true);
+const pointerKeysPanel = document.getElementById('pointer-keys');
+const pointerKeysToggle = document.getElementById('pointer-keys-toggle');
+let pointerKeysOpen = '';
+let pointerKeysShift = false;
+
+function pointerKeysContext(){
+  if(document.getElementById('feedback-overlay').style.display==='flex') return 'feedback';
+  if(MENU_STATE._rebinding && (G?.showOptions && G._kbScreen || !G && MENU_STATE.screen==='keybindings')) return 'binding';
+  if(!G && MENU_STATE.screen==='naming') return 'naming';
+  return '';
+}
+
+function renderPointerKeys(){
+  const context=pointerKeysContext();
+  if(context!==pointerKeysOpen) pointerKeysOpen='';
+  pointerKeysToggle.hidden=!context;
+  pointerKeysPanel.hidden=!pointerKeysOpen;
+  pointerKeysToggle.setAttribute('aria-expanded',String(!!pointerKeysOpen));
+  if(!pointerKeysOpen) return;
+
+  const symbols='@.-_+&?!,\'"/:;#%';
+  const row = keys=>'<div>'+keys.map(([key,label=key,code=''])=>
+    `<button type="button" class="hud-menu-btn" data-text-key="${htmlEsc(key)}" data-code="${htmlEsc(code)}">${htmlEsc(label)}</button>`
+  ).join('')+'</div>';
+  const binding=context==='binding';
+  const letters=s=>[...s].map(key=>[pointerKeysShift?key.toUpperCase():key, binding?key.toUpperCase():undefined,'Key'+key.toUpperCase()]);
+  pointerKeysPanel.innerHTML=[
+    row([...'1234567890'].map(key=>[key,key,'Digit'+key])),
+    row(letters('qwertyuiop')),
+    row(letters('asdfghjkl')),
+    row(letters('zxcvbnm')),
+    binding ? row([[' ','Space','Space'],['.','Period','Period'],[',','Comma','Comma']])
+      : row([...symbols].map(key=>[key])),
+    binding ? '' : row([['Shift','Shift'],[' ','Space'],['Backspace','Backspace'],...(context==='feedback'?[['\n','New line']]:[])]),
+  ].join('');
+}
+
+pointerKeysToggle.addEventListener('mousedown',event=>event.preventDefault());
+pointerKeysToggle.addEventListener('click',()=>{
+  pointerKeysOpen=pointerKeysOpen?'':pointerKeysContext();
+  pointerKeysShift=false;
+  renderPointerKeys();
+});
+
+pointerKeysPanel.addEventListener('mousedown',event=>event.preventDefault());
+pointerKeysPanel.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-text-key]');
+  if(!button || pointerKeysOpen!==pointerKeysContext()) return;
+  const key=button.dataset.textKey;
+  if(pointerKeysOpen==='binding'){
+    activateGameKey(key,button.dataset.code);
+    return;
+  }
+  if(key==='Shift'){
+    pointerKeysShift=!pointerKeysShift;
+    renderPointerKeys();
+    return;
+  }
+  if(pointerKeysOpen==='naming'){
+    editVesselName(key);
+    return;
+  }
+  const input=document.activeElement?.matches('#feedback-email,#feedback-msg')
+    ? document.activeElement : document.getElementById('feedback-email');
+  const start=input.selectionStart ?? input.value.length;
+  const end=input.selectionEnd ?? input.value.length;
+  if(input.type==='email'){
+    input.value=key==='Backspace'?input.value.slice(0,-1):input.value+key;
+  } else if(key==='Backspace'){
+    input.setRangeText('',start===end?Math.max(0,start-1):start,end,'end');
+  } else {
+    input.setRangeText(key,start,end,'end');
+  }
+  input.focus();
+});
 // ─────────────────────────────────────────────────────────────────
 //  RENDER
 // ─────────────────────────────────────────────────────────────────
@@ -13360,6 +13466,7 @@ function renderAll(){
   renderHUD();
   renderSidebar();
   renderContextBar();
+  renderPointerKeys();
   renderGalaxyMinimap();
   renderCriticalBanner();
   checkAlarms();
@@ -17395,6 +17502,11 @@ function inventoryEquipType(item){
   if(['armor_flight','armor_reinforced','armor_diving','armor_exosuit','armor_plate'].includes(key)) return 'armor';
   if(key?.startsWith('implant_')) return 'implant';
   if(key==='stim_pack') return 'stim';
+}
+
+function inventoryItemCanBeUsed(item){
+  return ['medikit','trauma_kit','mild_antidepressants','iodine_pills','antibiotics','oxytank','morale_drug',
+    'grapple','jetpack','capture_net','contain_crate','field_rations','rad_flush','sensor_drone','repair_kit'].includes(item?.usable);
 }
 
 function drawInventoryOverlay(){
@@ -27880,23 +27992,31 @@ function renderSidebar(){
 // ─────────────────────────────────────────────────────────────────
 //  CONTEXTUAL ACTION BAR
 //  Rebuilds the #ctx-bar based on current mode and player position.
-//  Each btn() call creates a labelled key hint. Extend this function
-//  whenever new context-sensitive actions are added to the game.
+//  Actions use the same shortcuts as the keyboard. Status text stays passive.
 // ─────────────────────────────────────────────────────────────────
 function renderContextBar(){
   const bar = document.getElementById('ctx-bar');
   const btns = [];
 
-  // Helper: build a button string
-  const btn = (key, label, cls='') =>
-    `<div class="ctx-btn ${cls}"><span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}</div>`;
+  const btn = (key,label,cls='',action=key==='ESC'?'Escape':key==='Enter'?key:/^[A-Z0-9]$/.test(key)?key.toLowerCase():null) => {
+    const content=`<span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}`;
+    return action
+      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control>${content}</button>`
+      : `<div class="ctx-btn ${cls}">${content}</div>`;
+  };
+  const arrows = (label,horizontal=false) => {
+    const keys=horizontal?['←','→','ArrowLeft','ArrowRight']:['↑','↓','ArrowUp','ArrowDown'];
+    btns.push(btn(keys[0],label,'info',keys[2]),btn(keys[1],label,'info',keys[3]));
+  };
 
-  if(G.dead){
+  if(G.showOptions && !G.dead && !G.retired){
+    btns.push(btn('ESC',G._kbScreen?'Back':'Close options','info'));
+  } else if(G.dead || G.retired){
     btns.push(btn('Enter','Main Menu','info'));
 
   } else if(BARTER.active){
-    btns.push(btn('↑/↓','Select goods','info'));
-    btns.push(btn('←/→','Switch side','info'));
+    arrows('Select goods');
+    arrows('Switch side',true);
     if(BARTER.side==='player' && BARTER.playerItems.length){
       btns.push(btn('Enter',BARTER.offered.has(BARTER.playerSel)?'Remove from offer':'Offer selected item','good'));
     } else if(BARTER.side==='civ' && BARTER.civItems.length){
@@ -27905,7 +28025,7 @@ function renderContextBar(){
     btns.push(btn('ESC','Close barter','info'));
 
   } else if(G.dialogue){
-    btns.push(btn('↑/↓','Select reply','info'));
+    arrows('Select reply');
     const reply=dialogueVisibleOptions()[G.dialogue.sel||0];
     if(reply && !reply.disabled){
       const label=String(reply.label||'Choose reply');
@@ -27915,9 +28035,15 @@ function renderContextBar(){
     if(dialogueAllowsEscape()) btns.push(btn('ESC','Close dialogue','info'));
 
   } else if(G.rangeTarget){
-    btns.push(btn('WASD/Arrows','Aim cursor','info'));
-    btns.push(btn('F / Enter','Fire','danger'));
+    btns.push(btn('Compass','Aim cursor','info'));
+    btns.push(btn('Enter','Fire','danger'));
+    btns.push(btn('Tab','Next shooter','info','Tab'));
     btns.push(btn('ESC','Cancel','info'));
+  } else if(G._itemAimMode){
+    btns.push(btn('Compass','Choose direction','info'));
+    btns.push(btn('ESC','Cancel','info'));
+  } else if(G._voidPrompt){
+    btns.push(btn('Y','Step into void','danger'),btn('N','Stay here','info'));
   } else if(G.examine){
     btns.push(btn('Move','Move cursor','info'));
     const creature = G.mode === 'planet' ? creatureExamineTarget() : null;
@@ -27933,7 +28059,7 @@ function renderContextBar(){
         else btns.push(`<div class="ctx-btn" style="color:#555;border-color:#333">Out of radio range (${examData.dist}u / max ${radioRange()}u)</div>`);
       }
     }
-    btns.push(btn('X / ESC','Exit examine','info'));
+    btns.push(btn('X / ESC','Exit examine','info','Escape'));
 
   } else if(G.mode==='shipcombat'){
     const combatSS = G.shipStats || buildShipStats('LIGHT_SCOUT');
@@ -27958,10 +28084,10 @@ function renderContextBar(){
     if(G.stranded){
       const st = G.stranded;
       if(st.rescuePhase==='offer'){
-        btns.push(btn('Y / Enter','Accept rescue','good'));
+        btns.push(btn('Y / Enter','Accept rescue','good','y'));
         btns.push(btn('N','Decline','danger'));
       } else {
-        btns.push(btn('Move key','Wait one turn (crew drain)','danger'));
+        btns.push(btn('Compass','Wait one turn (crew drain)','danger'));
         btns.push(btn('T', st.sos ? 'Disable SOS beacon' : 'Activate SOS beacon', st.sos?'danger':'good'));
       }
     } else {
@@ -27999,7 +28125,7 @@ function renderContextBar(){
       const pirateNear = !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
       if(pirateNear) btns.push(btn('!','Pirate nearby: '+pirateNear.name,'danger'));
       const neutralTarget = nearestNeutralTarget(1);
-      if(neutralTarget) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
+      if(neutralTarget && !pirateHere) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
       // REP status removed from ctx bar
       const radioContact = nearestRadioContact();
       if(radioContact) btns.push(btn('H','Hail '+radioContact.name+' ('+neutralShipDistance(radioContact)+'u)','info'));
@@ -28009,11 +28135,11 @@ function renderContextBar(){
       }
       // Show tow status if currently towing
       if(G.towedShip){
-        btns.push(`<div class="ctx-btn" style="color:#cc88ff;border-color:#442266">⚓ Towing: ${G.towedShip.name} — dock at a station to sell  [X to release]</div>`);
+        btns.push(btn('Shift+X','Release tow — '+G.towedShip.name,'warn','Shift+X'));
       }
       // Pirate base on current tile
       const pirateBaseHere = G.pirateBases && G.pirateBases.find(pb=>pb.x===G.ship.x&&pb.y===G.ship.y&&!pb.destroyed);
-      if(pirateBaseHere && !pirateHere){
+      if(pirateBaseHere && !pirateHere && !neutralTarget){
         const pct = Math.round((pirateBaseHere.hp/pirateBaseHere.maxHp)*100);
         btns.push(btn('F','Fire on '+pirateBaseHere.name+'  ('+pct+'% integrity)','danger'));
       }
@@ -28045,10 +28171,10 @@ function renderContextBar(){
     const activeBody = (G.selMoon>=0 && pDesc?.moons?.[G.selMoon]) ? pDesc.moons[G.selMoon] : pDesc;
     const scanState = activeBody?.scanState||'none';
     const isGasGiant = pDesc?.biome==='GAS_GIANT';
-    btns.push(btn('<-/->','Select planet'));
+    arrows('Select planet',true);
     if(isGasGiant){
       if(pDesc?.scanState==='full' && pDesc?.moons?.length)
-        btns.push(btn('↑↓','Select moon ('+pDesc.moons.length+')','info'));
+        arrows('Select moon');
       else if(pDesc?.scanState!=='full')
         btns.push(btn('S','Scan gas giant to reveal moons','info'));
     }
@@ -28064,7 +28190,7 @@ function renderContextBar(){
 
   } else if(G.mode==='scanview'){
     const pdata=G.planets[G.scanViewKey];
-    btns.push(btn('Move','Select landing site','info'));
+    btns.push(btn('Compass','Select landing site','info'));
     if(pdata && canLandAt(pdata,G.scanCursorX ?? pdata.spawnX,G.scanCursorY ?? pdata.spawnY)){
       btns.push(btn('Enter','Land at selected site','good'));
     }
@@ -28080,7 +28206,6 @@ function renderContextBar(){
       if(action) btns.push(btn('Enter',action,'good'));
       if(person){btns.push(btn('T','Give medical care','info'));btns.push(btn('P','Deploy isolation pod','info'));}
       if(cell?.type==='q_life_support' && !G.expedition.quarantine.repaired) btns.push(btn('R','Work manual pump','info'));
-      btns.push(btn('X','Examine','info'));
     }
     if(pdata?.isCasino){
       const labels={casino_host:'Talk to host',casino_info:'Read directory',casino_poker:'Play Void Poker',
@@ -28092,8 +28217,9 @@ function renderContextBar(){
 
     if(atShip){
       btns.push(btn('L','Lift off','info'));
+      if(G.oxygen<100) btns.push(btn('Shift+O','Refill oxygen','info','Shift+O'));
     } else if(!pdata?.isQuarantine){
-      btns.push(btn('L','Lift off (go to ship first)',''));
+      btns.push(btn('L','Lift off (go to ship first)','',null));
     }
     if(civContact) btns.push(btn('T', civContact.local ? 'Talk to local' : 'Contact civilization','good'));
 
@@ -28129,9 +28255,9 @@ function renderContextBar(){
 
     // Dive / Surface hint
     if(pdata?.isUnderwater){
-      btns.push(btn('Z','Surface','info'));
+      btns.push(btn('Shift+Z','Surface','info','Shift+Z'));
     } else if(cell?.type==='EARTH_WATER'){
-      btns.push(btn('Z','Dive','info'));
+      btns.push(btn('Shift+Z','Dive','info','Shift+Z'));
     }
 
 
@@ -28175,7 +28301,7 @@ function renderContextBar(){
 
   } else if(G.mode==='radio'){
     const action=radioTradeRows()[G.radio?.sel||0];
-    btns.push(btn('↑↓','Select trade','info'));
+    arrows('Select trade');
     if(action && !action.disabled) btns.push(btn('Enter',action.label,'good'));
     btns.push(btn('ESC','Close channel','info'));
 
@@ -28188,14 +28314,14 @@ function renderContextBar(){
     } else if(b.confirm==='retire_story'){
       btns.push(btn('Enter','View career record','good'));
     } else if(b.screen==='main'){
-      btns.push(btn('↑↓','Select building','info'));
+      arrows('Select building');
       if(building){
         const name=typeof building.name==='function' ? building.name(b.stationName) : building.name;
         btns.push(btn('Enter','Open '+name,'good'));
       }
       btns.push(btn('ESC','Undock','info'));
     } else {
-      btns.push(btn(b.screen==='changehull'?'←/→':'↑↓','Select action','info'));
+      arrows('Select action',b.screen==='changehull');
       const action=b.screen==='sub'?building?.actions()[b.subSel]:null;
       if(action && !action.disabled && !action._header) btns.push(btn('Enter',action.label,'good'));
       else if(b.screen==='recruit') btns.push(btn('Enter','Hire selected recruit','good'));
@@ -28208,23 +28334,24 @@ function renderContextBar(){
     if(G._crewExamine){
       btns.push(btn('↑/↓','Select crew','info'));
       btns.push(btn('1-9','Choose','good'));
-      btns.push(btn('X / ESC','Exit dialogue','info'));
+      btns.push(btn('X / ESC','Exit dialogue','info','Escape'));
       bar.innerHTML = btns.join('');
       return;
     }
     if(G._inventoryExamine){
-      btns.push(btn('↑/↓','Browse items','info'));
-      btns.push(btn('X / ESC','Exit item examine','info'));
+      arrows('Browse items');
+      btns.push(btn('X / ESC','Exit item examine','info','Escape'));
       bar.innerHTML = btns.join('');
       return;
     }
-    btns.push(btn('←/→','Switch tab','info'));
+    arrows('Switch tab',true);
     if(G._viewTab==='crew'){
-      btns.push(btn('↑/↓','Select crew','info'));
+      arrows('Select crew');
       if(G._equipGunIdx !== undefined)   btns.push(btn('Enter','Equip weapon','good'));
       if(G._equipArmorIdx !== undefined) btns.push(btn('Enter','Equip armor','good'));
+      if(G._equipImplantIdx !== undefined) btns.push(btn('Enter','Install implant','good'));
       if(G._equipStimIdx !== undefined)  btns.push(btn('Enter','Administer stim','good'));
-      if(G._equipGunIdx === undefined && G._equipArmorIdx === undefined && G._equipStimIdx === undefined){
+      if(G._equipGunIdx === undefined && G._equipArmorIdx === undefined && G._equipImplantIdx === undefined && G._equipStimIdx === undefined){
         const sc = (G.crew.filter(c=>c.hp>0))[G._viewCrewSel||0];
         if(sc?.weapon && sc.weapon !== 'Bare hands') btns.push(btn('W','Unequip weapon','danger'));
         if(sc?.armorUsable) btns.push(btn('S','Strip armor','danger'));
@@ -28232,18 +28359,19 @@ function renderContextBar(){
       }
     }
     if(G._viewTab==='inventory' && G.inventory.length){
-      btns.push(btn('↑/↓','Select item','info'));
+      arrows('Select item');
       const item = G.inventory[G._viewInvSel||0];
       if(item?.usable==='gun' || item?.usable==='gun_sniper' || item?.usable==='gun_shotgun' || item?.usable==='gun_burst' || item?.usable==='gun_plasma' || item?.usable==='knife' || item?.usable==='stun_baton' || item?.usable==='vibroblade' || item?.usable==='tranq_darts') btns.push(btn('Enter','Equip to crew','good'));
       else if(item?.usable==='armor_flight' || item?.usable==='armor_reinforced' || item?.usable==='armor_diving' || item?.usable==='armor_exosuit' || item?.usable==='armor_plate') btns.push(btn('Enter','Equip to crew','good'));
       else if(item?.usable==='stim_pack') btns.push(btn('Enter','Administer to crew','good'));
       else if(item?.usable?.startsWith('implant_')) btns.push(btn('Enter','Install implant','good'));
-      else if(item?.usable==='c4') btns.push(item._armed ? btn('Drop','Drop now!','warn') : btn('Enter','Arm C4','warn'));
+      else if(item?.usable==='c4') btns.push(item._armed ? btn('D','Drop now!','warn') : btn('Enter','Arm C4','warn'));
+      else if(inventoryItemCanBeUsed(item)) btns.push(btn('Enter','Use '+item.name,'good'));
       btns.push(btn('X','Examine item','info'));
-      if(G._prevMode==='planet') btns.push(btn('D','Drop item','warn'));
+      if(G._prevMode==='planet' && !(item?.usable==='c4' && item._armed)) btns.push(btn('D','Drop item','warn'));
     }
     if(G._viewTab==='ship' && G.mode !== 'base' && G.mode !== 'planet' && (G.cargo?.length||0) > 0){
-      btns.push(btn('↑/↓','Select cargo','info'));
+      arrows('Select cargo');
       if(G._cargoExamine) btns.push(btn('X','Close examine','info'));
       else btns.push(btn('X','Examine cargo','info'));
       btns.push(btn('J', G._jettisonConfirm ? 'Confirm jettison' : 'Jettison', G._jettisonConfirm ? 'danger' : 'warn'));
@@ -28252,12 +28380,21 @@ function renderContextBar(){
     btns.push(btn('ESC','Close','info'));
   }
 
+  if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
+     !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt && !G.stranded){
+    if(G.mode==='galaxy'||G.mode==='planet') btns.push(btn('X','Examine','info'));
+    if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','info'));
+    btns.push(btn('O','Options','info'));
+  }
   bar.innerHTML = btns.join('');
 }
 
-// -----------------------------------------------------------------
-//  HELPERS
-// -----------------------------------------------------------------
+document.getElementById('ctx-bar').addEventListener('wheel',event=>{
+  const bar=event.currentTarget;
+  if(!event.deltaY || bar.scrollWidth<=bar.clientWidth) return;
+  event.preventDefault();
+  bar.scrollLeft+=event.deltaY;
+},{passive:false});
 function crewAlive(){ return G.crew.some(c=>c.hp>0); }
 
 function atmosphereBiomeKey(key){
@@ -33359,6 +33496,20 @@ function doWaitPlanet(turnAlreadyAdvanced=false){
 //  All branches are wrapped in try-catch so a JS error in one
 //  action can never silently break the event listener.
 // ─────────────────────────────────────────────────────────────────
+function activateGameKey(key,code=''){
+  // Pointer actions use the shortcut itself, independent of remapped movement keys.
+  const shiftKey=key.startsWith('Shift+');
+  if(shiftKey) key=key.slice(6);
+  document.dispatchEvent(new KeyboardEvent('keydown',{key,code,shiftKey,bubbles:true,cancelable:true}));
+}
+
+document.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-game-key]');
+  if(!button) return;
+  button.blur();
+  activateGameKey(button.dataset.gameKey);
+});
+
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
   if(e.key==='F4' && debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return;}
@@ -33415,7 +33566,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   const menuControl = e.target.closest?.('button[data-menu-control]');
-  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice')) && (e.key==='Enter'||e.key===' ')){
+  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey) && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
     if(!e.repeat) menuControl.click();
     return;
@@ -33435,6 +33586,17 @@ document.addEventListener('keydown', e=>{
 
     // F5 — save to file from anywhere in-game
     if(e.key==='F5'){ e.preventDefault(); saveToFile(); return; }
+
+    if(e.shiftKey && !G.showOptions && !G.dialogue && !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt){
+      const key=e.key.toLowerCase();
+      if(G.mode==='planet' && key==='o'){ doRefillOxygen(); return; }
+      if(G.mode==='planet' && key==='z'){ doToggleDive(); return; }
+      if(G.mode==='galaxy' && key==='x' && G.towedShip){
+        addLog('Tractor beam released. '+G.towedShip.name+' drifts free.','lw');
+        G.towedShip=null;
+        renderAll(); return;
+      }
+    }
 
     if(!G.showOptions && (e.key==='-'||e.key==='='||e.key==='+') && !e.ctrlKey && !e.metaKey){
       const step = e.key==='-'?-1:1;
@@ -34014,6 +34176,8 @@ document.addEventListener('keydown', e=>{
     if(e.key==='Escape'){
       if(G.mode==='shipcombat'){ const _eng=G.shipStats?.engineRating||1; addLog('Use [R] to retreat (costs '+Math.max(5,12-_eng*2)+' fuel), [S] to surrender, or [F] to fire.','li'); renderAll(); return; }
       if(G.mode==='inventory'){ closeInventoryMenu(); return; }
+      if(G.mode==='planet' && G._voidPrompt){ G._voidPrompt=null; addLog('No.','lm'); renderAll(); return; }
+      if(G.mode==='galaxy' && G.stranded?.rescuePhase==='offer'){ doDeclineRescue(); return; }
       if(G.mode==='galaxy' || G.mode==='planet'){ returnToMainMenuFromGame(); return; }
       return;
     }
@@ -34038,7 +34202,7 @@ document.addEventListener('keydown', e=>{
     // Rescue accept/decline — MUST be before movement dispatch so remapped keys can't swallow Y/N
     if(G.mode==='galaxy' && G.stranded?.rescuePhase==='offer'){
       if(e.key==='y'||e.key==='Y'||e.key==='Enter'){ doAcceptRescue(); return; }
-      if(e.key==='n'||e.key==='N'||e.key==='Escape'){ doDeclineRescue(); return; }
+      if(e.key==='n'||e.key==='N'){ doDeclineRescue(); return; }
     }
 
     if(quarantineInterior()){
@@ -34137,17 +34301,9 @@ document.addEventListener('keydown', e=>{
     // Enter = interact/dock/land — but not when rescue offer is pending
     if(e.key==='Enter' && !(G.stranded?.rescuePhase==='offer')){ doInteract(); return; }
     if((e.key==='z'||e.key==='Z')&&G.mode==='planet'){ doToggleDive(); return; }
-    if(e.key==='o'||e.key==='O'){ doRefillOxygen(); return; }
     if(e.key==='l'||e.key==='L'){ doLiftOff(); return; }
     if(e.key==='.'&&G.mode==='planet'){ doWaitPlanet(); return; }
     if(e.code==='Period'){ e.preventDefault(); if(G.mode==='planet') doWaitPlanet(); else doWaitGalaxy(); return; }
-    if(e.key==='x'||e.key==='X'){
-      if(G.mode==='galaxy' && G.towedShip){
-        addLog('Tractor beam released. '+G.towedShip.name+' drifts free.','lw');
-        G.towedShip = null;
-        renderAll(); return;
-      }
-    }
     if(e.key==='t'||e.key==='T'){
       if(G.mode==='galaxy'){
         // Tractor beam — tow a dead stranded ship on current tile
@@ -34227,25 +34383,14 @@ document.addEventListener('keyup', e=>{
   // Naming screen — capture typed characters
   if(G===null && MENU_STATE.screen==='naming'){
     if(e.key==='Backspace'){
-      const f = MENU_STATE.namingField;
-      if(f==='captain') MENU_STATE.captainName = (MENU_STATE.captainName||'').slice(0,-1);
-      else              MENU_STATE.shipName    = (MENU_STATE.shipName||'').slice(0,-1);
-      drawMenuScreen();
+      editVesselName('Backspace');
     } else if(e.key==='Enter'){
       if(MENU_STATE.namingEntryKeyStillHeld){
         MENU_STATE.namingEntryKeyStillHeld = false;
         drawMenuScreen();
       } else advanceVesselRegistration();
     } else if(e.key.length===1 && !e.ctrlKey && !e.metaKey){
-      const f = MENU_STATE.namingField;
-      if(f==='captain'){
-        if((MENU_STATE.captainName||'').length < 20)
-          MENU_STATE.captainName = (MENU_STATE.captainName||'') + e.key;
-      } else {
-        if((MENU_STATE.shipName||'').length < 20)
-          MENU_STATE.shipName = (MENU_STATE.shipName||'') + e.key;
-      }
-      drawMenuScreen();
+      editVesselName(e.key);
     }
   }
 });
@@ -35446,6 +35591,7 @@ async function returnToMainMenuFromGame(){
 
 function drawMenuScreen(){
   resetCanvasMenu();
+  renderPointerKeys();
   ctx.fillStyle='#050510';
   ctx.fillRect(0,0,canvas.width,canvas.height);
   // Starfield
@@ -35977,6 +36123,14 @@ function openVesselRegistration(index,keyHeld){
   drawMenuScreen();
 }
 
+function editVesselName(key){
+  const field=MENU_STATE.namingField==='captain'?'captainName':'shipName';
+  const value=MENU_STATE[field]||'';
+  if(key==='Backspace') MENU_STATE[field]=value.slice(0,-1);
+  else if(value.length<20) MENU_STATE[field]=value+key;
+  drawMenuScreen();
+}
+
 function advanceVesselRegistration(){
   const captains=['Yara Voss','Deklan Mire','Sable Orin','Tev Hadra','Cass Weld',
     'Rook Solan','Lena Quist','Bren Falke','Ziva Thorn','Oskar Dune','Mira Stahl','Colt Vane'];
@@ -36207,13 +36361,18 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
 // The compass is the only pointer control that can move or wait in the world.
 document.getElementById('compass-grid').addEventListener('mousedown',event=>{
   if(event.button!==0 || !G || G.dead || G.retired || canvasMenuBlocked() ||
-    G.showOptions || G.dialogue || G.examine || G.rangeTarget || G._itemAimMode ||
+    G.showOptions || G.dialogue ||
     G._voidPrompt || G.stranded?.rescuePhase==='offer' || DEBUG.on) return;
-  if(G.mode!=='galaxy' && G.mode!=='planet') return;
   const direction = event.target.closest('.cmp-btn');
   if(!direction) return;
   event.preventDefault();
   const {dx,dy} = direction.dataset;
+  if(G.examine || G.rangeTarget || G._itemAimMode || G.mode==='scanview' || G.mode==='system'){
+    if(dx===undefined) return;
+    activateGameKey('', 'Numpad'+(5-3*Number(dy)+Number(dx)));
+    return;
+  }
+  if(G.mode!=='galaxy' && G.mode!=='planet') return;
   if(G.stranded) doStrandedWait();
   else if(dx!==undefined) tryMove(Number(dx),Number(dy));
   else if(G.mode==='planet') doWaitPlanet();
@@ -36452,6 +36611,7 @@ function showFeedbackError(text){
 function openFeedback(){
   const ov = document.getElementById('feedback-overlay');
   ov.style.display = 'flex';
+  renderPointerKeys();
   document.getElementById('feedback-success').style.display = 'none';
   const error = document.getElementById('feedback-error');
   error.textContent = 'Something went wrong. Try again.';
@@ -36466,6 +36626,7 @@ function openFeedback(){
 
 function closeFeedback(){
   document.getElementById('feedback-overlay').style.display = 'none';
+  renderPointerKeys();
 }
 
 function isValidReplyEmail(email){
@@ -36514,7 +36675,7 @@ document.getElementById('feedback-overlay').addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if(e.key==='Escape' && document.getElementById('feedback-overlay').style.display==='flex'){
     closeFeedback();
-    e.stopPropagation();
+    e.stopImmediatePropagation();
   }
 }, true);
 

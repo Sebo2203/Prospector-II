@@ -9,6 +9,7 @@ function showFeedbackError(text){
 function openFeedback(){
   const ov = document.getElementById('feedback-overlay');
   ov.style.display = 'flex';
+  renderPointerKeys();
   document.getElementById('feedback-success').style.display = 'none';
   const error = document.getElementById('feedback-error');
   error.textContent = 'Something went wrong. Try again.';
@@ -23,6 +24,7 @@ function openFeedback(){
 
 function closeFeedback(){
   document.getElementById('feedback-overlay').style.display = 'none';
+  renderPointerKeys();
 }
 
 function isValidReplyEmail(email){
@@ -71,7 +73,7 @@ document.getElementById('feedback-overlay').addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if(e.key==='Escape' && document.getElementById('feedback-overlay').style.display==='flex'){
     closeFeedback();
-    e.stopPropagation();
+    e.stopImmediatePropagation();
   }
 }, true);
 

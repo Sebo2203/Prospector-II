@@ -4,7 +4,11 @@ These rules apply to the active experimental build. [Download instructions](../R
 
 ## Controls
 
-Use the keyboard to move, target, fire, and pick things up. The HUD compass also moves or waits during normal play. The gray shortcut legend is a keyboard reference. Press **I** to open the inventory, crew, ship, and log tabs, or **O** to open Options. In menus, click choices or use the displayed keys. Select cargo and press **X**, or click its slot, to open the same details. Hover gives a quick preview.
+Click the context bar actions or use their displayed shortcuts. The top-left **ESC** button does the same thing as the Escape key. Use the compass to move or wait, or to position the cursor while examining, aiming, or choosing a landing site. The keyboard movement keys work in those views too. World tiles are passive. The gray shortcut legend is a keyboard reference.
+
+Open Inventory with **I** or Options with **O**, or click their context buttons. Click menu choices or use their displayed keys. Select cargo and press **X**, or click its slot, to open the same details. Hover gives a quick preview. Use **On-screen keys** to enter names or feedback text, or to choose a common movement key while rebinding.
+
+Use **Shift+Z** to dive or surface, **Shift+O** to refill oxygen at the ship, and **Shift+X** to release a tow. These commands also appear as context actions when available.
 
 ## Crew at a glance
 

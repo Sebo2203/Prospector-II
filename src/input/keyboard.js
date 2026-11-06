@@ -3,6 +3,20 @@
 //  All branches are wrapped in try-catch so a JS error in one
 //  action can never silently break the event listener.
 // ─────────────────────────────────────────────────────────────────
+function activateGameKey(key,code=''){
+  // Pointer actions use the shortcut itself, independent of remapped movement keys.
+  const shiftKey=key.startsWith('Shift+');
+  if(shiftKey) key=key.slice(6);
+  document.dispatchEvent(new KeyboardEvent('keydown',{key,code,shiftKey,bubbles:true,cancelable:true}));
+}
+
+document.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-game-key]');
+  if(!button) return;
+  button.blur();
+  activateGameKey(button.dataset.gameKey);
+});
+
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
   if(e.key==='F4' && debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return;}
@@ -59,7 +73,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   const menuControl = e.target.closest?.('button[data-menu-control]');
-  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice')) && (e.key==='Enter'||e.key===' ')){
+  if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey) && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
     if(!e.repeat) menuControl.click();
     return;
@@ -79,6 +93,17 @@ document.addEventListener('keydown', e=>{
 
     // F5 — save to file from anywhere in-game
     if(e.key==='F5'){ e.preventDefault(); saveToFile(); return; }
+
+    if(e.shiftKey && !G.showOptions && !G.dialogue && !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt){
+      const key=e.key.toLowerCase();
+      if(G.mode==='planet' && key==='o'){ doRefillOxygen(); return; }
+      if(G.mode==='planet' && key==='z'){ doToggleDive(); return; }
+      if(G.mode==='galaxy' && key==='x' && G.towedShip){
+        addLog('Tractor beam released. '+G.towedShip.name+' drifts free.','lw');
+        G.towedShip=null;
+        renderAll(); return;
+      }
+    }
 
     if(!G.showOptions && (e.key==='-'||e.key==='='||e.key==='+') && !e.ctrlKey && !e.metaKey){
       const step = e.key==='-'?-1:1;
@@ -658,6 +683,8 @@ document.addEventListener('keydown', e=>{
     if(e.key==='Escape'){
       if(G.mode==='shipcombat'){ const _eng=G.shipStats?.engineRating||1; addLog('Use [R] to retreat (costs '+Math.max(5,12-_eng*2)+' fuel), [S] to surrender, or [F] to fire.','li'); renderAll(); return; }
       if(G.mode==='inventory'){ closeInventoryMenu(); return; }
+      if(G.mode==='planet' && G._voidPrompt){ G._voidPrompt=null; addLog('No.','lm'); renderAll(); return; }
+      if(G.mode==='galaxy' && G.stranded?.rescuePhase==='offer'){ doDeclineRescue(); return; }
       if(G.mode==='galaxy' || G.mode==='planet'){ returnToMainMenuFromGame(); return; }
       return;
     }
@@ -682,7 +709,7 @@ document.addEventListener('keydown', e=>{
     // Rescue accept/decline — MUST be before movement dispatch so remapped keys can't swallow Y/N
     if(G.mode==='galaxy' && G.stranded?.rescuePhase==='offer'){
       if(e.key==='y'||e.key==='Y'||e.key==='Enter'){ doAcceptRescue(); return; }
-      if(e.key==='n'||e.key==='N'||e.key==='Escape'){ doDeclineRescue(); return; }
+      if(e.key==='n'||e.key==='N'){ doDeclineRescue(); return; }
     }
 
     if(quarantineInterior()){
@@ -781,17 +808,9 @@ document.addEventListener('keydown', e=>{
     // Enter = interact/dock/land — but not when rescue offer is pending
     if(e.key==='Enter' && !(G.stranded?.rescuePhase==='offer')){ doInteract(); return; }
     if((e.key==='z'||e.key==='Z')&&G.mode==='planet'){ doToggleDive(); return; }
-    if(e.key==='o'||e.key==='O'){ doRefillOxygen(); return; }
     if(e.key==='l'||e.key==='L'){ doLiftOff(); return; }
     if(e.key==='.'&&G.mode==='planet'){ doWaitPlanet(); return; }
     if(e.code==='Period'){ e.preventDefault(); if(G.mode==='planet') doWaitPlanet(); else doWaitGalaxy(); return; }
-    if(e.key==='x'||e.key==='X'){
-      if(G.mode==='galaxy' && G.towedShip){
-        addLog('Tractor beam released. '+G.towedShip.name+' drifts free.','lw');
-        G.towedShip = null;
-        renderAll(); return;
-      }
-    }
     if(e.key==='t'||e.key==='T'){
       if(G.mode==='galaxy'){
         // Tractor beam — tow a dead stranded ship on current tile
@@ -871,25 +890,14 @@ document.addEventListener('keyup', e=>{
   // Naming screen — capture typed characters
   if(G===null && MENU_STATE.screen==='naming'){
     if(e.key==='Backspace'){
-      const f = MENU_STATE.namingField;
-      if(f==='captain') MENU_STATE.captainName = (MENU_STATE.captainName||'').slice(0,-1);
-      else              MENU_STATE.shipName    = (MENU_STATE.shipName||'').slice(0,-1);
-      drawMenuScreen();
+      editVesselName('Backspace');
     } else if(e.key==='Enter'){
       if(MENU_STATE.namingEntryKeyStillHeld){
         MENU_STATE.namingEntryKeyStillHeld = false;
         drawMenuScreen();
       } else advanceVesselRegistration();
     } else if(e.key.length===1 && !e.ctrlKey && !e.metaKey){
-      const f = MENU_STATE.namingField;
-      if(f==='captain'){
-        if((MENU_STATE.captainName||'').length < 20)
-          MENU_STATE.captainName = (MENU_STATE.captainName||'') + e.key;
-      } else {
-        if((MENU_STATE.shipName||'').length < 20)
-          MENU_STATE.shipName = (MENU_STATE.shipName||'') + e.key;
-      }
-      drawMenuScreen();
+      editVesselName(e.key);
     }
   }
 });

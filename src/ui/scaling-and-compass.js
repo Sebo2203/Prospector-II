@@ -75,13 +75,18 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
 // The compass is the only pointer control that can move or wait in the world.
 document.getElementById('compass-grid').addEventListener('mousedown',event=>{
   if(event.button!==0 || !G || G.dead || G.retired || canvasMenuBlocked() ||
-    G.showOptions || G.dialogue || G.examine || G.rangeTarget || G._itemAimMode ||
+    G.showOptions || G.dialogue ||
     G._voidPrompt || G.stranded?.rescuePhase==='offer' || DEBUG.on) return;
-  if(G.mode!=='galaxy' && G.mode!=='planet') return;
   const direction = event.target.closest('.cmp-btn');
   if(!direction) return;
   event.preventDefault();
   const {dx,dy} = direction.dataset;
+  if(G.examine || G.rangeTarget || G._itemAimMode || G.mode==='scanview' || G.mode==='system'){
+    if(dx===undefined) return;
+    activateGameKey('', 'Numpad'+(5-3*Number(dy)+Number(dx)));
+    return;
+  }
+  if(G.mode!=='galaxy' && G.mode!=='planet') return;
   if(G.stranded) doStrandedWait();
   else if(dx!==undefined) tryMove(Number(dx),Number(dy));
   else if(G.mode==='planet') doWaitPlanet();

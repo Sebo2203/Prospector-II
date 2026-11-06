@@ -59,7 +59,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | Suite | Coverage |
 | --- | --- |
 | `interface` | Twelve-person crew row and individual health and status, galaxy map focus and patrol replies, actionable banners, Mercy action hints, and keyboard barter at three window sizes |
-| `menu-input` | Mouse and keyboard menus, station and radio actions, crew selection and cargo inspection, modal isolation, and the compass exception at a scaled viewport |
+| `menu-input` | On-screen naming, context actions for docking, radio, combat, and item use, shared Escape behavior, compass waiting and cursor movement, crew and cargo at a scaled viewport |
 | `stations` | Station/wreck alpha, background preservation, native derelict/Mercy render and boarding paths, ASCII and career restoration |
 | `version` | Version labels, main menu keyboard and mouse navigation with and without a save, and retired changelog shortcut |
 | `palette` | Runtime catalog coverage, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |
