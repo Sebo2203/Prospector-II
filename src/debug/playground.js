@@ -48,7 +48,6 @@ function debugEnterPalette(area='galaxy',rebuild=false){
   if(!G) return;
   if(!debugPaletteReturn){autoSave();debugPaletteReturn={game:G,debug:JSON.parse(JSON.stringify(DEBUG))};}
   if(!G.debugPalette || rebuild){
-    DEBUG.on=false;resetDebugSubMenus();
     G=JSON.parse(JSON.stringify(debugPaletteReturn.game));
     Object.assign(G,{mode:'galaxy',turn:1,dead:false,retired:false,deathCause:'',shipCombat:null,stranded:null,dialogue:null,
       forcedMove:null,examine:null,rangeTarget:null,_itemAimMode:null,_voidPrompt:null,showOptions:false,
@@ -81,12 +80,15 @@ function debugPaletteNavigateHome(area){
     G.mode='planet';G.curPlanet=G.debugPalette.surfaceKey;G.player={x:2,y:2};
     revealPlanet(G.curPlanet,2,2);
   } else {G.mode='galaxy';G.curPlanet='';}
-  DEBUG.on=false;DEBUG.paletteMenu=false;resetDebugSubMenus();
-  restoreGameUI();addLog('DEBUG PLAYGROUND — F4 returns to your career. Shift+B then F6 searches all samples. NPCs '+(G.debugPalette.simulate?'live.':'paused; F7 in debug enables simulation.'),'li');renderAll();
+  closeDebugMenu();
+  debugPlaygroundButton.hidden=false;
+  restoreGameUI();addLog('DEBUG PLAYGROUND — Use the Playground button to search samples or return to your career. NPCs '+(G.debugPalette.simulate?'live.':'paused.'),'li');renderAll();
 }
 
 function debugReturnFromPalette(render=true){
   if(!debugPaletteReturn) return;
+  closeDebugMenu();
+  debugPlaygroundButton.hidden=true;
   for(const id of ['feedback-overlay','barter-overlay']){const el=document.getElementById(id);if(el)el.style.display='none';}
   document.getElementById('minimap-overlay')?.classList.remove('visible');
   const saved=debugPaletteReturn;debugPaletteReturn=null;G=saved.game;
@@ -220,63 +222,6 @@ function debugPrepareAquaticPaletteSurface(pd){
   for(let y=2;y<Math.min(PH(pd)-2,16);y++)for(let x=2;x<Math.min(PW(pd)-2,26);x++){
     if(x!==pd.spawnX||y!==pd.spawnY)pd.grid[y][x]={type:'EARTH_WATER'};
   }
-}
-
-function debugPaletteFilteredEntries(){
-  const query=(DEBUG.paletteSearch||'').toLowerCase();
-  return (G?.debugPalette?.entries||[]).filter(e=>(e.kind+' '+e.label+' '+e.id).toLowerCase().includes(query));
-}
-
-function moveDebugPaletteSelection(step){
-  const count=debugPaletteFilteredEntries().length;
-  DEBUG.paletteSel=Math.max(0,Math.min(count-1,(DEBUG.paletteSel||0)+step));
-  renderAll();
-}
-
-function handleDebugPaletteKey(e){
-  if(e.key==='F4'&&debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return true;}
-  if(DEBUG.on && ['F2','F3','F6','F7'].includes(e.key)){
-    e.preventDefault();
-    if(e.key==='F7'){if(G.debugPalette){G.debugPalette.simulate=!G.debugPalette.simulate;renderAll();}return true;}
-    if(e.key==='F2'||e.key==='F3'){debugEnterPalette(e.key==='F3'?'surface':'galaxy',e.shiftKey);return true;}
-    if(!G.debugPalette)debugEnterPalette('galaxy');
-    DEBUG.on=true;DEBUG.paletteMenu=true;DEBUG.paletteSearch='';DEBUG.paletteSel=0;renderAll();return true;
-  }
-  if(!DEBUG.paletteMenu)return false;
-  e.preventDefault();
-  if(e.key==='Escape'){DEBUG.paletteMenu=false;DEBUG.on=false;renderAll();return true;}
-  const rows=debugPaletteFilteredEntries();
-  if(e.key==='ArrowUp'||e.key==='ArrowDown'){
-    moveDebugPaletteSelection(e.key==='ArrowUp'?-1:1);
-    return true;
-  }
-  else if(e.key==='Enter'){const entry=rows[DEBUG.paletteSel||0];if(entry)debugPaletteVisit(entry.id);return true;}
-  else {if(e.key==='Backspace')DEBUG.paletteSearch=DEBUG.paletteSearch.slice(0,-1);
-    else if(e.key.length===1&&!e.ctrlKey&&!e.altKey)DEBUG.paletteSearch+=e.key;DEBUG.paletteSel=0;}
-  renderAll();return true;
-}
-
-function drawDebugPaletteDirectory(){
-  if(!DEBUG.paletteMenu)return;
-  ctx.fillStyle='#07101b';ctx.fillRect(0,0,canvasWidth,canvasHeight);ctx.textAlign='left';
-  ctx.font='bold 18px Courier New';ctx.fillStyle='#ffe066';ctx.fillText('DEBUG PALETTE — SEARCH ALL CONTENT',20,30);
-  ctx.font='13px Courier New';ctx.fillStyle='#88bbcc';ctx.fillText('Type to search: '+(DEBUG.paletteSearch||'all')+'  |  Enter visits  |  Esc closes',20,57);
-  ctx.fillText('F2 galaxy · F3 surface · F4 career · Shift+F2 rebuild · F7 NPC simulation '+(G.debugPalette.simulate?'ON':'OFF'),20,79);
-  const rows=debugPaletteFilteredEntries(),count=Math.max(1,Math.floor((canvasHeight-120)/22));
-  DEBUG.paletteSel=Math.max(0,Math.min(rows.length-1,DEBUG.paletteSel||0));
-  const start=Math.max(0,Math.min(DEBUG.paletteSel-Math.floor(count/2),rows.length-count));
-  rows.slice(start,start+count).forEach((e,i)=>{
-    canvasMenuTarget(20,94+i*22,canvasWidth-40,22,()=>debugPaletteVisit(e.id));
-    ctx.fillStyle=start+i===DEBUG.paletteSel?'#ffe066':'#aabbd0';
-    ctx.fillText((start+i===DEBUG.paletteSel?'> ':'  ')+e.kind.toUpperCase()+' — '+e.label,20,109+i*22,canvasWidth-40);
-  });
-  canvasMenuScroll=moveDebugPaletteSelection;
-  canvasMenuButton('Close [Esc]',canvasWidth-125,canvasHeight-32,()=>{
-    DEBUG.paletteMenu=false;
-    DEBUG.on=false;
-    renderAll();
-  });
-  ctx.fillStyle='#88aabb';ctx.fillText(rows.length+' matching samples · Arrow keys select',20,canvasHeight-12);
 }
 
 function drawDebugPaletteLabels(){

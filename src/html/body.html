@@ -186,6 +186,15 @@
 
 </div><!-- #root -->
 
+<button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Playground</button>
+<dialog id="debug-dialog" aria-labelledby="debug-title">
+  <header class="debug-header">
+    <h2 id="debug-title"></h2>
+    <div id="debug-navigation"></div>
+  </header>
+  <div id="debug-content"></div>
+</dialog>
+
 <div id="save-notice" role="alert" hidden>
   <span id="save-notice-text"></span>
   <button id="save-retry" data-menu-control onclick="retryAutosave()">Retry</button>

@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.39 makes the debug tools clickable
+
+Released on `experiment/expedition-legacy`.
+
+- Replaced the debug hotkeys with clickable toggles, spawn controls, civilization tools, reports, and searchable gear and sample lists. Shift+B still opens the tools during a career. A Playground button opens them inside the sandbox.
+- Added click confirmations for surface regeneration, civilization replacement, and playground rebuilds. The sandbox keeps its own state and **Return to Career** restores the retained run.
+- All 47 repository tests and seven headless Edge suites passed, including the debug click-through at 800×600, footer layout, autosave, and exact career restoration. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.38 separates the controls and status strip
 
 Released on `experiment/expedition-legacy`.

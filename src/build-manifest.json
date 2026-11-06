@@ -115,6 +115,7 @@
     "src/actions/wait-and-fuel.js",
     "src/input/keyboard.js",
     "src/debug/playground.js",
+    "src/debug/menu.js",
     "src/audio/sound-effects.js",
     "src/persistence/autosave-store.js",
     "src/persistence/save-load.js",

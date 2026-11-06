@@ -19,42 +19,7 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(e.key==='F4' && debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return;}
-  // ── Debug item search mode — must intercept before ANY other routing ──
-  if(DEBUG?.itemSubSearch !== undefined){
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.key === 'Escape'){ DEBUG.itemSubSearch = undefined; DEBUG.itemSubMenu = false; renderAll(); return; }
-    if(e.key === 'ArrowUp' || e.key === 'ArrowDown'){
-      if(!DEBUG.itemSubCol) DEBUG.itemSubCol = 'left';
-      drawDebugItemSubMenu();
-      const col = DEBUG.itemSubCol;
-      const rows = col === 'right' ? (drawDebugItemSubMenu._rightRows||[]) : (drawDebugItemSubMenu._leftRows||[]);
-      const selKey = col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-      const numRows = rows.length;
-      if(numRows > 0){
-        DEBUG[selKey] = ((DEBUG[selKey]||0) + (e.key==='ArrowUp' ? -1 : 1) + numRows) % numRows;
-      }
-      renderAll(); return;
-    }
-    if(e.key === 'Enter'){ debugItemSubMenuSpawn(); return; }
-    // Update search string
-    if(e.key === 'Backspace') DEBUG.itemSubSearch = (DEBUG.itemSubSearch||'').slice(0,-1);
-    else if(e.key.length === 1) DEBUG.itemSubSearch += e.key;
-    else { renderAll(); return; }
-    // Jump selection to first match after every change
-    if(!DEBUG.itemSubCol) DEBUG.itemSubCol = 'left';
-    drawDebugItemSubMenu();
-    const _col = DEBUG.itemSubCol;
-    const _rows = _col === 'right' ? (drawDebugItemSubMenu._rightRows||[]) : (drawDebugItemSubMenu._leftRows||[]);
-    const _selKey = _col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-    const _q = (DEBUG.itemSubSearch||'').toLowerCase().trim();
-    if(_q){
-      const _idx = _rows.findIndex(r => r.type !== 'header' && String(r.label||'').toLowerCase().includes(_q));
-      if(_idx !== -1) DEBUG[_selKey] = _idx;
-    }
-    renderAll(); return;
-  }
+  if(debugDialog.open || e.target===debugPlaygroundButton) return;
   // Block all game keys while feedback overlay is open
   if(document.getElementById('feedback-overlay').style.display==='flex') return;
   if(document.getElementById('minimap-overlay')?.classList.contains('visible')){
@@ -81,7 +46,11 @@ document.addEventListener('keydown', e=>{
 
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
-  if(handleDebugPaletteKey(e)) return;
+  if(e.key==='B' && e.shiftKey && !e.repeat){
+    e.preventDefault();
+    openDebugMenu();
+    return;
+  }
 
   if(G.forcedMove?.active){
     e.preventDefault();
@@ -112,7 +81,7 @@ document.addEventListener('keydown', e=>{
     }
 
     // M — open full galaxy minimap
-    if((e.key==='m'||e.key==='M') && !DEBUG.on){
+    if(e.key==='m'||e.key==='M'){
       e.preventDefault();
       openGalaxyMinimapOverlay();
       return;
@@ -204,141 +173,6 @@ document.addEventListener('keydown', e=>{
         return;
       }
       return;
-    }
-
-    // Shift+B — toggle debug menu
-    if(e.key==='B' && e.shiftKey){
-      DEBUG.on = !DEBUG.on;
-      renderAll();
-      return;
-    }
-    // Debug hotkeys (only when debug menu is open)
-    if(DEBUG.on){
-      if(DEBUG.galaxyReport){
-        if(e.key==='Escape'||e.key==='v'||e.key==='V'){
-          DEBUG.galaxyReport = false;
-          renderAll(); return;
-        }
-        return;
-      }
-      // ── Civ sub-menu — intercept all keys when open ──
-      if(DEBUG.civSubMenu){
-        e.preventDefault();
-        const rows = debugCivSubMenuRows();
-        const numRows = rows.length;
-        if(e.key==='Escape'||e.key==='c'||e.key==='C'){ DEBUG.civSubMenu=false; renderAll(); return; }
-        if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){
-          DEBUG.civSubSel = (DEBUG.civSubSel - 1 + numRows) % numRows;
-          renderAll(); return;
-        }
-        if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){
-          DEBUG.civSubSel = (DEBUG.civSubSel + 1) % numRows;
-          renderAll(); return;
-        }
-        const selRow = rows[DEBUG.civSubSel];
-        if(e.key==='ArrowLeft'){ debugCivSubMenuApplyRow(selRow, -1); renderAll(); return; }
-        if(e.key==='ArrowRight'){ debugCivSubMenuApplyRow(selRow, 1); renderAll(); return; }
-        if(e.key==='Enter'){
-          // Enter always spawns — arrow keys are the only way to change values
-          e.stopPropagation();
-          DEBUG.civSubMenu=false; debugSpawnCivilizationOnCurrentPlanet(); return;
-        }
-        if(e.key===' '){
-          // Space closes if on close row, otherwise also spawns
-          if(selRow?.key === 'close'){ DEBUG.civSubMenu=false; renderAll(); return; }
-          DEBUG.civSubMenu=false; debugSpawnCivilizationOnCurrentPlanet(); return;
-        }
-        renderAll(); return;
-      }
-      // ── Item sub-menu — intercept all keys when open ──
-      if(DEBUG.itemSubMenu){
-        e.preventDefault();
-        if(!DEBUG.itemSubCol) DEBUG.itemSubCol = 'left';
-        // Ensure draw has run so row arrays exist
-        drawDebugItemSubMenu();
-        const col = DEBUG.itemSubCol;
-        const rows = col === 'right' ? (drawDebugItemSubMenu._rightRows||[]) : (drawDebugItemSubMenu._leftRows||[]);
-        const selKey = col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-        const numRows = rows.length;
-
-        // ── Search mode active ──
-        if(DEBUG.itemSubSearch !== undefined){
-          // Handled at top of keydown listener — should not reach here
-        }
-
-        if(e.key==='Escape'||e.key==='i'||e.key==='I'){ DEBUG.itemSubMenu=false; renderAll(); return; }
-        if(e.key==='f'||e.key==='F'){ DEBUG.itemSubSearch = ''; renderAll(); return; }
-        if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){
-          DEBUG.itemSubCol = 'left'; renderAll(); return;
-        }
-        if(e.key==='ArrowRight'||e.key==='d'||e.key==='D'){
-          DEBUG.itemSubCol = 'right'; renderAll(); return;
-        }
-        if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){
-          DEBUG[selKey] = ((DEBUG[selKey]||0) - 1 + numRows) % numRows;
-          renderAll(); return;
-        }
-        if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){
-          DEBUG[selKey] = ((DEBUG[selKey]||0) + 1) % numRows;
-          renderAll(); return;
-        }
-        if(e.key==='Enter'||e.key===' '){
-          debugItemSubMenuSpawn(); return;
-        }
-        renderAll(); return;
-      }
-      if(e.key==='Escape'){ DEBUG.on = false; renderAll(); return; }
-      if(e.key==='1'){ DEBUG.infiniteFuel = !DEBUG.infiniteFuel; renderAll(); return; }
-      if(e.key==='2'){ DEBUG.infiniteHull = !DEBUG.infiniteHull; renderAll(); return; }
-      if(e.key==='3'){
-        DEBUG.fullVision = !DEBUG.fullVision;
-        if(DEBUG.fullVision) G.visited.fill(true);
-        renderAll(); return;
-      }
-      if(e.key==='4'){ DEBUG.infiniteOxy = !DEBUG.infiniteOxy; renderAll(); return; }
-      if(e.key==='7'){ DEBUG.infiniteCrewHp = !DEBUG.infiniteCrewHp; debugRestoreCrewHp(); addLog('DEBUG: Infinite crew HP '+(DEBUG.infiniteCrewHp?'ON':'OFF')+'.','lw'); renderAll(); return; }
-      if(e.key==='8'){ DEBUG.shipInvisible = !DEBUG.shipInvisible; addLog('DEBUG: Invisible to enemy ships '+(DEBUG.shipInvisible?'ON':'OFF')+'.','lw'); renderAll(); return; }
-      if(e.key==='9'){
-        DEBUG.preScan = ((DEBUG.preScan||0) + 1) % 3;
-        const _scanLabels = ['Pre-scan debug spawned planets','Pre-scan all planets (even non-debug)','Scan no planets'];
-        addLog('DEBUG: '+_scanLabels[DEBUG.preScan]+'.','lw'); renderAll(); return;
-      }
-      if(e.key==='0'){ DEBUG.showFPS = !DEBUG.showFPS; renderAll(); return; }
-
-      if(e.key==='v'||e.key==='V'){ DEBUG.galaxyReport = true; renderAll(); return; }
-
-      if(e.key==='g'||e.key==='G'){ debugSpawnGunnerAlien(); return; }
-      if(e.key==='n'||e.key==='N'){ debugRegenWithAncientRuins(); return; }
-      if(e.key==='r'||e.key==='R'){ debugApplyCrewStatus('radiation'); return; }
-      if(e.key==='d'||e.key==='D'){ debugApplyCrewStatus('disease'); return; }
-      if(e.key==='h'||e.key==='H'){ debugApplyCrewStatus('hallucination'); return; }
-      if(e.key==='m'||e.key==='M'){ G.credits+=1000; addLog('DEBUG: +1000 cr (total: '+G.credits+')','lw'); renderAll(); return; }
-      if(e.key==='c'||e.key==='C'){ DEBUG.civSubMenu=true; DEBUG.civSubSel=0; renderAll(); return; }
-      if(e.key==='i'||e.key==='I'){ DEBUG.itemSubMenu=true; DEBUG.itemSubSel=0; DEBUG.itemSubSearch=''; renderAll(); return; }
-      if(e.key==='k'||e.key==='K'){ debugToggleCurrentCivHostile(); return; }
-      // Cycle biome / galaxy object for spawn
-      const biomeCount = Object.keys(BIOMES).length;
-      const gObjCount = DEBUG_GALAXY_OBJ_TYPES.length;
-      if(e.key==='x'||e.key==='X'){ DEBUG.spawnMode = DEBUG.spawnMode==='galaxy_obj' ? 'biome' : 'galaxy_obj'; renderAll(); return; }
-      if(e.key==='ArrowLeft'){
-        if(DEBUG.spawnMode==='galaxy_obj') DEBUG.spawnGalaxyObj=(DEBUG.spawnGalaxyObj-1+gObjCount)%gObjCount;
-        else DEBUG.spawnBiome=(DEBUG.spawnBiome-1+biomeCount)%biomeCount;
-        renderAll(); return;
-      }
-      if(e.key==='ArrowRight'){
-        if(DEBUG.spawnMode==='galaxy_obj') DEBUG.spawnGalaxyObj=(DEBUG.spawnGalaxyObj+1)%gObjCount;
-        else DEBUG.spawnBiome=(DEBUG.spawnBiome+1)%biomeCount;
-        renderAll(); return;
-      }
-      if(e.key==='Enter' && G.mode==='galaxy'){
-        if(DEBUG.spawnMode==='galaxy_obj') debugSpawnGalaxyObj();
-        else debugSpawnSystem();
-        return;
-      }
-      if(e.key==='6'){
-        debugSpawnCivilizationOnCurrentPlanet();
-        return;
-      }
     }
 
     // Game over / retirement

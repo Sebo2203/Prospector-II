@@ -1,17 +1,17 @@
 # Debug playground
 
-Open the existing debug menu with **Shift+B** during a run.
+Open **Debug Tools** with **Shift+B** during a run. Click toggles and actions directly. Select a biome or object to spawn it near Starbase Alpha, or open **Spawn Gear or Cargo** to search and add items. Civilization tools are available on the surface.
 
-| Key | Action |
+| Playground control | Action |
 | --- | --- |
-| F2 | Enter the galaxy palette, or return to its arrival station |
-| F3 | Enter the surface gallery |
-| F6 | Open the searchable directory; type a name/category, use arrows and Enter to visit |
-| Shift+F2 | Rebuild both palettes from the current content catalogs |
-| F7 | Toggle live NPC movement while the debug menu or directory is open |
-| F4 | Leave the playground and restore the career, including its previous debug settings |
+| Galaxy Gallery | Enter the galaxy gallery or return to its arrival station |
+| Surface Gallery | Enter the surface gallery |
+| Find a Sample | Filter by name or category, then click a sample to visit |
+| Rebuild Playground | Confirm to discard changes and rebuild both galleries from the current catalogs |
+| Run NPCs Live / Pause NPCs | Toggle normal NPC movement and behavior in the test world |
+| Return to Career | Leave the playground and restore the retained career and debug settings |
 
-F4 also works during dialogue, combat, item search and after death. F2/F3 and rebuilding refill the test ship and restore the test crew. The ordinary debug switches remain available. Default test settings grant fuel, hull, oxygen and crew protection, full vision, ample credits, cargo space and crew roles. These belong only to the disposable test session.
+While testing, click **Playground** in the top right to reopen the tools, including during dialogue, combat, and after death. Switching galleries or rebuilding refills the test ship and restores the test crew. Default test settings grant fuel, hull, oxygen and crew protection, full vision, ample credits, cargo space and crew roles. These belong only to the disposable test session.
 
 ## Galaxy
 
@@ -23,7 +23,7 @@ From experimental.11, biome and civilization exhibits show body previews rather 
 
 The Void Royale and Derelict Station biome entries are native casino/derelict objects with their normal artwork and boarding behavior. Void Royale no longer appears as a sun, and Enter boards its walkable deck directly. Both its galaxy-object and biome entries remain available in the directory. Other planetary biomes retain their normal orbit and landing controls; civilization directory entries still enter the prepared contact map. ASCII mode has matching body symbols and casino/derelict glyphs.
 
-If a test palette is already open from an older build, use **Shift+B → Shift+F2** to rebuild it, or return to the career with F4 and enter it again. Rebuilding resets only the disposable test worlds.
+Use **Rebuild Playground** to refresh the samples from the current content catalogs.
 
 ## Surface
 
@@ -35,7 +35,7 @@ Raw building tiles are useful for visual and collision inspection; some require 
 
 ## Career isolation
 
-Entry saves and retains the original career, then constructs an independent test world. Playground actions do not write the career autosave, export a game save, load another save over the test session or emit gameplay analytics. F4 restores the retained run exactly. Going to the main menu or quitting discards the playground; Continue uses the career autosave. Rebuilding removes test-world changes and re-reads the catalogs. It does not modify the retained career.
+Entry saves and retains the original career, then constructs an independent test world. Playground actions do not write the career autosave, export a game save, load another save over the test session or emit gameplay analytics. **Return to Career** restores the retained run exactly. Going to the main menu or quitting discards the playground. Continue uses the career autosave. Rebuilding removes test-world changes and re-reads the catalogs.
 
 ## Keeping it complete
 

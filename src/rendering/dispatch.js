@@ -69,11 +69,6 @@ function drawCanvas(){
   if(DEBUG.on || G.forcedMove?.active) resetCanvasMenu();
 
   drawDebugPaletteLabels();
-  if(DEBUG.on) drawDebugOverlay();
-  if(DEBUG.on && DEBUG.civSubMenu)  drawDebugCivSubMenu();
-  if(DEBUG.on && DEBUG.itemSubMenu) drawDebugItemSubMenu();
-  if(DEBUG.on && DEBUG.galaxyReport) drawDebugGalaxyReportPopup();
-  drawDebugPaletteDirectory();
   const mapMode=canvasMapMode();
   if(mapMode!=='fire') pointerFireAim=null;
   canvas.classList.toggle('map-targeting',!!mapMode);

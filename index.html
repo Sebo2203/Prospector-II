@@ -1516,6 +1516,84 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   overflow: hidden;
 }
 #save-state { color: #558877; }
+
+#debug-playground-button {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1100;
+  cursor: pointer;
+}
+
+#debug-dialog {
+  position: fixed;
+  width: min(900px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid #56728b;
+  background: #0c141f;
+  color: #d5e5f2;
+  font: 14px system-ui, sans-serif;
+  color-scheme: dark;
+}
+#debug-dialog[open] { display: flex; flex-direction: column; }
+#debug-dialog.debug-catalog { height: min(620px, calc(100vh - 24px)); }
+#debug-dialog.debug-catalog #debug-content { display: flex; flex-direction: column; overflow: hidden; }
+#debug-dialog::backdrop { background: rgba(0,0,0,.66); }
+.debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #34485e;
+  background: #142130;
+}
+.debug-header h2 { font-size: 18px; }
+#debug-content { overflow: auto; padding: 16px; }
+.debug-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 12px;
+}
+.debug-grid section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #34485e;
+  background: #111d2a;
+}
+.debug-grid h3 { margin-bottom: 8px; font-size: 15px; color: #a9d6f2; }
+#debug-dialog p { margin-bottom: 8px; }
+#debug-dialog small { color: #a1b9cc; }
+#debug-dialog button, #debug-dialog select, #debug-dialog input[type="search"] {
+  padding: 5px 8px;
+  border: 1px solid #45617a;
+  border-radius: 3px;
+  background: #17293a;
+  color: inherit;
+  font: inherit;
+}
+#debug-dialog button { margin: 2px 6px 2px 0; }
+#debug-dialog button:enabled, #debug-dialog select:enabled, .debug-toggle { cursor: pointer; }
+#debug-dialog button:enabled:hover { background: #26445e; }
+#debug-dialog :focus-visible { outline: 2px solid #8cd3f7; outline-offset: 1px; }
+#debug-dialog :disabled { opacity: .5; }
+#debug-dialog input[type="search"] { width: 100%; margin-bottom: 8px; }
+.debug-switches { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr)); }
+.debug-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.debug-field { display: flex; flex-direction: column; gap: 3px; margin: 8px 0 4px; }
+.debug-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  align-content: start;
+  overflow: auto;
+}
+#debug-dialog .debug-results button { display: grid; gap: 2px; text-align: left; }
+#debug-dialog dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; }
+#debug-action-status:empty { display: none; }
+#debug-action-status:not(:empty) { margin-top: 8px; color: #a0e6b8; }
 #save-state[data-phase="saving"] { color: #aa9955; }
 #save-state[data-phase="error"] { color: #ff7755; }
 #save-notice {
@@ -1830,7 +1908,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.38</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.39</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1879,6 +1957,15 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 
 </div><!-- #root -->
 
+<button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Playground</button>
+<dialog id="debug-dialog" aria-labelledby="debug-title">
+  <header class="debug-header">
+    <h2 id="debug-title"></h2>
+    <div id="debug-navigation"></div>
+  </header>
+  <div id="debug-content"></div>
+</dialog>
+
 <div id="save-notice" role="alert" hidden>
   <span id="save-notice-text"></span>
   <button id="save-retry" data-menu-control onclick="retryAutosave()">Retry</button>
@@ -1888,8 +1975,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.38';
-const GAME_VERSION_LABEL = 'v0.28 experimental.38';
+const GAME_VERSION = '0.28.0-experimental.39';
+const GAME_VERSION_LABEL = 'v0.28 experimental.39';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -5198,12 +5285,9 @@ const DEBUG = {
   showFPS:      false,
   spawnBiome:   0,
   spawnGalaxyObj: 0,   // index into DEBUG_GALAXY_OBJ_TYPES
-  spawnMode:    'biome', // 'biome' | 'galaxy_obj'
   debugCivTier: 0,
+  debugCivSpecies: -1,
   debugCivAggression: 1,
-  // Civ sub-menu
-  civSubMenu:   false,
-  civSubSel:    0,
   // Pinned primitive traits (index into array; -1 = random)
   civPrimDiet:      -1,
   civPrimSocial:    -1,
@@ -5216,19 +5300,14 @@ const DEBUG = {
   civTraitBureaucracy: '',
   civTraitMedia:       '',
   civTraitPolicy:      '',
-  // Item sub-menu
-  itemSubMenu: false,
-  itemSubSel:  0,
-  galaxyReport: false,
   // Combat logger
   combatLog:   false,
 };
 
 // ── DEBUG COMBAT LOGGER ──────────────────────────────────────────────────────
 // When DEBUG.combatLog is ON every combat-relevant event is stamped with turn,
-// entity stats, speed budget, and damage. Toggle with [P] in the debug menu.
-// [L] downloads the full log as a .txt file for later review.
-// The last 30 entries also appear live in the debug overlay panel.
+// entity stats, speed budget, and damage. Toggle it in the debug menu.
+// Download the full log as a .txt file from the debug menu.
 
 const _COMBAT_LOG_ENTRIES = [];   // { turn, event, data }
 const _COMBAT_LOG_MAX = 2000;     // ring-buffer cap
@@ -5270,16 +5349,6 @@ function debugCombatLogDownload(){
   URL.revokeObjectURL(a.href);
   addLog('DEBUG: combat log downloaded ('+_COMBAT_LOG_ENTRIES.length+' entries).','lw');
 }
-
-function resetDebugSubMenus(){
-  DEBUG.civSubMenu = false;
-  DEBUG.civSubSel = 0;
-  DEBUG.itemSubMenu = false;
-  DEBUG.itemSubSel = 0;
-  DEBUG.itemSubSelR = 0;
-  DEBUG.itemSubCol = 'left';
-}
-
 // Saved facts, rather than parsed log messages, support the journal and endings.
 function ensureExpeditionState(){
   if(!G) return null;
@@ -13787,11 +13856,6 @@ function drawCanvas(){
   if(DEBUG.on || G.forcedMove?.active) resetCanvasMenu();
 
   drawDebugPaletteLabels();
-  if(DEBUG.on) drawDebugOverlay();
-  if(DEBUG.on && DEBUG.civSubMenu)  drawDebugCivSubMenu();
-  if(DEBUG.on && DEBUG.itemSubMenu) drawDebugItemSubMenu();
-  if(DEBUG.on && DEBUG.galaxyReport) drawDebugGalaxyReportPopup();
-  drawDebugPaletteDirectory();
   const mapMode=canvasMapMode();
   if(mapMode!=='fire') pointerFireAim=null;
   canvas.classList.toggle('map-targeting',!!mapMode);
@@ -20484,7 +20548,7 @@ function debugResetCivilizationState(civ){
 function debugApplySelectedCivAggression(){
   const pd = debugCurrentPlanetData();
   if(!pd?.civilization){
-    addLog('DEBUG: No civilization on current planet. Press 6 to spawn one.','lw');
+    addLog('DEBUG: No civilization on current planet. Use the Civilization panel to spawn one.','lw');
     renderAll();
     return;
   }
@@ -20525,21 +20589,6 @@ function debugToggleCurrentCivHostile(){
   renderAll();
 }
 
-function cycleArrayIndex(current, len, dir, allowRandom=false){
-  const min = allowRandom ? -1 : 0;
-  const span = len + (allowRandom ? 1 : 0);
-  let next = (current ?? min) + dir;
-  if(next < min) next = min + span - 1;
-  if(next >= len) next = min;
-  return next;
-}
-
-function cycleStringChoice(current, values, dir){
-  const opts = ['', ...values];
-  const idx = Math.max(0, opts.indexOf(current ?? ''));
-  return opts[(idx + dir + opts.length) % opts.length];
-}
-
 function debugPinnedCivTraits(tier){
   if(tier === 'primitive'){
     return {
@@ -20559,68 +20608,6 @@ function debugPinnedCivTraits(tier){
   return out;
 }
 
-function debugCivSubMenuRows(){
-  const tierPick = DEBUG_CIV_TIERS[(DEBUG.debugCivTier||0) % DEBUG_CIV_TIERS.length];
-  const tier = tierPick?.id || 'primitive';
-  const speciesValue = DEBUG.debugCivSpecies < 0 ? 'Random' : CIV_SPECIES_TYPES[DEBUG.debugCivSpecies % CIV_SPECIES_TYPES.length];
-  const rows = [
-    { key:'tier', label:'Tier', value:tierPick?.label || 'Primitive' },
-    { key:'species', label:'Species', value:speciesValue },
-    { key:'aggression', label:'Aggression', value:CIV_AGGRESSION[(DEBUG.debugCivAggression||0) % CIV_AGGRESSION.length] },
-  ];
-  if(tier === 'primitive'){
-    rows.push(
-      { key:'primDiet', label:'Diet', value:DEBUG.civPrimDiet < 0 ? 'Random' : PRIM_DIETS[DEBUG.civPrimDiet] },
-      { key:'primSocial', label:'Social', value:DEBUG.civPrimSocial < 0 ? 'Random' : PRIM_SOCIAL[DEBUG.civPrimSocial] },
-      { key:'primCuriosity', label:'Curiosity', value:DEBUG.civPrimCuriosity < 0 ? 'Random' : PRIM_CURIOSITY[DEBUG.civPrimCuriosity] },
-      { key:'primHonor', label:'Honor', value:DEBUG.civPrimHonor < 0 ? 'Random' : PRIM_HONOR[DEBUG.civPrimHonor] },
-    );
-  } else {
-    Object.entries(CIVI_TRAITS[tier] || {}).forEach(([axis, values])=>{
-      const debugKey = 'civTrait'+axis[0].toUpperCase()+axis.slice(1);
-      rows.push({ key:'trait:'+debugKey, label:axis, value:DEBUG[debugKey] || 'Random', values });
-    });
-  }
-  // Live-edit rows for an already-spawned civ on the current planet
-  const pd = debugCurrentPlanetData();
-  const liveState = pd?.civilization ? ensureCivilizationState(pd) : null;
-  const langVals = ['0','1','2','3','4','5'];
-  const alertVals = ['0','1','2','3','4','5'];
-  rows.push({ key:'liveLanguage', label:'Language (live)', value: liveState ? String(Math.max(0, Math.min(5, liveState.languageProgress || 0))) : '—', values: langVals, liveOnly: true });
-  rows.push({ key:'liveAlert',    label:'Alert (live)',    value: liveState ? String(Math.max(0, Math.min(5, liveState.alert || 0)))             : '—', values: alertVals, liveOnly: true });
-
-  rows.push({ key:'spawn', label:'Spawn civilization', value:'Enter / Space' });
-  rows.push({ key:'close', label:'Close submenu', value:'Esc / C' });
-  return rows;
-}
-
-function debugCivSubMenuApplyRow(row, dir){
-  if(!row) return;
-  if(row.key === 'tier') DEBUG.debugCivTier = cycleArrayIndex(DEBUG.debugCivTier || 0, DEBUG_CIV_TIERS.length, dir);
-  else if(row.key === 'species') DEBUG.debugCivSpecies = cycleArrayIndex(DEBUG.debugCivSpecies ?? -1, CIV_SPECIES_TYPES.length, dir, true);
-  else if(row.key === 'aggression') DEBUG.debugCivAggression = cycleArrayIndex(DEBUG.debugCivAggression || 0, CIV_AGGRESSION.length, dir);
-  else if(row.key === 'primDiet') DEBUG.civPrimDiet = cycleArrayIndex(DEBUG.civPrimDiet ?? -1, PRIM_DIETS.length, dir, true);
-  else if(row.key === 'primSocial') DEBUG.civPrimSocial = cycleArrayIndex(DEBUG.civPrimSocial ?? -1, PRIM_SOCIAL.length, dir, true);
-  else if(row.key === 'primCuriosity') DEBUG.civPrimCuriosity = cycleArrayIndex(DEBUG.civPrimCuriosity ?? -1, PRIM_CURIOSITY.length, dir, true);
-  else if(row.key === 'primHonor') DEBUG.civPrimHonor = cycleArrayIndex(DEBUG.civPrimHonor ?? -1, PRIM_HONOR.length, dir, true);
-  else if(row.key?.startsWith('trait:')) DEBUG[row.key.slice(6)] = cycleStringChoice(DEBUG[row.key.slice(6)], row.values || [], dir);
-  else if(row.key === 'liveLanguage'){
-    const pd = debugCurrentPlanetData();
-    if(!pd?.civilization){ addLog('DEBUG: No civilization on current planet.','lw'); return; }
-    const state = ensureCivilizationState(pd);
-    const cur = Math.max(0, Math.min(5, state.languageProgress || 0));
-    state.languageProgress = Math.max(0, Math.min(5, cur + dir));
-  }
-  else if(row.key === 'liveAlert'){
-    const pd = debugCurrentPlanetData();
-    if(!pd?.civilization){ addLog('DEBUG: No civilization on current planet.','lw'); return; }
-    const state = ensureCivilizationState(pd);
-    const cur = Math.max(0, Math.min(5, state.alert || 0));
-    state.alert = Math.max(0, Math.min(5, cur + dir));
-    if(state.alert <= 2) state.hostile = false;
-  }
-}
-
 function debugCivStatusRows(){
   const pd = debugCurrentPlanetData();
   const civ = pd?.civilization || null;
@@ -20633,186 +20620,15 @@ function debugCivStatusRows(){
   ];
 }
 
-function drawDebugCivSubMenu(){
-  const rows = debugCivSubMenuRows();
-  const statusRows = debugCivStatusRows();
-  const pad = 10, lh = 22, w = 520;
-  const x = canvasWidth - w - 8, y = 8;
-  const h = pad*2 + (rows.length + statusRows.length + 4)*lh;
-  ctx.fillStyle='rgba(0,0,0,0.9)';
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle='#88ffcc'; ctx.lineWidth=1;
-  ctx.strokeRect(x, y, w, h);
-  ctx.font='bold 15px Courier New'; ctx.textAlign='left';
-  ctx.fillStyle='#88ffcc';
-  ctx.fillText('CIV DEBUG SUBMENU', x+pad, y+pad+lh);
-  ctx.font='14px Courier New';
-  ctx.fillStyle='#aaaacc';
-  ctx.fillText('Up/Down select   Left/Right change   Enter spawn   Esc/C close', x+pad, y+pad+lh*2);
-  rows.forEach((row, i)=>{
-    const yy = y + pad + lh*(i+3);
-    const sel = i === (DEBUG.civSubSel || 0);
-    ctx.fillStyle = sel ? '#ffe066' : row.key === 'spawn' ? '#90f0a0' : row.key === 'close' ? '#ff8888' : '#cccccc';
-    ctx.fillText((sel?'> ':'  ')+row.label+': '+row.value, x+pad, yy);
-  });
-  const statusTopY = y + pad + lh*(rows.length+3.6);
-  ctx.fillStyle = '#223333';
-  ctx.fillRect(x+8, statusTopY - 14, w-16, 1);
-  ctx.font = '12px Courier New';
-  statusRows.forEach((row, i)=>{
-    const yy = statusTopY + i*lh;
-    ctx.fillStyle = '#667788';
-    ctx.fillText(row.label+':', x+pad, yy);
-    ctx.fillStyle = '#ccddcc';
-    ctx.fillText(row.value, x+pad+130, yy);
-  });
-}
-
-function debugItemRowsFromCatalog(catalog, type){
-  const rows = [];
-  catalog.forEach(group=>{
-    rows.push({ type:'header', label:group.cat });
-    group.items.forEach(item=>rows.push({ type, label:type === 'cargo' ? (COMMODITIES[item]?.name || item) : item.name, item }));
-  });
-  return rows;
-}
-
-function drawDebugItemSubMenu(){
-  const leftRows = debugItemRowsFromCatalog(DEBUG_ITEM_CATALOG, 'inventory');
-  const rightRows = debugItemRowsFromCatalog(DEBUG_CARGO_CATALOG, 'cargo');
-  drawDebugItemSubMenu._leftRows = leftRows;
-  drawDebugItemSubMenu._rightRows = rightRows;
-
-  // Fill the entire canvas
-  const x = 0, y = 0, w = canvasWidth, h = canvasHeight;
-  const pad = 18, lh = 26, footerH = 28;
-  const gap = 16;
-  const colW = Math.floor((w - pad * 3 - gap) / 2);
-
-  // Header: title on line 1, legend on line 2, column labels on line 3, divider after
-  const titleY  = pad + 22;
-  const legendY = titleY + 24;
-  const colLblY = legendY + 24;
-  const headerH = colLblY + 14;   // divider sits here
-  const searchBarH = DEBUG.itemSubSearch !== undefined ? 34 : 0;
-  const listTop = headerH + searchBarH;
-  const maxVisible = Math.floor((h - listTop - footerH) / lh);
-
-  ctx.fillStyle = '#060810';
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2;
-  ctx.strokeRect(x+1, y+1, w-2, h-2);
-
-  ctx.font = 'bold 20px Courier New'; ctx.textAlign = 'left';
-  ctx.fillStyle = '#ffe066';
-  ctx.fillText('DEBUG — ITEM SUBMENU', x+pad, titleY);
-
-  ctx.font = '14px Courier New';
-  ctx.fillStyle = '#7788aa';
-  ctx.fillText('←/→ switch column    ↑/↓ select    Enter spawn    F search    Esc / I  close', x+pad, legendY);
-
-  // Column labels — left and right aligned to their column x
-  const leftCX  = x + pad;
-  const rightCX = x + pad + colW + gap;
-  ctx.font = 'bold 13px Courier New';
-  ctx.fillStyle = (DEBUG.itemSubCol||'left') === 'left' ? '#88ccff' : '#445566';
-  ctx.fillText('── INVENTORY ITEMS ──', leftCX, colLblY);
-  ctx.fillStyle = (DEBUG.itemSubCol||'left') === 'right' ? '#88ccff' : '#445566';
-  ctx.fillText('── CARGO COMMODITIES ──', rightCX, colLblY);
-
-  ctx.fillStyle = '#223';
-  ctx.fillRect(x+4, headerH+2, w-8, 1);
-
-  // Search bar — shown when itemSubSearch is active
-  if(DEBUG.itemSubSearch !== undefined){
-    const sbY = headerH + 8;
-    const sbH = 22;
-    ctx.fillStyle = '#0a0e1a';
-    ctx.fillRect(x+pad, sbY, w-pad*2, sbH);
-    ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 1;
-    ctx.strokeRect(x+pad, sbY, w-pad*2, sbH);
-    ctx.font = '14px Courier New';
-    ctx.fillStyle = '#aabbcc';
-    ctx.fillText('Search: ', x+pad+6, sbY+15);
-    ctx.fillStyle = '#ffffff';
-    const cursor = Math.floor(Date.now()/500)%2===0 ? '▌' : '';
-    ctx.fillText((DEBUG.itemSubSearch||'')+cursor, x+pad+74, sbY+15);
-  }
-
-  // Vertical divider
-  const divX = x + pad + colW + Math.round(gap/2);
-  ctx.fillStyle = '#1a2030';
-  ctx.fillRect(divX, listTop+4, 1, maxVisible * lh);
-
-  const drawCol = (rows, colName, cx, selected)=>{
-    const active = colName === (DEBUG.itemSubCol || 'left');
-    let scrollTop = Math.max(0, selected - Math.floor(maxVisible / 2));
-    scrollTop = Math.min(scrollTop, Math.max(0, rows.length - maxVisible));
-    const visible = rows.slice(scrollTop, scrollTop + maxVisible);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(cx, listTop+4, colW, maxVisible*lh);
-    ctx.clip();
-
-    visible.forEach((row, vi)=>{
-      const i = scrollTop + vi;
-      const yy = listTop + 4 + vi*lh + lh - 6;
-      const sel = selected === i && active;
-      if(sel){
-        ctx.fillStyle = 'rgba(80,68,0,0.9)';
-        ctx.fillRect(cx, listTop+4+vi*lh, colW, lh);
-        ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 1;
-        ctx.strokeRect(cx+0.5, listTop+4+vi*lh+0.5, colW-1, lh-1);
-      }
-      if(row.type === 'header'){
-        ctx.font = 'bold 12px Courier New';
-        ctx.fillStyle = '#556633';
-        ctx.fillText('── '+String(row.label||'').toUpperCase()+' ──', cx+6, yy);
-      } else {
-        const itemCol = row.type === 'cargo' ? (COMMODITIES[row.item]?.col||'#aaa') : (row.item.col||'#aaa');
-        ctx.fillStyle = itemCol;
-        ctx.fillRect(cx+6, yy-14, 10, 10);
-        ctx.font = sel ? 'bold 15px Courier New' : '14px Courier New';
-        ctx.fillStyle = sel ? '#ffffff' : '#cccccc';
-        const label = String(row.label||'');
-        ctx.fillText(label.length > 38 ? label.slice(0,37)+'…' : label, cx+22, yy);
-      }
-    });
-    ctx.restore();
-
-    // Scroll indicator — only at bottom
-    if(scrollTop + maxVisible < rows.length){
-      ctx.font = '13px Courier New';
-      ctx.fillStyle = '#667';
-      ctx.textAlign = 'center';
-      ctx.fillText('▼ more', cx+colW/2, listTop+4+maxVisible*lh+footerH-6);
-      ctx.textAlign = 'left';
-    }
-  };
-
-  drawCol(leftRows, 'left',  leftCX,  DEBUG.itemSubSel  || 0);
-  drawCol(rightRows,'right', rightCX, DEBUG.itemSubSelR || 0);
-}
-
-function debugItemSubMenuSpawn(){
-  if(!G) return;
-  const col = DEBUG.itemSubCol || 'left';
-  drawDebugItemSubMenu();
-  const rows = col === 'right' ? drawDebugItemSubMenu._rightRows : drawDebugItemSubMenu._leftRows;
-  const selKey = col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-  const row = rows[Math.max(0, Math.min(DEBUG[selKey] || 0, rows.length - 1))];
-  if(!row || row.type === 'header') return;
+function debugSpawnItem(row){
   if(row.type === 'cargo'){
-    const commodityId = row.item;
-    if(addCargo(makeCommodityItem(commodityId, 'debug', 0))) addLog('DEBUG: Cargo added: '+(COMMODITIES[commodityId]?.name || commodityId)+'.','lg');
+    if(addCargo(makeCommodityItem(row.item, 'debug', 0))) addLog('DEBUG: Cargo added: '+row.label+'.','lg');
   } else {
     G.inventory.push({ ...row.item });
-    addLog('DEBUG: Item added: '+row.item.name+'.','lg');
+    addLog('DEBUG: Item added: '+row.label+'.','lg');
   }
   renderAll();
 }
-
 function debugSpawnCivilizationOnCurrentPlanet(){
   if(G.mode !== 'planet'){
     addLog('DEBUG: Civilization spawn only works on planet surface.','lw');
@@ -20891,104 +20707,6 @@ function debugSpawnCivilizationOnCurrentPlanet(){
   renderAll();
 }
 
-function drawDebugOverlay(){
-  if(DEBUG.civSubMenu){
-    drawDebugCivSubMenu();
-    return;
-  }
-  if(DEBUG.itemSubMenu){
-    drawDebugItemSubMenu();
-    return;
-  }
-  const pad = 8, lh = 17, w = Math.min(560,canvasWidth-16);
-  const x = canvasWidth - w - 8, y = 8;
-
-  const items = [
-    { key:'1', label:'Infinite Fuel',           val: DEBUG.infiniteFuel    },
-    { key:'2', label:'Infinite Hull',           val: DEBUG.infiniteHull    },
-    { key:'3', label:'Full Vision',             val: DEBUG.fullVision      },
-    { key:'4', label:'Infinite O2',             val: DEBUG.infiniteOxy     },
-    { key:'7', label:'Infinite Crew HP',        val: DEBUG.infiniteCrewHp  },
-    { key:'8', label:'Invisible to enemy ships', val: DEBUG.shipInvisible   },
-    { key:'9', label:['Pre-scan debug planets','Pre-scan all planets','Scan no planets'][DEBUG.preScan||0], val: DEBUG.preScan !== 2 },
-    { key:'0', label:'FPS Counter',             val: DEBUG.showFPS         },
-  ];
-
-  // Title, eight toggles, eleven existing actions, three palette rows and close.
-  const totalRows = 24;
-  const h = Math.min(canvasHeight-16,pad*2 + totalRows*lh);
-
-  ctx.fillStyle='rgba(0,0,0,0.82)';
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle='#ff4400'; ctx.lineWidth=1;
-  ctx.strokeRect(x, y, w, h);
-
-  ctx.font='bold 12px Courier New'; ctx.textAlign='left';
-
-  let row = 0;
-  const ly = ()=> y + pad + (row++)*lh + lh; // advance and return y
-
-  ctx.fillStyle='#ff4400';
-  ctx.fillText('⚙ DEBUG MODE  #'+getFileHash(), x+pad, ly());
-
-  items.forEach(item=>{
-    ctx.fillStyle = item.val ? '#44ff88' : '#666666';
-    ctx.fillText('['+item.key+'] '+item.label+': '+(item.val?'ON':'OFF'), x+pad, ly());
-  });
-
-  ctx.fillStyle='#ffe066';
-  ctx.fillText('[M] +1000 cr  (have: '+G.credits+')', x+pad, ly());
-
-  ctx.fillStyle='#aaddff';
-  ctx.fillText('[V] Galaxy Spawn Report', x+pad, ly());
-
-  ctx.fillStyle='#ffaa44';
-  const debugBiomes = Object.keys(BIOMES);
-  const selBiome = debugBiomes[DEBUG.spawnBiome % debugBiomes.length];
-  const spawnModeActive = DEBUG.spawnMode === 'galaxy_obj';
-  ctx.fillText('[5] Spawn: '+(spawnModeActive ? 'GALAXY OBJ' : 'System')+'  ◄►: '+selBiome, x+pad, ly());
-
-  // Galaxy object spawn selector
-  const selGObj = DEBUG_GALAXY_OBJ_TYPES[DEBUG.spawnGalaxyObj % DEBUG_GALAXY_OBJ_TYPES.length];
-  ctx.fillStyle = spawnModeActive ? '#00ddaa' : '#446655';
-  ctx.fillText('[X] Galaxy Obj Mode'+(spawnModeActive?' [ON]':' [off]')+'  ◄►: '+selGObj.label, x+pad, ly());
-
-  ctx.fillStyle='#ff6622';
-  ctx.fillText('[Enter] → Place next to Starbase', x+pad, ly());
-
-  const civTierNames = DEBUG_CIV_TIERS.map(t=>t.label);
-  const civTierLabel = civTierNames[(DEBUG.debugCivTier||0) % civTierNames.length];
-  const civAgg = CIV_AGGRESSION[(DEBUG.debugCivAggression||0) % CIV_AGGRESSION.length];
-  const civPdata = G.mode==='planet' ? G.planets?.[G.curPlanet] : null;
-  const civState = civPdata?.civilization ? civPdata.civilization.tierLabel+' '+civPdata.civilization.species+' / '+civPdata.civilization.aggression+(civPdata.civilization.state?.hostile?' / HOSTILE':'') : 'none';
-  ctx.fillStyle = '#88ffcc';
-  ctx.fillText('[6] Spawn Civ: '+civTierLabel+' / '+civAgg+'  (current: '+civState+')', x+pad, ly());
-
-  ctx.fillStyle = '#88ccff';
-  ctx.fillText('[C] Civ Menu   [T] Tier   [A] Aggression   [Shift+A] Apply', x+pad, ly());
-
-  ctx.fillStyle = '#ff8888';
-  ctx.fillText('[K] Toggle Current Civ Hostile/Clear Hostility', x+pad, ly());
-
-  ctx.fillStyle=G.mode==='planet' ? '#ffaaa0' : '#664444';
-  ctx.fillText('[G] Spawn Gunner Alien', x+pad, ly());
-
-  ctx.fillStyle=G.mode==='planet' ? '#44ffdd' : '#1a5548';
-  ctx.fillText('[N] Regen planet + overlay Ancient Ruins', x+pad, ly());
-
-  ctx.fillStyle='#d488ff';
-  ctx.fillText('[R] Rad  [D] Disease  [H] Hallucination', x+pad, ly());
-
-  ctx.fillStyle='#ffe066';
-  ctx.fillText('[F2] Galaxy palette  [Shift+F2] Rebuild',x+pad,ly());
-  ctx.fillText('[F3] Surface palette  [F4] Return to career',x+pad,ly());
-  ctx.fillText('[F6] Search palette  [F7] Live simulation',x+pad,ly());
-  ctx.fillStyle='#998877';
-  ctx.fillText('Shift+B to close', x+pad, ly());
-
-  ctx.textAlign='left';
-}
-
 function buildDebugGalaxyReportRows(){
   const rows = [];
   const cells = (G?.galaxy || []).flat();
@@ -21023,39 +20741,6 @@ function buildDebugGalaxyReportRows(){
   rows.push(['Neutral ships', (G?.neutralShips||[]).filter(ns=>ns.alive!==false).length]);
   rows.push(['Stranded contacts', (G?.npcStranded||[]).length]);
   return rows;
-}
-
-function drawDebugGalaxyReportPopup(){
-  const rows = buildDebugGalaxyReportRows();
-  const w = 660, pad = 16, lh = 22;
-  const h = pad*2 + 46 + rows.length*lh + 26;
-  const x = Math.floor((canvasWidth - w)/2);
-  const y = Math.floor((canvasHeight - h)/2);
-  ctx.fillStyle='rgba(0,0,0,0.9)';
-  ctx.fillRect(0,0,canvasWidth,canvasHeight);
-  ctx.fillStyle='rgba(4,10,18,0.98)';
-  ctx.fillRect(x,y,w,h);
-  ctx.strokeStyle='#44aaff';
-  ctx.lineWidth=2;
-  ctx.strokeRect(x,y,w,h);
-  ctx.font='bold 20px Courier New';
-  ctx.textAlign='left';
-  ctx.fillStyle='#aaddff';
-  ctx.fillText('GALAXY SPAWN REPORT', x+pad, y+pad+22);
-  ctx.font='13px Courier New';
-  ctx.fillStyle='#6688aa';
-  ctx.fillText('Generated and current galaxy population.  ESC / V closes.', x+pad, y+pad+42);
-  ctx.font='bold 14px Courier New';
-  let yy = y + pad + 72;
-  rows.forEach(([label,value])=>{
-    ctx.fillStyle='#88ccff';
-    ctx.fillText(label, x+pad, yy);
-    ctx.fillStyle='#ddddcc';
-    ctx.fillText(String(value), x+210, yy);
-    yy += lh;
-  });
-  ctx.textAlign='left';
-  ctx.lineWidth=1;
 }
 
 function debugSpawnSystem(){
@@ -33846,42 +33531,7 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(e.key==='F4' && debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return;}
-  // ── Debug item search mode — must intercept before ANY other routing ──
-  if(DEBUG?.itemSubSearch !== undefined){
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.key === 'Escape'){ DEBUG.itemSubSearch = undefined; DEBUG.itemSubMenu = false; renderAll(); return; }
-    if(e.key === 'ArrowUp' || e.key === 'ArrowDown'){
-      if(!DEBUG.itemSubCol) DEBUG.itemSubCol = 'left';
-      drawDebugItemSubMenu();
-      const col = DEBUG.itemSubCol;
-      const rows = col === 'right' ? (drawDebugItemSubMenu._rightRows||[]) : (drawDebugItemSubMenu._leftRows||[]);
-      const selKey = col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-      const numRows = rows.length;
-      if(numRows > 0){
-        DEBUG[selKey] = ((DEBUG[selKey]||0) + (e.key==='ArrowUp' ? -1 : 1) + numRows) % numRows;
-      }
-      renderAll(); return;
-    }
-    if(e.key === 'Enter'){ debugItemSubMenuSpawn(); return; }
-    // Update search string
-    if(e.key === 'Backspace') DEBUG.itemSubSearch = (DEBUG.itemSubSearch||'').slice(0,-1);
-    else if(e.key.length === 1) DEBUG.itemSubSearch += e.key;
-    else { renderAll(); return; }
-    // Jump selection to first match after every change
-    if(!DEBUG.itemSubCol) DEBUG.itemSubCol = 'left';
-    drawDebugItemSubMenu();
-    const _col = DEBUG.itemSubCol;
-    const _rows = _col === 'right' ? (drawDebugItemSubMenu._rightRows||[]) : (drawDebugItemSubMenu._leftRows||[]);
-    const _selKey = _col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-    const _q = (DEBUG.itemSubSearch||'').toLowerCase().trim();
-    if(_q){
-      const _idx = _rows.findIndex(r => r.type !== 'header' && String(r.label||'').toLowerCase().includes(_q));
-      if(_idx !== -1) DEBUG[_selKey] = _idx;
-    }
-    renderAll(); return;
-  }
+  if(debugDialog.open || e.target===debugPlaygroundButton) return;
   // Block all game keys while feedback overlay is open
   if(document.getElementById('feedback-overlay').style.display==='flex') return;
   if(document.getElementById('minimap-overlay')?.classList.contains('visible')){
@@ -33908,7 +33558,11 @@ document.addEventListener('keydown', e=>{
 
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
-  if(handleDebugPaletteKey(e)) return;
+  if(e.key==='B' && e.shiftKey && !e.repeat){
+    e.preventDefault();
+    openDebugMenu();
+    return;
+  }
 
   if(G.forcedMove?.active){
     e.preventDefault();
@@ -33939,7 +33593,7 @@ document.addEventListener('keydown', e=>{
     }
 
     // M — open full galaxy minimap
-    if((e.key==='m'||e.key==='M') && !DEBUG.on){
+    if(e.key==='m'||e.key==='M'){
       e.preventDefault();
       openGalaxyMinimapOverlay();
       return;
@@ -34031,141 +33685,6 @@ document.addEventListener('keydown', e=>{
         return;
       }
       return;
-    }
-
-    // Shift+B — toggle debug menu
-    if(e.key==='B' && e.shiftKey){
-      DEBUG.on = !DEBUG.on;
-      renderAll();
-      return;
-    }
-    // Debug hotkeys (only when debug menu is open)
-    if(DEBUG.on){
-      if(DEBUG.galaxyReport){
-        if(e.key==='Escape'||e.key==='v'||e.key==='V'){
-          DEBUG.galaxyReport = false;
-          renderAll(); return;
-        }
-        return;
-      }
-      // ── Civ sub-menu — intercept all keys when open ──
-      if(DEBUG.civSubMenu){
-        e.preventDefault();
-        const rows = debugCivSubMenuRows();
-        const numRows = rows.length;
-        if(e.key==='Escape'||e.key==='c'||e.key==='C'){ DEBUG.civSubMenu=false; renderAll(); return; }
-        if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){
-          DEBUG.civSubSel = (DEBUG.civSubSel - 1 + numRows) % numRows;
-          renderAll(); return;
-        }
-        if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){
-          DEBUG.civSubSel = (DEBUG.civSubSel + 1) % numRows;
-          renderAll(); return;
-        }
-        const selRow = rows[DEBUG.civSubSel];
-        if(e.key==='ArrowLeft'){ debugCivSubMenuApplyRow(selRow, -1); renderAll(); return; }
-        if(e.key==='ArrowRight'){ debugCivSubMenuApplyRow(selRow, 1); renderAll(); return; }
-        if(e.key==='Enter'){
-          // Enter always spawns — arrow keys are the only way to change values
-          e.stopPropagation();
-          DEBUG.civSubMenu=false; debugSpawnCivilizationOnCurrentPlanet(); return;
-        }
-        if(e.key===' '){
-          // Space closes if on close row, otherwise also spawns
-          if(selRow?.key === 'close'){ DEBUG.civSubMenu=false; renderAll(); return; }
-          DEBUG.civSubMenu=false; debugSpawnCivilizationOnCurrentPlanet(); return;
-        }
-        renderAll(); return;
-      }
-      // ── Item sub-menu — intercept all keys when open ──
-      if(DEBUG.itemSubMenu){
-        e.preventDefault();
-        if(!DEBUG.itemSubCol) DEBUG.itemSubCol = 'left';
-        // Ensure draw has run so row arrays exist
-        drawDebugItemSubMenu();
-        const col = DEBUG.itemSubCol;
-        const rows = col === 'right' ? (drawDebugItemSubMenu._rightRows||[]) : (drawDebugItemSubMenu._leftRows||[]);
-        const selKey = col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-        const numRows = rows.length;
-
-        // ── Search mode active ──
-        if(DEBUG.itemSubSearch !== undefined){
-          // Handled at top of keydown listener — should not reach here
-        }
-
-        if(e.key==='Escape'||e.key==='i'||e.key==='I'){ DEBUG.itemSubMenu=false; renderAll(); return; }
-        if(e.key==='f'||e.key==='F'){ DEBUG.itemSubSearch = ''; renderAll(); return; }
-        if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){
-          DEBUG.itemSubCol = 'left'; renderAll(); return;
-        }
-        if(e.key==='ArrowRight'||e.key==='d'||e.key==='D'){
-          DEBUG.itemSubCol = 'right'; renderAll(); return;
-        }
-        if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){
-          DEBUG[selKey] = ((DEBUG[selKey]||0) - 1 + numRows) % numRows;
-          renderAll(); return;
-        }
-        if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){
-          DEBUG[selKey] = ((DEBUG[selKey]||0) + 1) % numRows;
-          renderAll(); return;
-        }
-        if(e.key==='Enter'||e.key===' '){
-          debugItemSubMenuSpawn(); return;
-        }
-        renderAll(); return;
-      }
-      if(e.key==='Escape'){ DEBUG.on = false; renderAll(); return; }
-      if(e.key==='1'){ DEBUG.infiniteFuel = !DEBUG.infiniteFuel; renderAll(); return; }
-      if(e.key==='2'){ DEBUG.infiniteHull = !DEBUG.infiniteHull; renderAll(); return; }
-      if(e.key==='3'){
-        DEBUG.fullVision = !DEBUG.fullVision;
-        if(DEBUG.fullVision) G.visited.fill(true);
-        renderAll(); return;
-      }
-      if(e.key==='4'){ DEBUG.infiniteOxy = !DEBUG.infiniteOxy; renderAll(); return; }
-      if(e.key==='7'){ DEBUG.infiniteCrewHp = !DEBUG.infiniteCrewHp; debugRestoreCrewHp(); addLog('DEBUG: Infinite crew HP '+(DEBUG.infiniteCrewHp?'ON':'OFF')+'.','lw'); renderAll(); return; }
-      if(e.key==='8'){ DEBUG.shipInvisible = !DEBUG.shipInvisible; addLog('DEBUG: Invisible to enemy ships '+(DEBUG.shipInvisible?'ON':'OFF')+'.','lw'); renderAll(); return; }
-      if(e.key==='9'){
-        DEBUG.preScan = ((DEBUG.preScan||0) + 1) % 3;
-        const _scanLabels = ['Pre-scan debug spawned planets','Pre-scan all planets (even non-debug)','Scan no planets'];
-        addLog('DEBUG: '+_scanLabels[DEBUG.preScan]+'.','lw'); renderAll(); return;
-      }
-      if(e.key==='0'){ DEBUG.showFPS = !DEBUG.showFPS; renderAll(); return; }
-
-      if(e.key==='v'||e.key==='V'){ DEBUG.galaxyReport = true; renderAll(); return; }
-
-      if(e.key==='g'||e.key==='G'){ debugSpawnGunnerAlien(); return; }
-      if(e.key==='n'||e.key==='N'){ debugRegenWithAncientRuins(); return; }
-      if(e.key==='r'||e.key==='R'){ debugApplyCrewStatus('radiation'); return; }
-      if(e.key==='d'||e.key==='D'){ debugApplyCrewStatus('disease'); return; }
-      if(e.key==='h'||e.key==='H'){ debugApplyCrewStatus('hallucination'); return; }
-      if(e.key==='m'||e.key==='M'){ G.credits+=1000; addLog('DEBUG: +1000 cr (total: '+G.credits+')','lw'); renderAll(); return; }
-      if(e.key==='c'||e.key==='C'){ DEBUG.civSubMenu=true; DEBUG.civSubSel=0; renderAll(); return; }
-      if(e.key==='i'||e.key==='I'){ DEBUG.itemSubMenu=true; DEBUG.itemSubSel=0; DEBUG.itemSubSearch=''; renderAll(); return; }
-      if(e.key==='k'||e.key==='K'){ debugToggleCurrentCivHostile(); return; }
-      // Cycle biome / galaxy object for spawn
-      const biomeCount = Object.keys(BIOMES).length;
-      const gObjCount = DEBUG_GALAXY_OBJ_TYPES.length;
-      if(e.key==='x'||e.key==='X'){ DEBUG.spawnMode = DEBUG.spawnMode==='galaxy_obj' ? 'biome' : 'galaxy_obj'; renderAll(); return; }
-      if(e.key==='ArrowLeft'){
-        if(DEBUG.spawnMode==='galaxy_obj') DEBUG.spawnGalaxyObj=(DEBUG.spawnGalaxyObj-1+gObjCount)%gObjCount;
-        else DEBUG.spawnBiome=(DEBUG.spawnBiome-1+biomeCount)%biomeCount;
-        renderAll(); return;
-      }
-      if(e.key==='ArrowRight'){
-        if(DEBUG.spawnMode==='galaxy_obj') DEBUG.spawnGalaxyObj=(DEBUG.spawnGalaxyObj+1)%gObjCount;
-        else DEBUG.spawnBiome=(DEBUG.spawnBiome+1)%biomeCount;
-        renderAll(); return;
-      }
-      if(e.key==='Enter' && G.mode==='galaxy'){
-        if(DEBUG.spawnMode==='galaxy_obj') debugSpawnGalaxyObj();
-        else debugSpawnSystem();
-        return;
-      }
-      if(e.key==='6'){
-        debugSpawnCivilizationOnCurrentPlanet();
-        return;
-      }
     }
 
     // Game over / retirement
@@ -34764,7 +34283,6 @@ function debugEnterPalette(area='galaxy',rebuild=false){
   if(!G) return;
   if(!debugPaletteReturn){autoSave();debugPaletteReturn={game:G,debug:JSON.parse(JSON.stringify(DEBUG))};}
   if(!G.debugPalette || rebuild){
-    DEBUG.on=false;resetDebugSubMenus();
     G=JSON.parse(JSON.stringify(debugPaletteReturn.game));
     Object.assign(G,{mode:'galaxy',turn:1,dead:false,retired:false,deathCause:'',shipCombat:null,stranded:null,dialogue:null,
       forcedMove:null,examine:null,rangeTarget:null,_itemAimMode:null,_voidPrompt:null,showOptions:false,
@@ -34797,12 +34315,15 @@ function debugPaletteNavigateHome(area){
     G.mode='planet';G.curPlanet=G.debugPalette.surfaceKey;G.player={x:2,y:2};
     revealPlanet(G.curPlanet,2,2);
   } else {G.mode='galaxy';G.curPlanet='';}
-  DEBUG.on=false;DEBUG.paletteMenu=false;resetDebugSubMenus();
-  restoreGameUI();addLog('DEBUG PLAYGROUND — F4 returns to your career. Shift+B then F6 searches all samples. NPCs '+(G.debugPalette.simulate?'live.':'paused; F7 in debug enables simulation.'),'li');renderAll();
+  closeDebugMenu();
+  debugPlaygroundButton.hidden=false;
+  restoreGameUI();addLog('DEBUG PLAYGROUND — Use the Playground button to search samples or return to your career. NPCs '+(G.debugPalette.simulate?'live.':'paused.'),'li');renderAll();
 }
 
 function debugReturnFromPalette(render=true){
   if(!debugPaletteReturn) return;
+  closeDebugMenu();
+  debugPlaygroundButton.hidden=true;
   for(const id of ['feedback-overlay','barter-overlay']){const el=document.getElementById(id);if(el)el.style.display='none';}
   document.getElementById('minimap-overlay')?.classList.remove('visible');
   const saved=debugPaletteReturn;debugPaletteReturn=null;G=saved.game;
@@ -34938,63 +34459,6 @@ function debugPrepareAquaticPaletteSurface(pd){
   }
 }
 
-function debugPaletteFilteredEntries(){
-  const query=(DEBUG.paletteSearch||'').toLowerCase();
-  return (G?.debugPalette?.entries||[]).filter(e=>(e.kind+' '+e.label+' '+e.id).toLowerCase().includes(query));
-}
-
-function moveDebugPaletteSelection(step){
-  const count=debugPaletteFilteredEntries().length;
-  DEBUG.paletteSel=Math.max(0,Math.min(count-1,(DEBUG.paletteSel||0)+step));
-  renderAll();
-}
-
-function handleDebugPaletteKey(e){
-  if(e.key==='F4'&&debugPaletteReturn){e.preventDefault();debugReturnFromPalette();return true;}
-  if(DEBUG.on && ['F2','F3','F6','F7'].includes(e.key)){
-    e.preventDefault();
-    if(e.key==='F7'){if(G.debugPalette){G.debugPalette.simulate=!G.debugPalette.simulate;renderAll();}return true;}
-    if(e.key==='F2'||e.key==='F3'){debugEnterPalette(e.key==='F3'?'surface':'galaxy',e.shiftKey);return true;}
-    if(!G.debugPalette)debugEnterPalette('galaxy');
-    DEBUG.on=true;DEBUG.paletteMenu=true;DEBUG.paletteSearch='';DEBUG.paletteSel=0;renderAll();return true;
-  }
-  if(!DEBUG.paletteMenu)return false;
-  e.preventDefault();
-  if(e.key==='Escape'){DEBUG.paletteMenu=false;DEBUG.on=false;renderAll();return true;}
-  const rows=debugPaletteFilteredEntries();
-  if(e.key==='ArrowUp'||e.key==='ArrowDown'){
-    moveDebugPaletteSelection(e.key==='ArrowUp'?-1:1);
-    return true;
-  }
-  else if(e.key==='Enter'){const entry=rows[DEBUG.paletteSel||0];if(entry)debugPaletteVisit(entry.id);return true;}
-  else {if(e.key==='Backspace')DEBUG.paletteSearch=DEBUG.paletteSearch.slice(0,-1);
-    else if(e.key.length===1&&!e.ctrlKey&&!e.altKey)DEBUG.paletteSearch+=e.key;DEBUG.paletteSel=0;}
-  renderAll();return true;
-}
-
-function drawDebugPaletteDirectory(){
-  if(!DEBUG.paletteMenu)return;
-  ctx.fillStyle='#07101b';ctx.fillRect(0,0,canvasWidth,canvasHeight);ctx.textAlign='left';
-  ctx.font='bold 18px Courier New';ctx.fillStyle='#ffe066';ctx.fillText('DEBUG PALETTE — SEARCH ALL CONTENT',20,30);
-  ctx.font='13px Courier New';ctx.fillStyle='#88bbcc';ctx.fillText('Type to search: '+(DEBUG.paletteSearch||'all')+'  |  Enter visits  |  Esc closes',20,57);
-  ctx.fillText('F2 galaxy · F3 surface · F4 career · Shift+F2 rebuild · F7 NPC simulation '+(G.debugPalette.simulate?'ON':'OFF'),20,79);
-  const rows=debugPaletteFilteredEntries(),count=Math.max(1,Math.floor((canvasHeight-120)/22));
-  DEBUG.paletteSel=Math.max(0,Math.min(rows.length-1,DEBUG.paletteSel||0));
-  const start=Math.max(0,Math.min(DEBUG.paletteSel-Math.floor(count/2),rows.length-count));
-  rows.slice(start,start+count).forEach((e,i)=>{
-    canvasMenuTarget(20,94+i*22,canvasWidth-40,22,()=>debugPaletteVisit(e.id));
-    ctx.fillStyle=start+i===DEBUG.paletteSel?'#ffe066':'#aabbd0';
-    ctx.fillText((start+i===DEBUG.paletteSel?'> ':'  ')+e.kind.toUpperCase()+' — '+e.label,20,109+i*22,canvasWidth-40);
-  });
-  canvasMenuScroll=moveDebugPaletteSelection;
-  canvasMenuButton('Close [Esc]',canvasWidth-125,canvasHeight-32,()=>{
-    DEBUG.paletteMenu=false;
-    DEBUG.on=false;
-    renderAll();
-  });
-  ctx.fillStyle='#88aabb';ctx.fillText(rows.length+' matching samples · Arrow keys select',20,canvasHeight-12);
-}
-
 function drawDebugPaletteLabels(){
   if(!G.debugPalette||!['galaxy','planet'].includes(G.mode))return;
   const pd=G.planets[G.curPlanet],world=G.mode==='galaxy',W=world?MAP_W:PW(pd),H=world?MAP_H:PH(pd);
@@ -35038,6 +34502,332 @@ function drawDebugPaletteBodyIcon(body,x,y){
     drawSystemBodyIcon(body,0,0,color,true);
   }
   ctx.restore();
+}
+const debugDialog = document.getElementById('debug-dialog');
+const debugPlaygroundButton = document.getElementById('debug-playground-button');
+const debugContent = document.getElementById('debug-content');
+const debugNavigation = document.getElementById('debug-navigation');
+const DEBUG_SCAN_MODES = ['Pre-scan debug planets', 'Pre-scan all planets', 'Scan no planets'];
+
+function debugElement(tag, label, parent){
+  const element = document.createElement(tag);
+  element.textContent = label;
+  parent.append(element);
+  return element;
+}
+
+function debugButton(parent, label, action, disabled=false){
+  const button = debugElement('button', label, parent);
+  button.type = 'button';
+  button.disabled = disabled;
+  button.addEventListener('click', action);
+  return button;
+}
+
+function debugSection(parent, title){
+  const section = debugElement('section', '', parent);
+  debugElement('h3', title, section);
+  return section;
+}
+
+function debugSelect(parent, label, options, value, change, disabled=false){
+  const field = debugElement('label', label, parent);
+  field.className = 'debug-field';
+  const select = debugElement('select', '', field);
+  select.setAttribute('aria-label', label);
+  options.forEach(([key, text])=>debugElement('option', text, select).value = key);
+  select.value = value;
+  select.disabled = disabled;
+  select.addEventListener('change', ()=>change(select.value));
+  return select;
+}
+
+function debugIndexedOptions(values, random=false){
+  const options = values.map((value, index)=>[index, value]);
+  if(random) options.unshift([-1, 'Random']);
+  return options;
+}
+
+function openDebugMenu(){
+  if(!G || AUTOSAVE_STATE.transition || AUTOSAVE_STATE.loading || debugDialog.open) return;
+  DEBUG.on = true;
+  showDebugMenu('tools');
+  debugDialog.showModal();
+}
+
+function closeDebugMenu(){
+  DEBUG.on = false;
+  if(debugDialog.open) debugDialog.close();
+}
+
+function dismissDebugMenu(){
+  closeDebugMenu();
+  if(G) drawCanvas();
+}
+
+debugDialog.addEventListener('cancel', event=>{
+  event.preventDefault();
+  dismissDebugMenu();
+});
+debugPlaygroundButton.addEventListener('click', ()=>{
+  debugPlaygroundButton.blur();
+  openDebugMenu();
+});
+
+function showDebugMenu(page, confirmation){
+  const titles = {
+    tools:'Debug Tools', items:'Spawn Gear and Cargo', civilization:'Civilization',
+    directory:'Find a Playground Sample', report:'Galaxy Spawn Report', confirm:'Confirm Debug Action',
+  };
+  debugDialog.classList.toggle('debug-catalog', page==='items' || page==='directory');
+  document.getElementById('debug-title').textContent = titles[page];
+  debugNavigation.replaceChildren();
+  if(page!=='tools') debugButton(debugNavigation, 'Back to Tools', ()=>showDebugMenu('tools'));
+  debugButton(debugNavigation, 'Close', dismissDebugMenu);
+  debugContent.replaceChildren();
+  debugContent.scrollTop = 0;
+
+  if(page==='tools') drawDebugTools();
+  else if(page==='items') drawDebugItemList();
+  else if(page==='civilization') drawDebugCivilizationTools();
+  else if(page==='directory') drawDebugSampleDirectory();
+  else if(page==='report'){
+    const list = debugElement('dl', '', debugContent);
+    buildDebugGalaxyReportRows().forEach(([label, value])=>{
+      debugElement('dt', label, list);
+      debugElement('dd', value, list);
+    });
+  } else {
+    debugElement('p', confirmation.message, debugContent);
+    debugButton(debugContent, 'Cancel', ()=>showDebugMenu(confirmation.back));
+    debugButton(debugContent, confirmation.label, confirmation.action);
+  }
+}
+
+function debugConfirm(back, message, label, action){
+  showDebugMenu('confirm', {back, message, label, action:()=>{
+    showDebugMenu(back);
+    action();
+  }});
+}
+
+function debugLogAction(action, refresh){
+  const before = logDisplayText(G.log[0]);
+  action();
+  refresh?.();
+  const status = document.getElementById('debug-action-status');
+  const after = logDisplayText(G.log[0]);
+  if(status && after!==before) status.textContent = after;
+}
+
+function drawDebugTools(){
+  const grid = debugElement('div', '', debugContent);
+  grid.className = 'debug-grid';
+  const toggles = debugSection(grid, 'Toggles');
+  const switches = debugElement('div', '', toggles);
+  switches.className = 'debug-switches';
+  const flags = [
+    ['infiniteFuel', 'Infinite fuel'], ['infiniteHull', 'Infinite hull'],
+    ['infiniteOxy', 'Infinite oxygen'], ['infiniteCrewHp', 'Infinite crew HP'],
+    ['fullVision', 'Full vision'], ['shipInvisible', 'Invisible to enemy ships'],
+    ['showFPS', 'FPS counter'], ['combatLog', 'Combat logging'],
+  ];
+  for(const [key, label] of flags){
+    const row = debugElement('label', '', switches);
+    row.className = 'debug-toggle';
+    const checkbox = debugElement('input', '', row);
+    checkbox.type = 'checkbox';
+    checkbox.checked = DEBUG[key];
+    row.append(label);
+    checkbox.addEventListener('change', ()=>{
+      DEBUG[key] = checkbox.checked;
+      if(key==='fullVision' && checkbox.checked) G.visited.fill(true);
+      if(key==='infiniteCrewHp'){
+        debugRestoreCrewHp();
+        addLog('DEBUG: Infinite crew HP '+(checkbox.checked?'ON':'OFF')+'.','lw');
+      }
+      if(key==='shipInvisible') addLog('DEBUG: Invisible to enemy ships '+(checkbox.checked?'ON':'OFF')+'.','lw');
+      renderAll();
+    });
+  }
+  debugSelect(toggles, 'Planet pre-scan', debugIndexedOptions(DEBUG_SCAN_MODES), DEBUG.preScan, value=>{
+    DEBUG.preScan = Number(value);
+    addLog('DEBUG: '+DEBUG_SCAN_MODES[DEBUG.preScan]+'.','lw');
+    renderAll();
+  });
+  debugButton(toggles, 'Download Combat Log', ()=>debugLogAction(debugCombatLogDownload, renderAll));
+
+  const spawn = debugSection(grid, 'Spawn Near Starbase Alpha');
+  const inGalaxy = G.mode==='galaxy';
+  debugSelect(spawn, 'System biome', debugIndexedOptions(Object.keys(BIOMES)), DEBUG.spawnBiome,
+    value=>DEBUG.spawnBiome=Number(value), !inGalaxy);
+  debugButton(spawn, 'Spawn System', ()=>debugLogAction(debugSpawnSystem), !inGalaxy);
+  debugSelect(spawn, 'Galaxy object', debugIndexedOptions(DEBUG_GALAXY_OBJ_TYPES.map(object=>object.label)),
+    DEBUG.spawnGalaxyObj, value=>DEBUG.spawnGalaxyObj=Number(value), !inGalaxy);
+  debugButton(spawn, 'Spawn Galaxy Object', ()=>debugLogAction(debugSpawnGalaxyObj), !inGalaxy);
+  debugButton(spawn, 'Galaxy Spawn Report', ()=>showDebugMenu('report'));
+
+  const career = debugSection(grid, 'Items, Crew, and Surface');
+  debugButton(career, 'Spawn Gear or Cargo', ()=>showDebugMenu('items'));
+  debugButton(career, 'Add 1,000 Credits', ()=>debugLogAction(()=>{
+    G.credits += 1000;
+    addLog('DEBUG: +1000 cr (total: '+G.credits+')','lw');
+    renderAll();
+  }));
+  for(const [key, label] of [['radiation','Radiation'], ['disease','Disease'], ['hallucination','Hallucination']]){
+    debugButton(career, 'Apply '+label, ()=>debugLogAction(()=>debugApplyCrewStatus(key)));
+  }
+  const onSurface = !!debugCurrentPlanetData();
+  debugButton(career, 'Civilization Tools', ()=>showDebugMenu('civilization'), !onSurface);
+  debugButton(career, 'Spawn Gunner Alien', ()=>debugLogAction(debugSpawnGunnerAlien), !onSurface);
+  debugButton(career, 'Regenerate Surface with Ruins', ()=>debugConfirm('tools',
+    'Replace the current surface map and its inhabitants?', 'Regenerate Surface',
+    ()=>debugLogAction(debugRegenWithAncientRuins)), !onSurface);
+
+  const playground = debugSection(grid, 'Playground');
+  toggles.after(playground);
+  const sandbox = G.debugPalette;
+  debugElement('p', sandbox ? 'Disposable test world' : 'Open a test world with its own crew and ship.', playground);
+  debugButton(playground, 'Galaxy Gallery', ()=>enterDebugGallery('galaxy'));
+  debugButton(playground, 'Surface Gallery', ()=>enterDebugGallery('surface'));
+  debugButton(playground, 'Find a Sample', ()=>{
+    if(!G.debugPalette){
+      enterDebugGallery('galaxy');
+      openDebugMenu();
+    }
+    showDebugMenu('directory');
+  });
+  if(sandbox){
+    const simulation = debugButton(playground, '', ()=>{
+      sandbox.simulate = !sandbox.simulate;
+      updateSimulationLabel();
+      renderAll();
+    });
+    const updateSimulationLabel = ()=>{
+      simulation.textContent = sandbox.simulate ? 'Pause NPCs' : 'Run NPCs Live';
+    };
+    updateSimulationLabel();
+    debugButton(playground, 'Rebuild Playground', ()=>debugConfirm('tools',
+      'Discard changes in the playground and rebuild both galleries?', 'Rebuild Galleries',
+      ()=>enterDebugGallery('galaxy', true)));
+    debugButton(playground, 'Return to Career', ()=>debugReturnFromPalette());
+  }
+  debugElement('p', '', debugContent).id = 'debug-action-status';
+  debugElement('small', 'Build #'+getFileHash(), debugContent);
+}
+
+function enterDebugGallery(area, rebuild=false){
+  closeDebugMenu();
+  debugEnterPalette(area, rebuild);
+}
+
+function debugSearchList(rows, placeholder, activate){
+  const search = debugElement('input', '', debugContent);
+  search.type = 'search';
+  search.placeholder = placeholder;
+  search.setAttribute('aria-label', placeholder);
+  const results = debugElement('div', '', debugContent);
+  results.className = 'debug-results';
+  function updateResults(){
+    const query = search.value.toLowerCase().trim();
+    const matching = rows.filter(row=>row.search.toLowerCase().includes(query));
+    results.replaceChildren();
+    results.scrollTop = 0;
+    if(!matching.length) debugElement('p', 'No matches', results);
+    for(const row of matching){
+      const button = debugButton(results, row.label, ()=>activate(row));
+      debugElement('small', row.group, button);
+    }
+  }
+  search.addEventListener('input', updateResults);
+  updateResults();
+}
+
+function drawDebugItemList(){
+  debugElement('p', '', debugContent).id = 'debug-action-status';
+  const rows = [
+    ...DEBUG_ITEM_CATALOG.flatMap(({cat, items})=>items.map(item=>({
+      item, type:'inventory', group:cat, label:item.name, search:cat+' '+item.name,
+    }))),
+    ...DEBUG_CARGO_CATALOG.flatMap(({cat, items})=>items.map(item=>({
+      item, type:'cargo', group:'Cargo / '+cat, label:COMMODITIES[item]?.name || item,
+      search:'cargo '+cat+' '+(COMMODITIES[item]?.name || item),
+    }))),
+  ];
+  debugSearchList(rows, 'Filter gear or cargo', row=>debugLogAction(()=>debugSpawnItem(row)));
+}
+
+function drawDebugSampleDirectory(){
+  const rows = G.debugPalette.entries.map(entry=>({
+    ...entry, group:entry.kind, search:entry.kind+' '+entry.label+' '+entry.id,
+  }));
+  debugSearchList(rows, 'Filter samples', row=>debugPaletteVisit(row.id));
+}
+
+function drawDebugCivilizationTools(){
+  const civilization = debugCurrentPlanetData()?.civilization;
+  const grid = debugElement('div', '', debugContent);
+  grid.className = 'debug-grid';
+  const setup = debugSection(grid, 'Spawn Settings');
+  const tier = DEBUG_CIV_TIERS[DEBUG.debugCivTier].id;
+  const setIndex = (key, value)=>DEBUG[key]=Number(value);
+  debugSelect(setup, 'Tier', debugIndexedOptions(DEBUG_CIV_TIERS.map(item=>item.label)), DEBUG.debugCivTier, value=>{
+    setIndex('debugCivTier', value);
+    showDebugMenu('civilization');
+  });
+  debugSelect(setup, 'Species', debugIndexedOptions(CIV_SPECIES_TYPES, true), DEBUG.debugCivSpecies,
+    value=>setIndex('debugCivSpecies', value));
+  debugSelect(setup, 'Aggression', debugIndexedOptions(CIV_AGGRESSION), DEBUG.debugCivAggression,
+    value=>setIndex('debugCivAggression', value));
+
+  if(tier==='primitive'){
+    for(const [key, label, options] of [
+      ['civPrimDiet', 'Diet', PRIM_DIETS], ['civPrimSocial', 'Social', PRIM_SOCIAL],
+      ['civPrimCuriosity', 'Curiosity', PRIM_CURIOSITY], ['civPrimHonor', 'Honor', PRIM_HONOR],
+    ]){
+      debugSelect(setup, label, debugIndexedOptions(options, true), DEBUG[key], value=>setIndex(key, value));
+    }
+  } else {
+    for(const [axis, values] of Object.entries(CIVI_TRAITS[tier] || {})){
+      const key = 'civTrait'+axis[0].toUpperCase()+axis.slice(1);
+      debugSelect(setup, axis, [['','Random'], ...values.map(value=>[value,value])],
+        values.includes(DEBUG[key]) ? DEBUG[key] : '', value=>DEBUG[key]=value);
+    }
+  }
+  const spawn = ()=>debugLogAction(debugSpawnCivilizationOnCurrentPlanet, ()=>showDebugMenu('civilization'));
+  debugButton(setup, 'Spawn Civilization', ()=>{
+    if(civilization) debugConfirm('civilization', 'Replace the current civilization on this surface?', 'Replace Civilization', spawn);
+    else spawn();
+  });
+
+  const live = debugSection(grid, 'Current Civilization');
+  debugElement('p', '', debugContent).id = 'debug-action-status';
+  if(!civilization){
+    debugElement('p', 'No civilization on this surface.', live);
+    return;
+  }
+  const refresh = ()=>showDebugMenu('civilization');
+  const civState = ensureCivilizationState(debugCurrentPlanetData());
+  const status = debugElement('dl', '', live);
+  for(const {label, value} of debugCivStatusRows()){
+    debugElement('dt', label, status);
+    debugElement('dd', value, status);
+  }
+  const levels = debugIndexedOptions(['0','1','2','3','4','5']);
+  debugSelect(live, 'Language level', levels, Math.min(5, civState.languageProgress || 0), value=>{
+    civState.languageProgress = Number(value);
+    renderAll();
+    refresh();
+  });
+  debugSelect(live, 'Alert level', levels, Math.min(5, civState.alert || 0), value=>{
+    civState.alert = Number(value);
+    if(civState.alert<=2) civState.hostile = false;
+    renderAll();
+    refresh();
+  });
+  debugButton(live, 'Apply Selected Aggression', ()=>debugLogAction(debugApplySelectedCivAggression, refresh));
+  debugButton(live, civState.hostile ? 'Clear Hostility' : 'Force Hostility',
+    ()=>debugLogAction(debugToggleCurrentCivHostile, refresh));
 }
 // ─────────────────────────────────────────────────────────────────
 //  SOUND ENGINE  (Web Audio API — no files, fully offline)
@@ -35527,7 +35317,7 @@ async function retryAutosave(){
 }
 
 async function saveToFile(){
-  if(G?.debugPalette){addLog('DEBUG: Return to the career with F4 before exporting a save.','li');renderAll();return;}
+  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Playground menu before exporting a save.','li');renderAll();return;}
   const active=G;
   try {
     const raw = active ? JSON.stringify(active) : (await readStoredAutosave())?.record.raw;
@@ -35635,7 +35425,7 @@ function installSaveSnapshot(loaded){
 }
 
 function loadFromFile(){
-  if(G?.debugPalette){addLog('DEBUG: Return to the career with F4 before loading a save.','li');renderAll();return;}
+  if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Playground menu before loading a save.','li');renderAll();return;}
   const generation=++saveLoadGeneration;
   const input = document.createElement('input');
   input.type  = 'file';
