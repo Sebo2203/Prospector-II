@@ -94,8 +94,9 @@ html, body {
   height: 492px;
   min-height: 492px;
   max-height: 492px;
-  background: #0d0d16;
-  border-right: 1px solid #222;
+  background: linear-gradient(90deg, #17202a, #232e38 40%, #121a23);
+  border-right: 1px solid #080c11;
+  box-shadow: inset 1px 0 #3c4b58, inset -1px 0 #303d49;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -109,14 +110,23 @@ html, body {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 100%;
+  width: 54px;
+  padding: 7px 4px;
+  background: linear-gradient(#252f38, #1a222b);
+  border: 1px solid #0a1016;
+  border-top-color: #455360;
+  border-left-color: #35434e;
+  border-radius: 3px;
+  box-shadow: 0 2px 2px #0d141b;
 }
 .gauge-label {
   font-size: 11px;
-  color: #444;
+  font-weight: bold;
+  color: #b1bec8;
   text-transform: uppercase;
   letter-spacing: 1px;
   text-align: center;
+  text-shadow: 0 1px #080e13;
   transition: color 0.3s;
 }
 .gauge-label.warn { color: #ffaa00; }
@@ -126,16 +136,23 @@ html, body {
   50%      { opacity: 0.2; }
 }
 .gauge-val {
-  font-size: 12px;
+  min-width: 38px;
+  padding: 1px 2px;
+  font-size: 13px;
   font-weight: bold;
   text-align: center;
+  background: #080e15;
+  border: 1px solid #33414d;
+  border-top-color: #0a0f14;
+  border-radius: 2px;
 }
-/* Vertical bar gauge (fuel / hull) */
+/* Meter channel and etched quarter marks */
 .gauge-bar-wrap {
-  width: 26px;
+  width: 36px;
   height: 170px;
-  background: #111;
-  border: 1px solid #2a2a3a;
+  background: linear-gradient(90deg, #141e26 0 5px, #090f16 5px 25px, #162029 25px);
+  border: 1px solid #364550;
+  border-top-color: #0a0f14;
   border-radius: 3px;
   position: relative;
   overflow: hidden;
@@ -144,22 +161,28 @@ html, body {
   justify-content: flex-end;
 }
 .gauge-fill {
-  width: 100%;
-  border-radius: 2px;
+  width: 18px;
+  margin-left: 6px;
+  position: relative;
   transition: height 0.15s ease;
 }
-/* Tick marks on fuel gauge */
+.gauge-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(to top, transparent 0 6px, #090f16 6px 8px),
+    linear-gradient(90deg, #ffffff33, transparent 50%, #00000055);
+}
 .gauge-ticks {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-}
-.gauge-tick {
-  position: absolute;
-  right: 0;
+  inset: 0 0 0 auto;
   width: 6px;
-  height: 1px;
-  background: #333;
+  background:
+    linear-gradient(#92a4b1, #92a4b1) right 25% / 4px 1px no-repeat,
+    linear-gradient(#92a4b1, #92a4b1) right 50% / 6px 1px no-repeat,
+    linear-gradient(#92a4b1, #92a4b1) right 75% / 4px 1px no-repeat;
+  pointer-events: none;
 }
 
 #canvas-wrap {
@@ -169,10 +192,14 @@ html, body {
   min-height: 560px;
   max-width: 972px;
   max-height: 560px;
-  background: #0a0a0f;
+  background: linear-gradient(165deg, #3c4b57, #273540 55%, #121b23);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+}
+/* Use the existing clearance around the canvas as a recessed display frame. */
+#gc {
+  box-shadow: 0 0 0 1px #050a0e, 0 0 0 2px #516370, 0 0 0 4px #15212b;
 }
 canvas {
   display: block;

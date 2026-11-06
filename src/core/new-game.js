@@ -118,19 +118,5 @@ function initGame(chosenClass, captainName, shipName) {
     addLog('A sealed package sits in your hold. Deliver it to Waypoint Omega for 300 cr.','lw');
   }
   loadSprites().then(()=>{ restoreGameUI(); generateGalaxy(); renderAll(); });
-
-  // Build gauge tick marks (at 25%, 50%, 75%)
-  ['fuel-ticks','oxy-ticks'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.innerHTML='';
-    [25,50,75].forEach(pct=>{
-      const tick=document.createElement('div');
-      tick.className='gauge-tick';
-      tick.style.bottom=pct+'%';
-      el.appendChild(tick);
-    });
-  });
-
 }
 

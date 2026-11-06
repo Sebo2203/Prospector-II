@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.28 tries a cockpit bezel and instruments
+
+Released on `experiment/expedition-legacy`.
+
+- Set the main display in a dark steel bezel using the existing canvas margin. Restyled the fuel, hull, and oxygen gauges as recessed instruments with segmented fills, quarter marks, and numeric readouts. Gauge values, warning thresholds, and map input are unchanged.
+- All 47 repository tests and four headless Edge suites passed across runs. Checked the full canvas and instrument fit at 1400×720 and 800×600, plus critical fuel and oxygen states. The feedback keyboard check failed once and passed on rerun. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.27 trims the map controls
 
 Released on `experiment/expedition-legacy`.

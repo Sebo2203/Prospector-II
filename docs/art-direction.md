@@ -43,6 +43,10 @@ The HUD minimap fits the whole galaxy. From experimental.26, it uses darker expl
 
 From experimental.27, the sidebar map frame fits the width of the chart at its existing scale. Close the full map with the top-left **ESC** control or the **Escape** or **M** key.
 
+## Cockpit frame
+
+From experimental.28, the main display sits in a thin dark-steel bezel. Fuel, hull, and oxygen use inset instruments with segmented bars and quarter marks. The frame uses the existing margin around the play area, and the gauges retain their numeric readouts and warning thresholds.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.

@@ -12,6 +12,24 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => initGame('LIGHT_SCOUT', 'Interface QA', 'Interface QA'));
     await page.waitForFunction(() => G?.galaxy && G.log.some(entry => entry.msg.includes('Ready for departure')));
 
+    for(const [width,height] of [[1400,720],[800,600]]){
+      await page.setViewportSize({width,height});
+      await page.waitForFunction(({width,height})=>{
+        const scale=Math.min(width/GAME_W,height/GAME_H);
+        return Math.abs(document.getElementById('root').getBoundingClientRect().width-GAME_W*scale)<1;
+      },{width,height});
+      assert.ok(await page.evaluate(()=>{
+        const display=document.getElementById('gc');
+        const main=document.getElementById('main').getBoundingClientRect();
+        const hull=document.getElementById('g-hull').getBoundingClientRect();
+        return display.clientWidth===960 && display.clientHeight===480 &&
+          display.offsetTop===6 && display.offsetLeft===6 &&
+          hull.bottom<=main.bottom && document.getElementById('hull-ticks').offsetWidth>0;
+      }), 'the bezel keeps the full canvas and both gauges visible');
+      await page.screenshot({path:artifactPath('Cockpit-'+width+'.png')});
+    }
+    await page.setViewportSize({width:1400,height:720});
+
     // Put a patrol in range, then use the real map controls and hail/reply keys.
     await page.evaluate(() => {
       G.neutralShips = [{ type: 'patrol', name: 'QA Station Patrol', x: G.ship.x + 1, y: G.ship.y }];
@@ -163,6 +181,7 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => { G.fuel = Math.floor(G.maxFuel * 0.2); renderAll(); });
     assert.match(await banner.textContent(), /FUEL CRITICAL/);
     assert.equal(await banner.isVisible(), true);
+    assert.equal(await page.locator('#gauge-fuel .gauge-label.crit').isVisible(), true);
     await page.evaluate(() => {
       G.fuel = G.maxFuel;
       G.stranded = { rescuePhase: 'offer' };
@@ -229,6 +248,10 @@ const assert = require('node:assert/strict');
       renderAll();
     });
     assert.match(await banner.textContent(), /OXYGEN CRITICAL/);
+    assert.equal(await page.locator('#gauge-fuel').isVisible(), false);
+    assert.equal(await page.locator('#gauge-hull').isVisible(), false);
+    assert.equal(await page.locator('#gauge-oxy .gauge-label.crit').isVisible(), true);
+    assert.equal(await page.locator('#g-oxy').textContent(), '20%');
     await page.evaluate(() => debugReturnFromPalette());
     assert.equal(await banner.isVisible(), false);
 
@@ -304,6 +327,6 @@ const assert = require('node:assert/strict');
     assert.equal(await page.evaluate(() => G.inventory.some(item => item.name.startsWith('Trade good 0 '))), true);
     assert.equal(await banner.isVisible(), false);
     assert.deepEqual(errors, []);
-    console.log('PASS: compact crew status, map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and mouse and keyboard barter.');
+    console.log('PASS: cockpit display and gauges, compact crew status, map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and mouse and keyboard barter.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });
