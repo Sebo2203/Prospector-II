@@ -101,10 +101,9 @@ function debugBuildGalaxyPalette(){
   const slot=()=>{const cols=Math.floor((MAP_W-8)/5),x=8+(index%cols)*5,y=8+Math.floor(index++/cols)*4;
     if(y>=MAP_H-3)throw Error('Galaxy palette is full; extend its layout before adding exhibits');return{x,y};};
   G.galaxy[3][3]={type:'BASE',name:'Palette arrival'};
-  DEBUG_GALAXY_OBJ_TYPES.forEach((definition,i)=>{
-    const pos=slot();G.bases=[{x:pos.x-2,y:pos.y,name:'Starbase Alpha'}];
-    DEBUG.spawnGalaxyObj=i;G.mode='galaxy';debugSpawnGalaxyObj();
-    if(G.galaxy[pos.y][pos.x].type==='VOID' && !G.galaxy[pos.y][pos.x].name)throw Error('Missing galaxy factory: '+definition.id);
+  DEBUG_GALAXY_OBJ_TYPES.forEach(definition=>{
+    const pos=slot();
+    if(!placeDebugGalaxyObject(definition,pos.x,pos.y))throw Error('Missing galaxy factory: '+definition.id);
     G.debugPalette.entries.push({id:'galaxy:'+definition.id,kind:'galaxy',category:'Galaxy Objects',label:definition.label,...pos});
   });
   for(const [star,definition] of Object.entries(STAR_TYPES)){

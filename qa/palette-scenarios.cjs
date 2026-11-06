@@ -23,6 +23,33 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  assert.equal(await page.evaluate(async()=>{await autosaveQueue.idle();return (await readStoredAutosave())?.record.raw;}),original);
  const counts=await page.evaluate(()=>({entries:G.debugPalette.entries.length,objects:DEBUG_GALAXY_OBJ_TYPES.length,tiles:Object.keys(TILE).length}));
  const age=await page.evaluate(()=>{const age=G.npcStranded[0].age;tickNpcStranded();if(G.npcStranded[0].age!==age)throw Error('Paused NPC aged');return age;});
+ const spawnTest = await page.evaluate(()=>{
+   const x=0, y=MAP_H-4;
+   Object.assign(G.ship,{x,y});
+   G.galaxy[y][x+1]={type:'VOID'};
+   G.neutralShips.push({...G.neutralShips[0],x:x+1,y});
+   G.galaxy[y+1][x]={type:'PULSAR'};
+   G.galaxy[y-1][x]={type:'VOID'};
+   G.visited[(y-1)*MAP_W+x]=false;
+   renderAll();
+   return {x,y,count:G.pulsars.length};
+ });
+ await tools();
+ await page.getByRole('combobox',{name:'Galaxy object (next to your ship)'}).selectOption({label:'Pulsar'});
+ await click('Spawn Galaxy Object');
+ assert.deepEqual(await page.evaluate(({x,y})=>({
+   point:G.pulsars.slice(-1).map(pulsar=>[pulsar.x,pulsar.y])[0],
+   shipCell:G.galaxy[y][x+1].type,
+   known:G.visited[(y-1)*MAP_W+x],
+ }),spawnTest),{point:[spawnTest.x,spawnTest.y-1],shipCell:'VOID',known:true});
+ await page.evaluate(({x,y})=>{
+   G.galaxy[y-1][x+1]={type:'PULSAR'};
+   G.galaxy[y+1][x+1]={type:'PULSAR'};
+ },spawnTest);
+ await click('Spawn Galaxy Object');
+ assert.equal(await page.evaluate(()=>G.pulsars.length),spawnTest.count+1);
+ assert.match(await page.locator('#debug-action-status').textContent(),/No empty adjacent sector/);
+ await click('Close');
  await tools();
  await click('Run NPCs Live');
  assert.equal(await page.evaluate(()=>G.debugPalette.simulate),true);

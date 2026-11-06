@@ -152,12 +152,12 @@ function drawDebugTools(){
   });
   debugButton(toggles, 'Download Combat Log', ()=>debugLogAction(debugCombatLogDownload, renderAll));
 
-  const spawn = debugSection(grid, 'Spawn Near Starbase Alpha');
+  const spawn = debugSection(grid, 'Galaxy Spawning');
   const inGalaxy = G.mode==='galaxy';
-  debugSelect(spawn, 'System biome', debugIndexedOptions(Object.keys(BIOMES)), DEBUG.spawnBiome,
+  debugSelect(spawn, 'System biome (near Starbase Alpha)', debugIndexedOptions(Object.keys(BIOMES)), DEBUG.spawnBiome,
     value=>DEBUG.spawnBiome=Number(value), !inGalaxy);
   debugButton(spawn, 'Spawn System', ()=>debugLogAction(debugSpawnSystem), !inGalaxy);
-  debugSelect(spawn, 'Galaxy object', debugIndexedOptions(DEBUG_GALAXY_OBJ_TYPES.map(object=>object.label)),
+  debugSelect(spawn, 'Galaxy object (next to your ship)', debugIndexedOptions(DEBUG_GALAXY_OBJ_TYPES.map(object=>object.label)),
     DEBUG.spawnGalaxyObj, value=>DEBUG.spawnGalaxyObj=Number(value), !inGalaxy);
   debugButton(spawn, 'Spawn Galaxy Object', ()=>debugLogAction(debugSpawnGalaxyObj), !inGalaxy);
   debugButton(spawn, 'Galaxy Spawn Report', ()=>showDebugMenu('report'));

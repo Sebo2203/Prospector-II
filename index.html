@@ -884,6 +884,7 @@ html, body {
 .hud-val { font-size: 16px; font-weight: bold; white-space: nowrap; }
 .location-readout { min-width: 0; }
 #h-loc { overflow: hidden; text-overflow: ellipsis; }
+.hud-display { margin-right: auto; }
 #h-mode::before {
   content: '';
   display: inline-block;
@@ -894,7 +895,6 @@ html, body {
   background: currentColor;
 }
 .vessel-plate {
-  margin-left: auto;
   flex: 0 1 230px;
   min-width: 0;
   background: linear-gradient(#344550, #273641);
@@ -1512,13 +1512,12 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── Version tag ── */
 #version-tag {
   display: grid;
-  grid-template-rows: repeat(2, 1em);
-  gap: 3px;
+  grid-auto-rows: minmax(1lh, auto);
   flex-shrink: 0;
   font-size: 13px;
+  line-height: 1.2;
   color: #7d8c99;
   text-align: right;
-  overflow: hidden;
 }
 #save-state { color: #558877; }
 
@@ -1816,10 +1815,10 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
     <div class="hud-box"><div class="hud-label">CREDITS</div><div class="hud-val cy" id="h-creds">500</div></div>
     <div class="hud-box location-readout"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
     <div class="hud-box"><div class="hud-label">TURN</div><div class="hud-val cy" id="h-turn">1</div></div>
-    <div class="hud-box"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
+    <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
     <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
-    <div id="version-tag"><span>v0.28 experimental.40</span><span id="save-state" role="status" aria-live="polite"></span></div>
+    <div id="version-tag"><span>v0.28 experimental.41</span><span id="save-state" role="status" aria-live="polite"></span></div>
   </div>
 
   <!-- Canvas + Gauges + Sidebar -->
@@ -1982,8 +1981,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.40';
-const GAME_VERSION_LABEL = 'v0.28 experimental.40';
+const GAME_VERSION = '0.28.0-experimental.41';
+const GAME_VERSION_LABEL = 'v0.28 experimental.41';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -20847,64 +20846,68 @@ function debugSpawnSystem(){
 function debugSpawnGalaxyObj(){
   if(G.mode !== 'galaxy'){ addLog('DEBUG: Galaxy object spawn only works on galaxy map.','lw'); renderAll(); return; }
   const objType = DEBUG_GALAXY_OBJ_TYPES[DEBUG.spawnGalaxyObj % DEBUG_GALAXY_OBJ_TYPES.length];
-  const homeBase = (G.bases||[]).find(b=>b.name==='Starbase Alpha') || G.bases?.[0];
-  const bx = homeBase?.x ?? Math.floor(MAP_W/2);
-  const by = homeBase?.y ?? Math.floor(MAP_H/2);
-  const offsets = [[2,0],[-2,0],[0,2],[0,-2],[3,0],[-3,0],[0,3],[0,-3],[2,1],[-2,1],[2,-1],[-2,-1],[1,2],[-1,2],[1,-2],[-1,-2]];
-  let placed = false;
+  const occupants = [
+    ...(G.neutralShips||[]), ...(G.pirates||[]), ...(G.gasEntities||[]),
+    ...(G.npcStranded||[]), ...(G.nebulaLoot||[]),
+  ];
+  const offsets = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
   for(const [dx,dy] of offsets){
-    const tx=bx+dx, ty=by+dy;
-    if(tx<1||tx>=MAP_W-1||ty<1||ty>=MAP_H-1) continue;
-    if(G.galaxy[ty][tx].type !== 'VOID') continue;
-
-    let cellData;
-    if(objType.place){
-      cellData=objType.place(tx,ty);
-    } else if(objType.id === 'ROGUE_PLANET'){
-      const name = 'Debug Rogue';
-      const rpPlanetDesc = {
-        name, biome:'FROZEN', biomeName: BIOMES.FROZEN?.name||'Frozen',
-        orbitSlot:0, scanState:'none',
-        avgTemp:-180, gravity:'3.2', atmosphere:'None', radius:'0.55',
-      };
-      cellData = { type:'ROGUE_PLANET', name, planets:[rpPlanetDesc] };
-      G.roguePlanets = G.roguePlanets || [];
-      G.roguePlanets.push({ x:tx, y:ty, name });
-    } else if(objType.id === 'PULSAR'){
-      const name = 'Debug PSR';
-      cellData = { type:'PULSAR', name };
-      G.pulsars = G.pulsars || [];
-      G.pulsars.push({ x:tx, y:ty, name });
-    } else if(objType.id === 'BLACK_HOLE'){
-      cellData = { type:'BLACK_HOLE', name:'Debug Singularity' };
-      G.blackHoles = G.blackHoles || [];
-      G.blackHoles.push({ x:tx, y:ty });
-    } else if(objType.id === 'DERELICT'){
-      const DERELICT_NAMES = ['DSS Erebus','DSS Vanguard','Station Threnody','Station Morrow',
-        'DSS Koval','Outpost Silica','DSS Heliodor','Station Lacuna'];
-      const dname = pick(DERELICT_NAMES);
-      cellData = { type:'DERELICT', name:dname };
-      G.derelicts = G.derelicts || [];
-      G.derelicts.push({ x:tx, y:ty, name:dname });
-    } else if(objType.id === 'PIRATE_BASE'){
-      const PIRATE_BASE_NAMES = ['Cutthroat Station','Ironjaw Anchorage','The Maw',
-        'Voidbreaker Post','Redrock Station','Corsair\'s Rest'];
-      const pbName = pick(PIRATE_BASE_NAMES);
-      cellData = { type:'PIRATE_BASE', name:pbName };
-      G.pirateBases = G.pirateBases || [];
-      G.pirateBases.push({ x:tx, y:ty, name:pbName, hp:1000, maxHp:1000, destroyed:false, lastRespawn:0 });
+    const x = G.ship.x + dx, y = G.ship.y + dy;
+    if(G.galaxy[y]?.[x]?.type!=='VOID') continue;
+    if(occupants.some(object=>object.alive!==false && object.x===x && object.y===y)) continue;
+    if(placeDebugGalaxyObject(objType,x,y)){
+      renderAll();
+      return;
     }
-
-    if(cellData){
-      G.galaxy[ty][tx] = cellData;
-      G.visited[ty*MAP_W+tx] = true;
-      addLog('DEBUG: Spawned '+objType.label+' at ('+tx+','+ty+').','lg');
-      placed = true;
-    }
-    break;
   }
-  if(!placed) addLog('DEBUG: No VOID tile near starbase for galaxy object.','lw');
+  addLog('DEBUG: No empty adjacent sector for the galaxy object.','lw');
   renderAll();
+}
+
+function placeDebugGalaxyObject(objType,tx,ty){
+  let cellData;
+  if(objType.place){
+    cellData=objType.place(tx,ty);
+  } else if(objType.id === 'ROGUE_PLANET'){
+    const name = 'Debug Rogue';
+    const rpPlanetDesc = {
+      name, biome:'FROZEN', biomeName: BIOMES.FROZEN?.name||'Frozen',
+      orbitSlot:0, scanState:'none',
+      avgTemp:-180, gravity:'3.2', atmosphere:'None', radius:'0.55',
+    };
+    cellData = { type:'ROGUE_PLANET', name, planets:[rpPlanetDesc] };
+    G.roguePlanets = G.roguePlanets || [];
+    G.roguePlanets.push({ x:tx, y:ty, name });
+  } else if(objType.id === 'PULSAR'){
+    const name = 'Debug PSR';
+    cellData = { type:'PULSAR', name };
+    G.pulsars = G.pulsars || [];
+    G.pulsars.push({ x:tx, y:ty, name });
+  } else if(objType.id === 'BLACK_HOLE'){
+    cellData = { type:'BLACK_HOLE', name:'Debug Singularity' };
+    G.blackHoles = G.blackHoles || [];
+    G.blackHoles.push({ x:tx, y:ty });
+  } else if(objType.id === 'DERELICT'){
+    const DERELICT_NAMES = ['DSS Erebus','DSS Vanguard','Station Threnody','Station Morrow',
+      'DSS Koval','Outpost Silica','DSS Heliodor','Station Lacuna'];
+    const dname = pick(DERELICT_NAMES);
+    cellData = { type:'DERELICT', name:dname };
+    G.derelicts = G.derelicts || [];
+    G.derelicts.push({ x:tx, y:ty, name:dname });
+  } else if(objType.id === 'PIRATE_BASE'){
+    const PIRATE_BASE_NAMES = ['Cutthroat Station','Ironjaw Anchorage','The Maw',
+      'Voidbreaker Post','Redrock Station','Corsair\'s Rest'];
+    const pbName = pick(PIRATE_BASE_NAMES);
+    cellData = { type:'PIRATE_BASE', name:pbName };
+    G.pirateBases = G.pirateBases || [];
+    G.pirateBases.push({ x:tx, y:ty, name:pbName, hp:1000, maxHp:1000, destroyed:false, lastRespawn:0 });
+  }
+
+  if(!cellData) return false;
+  G.galaxy[ty][tx] = cellData;
+  G.visited[ty*MAP_W+tx] = true;
+  addLog('DEBUG: Spawned '+objType.label+' at ('+tx+','+ty+').','lg');
+  return true;
 }
 
 function debugRegenWithAncientRuins(){
@@ -34354,10 +34357,9 @@ function debugBuildGalaxyPalette(){
   const slot=()=>{const cols=Math.floor((MAP_W-8)/5),x=8+(index%cols)*5,y=8+Math.floor(index++/cols)*4;
     if(y>=MAP_H-3)throw Error('Galaxy palette is full; extend its layout before adding exhibits');return{x,y};};
   G.galaxy[3][3]={type:'BASE',name:'Palette arrival'};
-  DEBUG_GALAXY_OBJ_TYPES.forEach((definition,i)=>{
-    const pos=slot();G.bases=[{x:pos.x-2,y:pos.y,name:'Starbase Alpha'}];
-    DEBUG.spawnGalaxyObj=i;G.mode='galaxy';debugSpawnGalaxyObj();
-    if(G.galaxy[pos.y][pos.x].type==='VOID' && !G.galaxy[pos.y][pos.x].name)throw Error('Missing galaxy factory: '+definition.id);
+  DEBUG_GALAXY_OBJ_TYPES.forEach(definition=>{
+    const pos=slot();
+    if(!placeDebugGalaxyObject(definition,pos.x,pos.y))throw Error('Missing galaxy factory: '+definition.id);
     G.debugPalette.entries.push({id:'galaxy:'+definition.id,kind:'galaxy',category:'Galaxy Objects',label:definition.label,...pos});
   });
   for(const [star,definition] of Object.entries(STAR_TYPES)){
@@ -34675,12 +34677,12 @@ function drawDebugTools(){
   });
   debugButton(toggles, 'Download Combat Log', ()=>debugLogAction(debugCombatLogDownload, renderAll));
 
-  const spawn = debugSection(grid, 'Spawn Near Starbase Alpha');
+  const spawn = debugSection(grid, 'Galaxy Spawning');
   const inGalaxy = G.mode==='galaxy';
-  debugSelect(spawn, 'System biome', debugIndexedOptions(Object.keys(BIOMES)), DEBUG.spawnBiome,
+  debugSelect(spawn, 'System biome (near Starbase Alpha)', debugIndexedOptions(Object.keys(BIOMES)), DEBUG.spawnBiome,
     value=>DEBUG.spawnBiome=Number(value), !inGalaxy);
   debugButton(spawn, 'Spawn System', ()=>debugLogAction(debugSpawnSystem), !inGalaxy);
-  debugSelect(spawn, 'Galaxy object', debugIndexedOptions(DEBUG_GALAXY_OBJ_TYPES.map(object=>object.label)),
+  debugSelect(spawn, 'Galaxy object (next to your ship)', debugIndexedOptions(DEBUG_GALAXY_OBJ_TYPES.map(object=>object.label)),
     DEBUG.spawnGalaxyObj, value=>DEBUG.spawnGalaxyObj=Number(value), !inGalaxy);
   debugButton(spawn, 'Spawn Galaxy Object', ()=>debugLogAction(debugSpawnGalaxyObj), !inGalaxy);
   debugButton(spawn, 'Galaxy Spawn Report', ()=>showDebugMenu('report'));

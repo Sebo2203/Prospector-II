@@ -56,22 +56,38 @@ const assert = require('node:assert/strict');
       const height=width===1400?720:600;
       await page.setViewportSize({width,height});
       await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<0.1,width);
-      for(const alert of [false,true]){
-        const layout=await page.evaluate(alert=>{
+      for(const uiStyle of ['cockpit','classic']) for(const alert of [false,true]){
+        const layout=await page.evaluate(({uiStyle,alert})=>{
+          const previousStyle=OPTIONS.uiStyle;
+          OPTIONS.uiStyle=uiStyle;
+          applyUIStyle();
           if(alert) showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300');
           else hideMsg();
           const root=document.getElementById('root'), hud=document.getElementById('hud'), status=document.getElementById('version-tag');
           const rootBounds=root.getBoundingClientRect();
           const hudBounds=hud.getBoundingClientRect(), statusBounds=status.getBoundingClientRect();
-          return {
+          const badge=document.getElementById('save-state');
+          const range=document.createRange();
+          const fits=['Saved','Saving…','AUTOSAVE FAILED','DEBUG — career autosave protected'].every(label=>{
+            badge.textContent=label;
+            range.selectNodeContents(badge);
+            const text=range.getBoundingClientRect();
+            return text.top>=statusBounds.top && text.bottom<=statusBounds.bottom+0.1 &&
+              text.top>=hudBounds.top && text.bottom<=hudBounds.bottom;
+          });
+          const result={
             inset:hudBounds.right-statusBounds.right,
             padding:parseFloat(getComputedStyle(hud).paddingRight)*rootBounds.width/GAME_W,
-            fits:statusBounds.top>=hudBounds.top && statusBounds.bottom<=hudBounds.bottom,
+            fits,
             banner:document.getElementById('msg-bar').classList.contains('visible'),
           };
-        },alert);
+          OPTIONS.uiStyle=previousStyle;
+          applyUIStyle();
+          renderAutosaveStatus();
+          return result;
+        },{uiStyle,alert});
         assert.equal(layout.banner,alert);
-        assert.ok(layout.fits && Math.abs(layout.inset-layout.padding)<0.1,'version and save status stay in the top-right HUD');
+        assert.ok(layout.fits && Math.abs(layout.inset-layout.padding)<0.1,'every save label fits in the top-right HUD in '+uiStyle);
       }
     }
     await page.setViewportSize({width:1400,height:720});

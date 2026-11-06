@@ -74,6 +74,7 @@ html, body {
 .hud-val { font-size: 16px; font-weight: bold; white-space: nowrap; }
 .location-readout { min-width: 0; }
 #h-loc { overflow: hidden; text-overflow: ellipsis; }
+.hud-display { margin-right: auto; }
 #h-mode::before {
   content: '';
   display: inline-block;
@@ -84,7 +85,6 @@ html, body {
   background: currentColor;
 }
 .vessel-plate {
-  margin-left: auto;
   flex: 0 1 230px;
   min-width: 0;
   background: linear-gradient(#344550, #273641);
@@ -702,13 +702,12 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── Version tag ── */
 #version-tag {
   display: grid;
-  grid-template-rows: repeat(2, 1em);
-  gap: 3px;
+  grid-auto-rows: minmax(1lh, auto);
   flex-shrink: 0;
   font-size: 13px;
+  line-height: 1.2;
   color: #7d8c99;
   text-align: right;
-  overflow: hidden;
 }
 #save-state { color: #558877; }
 

@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.41 fixes the save label and spawns objects beside the ship
+
+Released on `experiment/expedition-legacy`.
+
+- Sized the top-right save and version rows to fit their text, fixing the clipped save label. The block stays right-aligned in both HUD styles.
+- **Spawn Galaxy Object** uses an empty neighboring sector, including diagonals and map edges. It skips existing contacts and reports when every neighboring sector is blocked. **Spawn System** still places systems near Starbase Alpha.
+- All 47 repository tests and five headless Edge suites passed. Reproduced the clipping on experimental.40 and checked both HUD styles at two window sizes. Verified adjacent spawning at a map edge, occupied sectors, and palette rebuilds. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.40 stabilizes orbit and groups debug catalogs
 
 Released on `experiment/expedition-legacy`.
