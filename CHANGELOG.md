@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.43 fixes Firefox minimap layout and surface seams
+
+Released on `experiment/expedition-legacy`.
+
+- Set explicit HUD minimap dimensions so Firefox keeps the canvas inside its panel beside the compass and map button at fitted window scales.
+- Aligned surface terrain, fog, and lighting to shared device-pixel edges to remove the thin grid at fractional scales in Sprites and ASCII.
+- Reproduced both issues on experimental.42. Checked minimap layout and shaded surfaces in installed Firefox at multiple viewport sizes and display densities. All 47 repository tests and five headless Edge suites passed. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.42 spawns debug star systems beside the ship
 
 Released on `experiment/expedition-legacy`.

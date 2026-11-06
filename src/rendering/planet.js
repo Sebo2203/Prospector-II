@@ -55,6 +55,17 @@ function drawPlanet(){
 
   // Helper: map tile (mx,my) → screen pixel (sx,sy)
   function tileToScreen(mx, my){ return [(mx-camX)*TS, (my-camY)*TS]; }
+  // Neighboring tiles share device-pixel edges, including their darkness and fog.
+  // Keep the logical coordinates used by terrain art and pointer targets.
+  const frameTransform = ctx.getTransform();
+  const xEdges = Array.from({length:VIEW_W+1}, (_,i)=>Math.round(i*TS*frameTransform.a+frameTransform.e));
+  const yEdges = Array.from({length:VIEW_H+1}, (_,i)=>Math.round(i*TS*frameTransform.d+frameTransform.f));
+  function alignTerrainTile(vx, vy, sx, sy){
+    const left = xEdges[vx], top = yEdges[vy];
+    const scaleX = (xEdges[vx+1]-left)/TS;
+    const scaleY = (yEdges[vy+1]-top)/TS;
+    ctx.setTransform(scaleX, 0, 0, scaleY, left-sx*scaleX, top-sy*scaleY);
+  }
   function drawBaseFloor(tileType, sx, sy, bg){
     const info = TILE[tileType];
     if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx, sx, sy);
@@ -69,6 +80,7 @@ function drawPlanet(){
       const x = camX + vx;
       if(x<0||x>=W) continue;
       const [sx,sy] = tileToScreen(x,y);
+      alignTerrainTile(vx, vy, sx, sy);
       // Fog of war
       if(!pdata.visited || !pdata.visited[y*W+x]){
         if(pdata.isAncientStation){
@@ -278,6 +290,7 @@ function drawPlanet(){
       }
     }
   }
+  ctx.setTransform(frameTransform);
 
   if(pdata.isQuarantine) drawQuarantinePeople(pdata,camX,camY);
   // ── Scanner second pass — draw ? on top of darkness for scanned deposits ──
@@ -312,6 +325,7 @@ function drawPlanet(){
     if(edist >= 1.5 && !hasLOS(e.x, e.y)) return;
     const [esx,esy] = tileToScreen(e.x, e.y);
     if(esx<0||esx>=canvasWidth||esy<0||esy>=canvasHeight) return;
+    alignTerrainTile(e.x-camX, e.y-camY, esx, esy);
     // Draw the actual tile underneath the enemy, not just the biome default floor,
     // so NPCs overlay on forests, civ buildings, etc. rather than erasing them.
     if(e.shipboardAlien){
@@ -367,6 +381,7 @@ function drawPlanet(){
       drawSprite(sp, esx, esy, e.colour||'#882200');
     }
   });
+  ctx.setTransform(frameTransform);
   const [psx,psy] = tileToScreen(px,py);
 
   // ── Jetpack propellant trail ───────────────────────────────────
@@ -400,12 +415,16 @@ function drawPlanet(){
       if(sdist > vr) return;
       if(sdist >= 1.5 && !hasLOS(c.x, c.y)) return;
       const [csx,csy] = tileToScreen(c.x, c.y);
+      const vx = c.x-camX, vy = c.y-camY;
+      if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H) return;
+      alignTerrainTile(vx, vy, csx, csy);
       drawSprite(c.sprite, csx, csy, null);
       if(darkAlpha > 0.1){
         ctx.fillStyle = `rgba(${darkR},${darkG},${darkB},${(darkAlpha*0.15).toFixed(2)})`;
         ctx.fillRect(csx, csy, TS, TS);
       }
     });
+    ctx.setTransform(frameTransform);
   }
 
   // ── Mist cloud rendering (ancient ruins) ─────────────────────

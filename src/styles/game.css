@@ -624,8 +624,9 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   outline-offset: 1px;
 }
 #galaxy-minimap {
-  width: auto;
-  height: auto;
+  width: 116px;
+  height: 70px;
+  flex: none;
   position: static;
   top: auto;
   left: auto;

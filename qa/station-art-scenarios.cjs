@@ -146,13 +146,60 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    'fog and empty space have no tile seams at fractional scaling in either render mode');
   await page.evaluate(()=>{OPTIONS.asciiMode=false;drawCanvas();});
   await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap-small-window.png')});
+  for(const [width,height] of [[2560,1440],[1400,720],[800,600]]){
+   await page.setViewportSize({width,height});
+   await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<1,width);
+   assert.ok(await page.evaluate(()=>{
+    const rect=id=>document.getElementById(id).getBoundingClientRect();
+    const compass=rect('compass-grid'), panel=rect('galaxy-minimap-panel');
+    const mini=rect('galaxy-minimap'), button=rect('minimap-max-btn');
+    return compass.right<panel.left && panel.right<button.left &&
+     mini.left>panel.left && mini.right<panel.right && mini.top>panel.top && mini.bottom<panel.bottom &&
+     Math.abs(compass.top-panel.top)<0.1 && Math.abs(panel.top-button.top)<0.1;
+   }), 'the small map fits between the compass and map button at every viewport scale');
+  }
+  const terrain=await page.evaluate(()=>{
+   const flat=document.createElement('canvas');
+   flat.width=flat.height=TS;
+   const paint=flat.getContext('2d');
+   paint.fillStyle='#99bbdd';
+   paint.fillRect(0,0,TS,TS);
+   IMG.frozen_floor=flat;
+   ASCII.frozen_floor={...ASCII.frozen_floor,ch:' '};
+   const grid=Array.from({length:VIEW_H},()=>Array.from({length:VIEW_W},()=>({type:'FROZEN_FLOOR'})));
+   const visited=Array(VIEW_W*VIEW_H).fill(true), lit=visited.map(()=>false);
+   G.curPlanet='qa:terrain';
+   G.planets[G.curPlanet]={grid,width:VIEW_W,height:VIEW_H,biome:'FROZEN',
+    planetTurn:2*(BIOMES.FROZEN.dayLength||20),visited,lit};
+   G.player={x:18,y:14};
+   G.mode='planet';
+   const counts=[];
+   for(const ascii of [false,true]){
+    OPTIONS.asciiMode=ascii;
+    for(const revealed of [false,true]){
+     visited.fill(revealed);
+     drawCanvas();
+     const {a,d}=ctx.getTransform();
+     const pixels=ctx.getImageData(1,1,Math.floor(7*TS*a)-2,Math.floor(7*TS*d)-2).data;
+     const colors=new Set();
+     for(let i=0;i<pixels.length;i+=4){
+      if(pixels[i+3]!==255) throw Error('Surface contains a transparent pixel between opaque tiles');
+      colors.add(pixels.slice(i,i+3).join(','));
+     }
+     counts.push(colors.size);
+    }
+   }
+   return counts;
+  });
+  assert.deepEqual(terrain,[1,1,1,1],'surface fog and shaded floors have no tile seams in either render mode');
   await page.setViewportSize({width:1400,height:720});
   await page.waitForFunction(()=>{
    const mini=document.getElementById('galaxy-minimap');
    return mini.getBoundingClientRect().width===mini.width;
   });
   await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap.png')});
-  report.checks.push(...chart,'full map fits native and scaled windows','seamless galaxy backgrounds at fractional scaling');
+  report.checks.push(...chart,'full map fits native and scaled windows','seamless galaxy backgrounds at fractional scaling',
+   'small map fits between compass and button','seamless fog and shaded floors on the surface');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,errors},null,2));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});
