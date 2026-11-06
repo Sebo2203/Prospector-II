@@ -1280,13 +1280,12 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  width: 362px;
   border-left: 1px solid #252535;
-  padding-left: 0;
+  padding-left: 8px;
 }
 #galaxy-minimap-panel {
-  width: 220px;
   height: 82px;
+  padding-inline: 5px;
   flex-shrink: 0;
   background: #080810;
   border: 1px solid #2a2a44;
@@ -1316,8 +1315,8 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   color: #aaccee;
 }
 #galaxy-minimap {
-  width: 208px;
-  height: 70px;
+  width: auto;
+  height: auto;
   position: static;
   top: auto;
   left: auto;
@@ -1332,8 +1331,6 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   background: rgba(2,2,8,0.96);
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 12px;
 }
 #minimap-overlay.visible { display: flex; }
 #minimap-overlay-body {
@@ -1393,12 +1390,6 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   height: 18px;
   flex-shrink: 0;
 }
-#minimap-overlay-hint {
-  color: #667788;
-  font-size: 14px;
-}
-#minimap-overlay-hint .ck { color: #ffe066; }
-
 /* ── Version tag ── */
 #version-tag {
   display: flex;
@@ -1533,7 +1524,6 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
         <div id="minimap-legend-rows"></div>
       </div>
     </div>
-    <button id="minimap-overlay-hint" class="hud-menu-btn" onclick="closeGalaxyMinimapOverlay()"><span class="ck">ESC</span> close map</button>
   </div>
 
   <!-- HUD — SHIP HP and FUEL moved to left gauge panel, O2 also in gauge panel -->
@@ -1634,12 +1624,12 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
         </div>
       </div>
       <div id="galaxy-minimap-panel">
-        <canvas id="galaxy-minimap" width="208" height="70"></canvas>
+        <canvas id="galaxy-minimap" width="116" height="70"></canvas>
       </div>
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.26</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.27</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1697,8 +1687,8 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.26';
-const GAME_VERSION_LABEL = 'v0.28 experimental.26';
+const GAME_VERSION = '0.28.0-experimental.27';
+const GAME_VERSION_LABEL = 'v0.28 experimental.27';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -33718,7 +33708,7 @@ document.addEventListener('keydown', e=>{
       closeGalaxyMinimapOverlay();
     } else if(e.key==='Enter'||e.key===' '){
       e.preventDefault();
-      if(e.target.id==='minimap-overlay-hint') closeGalaxyMinimapOverlay();
+      if(e.target.id==='game-escape' && !e.repeat) e.target.click();
     }
     return;
   }

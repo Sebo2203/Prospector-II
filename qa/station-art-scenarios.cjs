@@ -68,6 +68,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    renderGalaxyMinimap();
    const smallScale=Math.min((small.width-6)/MAP_W,(small.height-6)/MAP_H);
    const smallX=Math.floor((small.width-MAP_W*smallScale)/2);
+   if(smallScale!==(small.height-6)/MAP_H||smallX>4) throw Error('Sidebar minimap is squeezed or has wide side margins');
    const smallY=Math.floor((small.height-MAP_H*smallScale)/2);
    const smallPaint=small.getContext('2d');
    const miniColor=(x,y,dx=0,dy=0)=>{
@@ -123,7 +124,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   assert.equal(await page.locator('#minimap-overlay').isVisible(),false);
   await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap-small-window.png')});
   await page.setViewportSize({width:1400,height:720});
-  await page.waitForFunction(()=>document.getElementById('galaxy-minimap').getBoundingClientRect().width===208);
+  await page.waitForFunction(()=>{
+   const mini=document.getElementById('galaxy-minimap');
+   return mini.getBoundingClientRect().width===mini.width;
+  });
   await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap.png')});
   report.checks.push(...chart,'full map fits native and scaled windows');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,errors},null,2));

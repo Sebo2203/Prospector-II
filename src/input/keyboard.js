@@ -63,7 +63,7 @@ document.addEventListener('keydown', e=>{
       closeGalaxyMinimapOverlay();
     } else if(e.key==='Enter'||e.key===' '){
       e.preventDefault();
-      if(e.target.id==='minimap-overlay-hint') closeGalaxyMinimapOverlay();
+      if(e.target.id==='game-escape' && !e.repeat) e.target.click();
     }
     return;
   }

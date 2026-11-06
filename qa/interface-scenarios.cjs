@@ -31,6 +31,7 @@ const assert = require('node:assert/strict');
 
     await mapButton.click();
     assert.equal(await map.isVisible(), true);
+    assert.equal(await map.getByRole('button').count(), 0);
     assert.equal(await page.evaluate(() => document.activeElement.id), 'minimap-overlay');
     await page.keyboard.press('Escape');
     assert.equal(await map.isVisible(), false);
@@ -53,6 +54,14 @@ const assert = require('node:assert/strict');
     await page.keyboard.press('m');
     assert.equal(await map.isVisible(), false);
     await askPatrolAboutThreats('2');
+
+    for(const key of ['Enter', 'Space']){
+      await mapButton.click();
+      await page.locator('#game-escape').focus();
+      await page.keyboard.press(key);
+      assert.equal(await map.isVisible(), false);
+      assert.equal(await page.evaluate(() => document.activeElement === document.body), true);
+    }
 
     // Dialogue still owns Enter and Space if the player tabs to the map button.
     for(const key of ['Enter', 'Space']){

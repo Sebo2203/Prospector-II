@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.27 trims the map controls
+
+Released on `experiment/expedition-legacy`.
+
+- Removed the duplicate Escape button below the full map. The top-left Escape control, Escape and M keys, and click outside the map still close it. The sidebar minimap panel is 128 pixels wide instead of 220 and fits the whole galaxy at the same scale.
+- All 47 repository tests and four headless Edge suites passed. Checked the compact map at native and scaled window sizes, whole-galaxy coverage, and keyboard and pointer dismissal. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.26 clarifies the sidebar minimap
 
 Released on `experiment/expedition-legacy`.

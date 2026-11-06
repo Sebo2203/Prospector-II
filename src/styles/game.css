@@ -470,13 +470,12 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  width: 362px;
   border-left: 1px solid #252535;
-  padding-left: 0;
+  padding-left: 8px;
 }
 #galaxy-minimap-panel {
-  width: 220px;
   height: 82px;
+  padding-inline: 5px;
   flex-shrink: 0;
   background: #080810;
   border: 1px solid #2a2a44;
@@ -506,8 +505,8 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   color: #aaccee;
 }
 #galaxy-minimap {
-  width: 208px;
-  height: 70px;
+  width: auto;
+  height: auto;
   position: static;
   top: auto;
   left: auto;
@@ -522,8 +521,6 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   background: rgba(2,2,8,0.96);
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 12px;
 }
 #minimap-overlay.visible { display: flex; }
 #minimap-overlay-body {
@@ -583,12 +580,6 @@ button.ctx-btn:hover, button.ctx-btn:focus-visible {
   height: 18px;
   flex-shrink: 0;
 }
-#minimap-overlay-hint {
-  color: #667788;
-  font-size: 14px;
-}
-#minimap-overlay-hint .ck { color: #ffe066; }
-
 /* ── Version tag ── */
 #version-tag {
   display: flex;

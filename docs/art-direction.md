@@ -41,6 +41,8 @@ From experimental.25, the full map opened with **M** or the HUD map button draws
 
 The HUD minimap fits the whole galaxy. From experimental.26, it uses darker explored space against slate fog, brighter color-coded landmarks, and a green cross for the player. The muted rectangle marks the current galaxy viewport.
 
+From experimental.27, the sidebar map frame fits the width of the chart at its existing scale. Close the full map with the top-left **ESC** control or the **Escape** or **M** key.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.
