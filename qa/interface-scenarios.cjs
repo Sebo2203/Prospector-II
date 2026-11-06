@@ -16,7 +16,7 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('.cmp-center').textContent(), 'WAIT');
     assert.deepEqual(await page.locator('#sidebar > .s-title').allTextContents().then(titles=>titles.map(title=>title.trim().split(/\s+/).slice(0,2).join(' '))),
       ['Crew Status','Comms Log']);
-    for(const panel of ['#hud','#sidebar','#persist-bar']){
+    for(const panel of ['#hud','#sidebar']){
       const surface=await page.locator(panel).evaluate(el=>{
         const style=getComputedStyle(el);
         return [style.backgroundColor,style.backgroundImage];

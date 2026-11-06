@@ -1304,7 +1304,6 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── Persistent global bar ── */
 #persist-bar {
   padding: 6px 10px 6px 12px;
-  background: #111;
   border-top: 1px solid var(--steel-seam);
   box-shadow: inset 0 1px #34444e;
   font-size: 14px;
@@ -1486,16 +1485,15 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── Version tag ── */
 #version-tag {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 2px 12px;
-  background: #111;
+  margin-top: auto;
+  padding: 0 12px;
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
   flex-shrink: 0;
-  height: 22px;
-  min-height: 18px;
-  max-height: 18px;
+  height: 18px;
   overflow: hidden;
 }
 #save-state { color: #558877; }
@@ -1724,7 +1722,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.31</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.32</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1782,8 +1780,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.31';
-const GAME_VERSION_LABEL = 'v0.28 experimental.31';
+const GAME_VERSION = '0.28.0-experimental.32';
+const GAME_VERSION_LABEL = 'v0.28 experimental.32';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{

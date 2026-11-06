@@ -47,12 +47,37 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(() => G?.galaxy && G.log.some(e => e.msg.includes('Ready for departure')));
     assert.equal(await page.locator('#version-tag span').last().textContent(), expected.label);
     assert.equal(await page.locator('#version-tag').isVisible(), true);
+    const tools = page.locator('#persist-bar');
+    const status = page.locator('#version-tag');
+    for(const bar of [tools,status]){
+      assert.equal(await bar.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+    }
+    for(const width of [1400,800]){
+      const height=width===1400?720:600;
+      await page.setViewportSize({width,height});
+      await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<0.1,width);
+      for(const alert of [false,true]){
+        const layout=await page.evaluate(alert=>{
+          if(alert) showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300');
+          else hideMsg();
+          const root=document.getElementById('root'), status=document.getElementById('version-tag');
+          return {
+            inset:(root.getBoundingClientRect().bottom-status.getBoundingClientRect().bottom)*root.offsetWidth/root.getBoundingClientRect().width,
+            banner:document.getElementById('msg-bar').classList.contains('visible'),
+          };
+        },alert);
+        assert.equal(layout.banner,alert);
+        assert.ok(Math.abs(layout.inset-1)<0.1,'the status strip sits against the inner bottom edge');
+      }
+    }
+    await page.setViewportSize({width:1400,height:720});
+    await page.evaluate(()=>hideMsg());
     await page.screenshot({ path: artifactPath('Version-labels.png') });
     await page.evaluate(() => returnToMainMenuFromGame());
     await page.waitForFunction(() => MENU_STATE.screen === 'main' && MENU_STATE.hasAutosave);
     assert.equal(await page.locator('#game-escape').isVisible(),false);
     await checkMainMenu(['C', 'N', 'L', 'O', 'X', 'Q']);
     assert.deepEqual(errors, []);
-    console.log('PASS: version labels, main menu keyboard and mouse routes with and without a save, and retired V shortcut.');
+    console.log('PASS: version labels and bottom footer, main menu keyboard and mouse routes with and without a save, and retired V shortcut.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });

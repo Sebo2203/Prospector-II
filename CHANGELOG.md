@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.32 anchors the status strip at the bottom
+
+Released on `experiment/expedition-legacy`.
+
+- Pinned the save and version strip to the bottom of the play area. The shortcut area and status strip share the game background, removing the color seam left by the unused alert space.
+- All 47 repository tests and four headless Edge suites passed. Checked the bottom edge with the alert visible and hidden at 1400×720 and 800×600. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.31 restores cockpit instruments on dark panels
 
 Released on `experiment/expedition-legacy`.

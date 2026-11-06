@@ -47,6 +47,8 @@ From experimental.27, the sidebar map frame fits the width of the chart at its e
 
 From experimental.31, the broad surfaces behind the cockpit instruments and controls use the original dark palette. The individual readouts, vessel plate, segmented gauges, crew and comms console, compass keys, and map frames use the cockpit finish. The display readout names the current view, including navigation, orbital view, orbital scan, surface, and stations. The reduced-motion preference keeps gauge warnings steady.
 
+The save status and version sit at the bottom of the play area. The shortcuts and status strip share the same dark background, and the status strip stays at the bottom when an alert appears.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.
