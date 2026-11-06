@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.35 quiets routine actions and removes galaxy seams
+
+Released on `experiment/expedition-legacy`.
+
+- The general Examine, Inventory, and Options buttons use the same muted gray as the shortcut legend in both UI styles. Context-specific actions retain their accents and existing input routes.
+- Fixed the faint grid in the galaxy view caused by drawing neighboring tile backgrounds on fractional device pixels. Empty space and fog now use an opaque base and pixel-aligned edges.
+- All 47 repository tests and five headless Edge suites passed. Reproduced the seams on experimental.34 and verified uniform pixels across tile boundaries in Sprites and ASCII at a fractional scale. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.34 sharpens in-game text
 
 Released on `experiment/expedition-legacy`.

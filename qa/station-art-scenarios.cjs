@@ -126,6 +126,25 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   }
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#minimap-overlay').isVisible(),false);
+  const backgrounds=await page.evaluate(()=>{
+   G.crew[0].skills.nav=2;
+   return [false,true].map(ascii=>{
+    OPTIONS.asciiMode=ascii;
+    drawCanvas();
+    const {camX,camY}=canvasMapView;
+    const {a,d}=ctx.getTransform();
+    return [16,24].map(mx=>{
+     const x=Math.ceil((mx-camX)*TS*a), y=Math.ceil((32-camY)*TS*d);
+     const data=ctx.getImageData(x,y,Math.floor(4*TS*a)-1,Math.floor(4*TS*d)-1).data;
+     const colors=new Set();
+     for(let i=0;i<data.length;i+=4)colors.add(data.slice(i,i+4).join(','));
+     return [...colors];
+    });
+   });
+  });
+  assert.deepEqual(backgrounds,Array.from({length:2},()=>[['20,20,30,255'],['4,4,12,255']]),
+   'fog and empty space have no tile seams at fractional scaling in either render mode');
+  await page.evaluate(()=>{OPTIONS.asciiMode=false;drawCanvas();});
   await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap-small-window.png')});
   await page.setViewportSize({width:1400,height:720});
   await page.waitForFunction(()=>{
@@ -133,7 +152,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    return mini.getBoundingClientRect().width===mini.width;
   });
   await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap.png')});
-  report.checks.push(...chart,'full map fits native and scaled windows');
+  report.checks.push(...chart,'full map fits native and scaled windows','seamless galaxy backgrounds at fractional scaling');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,errors},null,2));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

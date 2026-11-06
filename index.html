@@ -831,6 +831,8 @@ html, body {
   --key-face: linear-gradient(#293947, #192530);
   --key-hover: linear-gradient(#344e60, #223543);
   --key-pressed: #101e29;
+  --shortcut-text: #919aa2;
+  --shortcut-key: #a7adb2;
   --fuel-normal: #48cdb6;
   --hull-normal: #67bcdd;
   background: #0a0a0f;
@@ -1273,6 +1275,14 @@ canvas {
 .ctx-btn.info .ck { color: #70d8ff; }
 .ctx-btn.warn   { border-color: #66501a; color: #ddaa44; }
 .ctx-btn.warn .ck { color: #ffcc55; }
+.ctx-btn.routine {
+  --key-face: #17181d;
+  --key-hover: #24262c;
+  --key-pressed: #131419;
+  color: var(--shortcut-text);
+  border-color: #3a3d44;
+}
+.ctx-btn.routine .ck { color: var(--shortcut-key); }
 button.ctx-btn { cursor: pointer; }
 button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── 8-dir Mouse Compass ── */
@@ -1310,7 +1320,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   border-top: 1px solid var(--steel-seam);
   box-shadow: inset 0 1px #34444e;
   font-size: 14px;
-  color: #919aa2;
+  color: var(--shortcut-text);
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
@@ -1322,7 +1332,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   align-items: stretch;
   position: relative;
 }
-#persist-bar .ck { color: #a7adb2; }
+#persist-bar .ck { color: var(--shortcut-key); }
 .hud-menu-btn {
   border: 1px solid var(--steel-rim);
   border-radius: 2px;
@@ -1596,6 +1606,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   --key-face: #121a24;
   --key-hover: #182534;
   --key-pressed: #0a1a28;
+  --shortcut-text: #777;
+  --shortcut-key: #999;
 }
 [data-ui-style="classic"] #hud,
 [data-ui-style="classic"] #gauge-panel,
@@ -1661,17 +1673,15 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 [data-ui-style="classic"] .crew-strip { padding: 0; background: transparent; box-shadow: none; }
 [data-ui-style="classic"] .crew-badge { background: #171b1a; }
 [data-ui-style="classic"] #msg-bar { background: #1a1a2e; border-top-color: #333; box-shadow: none; }
-[data-ui-style="classic"] .ctx-btn { background: #1a1a2e; }
+[data-ui-style="classic"] .ctx-btn:not(.routine) { background: #1a1a2e; }
 [data-ui-style="classic"] button.ctx-btn .ck { text-shadow: none; }
-[data-ui-style="classic"] button.ctx-btn:hover { background: #24243a; }
+[data-ui-style="classic"] button.ctx-btn:not(.routine):hover { background: #24243a; }
 [data-ui-style="classic"] :is(.hud-menu-btn,button.ctx-btn,.cmp-btn,#minimap-max-btn) { box-shadow: none; }
 [data-ui-style="classic"] .cmp-btn,
 [data-ui-style="classic"] #minimap-max-btn { --key-face: #0e0e18; color: #667788; }
 [data-ui-style="classic"] .cmp-btn { font-size: 10px; }
 [data-ui-style="classic"] .cmp-btn.cmp-center { --key-face: #0a0a12; font-size: 9px; }
 [data-ui-style="classic"] #shortcut-toggle { --key-face: #17181d; color: #999da7; }
-[data-ui-style="classic"] #persist-bar { color: #777; }
-[data-ui-style="classic"] #persist-bar .ck { color: #999; }
 [data-ui-style="classic"] .minimap-legend-title { color: #ffe066; }
 </style>
 </head>
@@ -1814,7 +1824,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.34</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.35</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1872,8 +1882,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.34';
-const GAME_VERSION_LABEL = 'v0.28 experimental.34';
+const GAME_VERSION = '0.28.0-experimental.35';
+const GAME_VERSION_LABEL = 'v0.28 experimental.35';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -14431,24 +14441,40 @@ function drawGalaxy(){
     .filter(entry=>entry.kind==='biome'||entry.kind==='civilization')
     .map(entry=>entry.x+','+entry.y)):null;
 
+  // An opaque space layer and shared pixel-aligned fog edges prevent seams when scaled.
+  ctx.fillStyle='#04040c';
+  ctx.fillRect(0,0,canvasWidth,canvasHeight);
+  const bestNav=Math.max(0,...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
+  const fogColor=bestNav>=2?'#14141e':'#04040c';
+  const {a:scaleX,d:scaleY}=ctx.getTransform();
+  const xEdges=Array.from({length:VIEW_W+1},(_,i)=>Math.round(i*TS*scaleX)/scaleX);
+  const yEdges=Array.from({length:VIEW_H+1},(_,i)=>Math.round(i*TS*scaleY)/scaleY);
+
   for(let vy=0; vy<VIEW_H; vy++){
     for(let vx=0; vx<VIEW_W; vx++){
       const mx = camX + vx;
       const my = camY + vy;
       const px = vx*TS, py = vy*TS;
+      const left=xEdges[vx], top=yEdges[vy];
+      const width=xEdges[vx+1]-left, height=yEdges[vy+1]-top;
       if(!DEBUG.fullVision && !G.visited[my*MAP_W+mx]){
-        const bestNav = Math.max(0, ...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
-        ctx.fillStyle = bestNav >= 2 ? '#14141e' : '#04040c';
-        ctx.fillRect(px,py,TS,TS);
+        ctx.fillStyle=fogColor;
+        ctx.fillRect(left,top,width,height);
         continue;
       }
       const cell=G.galaxy[my][mx];
+      if(cell.type==='VOID'){
+        ctx.fillStyle='#04040c';
+        ctx.fillRect(left,top,width,height);
+        continue;
+      }
       if(cell.type==='SYSTEM'&&paletteBodies?.has(mx+','+my)){
         drawDebugPaletteBodyIcon(cell.planets[0],px,py);
         continue;
       }
       if(OPTIONS.asciiMode){
-        ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
+        ctx.fillStyle=cell.type==='NEBULA'?'#2a1a4a':cell.type==='PULSAR'?'#000000':'#04040c';
+        ctx.fillRect(left,top,width,height);
         ctx.font='bold '+(TS-1)+'px Courier New';
         ctx.textAlign='center'; ctx.textBaseline='middle';
         if(cell.type==='SYSTEM'){
@@ -14457,19 +14483,15 @@ function drawGalaxy(){
         } else if(cell.type==='BASE'){
           ctx.fillStyle='#ffe066'; ctx.fillText('B',px+TS/2,py+TS/2+1);
         } else if(cell.type==='PIRATE_BASE'){
-          ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
           const _pb = (G.pirateBases||[]).find(b=>b.x===mx&&b.y===my);
           if(_pb&&_pb.destroyed){ ctx.fillStyle='#444433'; ctx.fillText('×',px+TS/2,py+TS/2+1); }
           else { ctx.fillStyle='#882200'; ctx.fillText('☠',px+TS/2,py+TS/2+1); }
         } else if(cell.type==='NEBULA'){
-          ctx.fillStyle='#2a1a4a'; ctx.fillRect(px,py,TS,TS);
           ctx.fillStyle=cell.nebulaVariant==='blue' ? '#44aaff' : '#cc44cc';
           ctx.globalAlpha=0.7; ctx.fillText('≈',px+TS/2,py+TS/2+1); ctx.globalAlpha=1;
         } else if(cell.type==='ROGUE_PLANET'){
-          ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
           ctx.fillStyle='#2a3050'; ctx.fillText('○',px+TS/2,py+TS/2+1);
         } else if(cell.type==='PULSAR'){
-          ctx.fillStyle='#000000'; ctx.fillRect(px,py,TS,TS);
           ctx.fillStyle='#00ddaa'; ctx.fillText('※',px+TS/2,py+TS/2+1);
         } else if(cell.type==='CASINO'){
           ctx.fillStyle='#cc44ff';ctx.fillText('$',px+TS/2,py+TS/2+1);
@@ -28714,9 +28736,9 @@ function renderContextBar(){
 
   if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
      !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt && !G.stranded){
-    if(G.mode==='galaxy'||G.mode==='planet') btns.push(btn('X','Examine','info'));
-    if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','info'));
-    btns.push(btn('O','Options','info'));
+    if(G.mode==='galaxy'||G.mode==='planet') btns.push(btn('X','Examine','routine'));
+    if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','routine'));
+    btns.push(btn('O','Options','routine'));
   }
   bar.innerHTML = btns.join('');
 }

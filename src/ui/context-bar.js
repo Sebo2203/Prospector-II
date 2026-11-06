@@ -391,9 +391,9 @@ function renderContextBar(){
 
   if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
      !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt && !G.stranded){
-    if(G.mode==='galaxy'||G.mode==='planet') btns.push(btn('X','Examine','info'));
-    if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','info'));
-    btns.push(btn('O','Options','info'));
+    if(G.mode==='galaxy'||G.mode==='planet') btns.push(btn('X','Examine','routine'));
+    if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','routine'));
+    btns.push(btn('O','Options','routine'));
   }
   bar.innerHTML = btns.join('');
 }

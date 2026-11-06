@@ -21,6 +21,8 @@ html, body {
   --key-face: linear-gradient(#293947, #192530);
   --key-hover: linear-gradient(#344e60, #223543);
   --key-pressed: #101e29;
+  --shortcut-text: #919aa2;
+  --shortcut-key: #a7adb2;
   --fuel-normal: #48cdb6;
   --hull-normal: #67bcdd;
   background: #0a0a0f;
@@ -463,6 +465,14 @@ canvas {
 .ctx-btn.info .ck { color: #70d8ff; }
 .ctx-btn.warn   { border-color: #66501a; color: #ddaa44; }
 .ctx-btn.warn .ck { color: #ffcc55; }
+.ctx-btn.routine {
+  --key-face: #17181d;
+  --key-hover: #24262c;
+  --key-pressed: #131419;
+  color: var(--shortcut-text);
+  border-color: #3a3d44;
+}
+.ctx-btn.routine .ck { color: var(--shortcut-key); }
 button.ctx-btn { cursor: pointer; }
 button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── 8-dir Mouse Compass ── */
@@ -500,7 +510,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   border-top: 1px solid var(--steel-seam);
   box-shadow: inset 0 1px #34444e;
   font-size: 14px;
-  color: #919aa2;
+  color: var(--shortcut-text);
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
@@ -512,7 +522,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   align-items: stretch;
   position: relative;
 }
-#persist-bar .ck { color: #a7adb2; }
+#persist-bar .ck { color: var(--shortcut-key); }
 .hud-menu-btn {
   border: 1px solid var(--steel-rim);
   border-radius: 2px;
@@ -786,6 +796,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   --key-face: #121a24;
   --key-hover: #182534;
   --key-pressed: #0a1a28;
+  --shortcut-text: #777;
+  --shortcut-key: #999;
 }
 [data-ui-style="classic"] #hud,
 [data-ui-style="classic"] #gauge-panel,
@@ -851,15 +863,13 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 [data-ui-style="classic"] .crew-strip { padding: 0; background: transparent; box-shadow: none; }
 [data-ui-style="classic"] .crew-badge { background: #171b1a; }
 [data-ui-style="classic"] #msg-bar { background: #1a1a2e; border-top-color: #333; box-shadow: none; }
-[data-ui-style="classic"] .ctx-btn { background: #1a1a2e; }
+[data-ui-style="classic"] .ctx-btn:not(.routine) { background: #1a1a2e; }
 [data-ui-style="classic"] button.ctx-btn .ck { text-shadow: none; }
-[data-ui-style="classic"] button.ctx-btn:hover { background: #24243a; }
+[data-ui-style="classic"] button.ctx-btn:not(.routine):hover { background: #24243a; }
 [data-ui-style="classic"] :is(.hud-menu-btn,button.ctx-btn,.cmp-btn,#minimap-max-btn) { box-shadow: none; }
 [data-ui-style="classic"] .cmp-btn,
 [data-ui-style="classic"] #minimap-max-btn { --key-face: #0e0e18; color: #667788; }
 [data-ui-style="classic"] .cmp-btn { font-size: 10px; }
 [data-ui-style="classic"] .cmp-btn.cmp-center { --key-face: #0a0a12; font-size: 9px; }
 [data-ui-style="classic"] #shortcut-toggle { --key-face: #17181d; color: #999da7; }
-[data-ui-style="classic"] #persist-bar { color: #777; }
-[data-ui-style="classic"] #persist-bar .ck { color: #999; }
 [data-ui-style="classic"] .minimap-legend-title { color: #ffe066; }

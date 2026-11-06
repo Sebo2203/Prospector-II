@@ -99,6 +99,24 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await page.locator('#h-vessel').isVisible(),false);
     assert.equal(await page.locator('#gauge-fuel .gauge-bar-wrap').evaluate(el=>el.offsetWidth),26);
     assert.equal(await page.locator('#fuel-fill').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 136, 0)');
+    const checkRoutineColors=async()=>{
+      const result=await page.evaluate(()=>{
+        const legend=document.getElementById('persist-hints');
+        const labelColor=getComputedStyle(legend).color;
+        const keyColor=getComputedStyle(legend.querySelector('.ck')).color;
+        const labels=Array.from(document.querySelectorAll('#ctx-bar button.routine'),button=>{
+          const label=button.textContent.trim();
+          if(getComputedStyle(button).color!==labelColor||getComputedStyle(button.querySelector('.ck')).color!==keyColor)
+            throw Error('Routine button does not match the shortcut legend');
+          return label;
+        });
+        const dock=document.querySelector('#ctx-bar button.good[data-game-key="Enter"]');
+        if(!dock||getComputedStyle(dock).color===labelColor) throw Error('Docking lost its accent');
+        return labels;
+      });
+      assert.deepEqual(result,['[X] Examine','[I] Inventory','[O] Options']);
+    };
+    await checkRoutineColors();
     const display=()=>page.evaluate(()=>{
       const bounds=canvas.getBoundingClientRect(), matrix=ctx.getTransform();
       return {
@@ -127,6 +145,7 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.equal(await page.locator('#root').getAttribute('data-ui-style'),'cockpit');
     assert.equal(await page.locator('#h-vessel').isVisible(),true);
     await press('Escape');
+    await checkRoutineColors();
     assert.equal(await page.locator('#persist-hints').isVisible(),false);
 
     await action(/Dock at Starbase/).click();

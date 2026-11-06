@@ -15,24 +15,40 @@ function drawGalaxy(){
     .filter(entry=>entry.kind==='biome'||entry.kind==='civilization')
     .map(entry=>entry.x+','+entry.y)):null;
 
+  // An opaque space layer and shared pixel-aligned fog edges prevent seams when scaled.
+  ctx.fillStyle='#04040c';
+  ctx.fillRect(0,0,canvasWidth,canvasHeight);
+  const bestNav=Math.max(0,...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
+  const fogColor=bestNav>=2?'#14141e':'#04040c';
+  const {a:scaleX,d:scaleY}=ctx.getTransform();
+  const xEdges=Array.from({length:VIEW_W+1},(_,i)=>Math.round(i*TS*scaleX)/scaleX);
+  const yEdges=Array.from({length:VIEW_H+1},(_,i)=>Math.round(i*TS*scaleY)/scaleY);
+
   for(let vy=0; vy<VIEW_H; vy++){
     for(let vx=0; vx<VIEW_W; vx++){
       const mx = camX + vx;
       const my = camY + vy;
       const px = vx*TS, py = vy*TS;
+      const left=xEdges[vx], top=yEdges[vy];
+      const width=xEdges[vx+1]-left, height=yEdges[vy+1]-top;
       if(!DEBUG.fullVision && !G.visited[my*MAP_W+mx]){
-        const bestNav = Math.max(0, ...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
-        ctx.fillStyle = bestNav >= 2 ? '#14141e' : '#04040c';
-        ctx.fillRect(px,py,TS,TS);
+        ctx.fillStyle=fogColor;
+        ctx.fillRect(left,top,width,height);
         continue;
       }
       const cell=G.galaxy[my][mx];
+      if(cell.type==='VOID'){
+        ctx.fillStyle='#04040c';
+        ctx.fillRect(left,top,width,height);
+        continue;
+      }
       if(cell.type==='SYSTEM'&&paletteBodies?.has(mx+','+my)){
         drawDebugPaletteBodyIcon(cell.planets[0],px,py);
         continue;
       }
       if(OPTIONS.asciiMode){
-        ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
+        ctx.fillStyle=cell.type==='NEBULA'?'#2a1a4a':cell.type==='PULSAR'?'#000000':'#04040c';
+        ctx.fillRect(left,top,width,height);
         ctx.font='bold '+(TS-1)+'px Courier New';
         ctx.textAlign='center'; ctx.textBaseline='middle';
         if(cell.type==='SYSTEM'){
@@ -41,19 +57,15 @@ function drawGalaxy(){
         } else if(cell.type==='BASE'){
           ctx.fillStyle='#ffe066'; ctx.fillText('B',px+TS/2,py+TS/2+1);
         } else if(cell.type==='PIRATE_BASE'){
-          ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
           const _pb = (G.pirateBases||[]).find(b=>b.x===mx&&b.y===my);
           if(_pb&&_pb.destroyed){ ctx.fillStyle='#444433'; ctx.fillText('×',px+TS/2,py+TS/2+1); }
           else { ctx.fillStyle='#882200'; ctx.fillText('☠',px+TS/2,py+TS/2+1); }
         } else if(cell.type==='NEBULA'){
-          ctx.fillStyle='#2a1a4a'; ctx.fillRect(px,py,TS,TS);
           ctx.fillStyle=cell.nebulaVariant==='blue' ? '#44aaff' : '#cc44cc';
           ctx.globalAlpha=0.7; ctx.fillText('≈',px+TS/2,py+TS/2+1); ctx.globalAlpha=1;
         } else if(cell.type==='ROGUE_PLANET'){
-          ctx.fillStyle='#04040c'; ctx.fillRect(px,py,TS,TS);
           ctx.fillStyle='#2a3050'; ctx.fillText('○',px+TS/2,py+TS/2+1);
         } else if(cell.type==='PULSAR'){
-          ctx.fillStyle='#000000'; ctx.fillRect(px,py,TS,TS);
           ctx.fillStyle='#00ddaa'; ctx.fillText('※',px+TS/2,py+TS/2+1);
         } else if(cell.type==='CASINO'){
           ctx.fillStyle='#cc44ff';ctx.fillText('$',px+TS/2,py+TS/2+1);

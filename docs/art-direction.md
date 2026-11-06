@@ -53,6 +53,8 @@ In **Options → UI Style**, choose **Cockpit** for the instrument finish or **C
 
 From experimental.34, the title menus, playfield canvas, and full galaxy chart draw at the displayed pixel density. Canvas sprite images use nearest-neighbor sampling. The HTML HUD, sidebar, and overlays are laid out at the fitted scale in browsers with CSS zoom support.
 
+The context bar uses the shortcut legend's muted gray for the general Examine, Inventory, and Options buttons. Local actions and warnings retain their accents. The galaxy view uses an opaque space background and pixel-aligned fog boundaries at fractional scales.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.
