@@ -11,6 +11,17 @@ const assert = require('node:assert/strict');
     await page.goto(gameUrl);
     await page.evaluate(() => initGame('LIGHT_SCOUT', 'Interface QA', 'Interface QA'));
     await page.waitForFunction(() => G?.galaxy && G.log.some(entry => entry.msg.includes('Ready for departure')));
+    assert.equal(await page.locator('#h-mode').textContent(), 'NAVIGATION');
+    assert.equal(await page.locator('#h-vessel').textContent(), 'Interface QA');
+    const log=page.locator('#log-list .log-entry').first();
+    const logSize=await log.evaluate(entry=>getComputedStyle(entry).fontSize);
+    await page.getByRole('button',{name:'Increase log text size'}).click();
+    assert.equal(await log.evaluate(entry=>parseFloat(getComputedStyle(entry).fontSize)),parseFloat(logSize)+1);
+    const decreaseLog=page.getByRole('button',{name:'Decrease log text size'});
+    await decreaseLog.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await log.evaluate(entry=>getComputedStyle(entry).fontSize),logSize);
+    await decreaseLog.blur();
 
     for(const [width,height] of [[1400,720],[800,600]]){
       await page.setViewportSize({width,height});
@@ -252,6 +263,9 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#gauge-hull').isVisible(), false);
     assert.equal(await page.locator('#gauge-oxy .gauge-label.crit').isVisible(), true);
     assert.equal(await page.locator('#g-oxy').textContent(), '20%');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal(await page.locator('#gauge-oxy .gauge-label.crit').evaluate(label=>getComputedStyle(label).animationName),'none');
+    await page.emulateMedia({reducedMotion:'no-preference'});
     await page.evaluate(() => debugReturnFromPalette());
     assert.equal(await banner.isVisible(), false);
 

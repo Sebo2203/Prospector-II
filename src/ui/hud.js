@@ -1,5 +1,6 @@
 function renderHUD(){
   document.getElementById('h-creds').textContent=G.credits;
+  document.getElementById('h-vessel').textContent=G.shipName || 'Unnamed Vessel';
 
   // ── Left gauge panel — swap based on mode ────────────────────
   const onPlanet = (G.mode==='planet');
@@ -31,26 +32,27 @@ function renderHUD(){
     const fuelPct  = Math.max(0, Math.min(1, G.fuel/G.maxFuel));
     const fuelFill = document.getElementById('fuel-fill');
     fuelFill.style.height = Math.round(fuelPct*100)+'%';
-    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'#ff8800';
+    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'#48cdb6';
     const gFuel = document.getElementById('g-fuel');
     gFuel.textContent = Math.round(G.fuel);
-    gFuel.className   = 'gauge-val '+(fuelPct<0.2?'cr':fuelPct<0.4?'co':'co');
+    gFuel.className   = 'gauge-val '+(fuelPct<0.2?'cr':fuelPct<0.6?'co':'cc');
 
     // Hull gauge
     const hullPct  = Math.max(0, Math.min(1, G.ship.hp/G.ship.maxHp));
     const hullFill = document.getElementById('hull-fill');
     hullFill.style.height = Math.round(hullPct*100)+'%';
-    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'#44aaff';
+    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'#67bcdd';
     const gHull = document.getElementById('g-hull');
     gHull.textContent = G.ship.hp;
-    gHull.className   = 'gauge-val '+(hullPct<0.25?'cr':hullPct<0.5?'co':'cg');
+    gHull.className   = 'gauge-val '+(hullPct<0.25?'cr':hullPct<0.5?'co':'cc');
   }
 
   document.getElementById('h-turn').textContent=G.turn;
 
-  const mn={galaxy:'GALAXY MAP', system:'SYSTEM VIEW', planet:'PLANET SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
-  document.getElementById('h-mode').textContent=G.mode==='planet'&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':mn[G.mode]||G.mode.toUpperCase();
-  if(quarantineInterior()) document.getElementById('h-mode').textContent='SHIP INTERIOR';
+  const modes={galaxy:'NAVIGATION', system:'ORBITAL VIEW', scanview:'ORBITAL SCAN', planet:'SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
+  const modeReadout=document.getElementById('h-mode');
+  modeReadout.textContent=onPlanet&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':modes[G.mode]||G.mode.toUpperCase();
+  if(quarantineInterior()) modeReadout.textContent='SHIP INTERIOR';
 
   let loc='Deep Space';
   if(G.mode==='base'){

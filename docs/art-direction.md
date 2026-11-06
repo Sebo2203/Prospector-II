@@ -47,6 +47,8 @@ From experimental.27, the sidebar map frame fits the width of the chart at its e
 
 From experimental.28, the main display sits in a thin dark-steel bezel. Fuel, hull, and oxygen use inset instruments with segmented bars and quarter marks. The frame uses the existing margin around the play area, and the gauges retain their numeric readouts and warning thresholds.
 
+From experimental.29, the status rail carries the vessel name and a readout for the current display. The crew and comms console, map housing, and control deck share the same finish. Buttons use a raised face and a recessed pressed state. Standard gauge readings use cool tones, with warm colors for caution and critical readings. The control locations and shortcuts stay the same, and the reduced-motion preference keeps gauge warnings steady.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.

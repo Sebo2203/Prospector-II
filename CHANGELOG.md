@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.29 finishes the cockpit styling
+
+Released on `experiment/expedition-legacy`.
+
+- Extended the steel bezel and instrument finish to the status rail, crew and comms console, and map housing. The top rail now shows the vessel name and the current display, including navigation, orbital view, orbital scan, and surface.
+- Styled the compass, context actions, and other cockpit buttons as raised keys with hover, focus, and pressed states. Normal gauges use cool colors, with warm colors for warnings. Reduced-motion mode keeps critical gauge labels steady.
+- All 47 repository tests and six headless Edge suites passed. Checked the native and 800×600 layouts, 12 crew badges, pointer and keyboard controls, display labels, alerts, maps, and save/load. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.28 tries a cockpit bezel and instruments
 
 Released on `experiment/expedition-legacy`.

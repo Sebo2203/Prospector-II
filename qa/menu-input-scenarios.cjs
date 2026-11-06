@@ -258,8 +258,10 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     await page.evaluate(()=>debugPaletteVisit('biome:HABITABLE'));
     await action(/Enter orbit/).click();
     assert.equal(await mode(),'system');
+    assert.equal(await page.locator('#h-mode').textContent(),'ORBITAL VIEW');
     await action(/View scan/).click();
     assert.equal(await mode(),'scanview');
+    assert.equal(await page.locator('#h-mode').textContent(),'ORBITAL SCAN');
     const cursor = await page.evaluate(()=>[G.scanCursorX,PW(G.planets[G.scanViewKey])]);
     await page.locator('.cmp-btn[data-dx="1"][data-dy="0"]').click();
     assert.equal(await page.evaluate(()=>G.scanCursorX),Math.min(cursor[0]+1,cursor[1]-1));
@@ -278,6 +280,7 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     assert.deepEqual(await page.evaluate(()=>[G.scanCursorX,G.scanCursorY]),[site.x,site.y]);
     await action(/Land at selected site/).click();
     assert.equal(await mode(),'planet');
+    assert.equal(await page.locator('#h-mode').textContent(),'SURFACE');
     assert.deepEqual(await page.evaluate(()=>[G.player.x,G.player.y]),[site.x,site.y]);
 
     await page.evaluate(()=>{
