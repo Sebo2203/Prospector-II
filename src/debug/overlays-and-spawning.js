@@ -232,85 +232,77 @@ function debugSpawnSystem(){
   const biomeKey  = biomeKeys[DEBUG.spawnBiome % biomeKeys.length];
   const B = BIOMES[biomeKey];
 
-  // Place next to Starbase Alpha — find nearest VOID tile
-  const homeBase = (G.bases||[]).find(b=>b.name==='Starbase Alpha') || G.bases?.[0];
-  const bx=homeBase?.x ?? Math.floor(MAP_W/2), by=homeBase?.y ?? Math.floor(MAP_H/2);
-  const offsets=[[1,0],[-1,0],[0,1],[0,-1],[2,0],[-2,0],[0,2],[0,-2],[1,1],[-1,1],[1,-1],[-1,-1],[3,0],[-3,0],[0,3],[0,-3]];
-  let placed=false;
-  for(const [dx,dy] of offsets){
-    const tx=bx+dx, ty=by+dy;
-    if(tx<1||tx>=MAP_W-1||ty<1||ty>=MAP_H-1) continue;
-    if(G.galaxy[ty][tx].type!=='VOID') continue;
-
-    // Build planet descriptor
-    const sysName = 'Debug-'+biomeKey;
-    // Skip CAVE as a standalone planet — caves only exist inside other planets
-    const _skipBiomes = ['CAVE'];
-    if(_skipBiomes.includes(biomeKey)){ addLog('DEBUG: CAVE is not a standalone planet — spawn a rocky biome and enter it.','li'); placed=true; break; }
-    const scanState = (DEBUG.preScan === 2) ? 'none' : 'full';
-    const desc = { name:sysName, biome:biomeKey, biomeName:B.name, orbitSlot:0, scanState };
-    if(biomeKey==='GAS_GIANT'){
-      desc.moons=[
-        { name:sysName+' Moon', biome:'MOON_ROCK', biomeName:BIOMES.MOON_ROCK.name, moonIdx:0,
-          avgTemp:-80, gravity:'0.6', atmosphere:'Trace', radius:'0.25', scanState },
-        { name:sysName+' Station', biome:'ANCIENT_STATION', biomeName:'Ancient Refueling Station',
-          moonIdx:1, avgTemp:-60, gravity:'0.4', atmosphere:'Vacuum', radius:'0.12',
-          isAncientStation:true, scanState },
-      ];
-    } else if(biomeKey==='ANCIENT_STATION'){
-      desc.isAncientStation = true;
-    }
-
-    G.galaxy[ty][tx] = {
-      type:'SYSTEM', name:sysName, starType:'YELLOW',
-      planets:[desc],
-    };
-
-    // Pre-generate the planet map so it exists before landing
-    const _pKey = tx+','+ty+':0';
-    if(biomeKey==='ANCIENT_STATION'||desc.isAncientStation) generateAncientStation(_pKey);
-    else if(biomeKey==='DERELICT') generateDerelict(_pKey);
-    else if(biomeKey==='RINGWORLD'||desc.isRingworld) generateRingworld(_pKey);
-    else if(biomeKey==='DESTROYED_RINGWORLD'||desc.isDestroyedRingworld) generateDestroyedRingworld(_pKey);
-    else if(biomeKey==='NUCLEAR_WAR'||desc.isNuclearWar) generateNuclearPlanet(_pKey);
-    else if(biomeKey==='BLOOM'||desc.isBloomWorld) generateBloomPlanet(_pKey);
-    else generatePlanet(_pKey, biomeKey);
-
-    // If rocky biome — force a cave entrance into the planet map
-    const _hasCaveRocks = BIOMES[biomeKey]?.rockDensity > 0;
-    if(_hasCaveRocks && G.planets[_pKey]){
-      const _pdata = G.planets[_pKey];
-      const _B = BIOMES[biomeKey];
-      const _caveKey = _pKey+':cave';
-      // Find a rock tile to place the entrance on
-      let _cx=-1, _cy=-1;
-      for(let _y=1;_y<PH(_pdata)-1&&_cx<0;_y++){
-        for(let _x=1;_x<PW(_pdata)-1;_x++){
-          const _t=_pdata.grid[_y][_x].type;
-          if(_t===_B.rock||_t===_B.rock2){ _cx=_x; _cy=_y; break; }
-        }
-      }
-      if(_cx>=0){
-        _pdata.grid[_cy][_cx]={type:'CAVE_ENTRANCE',caveKey:_caveKey};
-        addLog('DEBUG: Cave entrance placed at ('+_cx+','+_cy+') on '+biomeKey+' planet.','li');
-      } else {
-        addLog('DEBUG: No rock tile found for cave entrance on '+biomeKey+'.','lw');
-      }
-    }
-
-    // Reveal it
-    G.visited[ty*MAP_W+tx]=true;
-    addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press Enter to land.','lg');
-    placed=true;
-    break;
+  if(biomeKey==='CAVE'){
+    addLog('DEBUG: CAVE is not a standalone planet — spawn a rocky biome and enter it.','li');
+    renderAll();
+    return;
   }
-  if(!placed) addLog('DEBUG: No VOID tile near starbase to spawn into.','lw');
+  const sector = findDebugSpawnSector();
+  if(!sector){
+    addLog('DEBUG: No empty adjacent sector for the system.','lw');
+    renderAll();
+    return;
+  }
+  const {x:tx,y:ty} = sector;
+  const sysName = 'Debug-'+biomeKey;
+  const scanState = (DEBUG.preScan === 2) ? 'none' : 'full';
+  const desc = { name:sysName, biome:biomeKey, biomeName:B.name, orbitSlot:0, scanState };
+  if(biomeKey==='GAS_GIANT'){
+    desc.moons=[
+      { name:sysName+' Moon', biome:'MOON_ROCK', biomeName:BIOMES.MOON_ROCK.name, moonIdx:0,
+        avgTemp:-80, gravity:'0.6', atmosphere:'Trace', radius:'0.25', scanState },
+      { name:sysName+' Station', biome:'ANCIENT_STATION', biomeName:'Ancient Refueling Station',
+        moonIdx:1, avgTemp:-60, gravity:'0.4', atmosphere:'Vacuum', radius:'0.12',
+        isAncientStation:true, scanState },
+    ];
+  } else if(biomeKey==='ANCIENT_STATION'){
+    desc.isAncientStation = true;
+  }
+
+  G.galaxy[ty][tx] = {
+    type:'SYSTEM', name:sysName, starType:'YELLOW',
+    planets:[desc],
+  };
+
+  // Pre-generate the planet map so it exists before landing
+  const _pKey = tx+','+ty+':0';
+  if(biomeKey==='ANCIENT_STATION'||desc.isAncientStation) generateAncientStation(_pKey);
+  else if(biomeKey==='DERELICT') generateDerelict(_pKey);
+  else if(biomeKey==='RINGWORLD'||desc.isRingworld) generateRingworld(_pKey);
+  else if(biomeKey==='DESTROYED_RINGWORLD'||desc.isDestroyedRingworld) generateDestroyedRingworld(_pKey);
+  else if(biomeKey==='NUCLEAR_WAR'||desc.isNuclearWar) generateNuclearPlanet(_pKey);
+  else if(biomeKey==='BLOOM'||desc.isBloomWorld) generateBloomPlanet(_pKey);
+  else generatePlanet(_pKey, biomeKey);
+
+  // If rocky biome — force a cave entrance into the planet map
+  const _hasCaveRocks = BIOMES[biomeKey]?.rockDensity > 0;
+  if(_hasCaveRocks && G.planets[_pKey]){
+    const _pdata = G.planets[_pKey];
+    const _B = BIOMES[biomeKey];
+    const _caveKey = _pKey+':cave';
+    // Find a rock tile to place the entrance on
+    let _cx=-1, _cy=-1;
+    for(let _y=1;_y<PH(_pdata)-1&&_cx<0;_y++){
+      for(let _x=1;_x<PW(_pdata)-1;_x++){
+        const _t=_pdata.grid[_y][_x].type;
+        if(_t===_B.rock||_t===_B.rock2){ _cx=_x; _cy=_y; break; }
+      }
+    }
+    if(_cx>=0){
+      _pdata.grid[_cy][_cx]={type:'CAVE_ENTRANCE',caveKey:_caveKey};
+      addLog('DEBUG: Cave entrance placed at ('+_cx+','+_cy+') on '+biomeKey+' planet.','li');
+    } else {
+      addLog('DEBUG: No rock tile found for cave entrance on '+biomeKey+'.','lw');
+    }
+  }
+
+  // Reveal it
+  G.visited[ty*MAP_W+tx]=true;
+  addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press Enter to land.','lg');
   renderAll();
 }
 
-function debugSpawnGalaxyObj(){
-  if(G.mode !== 'galaxy'){ addLog('DEBUG: Galaxy object spawn only works on galaxy map.','lw'); renderAll(); return; }
-  const objType = DEBUG_GALAXY_OBJ_TYPES[DEBUG.spawnGalaxyObj % DEBUG_GALAXY_OBJ_TYPES.length];
+function findDebugSpawnSector(){
   const occupants = [
     ...(G.neutralShips||[]), ...(G.pirates||[]), ...(G.gasEntities||[]),
     ...(G.npcStranded||[]), ...(G.nebulaLoot||[]),
@@ -320,12 +312,20 @@ function debugSpawnGalaxyObj(){
     const x = G.ship.x + dx, y = G.ship.y + dy;
     if(G.galaxy[y]?.[x]?.type!=='VOID') continue;
     if(occupants.some(object=>object.alive!==false && object.x===x && object.y===y)) continue;
-    if(placeDebugGalaxyObject(objType,x,y)){
-      renderAll();
-      return;
-    }
+    return {x,y};
   }
-  addLog('DEBUG: No empty adjacent sector for the galaxy object.','lw');
+  return null;
+}
+
+function debugSpawnGalaxyObj(){
+  if(G.mode !== 'galaxy'){ addLog('DEBUG: Galaxy object spawn only works on galaxy map.','lw'); renderAll(); return; }
+  const objType = DEBUG_GALAXY_OBJ_TYPES[DEBUG.spawnGalaxyObj % DEBUG_GALAXY_OBJ_TYPES.length];
+  const sector = findDebugSpawnSector();
+  if(sector){
+    placeDebugGalaxyObject(objType,sector.x,sector.y);
+  } else {
+    addLog('DEBUG: No empty adjacent sector for the galaxy object.','lw');
+  }
   renderAll();
 }
 

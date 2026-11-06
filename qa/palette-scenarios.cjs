@@ -35,7 +35,7 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
    return {x,y,count:G.pulsars.length};
  });
  await tools();
- await page.getByRole('combobox',{name:'Galaxy object (next to your ship)'}).selectOption({label:'Pulsar'});
+ await page.getByRole('combobox',{name:'Galaxy object',exact:true}).selectOption({label:'Pulsar'});
  await click('Spawn Galaxy Object');
  assert.deepEqual(await page.evaluate(({x,y})=>({
    point:G.pulsars.slice(-1).map(pulsar=>[pulsar.x,pulsar.y])[0],
@@ -49,6 +49,20 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  await click('Spawn Galaxy Object');
  assert.equal(await page.evaluate(()=>G.pulsars.length),spawnTest.count+1);
  assert.match(await page.locator('#debug-action-status').textContent(),/No empty adjacent sector/);
+ await page.getByRole('combobox',{name:'System biome',exact:true}).selectOption({label:'HABITABLE'});
+ await click('Spawn System');
+ assert.match(await page.locator('#debug-action-status').textContent(),/No empty adjacent sector for the system/);
+ await page.evaluate(({x,y})=>{
+   G.galaxy[y+1][x+1]={type:'VOID'};
+   G.visited[(y+1)*MAP_W+x+1]=false;
+ },spawnTest);
+ await click('Spawn System');
+ assert.deepEqual(await page.evaluate(({x,y})=>({
+   biome:G.galaxy[y+1][x+1].planets?.[0]?.biome,
+   generated:!!G.planets[(x+1)+','+(y+1)+':0'],
+   known:G.visited[(y+1)*MAP_W+x+1],
+   shipCell:G.galaxy[y][x+1].type,
+ }),spawnTest),{biome:'HABITABLE',generated:true,known:true,shipCell:'VOID'});
  await click('Close');
  await tools();
  await click('Run NPCs Live');

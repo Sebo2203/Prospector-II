@@ -1,6 +1,6 @@
 # Debug Palette
 
-Open **Debug Tools** with **Shift+B** during a run. Spawn a system near Starbase Alpha or place a galaxy object in an empty sector adjacent to your ship. Open **Spawn Gear or Cargo** to browse or search by category and add items. Civilization tools are available on the surface.
+Open **Debug Tools** with **Shift+B** during a run. **Spawn System** and **Spawn Galaxy Object** both use an empty sector adjacent to your ship. Open **Spawn Gear or Cargo** to browse or search by category and add items. Civilization tools are available on the surface.
 
 | Debug Palette control | Action |
 | --- | --- |

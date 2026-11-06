@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.42 spawns debug star systems beside the ship
+
+Released on `experiment/expedition-legacy`.
+
+- **Spawn System** now uses the same empty neighboring sectors as **Spawn Galaxy Object**. Both controls report when all neighboring sectors are blocked.
+- All 47 repository tests and three headless Edge suites passed. The debug menu check covered both spawners, an occupied neighbor, a free diagonal at the map edge, and the generated planet map. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.41 fixes the save label and spawns objects beside the ship
 
 Released on `experiment/expedition-legacy`.
