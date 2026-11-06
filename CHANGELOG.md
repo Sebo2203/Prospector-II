@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.26 clarifies the sidebar minimap
+
+Released on `experiment/expedition-legacy`.
+
+- Increased the contrast between explored space and fog. Stations, wrecks, and hazards use brighter markers, and a green cross marks the player. The sidebar keeps the whole galaxy in view. See [Full galaxy map](docs/art-direction.md#full-galaxy-map).
+- All 47 repository tests and three headless Edge suites passed. The map fixture checked landmarks at opposite ends of the galaxy, hidden wrecks, fog contrast, and the player marker. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.25 draws artwork on the full galaxy map
 
 Released on `experiment/expedition-legacy`.

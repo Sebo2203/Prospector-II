@@ -55,15 +55,33 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     {x:43,y:30,type:'NEBULA',nebulaVariant:'pink'}
    ];
    const hidden={x:55,y:30,type:'DERELICT'};
+   const farStations=[{x:3,y:3,type:'BASE'},{x:MAP_W-4,y:MAP_H-4,type:'BASE'}];
    G.ship.x=35;G.ship.y=36;G.shipStats.sensorRange=3;
    G.galaxy=Array.from({length:MAP_H},()=>Array.from({length:MAP_W},()=>({type:'VOID'})));
    G.visited.fill(false);
    for(let y=21;y<42;y++)for(let x=21;x<51;x++)G.visited[y*MAP_W+x]=true;
-   for(const cell of [...points,hidden]) G.galaxy[cell.y][cell.x]=cell;
+   for(const {x,y} of farStations) G.visited[y*MAP_W+x]=true;
+   for(const cell of [...points,...farStations,hidden]) G.galaxy[cell.y][cell.x]=cell;
    G.pirates=[];G.pirateBases=[];G.npcStranded=[];G.nebulaLoot=[];G.gasEntities=[];G._activeDrones=[];
    G.neutralShips=[{x:37,y:36,type:'trader'},{x:40,y:36,type:'trader'},{x:45,y:36,type:'trader'}];
    const small=document.getElementById('galaxy-minimap');
    renderGalaxyMinimap();
+   const smallScale=Math.min((small.width-6)/MAP_W,(small.height-6)/MAP_H);
+   const smallX=Math.floor((small.width-MAP_W*smallScale)/2);
+   const smallY=Math.floor((small.height-MAP_H*smallScale)/2);
+   const smallPaint=small.getContext('2d');
+   const miniColor=(x,y,dx=0,dy=0)=>{
+    const pixel=smallPaint.getImageData(smallX+Math.floor(x*smallScale)+dx,smallY+Math.floor(y*smallScale)+dy,1,1);
+    return Array.from(pixel.data.slice(0,3)).join(',');
+   };
+   if(farStations.some(({x,y})=>miniColor(x,y)!=='255,223,131'))
+    throw Error('Minimap does not show landmarks at both ends of the galaxy');
+   if(miniColor(27,26)!=='255,223,131'||miniColor(35,26)!=='157,183,214'||miniColor(27,30)!=='255,159,72')
+    throw Error('Minimap station, wreck, and hazard markers are missing or indistinct');
+   if(miniColor(hidden.x,hidden.y)!=='53,55,71'||miniColor(28,38)!=='14,18,30')
+    throw Error('Minimap does not distinguish explored space from fog');
+   if(miniColor(G.ship.x,G.ship.y)!=='127,255,155'||miniColor(G.ship.x,G.ship.y,2)!=='127,255,155')
+    throw Error('Minimap player cross is missing');
    const before=small.toDataURL();
    OPTIONS.asciiMode=true;
    openGalaxyMinimapOverlay();
@@ -91,7 +109,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
    const legend=document.getElementById('minimap-legend-rows');
    if(legend.querySelectorAll('canvas').length!==15)throw Error('Missing graphical map key entries');
    return ['ten landmark sprites in ASCII mode','hidden wreck and out-of-range ship concealed',
-    'visible ship and radio contact rendered','small minimap pixels preserved'];
+    'visible ship and radio contact rendered','whole-galaxy minimap landmark, fog, and player contrast'];
   });
   for(const [width,height] of [[1400,720],[800,600]]){
    await page.setViewportSize({width,height});
@@ -103,6 +121,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
   }
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#minimap-overlay').isVisible(),false);
+  await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap-small-window.png')});
+  await page.setViewportSize({width:1400,height:720});
+  await page.waitForFunction(()=>document.getElementById('galaxy-minimap').getBoundingClientRect().width===208);
+  await page.locator('#galaxy-minimap-panel').screenshot({path:artifactPath('Galaxy-minimap.png')});
   report.checks.push(...chart,'full map fits native and scaled windows');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({...report,errors},null,2));
  }finally{await browser.close();}

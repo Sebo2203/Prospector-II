@@ -37,7 +37,9 @@ Derelict galaxy objects now use original code-authored 24px wreck art: a fractur
 
 ## Full galaxy map
 
-From experimental.25, the full map opened with **M** or the HUD map button draws discovered objects with the same artwork as the galaxy view at nine pixels per sector before window scaling. A green ring marks the player ship. Identified ships use their hull art and unidentified radio contacts use a yellow `?`. Unscanned sectors remain covered. The map has an illustrated key and uses graphics even in ASCII mode. The small HUD minimap keeps its color-coded tiles.
+From experimental.25, the full map opened with **M** or the HUD map button draws discovered objects with the same artwork as the galaxy view at nine pixels per sector before window scaling. A green ring marks the player ship. Identified ships use their hull art and unidentified radio contacts use a yellow `?`. Unscanned sectors remain covered. The map has an illustrated key and uses graphics even in ASCII mode.
+
+The HUD minimap fits the whole galaxy. From experimental.26, it uses darker explored space against slate fog, brighter color-coded landmarks, and a green cross for the player. The muted rectangle marks the current galaxy viewport.
 
 ## Source organization and reproduction
 

@@ -6,11 +6,19 @@ function renderGalaxyMinimap(){
   }
 }
 
+const MINIMAP_LANDMARK_COLORS={
+  BASE:'#ffdf83',
+  CASINO:'#e894fb',
+  DERELICT:'#9db7d6',
+  BLACK_HOLE:'#ff9f48',
+  ROGUE_PLANET:'#897cce',
+  PULSAR:'#53efda',
+};
+
 function drawGalaxyMinimapToCanvas(mini){
   if(!mini) return;
   const mctx = mini.getContext('2d');
   const w = mini.width, h = mini.height;
-  mctx.clearRect(0,0,w,h);
   mctx.fillStyle = '#030307';
   mctx.fillRect(0,0,w,h);
 
@@ -26,55 +34,45 @@ function drawGalaxyMinimapToCanvas(mini){
   const ox = Math.floor((w - mapW) / 2);
   const oy = Math.floor((h - mapH) / 2);
 
-  mctx.fillStyle = '#05050d';
+  mctx.fillStyle = '#353747';
   mctx.fillRect(ox, oy, Math.ceil(mapW), Math.ceil(mapH));
 
+  const markers = [];
+  mctx.fillStyle = '#0e121e';
   for(let y=0; y<MAP_H; y++){
     for(let x=0; x<MAP_W; x++){
-      const seen = DEBUG.fullVision || G.visited?.[y*MAP_W+x];
-      let col = '#303038';
+      if(!DEBUG.fullVision && !G.visited?.[y*MAP_W+x]) continue;
       const sx = ox + Math.floor(x * scale);
       const sy = oy + Math.floor(y * scale);
       const ex = ox + Math.ceil((x + 1) * scale);
       const ey = oy + Math.ceil((y + 1) * scale);
-      const tw = Math.max(1, ex - sx);
-      const th = Math.max(1, ey - sy);
-      if(!seen){
-        mctx.fillStyle = col;
-        mctx.fillRect(sx, sy, tw, th);
-        continue;
-      }
+      mctx.fillRect(sx, sy, ex - sx, ey - sy);
+
       const cell = G.galaxy[y]?.[x];
-      if(!cell) continue;
-      col = '#14141f';
+      if(!cell || cell.type==='VOID') continue;
+      let color = MINIMAP_LANDMARK_COLORS[cell.type];
+      let size = 2;
       if(cell.type === 'SYSTEM'){
-        col = (STAR_TYPES[cell.starType] || STAR_TYPES.YELLOW).col;
-      } else if(cell.type === 'BASE'){
-        col = '#ffe066';
+        color = (STAR_TYPES[cell.starType] || STAR_TYPES.YELLOW).col;
+        size = 1;
       } else if(cell.type === 'PIRATE_BASE'){
         const pb = (G.pirateBases||[]).find(b=>b.x===x&&b.y===y);
-        col = pb?.destroyed ? '#665544' : '#bb3311';
+        color = pb?.destroyed ? '#af906e' : '#ff6670';
       } else if(cell.type === 'NEBULA'){
-        col = cell.nebulaVariant === 'blue' ? '#2f7fca' : '#8a42aa';
-      } else if(cell.type === 'CASINO'){
-        col = '#cc44ff';
-      } else if(cell.type === 'DERELICT'){
-        col = '#6688aa';
-      } else if(cell.type === 'BLACK_HOLE'){
-        col = '#ff8800';
-      } else if(cell.type === 'ROGUE_PLANET'){
-        col = '#2a3050';
-      } else if(cell.type === 'PULSAR'){
-        col = '#00ddaa';
+        color = cell.nebulaVariant === 'blue' ? '#387cb5' : '#914da9';
+        size = 1;
       }
-      mctx.fillStyle = col;
-      mctx.fillRect(sx, sy, tw, th);
+      if(color) markers.push({x:sx,y:sy,color,size});
     }
   }
 
+  mctx.save();
+  mctx.beginPath();
+  mctx.rect(ox, oy, Math.ceil(mapW), Math.ceil(mapH));
+  mctx.clip();
   const camX = Math.max(0, Math.min(MAP_W - VIEW_W, G.ship.x - Math.floor(VIEW_W/2)));
   const camY = Math.max(0, Math.min(MAP_H - VIEW_H, G.ship.y - Math.floor(VIEW_H/2)));
-  mctx.strokeStyle = '#445566';
+  mctx.strokeStyle = '#5a657a';
   mctx.lineWidth = 1;
   mctx.strokeRect(
     ox + Math.floor(camX * scale) + 0.5,
@@ -83,15 +81,24 @@ function drawGalaxyMinimapToCanvas(mini){
     Math.max(2, Math.floor(VIEW_H * scale))
   );
 
-  const sx = ox + Math.floor(G.ship.x * scale);
-  const sy = oy + Math.floor(G.ship.y * scale);
-  mctx.fillStyle = '#70f090';
-  mctx.fillRect(sx-1, sy-1, 3, 3);
-  mctx.strokeStyle = '#102010';
-  mctx.strokeRect(sx-1.5, sy-1.5, 4, 4);
+  // Put the small markers above fog and the viewport so neither obscures landmarks.
+  for(const marker of markers){
+    mctx.fillStyle = marker.color;
+    mctx.fillRect(marker.x, marker.y, marker.size, marker.size);
+  }
+  mctx.restore();
 
   mctx.strokeStyle = '#222238';
   mctx.strokeRect(ox+0.5, oy+0.5, Math.ceil(mapW)-1, Math.ceil(mapH)-1);
+
+  const sx = ox + Math.floor(G.ship.x * scale);
+  const sy = oy + Math.floor(G.ship.y * scale);
+  mctx.fillStyle = '#08130d';
+  mctx.fillRect(sx-3, sy-1, 7, 3);
+  mctx.fillRect(sx-1, sy-3, 3, 7);
+  mctx.fillStyle = '#7fff9b';
+  mctx.fillRect(sx-2, sy, 5, 1);
+  mctx.fillRect(sx, sy-2, 1, 5);
 }
 
 function drawFullGalaxyMap(){
