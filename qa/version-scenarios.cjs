@@ -32,8 +32,8 @@ const assert = require('node:assert/strict');
         const button = MENU_STATE._btnRects[MENU_STATE._opts.findIndex(option => option.key === 'O')];
         const bounds = canvas.getBoundingClientRect();
         return {
-          x: bounds.left + (button.x + button.w / 2) * bounds.width / canvas.width,
-          y: bounds.top + (button.y + button.h / 2) * bounds.height / canvas.height,
+          x: bounds.left + (button.x + button.w / 2) * bounds.width / canvas.clientWidth,
+          y: bounds.top + (button.y + button.h / 2) * bounds.height / canvas.clientHeight,
         };
       });
       await page.mouse.click(optionsCenter.x, optionsCenter.y);

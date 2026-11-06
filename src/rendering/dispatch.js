@@ -18,6 +18,7 @@ function renderAll(){
 function drawCanvas(){
   resetCanvasMenu();
   canvasMapView=null;
+  canvas.classList.toggle('options-canvas',!!G.showOptions);
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if(G.mode==='planet'){

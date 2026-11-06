@@ -22,6 +22,8 @@ html, body {
   --key-face: linear-gradient(#293947, #192530);
   --key-hover: linear-gradient(#344e60, #223543);
   --key-pressed: #101e29;
+  --fuel-normal: #48cdb6;
+  --hull-normal: #67bcdd;
   background: #0a0a0f;
   color: #ccc;
   border-radius: 8px;
@@ -240,6 +242,7 @@ html, body {
 #gc {
   box-shadow: 0 0 0 1px #050a0e, 0 0 0 2px #516370, 0 0 0 4px #15212b;
 }
+#gc.menu-canvas, #gc.options-canvas { image-rendering: auto; }
 canvas {
   display: block;
   image-rendering: pixelated;
@@ -771,3 +774,92 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   font-size: 12px;
   font-style: italic;
 }
+
+/* Classic keeps the experimental.27 appearance on the shared, current layout. */
+#root[data-ui-style="classic"] {
+  --steel-rim: #2a2a44;
+  --steel-seam: #333;
+  --terminal: #080810;
+  --plate-label: #555;
+  --fuel-normal: #ff8800;
+  --hull-normal: #44aaff;
+  --key-face: #121a24;
+  --key-hover: #182534;
+  --key-pressed: #0a1a28;
+}
+[data-ui-style="classic"] #hud,
+[data-ui-style="classic"] #gauge-panel,
+[data-ui-style="classic"] #gc,
+[data-ui-style="classic"] #sidebar,
+[data-ui-style="classic"] #persist-bar {
+  box-shadow: none;
+}
+[data-ui-style="classic"] .vessel-plate,
+[data-ui-style="classic"] #h-mode::before,
+[data-ui-style="classic"] #hull-ticks,
+[data-ui-style="classic"] .gauge-fill::after { display: none; }
+[data-ui-style="classic"] .hud-box {
+  padding-inline: 9px;
+  background: #1a1a2e;
+  border-color: #2a2a44;
+  border-radius: 4px;
+  box-shadow: none;
+}
+[data-ui-style="classic"] .hud-label { font-size: 13px; letter-spacing: normal; }
+[data-ui-style="classic"] #h-mode,
+[data-ui-style="classic"] #g-hull.cc { color: #70f090; }
+[data-ui-style="classic"] #g-fuel.cc { color: #ffaa44; }
+[data-ui-style="classic"] .gauge-wrap {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+[data-ui-style="classic"] .gauge-label:not(.warn,.crit) { color: #555; }
+[data-ui-style="classic"] .gauge-label { font-weight: normal; text-shadow: none; }
+[data-ui-style="classic"] .gauge-val {
+  min-width: 0;
+  padding: 0;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+}
+[data-ui-style="classic"] .gauge-bar-wrap { width: 26px; background: #111; border-color: #2a2a3a; }
+[data-ui-style="classic"] .gauge-fill { width: 100%; margin: 0; border-radius: 2px; }
+[data-ui-style="classic"] #sidebar { padding: 10px 10px 0; }
+[data-ui-style="classic"] #sidebar > .s-title {
+  min-height: 0;
+  padding: 0 0 2px;
+  margin-bottom: 4px;
+  background: transparent;
+  border-top: 0;
+  border-bottom-color: #222;
+  color: #777;
+  font-weight: normal;
+  letter-spacing: normal;
+}
+[data-ui-style="classic"] #log-list {
+  padding: 0 0 10px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+[data-ui-style="classic"] #log-list:empty { padding: 0; }
+[data-ui-style="classic"] .log-size-controls { gap: 3px; }
+[data-ui-style="classic"] .log-size-controls .hud-menu-btn { width: 16px; height: 16px; }
+[data-ui-style="classic"] .crew-strip { padding: 0; background: transparent; box-shadow: none; }
+[data-ui-style="classic"] .crew-badge { background: #171b1a; }
+[data-ui-style="classic"] #msg-bar { background: #1a1a2e; border-top-color: #333; box-shadow: none; }
+[data-ui-style="classic"] .ctx-btn { background: #1a1a2e; }
+[data-ui-style="classic"] button.ctx-btn .ck { text-shadow: none; }
+[data-ui-style="classic"] button.ctx-btn:hover { background: #24243a; }
+[data-ui-style="classic"] :is(.hud-menu-btn,button.ctx-btn,.cmp-btn,#minimap-max-btn) { box-shadow: none; }
+[data-ui-style="classic"] .cmp-btn,
+[data-ui-style="classic"] #minimap-max-btn { --key-face: #0e0e18; color: #667788; }
+[data-ui-style="classic"] .cmp-btn { font-size: 10px; }
+[data-ui-style="classic"] .cmp-btn.cmp-center { --key-face: #0a0a12; font-size: 9px; }
+[data-ui-style="classic"] #shortcut-toggle { --key-face: #17181d; color: #999da7; }
+[data-ui-style="classic"] #persist-bar { color: #777; }
+[data-ui-style="classic"] #persist-bar .ck { color: #999; }
+[data-ui-style="classic"] .minimap-legend-title { color: #ffe066; }

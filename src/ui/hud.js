@@ -32,7 +32,7 @@ function renderHUD(){
     const fuelPct  = Math.max(0, Math.min(1, G.fuel/G.maxFuel));
     const fuelFill = document.getElementById('fuel-fill');
     fuelFill.style.height = Math.round(fuelPct*100)+'%';
-    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'#48cdb6';
+    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'var(--fuel-normal)';
     const gFuel = document.getElementById('g-fuel');
     gFuel.textContent = Math.round(G.fuel);
     gFuel.className   = 'gauge-val '+(fuelPct<0.2?'cr':fuelPct<0.6?'co':'cc');
@@ -41,7 +41,7 @@ function renderHUD(){
     const hullPct  = Math.max(0, Math.min(1, G.ship.hp/G.ship.maxHp));
     const hullFill = document.getElementById('hull-fill');
     hullFill.style.height = Math.round(hullPct*100)+'%';
-    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'#67bcdd';
+    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'var(--hull-normal)';
     const gHull = document.getElementById('g-hull');
     gHull.textContent = G.ship.hp;
     gHull.className   = 'gauge-val '+(hullPct<0.25?'cr':hullPct<0.5?'co':'cc');
@@ -50,8 +50,10 @@ function renderHUD(){
   document.getElementById('h-turn').textContent=G.turn;
 
   const modes={galaxy:'NAVIGATION', system:'ORBITAL VIEW', scanview:'ORBITAL SCAN', planet:'SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
+  const classicModes={galaxy:'GALAXY MAP',system:'SYSTEM VIEW',scanview:'SCANVIEW',planet:'PLANET SURFACE'};
+  const classicMode=OPTIONS.uiStyle==='classic'?classicModes[G.mode]:null;
   const modeReadout=document.getElementById('h-mode');
-  modeReadout.textContent=onPlanet&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':modes[G.mode]||G.mode.toUpperCase();
+  modeReadout.textContent=onPlanet&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':classicMode||modes[G.mode]||G.mode.toUpperCase();
   if(quarantineInterior()) modeReadout.textContent='SHIP INTERIOR';
 
   let loc='Deep Space';

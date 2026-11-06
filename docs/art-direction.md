@@ -49,6 +49,10 @@ From experimental.31, the broad surfaces behind the cockpit instruments and cont
 
 The save status and version sit at the bottom of the play area. The shortcuts and status strip share the same dark background, and the status strip stays at the bottom when an alert appears.
 
+In **Options → UI Style**, choose **Cockpit** for the instrument finish or **Classic** for the experimental.27 appearance. The choice applies immediately and is stored in the browser's options. Both styles use the current controls and bottom status strip. **Render Mode** independently switches between sprites and ASCII.
+
+The title menus render at the displayed pixel density. The in-game Options overlay uses normal browser sampling, while the playfield retains pixel-art sampling.
+
 ## Source organization and reproduction
 
 Run `npm run art:ships` after intentionally changing the original sheet selection or importer. It uses Node's built-in filesystem and compression modules; no graphics package or network access is needed. `node tools/import-prospector-ships.js --check` verifies reproducibility. The normal build consumes the checked-in generated sprite file and does not run the importer.

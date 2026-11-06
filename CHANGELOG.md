@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.33 adds a Classic UI setting
+
+Released on `experiment/expedition-legacy`.
+
+- Added **UI Style** to both Options screens. **Classic** brings back the experimental.27 look, and **Cockpit** remains the default. The selected style is saved with browser options. Both styles use the current bottom footer and controls.
+- Put the Render Mode hint inside its row with more contrast. Title menus draw at the displayed pixel density, and in-game Options uses smoother sampling. The playfield retains its pixel-art presentation.
+- All 47 repository tests and five headless Edge suites passed. Checked style switching by mouse and keyboard, persistence after reload, fractional-scale menu hit targets, the footer, and save/load. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.32 anchors the status strip at the bottom
 
 Released on `experiment/expedition-legacy`.

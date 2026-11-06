@@ -38,7 +38,7 @@
     <div class="hud-box"><div class="hud-label">CREDITS</div><div class="hud-val cy" id="h-creds">500</div></div>
     <div class="hud-box"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
     <div class="hud-box"><div class="hud-label">TURN</div><div class="hud-val cy" id="h-turn">1</div></div>
-    <div class="hud-box"><div class="hud-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
+    <div class="hud-box"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
   </div>
 
@@ -81,11 +81,11 @@
       
     </div>
     <div id="sidebar">
-      <div class="s-title">Crew Status</div>
+      <div class="s-title" id="crew-title">Crew Status</div>
       <div id="crew-list"></div>
       <div id="inv-list" style="display:none"></div>
       <div class="s-title">
-        <span>Comms Log</span>
+        <span id="log-title">Comms Log</span>
         <span class="log-size-controls">
           <button type="button" class="hud-menu-btn" data-menu-control aria-label="Decrease log text size" onclick="adjustLogFont(-1)">−</button>
           <button type="button" class="hud-menu-btn" data-menu-control aria-label="Increase log text size" onclick="adjustLogFont(1)">+</button>

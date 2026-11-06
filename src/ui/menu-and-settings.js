@@ -5,6 +5,10 @@ let MENU_STATE = { hasAutosave: false, screen: 'main' }; // screen: 'main'|'opti
 
 // ── Options (persisted to localStorage) ─────────────────────────
 const OPT_KEY = 'prospector_options';
+const UI_STYLES = [
+  {id:'cockpit', label:'COCKPIT'},
+  {id:'classic', label:'CLASSIC'},
+];
 
 
 // Human-readable label for a e.code string
@@ -28,15 +32,27 @@ function loadOptions(){
       const parsed = JSON.parse(raw);
       // Migrate: ensure keybinds exist
       if(!parsed.keybinds) parsed.keybinds = Object.assign({}, DEFAULT_KEYBINDS);
+      if(!UI_STYLES.some(style=>style.id===parsed.uiStyle)) parsed.uiStyle = UI_STYLES[0].id;
       return parsed;
     }
   } catch(e){}
-  return { asciiMode: false, keybinds: Object.assign({}, DEFAULT_KEYBINDS) };
+  return { asciiMode: false, uiStyle: UI_STYLES[0].id, keybinds: Object.assign({}, DEFAULT_KEYBINDS) };
 }
 function saveOptions(opts){
   try { localStorage.setItem(OPT_KEY, JSON.stringify(opts)); } catch(e){}
 }
 let OPTIONS = loadOptions();
+
+function applyUIStyle(){
+  const root=document.getElementById('root');
+  root.dataset.uiStyle=OPTIONS.uiStyle;
+  const classic=OPTIONS.uiStyle==='classic';
+  document.getElementById('h-mode-label').textContent=classic?'MODE':'DISPLAY';
+  document.getElementById('crew-title').textContent=classic?'Crew':'Crew Status';
+  document.getElementById('log-title').textContent=classic?'Log':'Comms Log';
+  root.querySelector('.cmp-center').textContent=classic?'·':'WAIT';
+}
+applyUIStyle();
 
 function setMenuCanvasMode(){
   const main = document.getElementById('main');
@@ -54,8 +70,8 @@ function setMenuCanvasMode(){
     wrap.style.maxWidth = '1400px';
     wrap.style.maxHeight = '720px';
   }
-  canvas.width = 1400;
-  canvas.height = 720;
+  canvas.classList.add('menu-canvas');
+  canvas.classList.remove('options-canvas');
   canvas.style.width = '1400px';
   canvas.style.height = '720px';
   canvas.style.top = '0';
@@ -80,6 +96,7 @@ function setGameCanvasMode(){
   }
   canvas.width = VIEW_W * TS;
   canvas.height = VIEW_H * TS;
+  canvas.classList.remove('menu-canvas');
   canvas.style.width = '';
   canvas.style.height = '';
   canvas.style.top = '';
@@ -158,22 +175,29 @@ async function returnToMainMenuFromGame(){
 }
 
 function drawMenuScreen(){
+  if(G!==null || !canvas.classList.contains('menu-canvas')) return;
+  const bounds=canvas.getBoundingClientRect();
+  const width=Math.max(1,Math.round(bounds.width*window.devicePixelRatio));
+  const height=Math.max(1,Math.round(bounds.height*window.devicePixelRatio));
+  if(canvas.width!==width) canvas.width=width;
+  if(canvas.height!==height) canvas.height=height;
+  ctx.setTransform(width/GAME_W,0,0,height/GAME_H,0,0);
   resetCanvasMenu();
   canvasMapView=null;
   canvas.classList.remove('map-targeting');
   renderPointerKeys();
   ctx.fillStyle='#050510';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillRect(0,0,GAME_W,GAME_H);
   // Starfield
   for(let i=0;i<120;i++){
-    const sx=(Math.sin(i*137.5)*0.5+0.5)*canvas.width;
-    const sy=(Math.cos(i*97.3)*0.5+0.5)*canvas.height;
+    const sx=(Math.sin(i*137.5)*0.5+0.5)*GAME_W;
+    const sy=(Math.cos(i*97.3)*0.5+0.5)*GAME_H;
     ctx.globalAlpha=0.3+((i*73)%100)/200;
     ctx.fillStyle='#ffffff';
     ctx.fillRect(sx,sy,i%3===0?2:1,i%3===0?2:1);
   }
   ctx.globalAlpha=1;
-  const cx=canvas.width/2;
+  const cx=GAME_W/2;
 
   if(MENU_STATE.screen==='options'){
     drawOptionsScreen(cx);
@@ -191,7 +215,7 @@ function drawMenuScreen(){
   }
 
   if(MENU_STATE.screen==='intro'){
-    const cy = canvas.height/2;
+    const cy = GAME_H/2;
     const lines = [
       'An unexplored sector of the galaxy.',
       '',
@@ -223,7 +247,7 @@ function drawMenuScreen(){
     ctx.fillStyle = '#ffe066';
     ctx.fillText('[ PRESS ENTER TO BEGIN ]', cx, cy + totalH/2 + 40);
     canvasMenuTarget(cx-140,cy+totalH/2+22,280,28,openShipSelection);
-    canvasMenuButton('Back [Esc]',24,canvas.height-30,()=>handleMenuKey({key:'Escape'}));
+    canvasMenuButton('Back [Esc]',24,GAME_H-30,()=>handleMenuKey({key:'Escape'}));
     return;
   }
 
@@ -300,7 +324,7 @@ function drawMenuScreen(){
 
     ctx.font='13px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
     ctx.fillText('←/→ navigate    Enter confirm', cx, 78+cardH+22);
-    canvasMenuButton('Back [Esc]',24,canvas.height-30,()=>handleMenuKey({key:'Escape'}));
+    canvasMenuButton('Back [Esc]',24,GAME_H-30,()=>handleMenuKey({key:'Escape'}));
     return;
   }
 
@@ -408,28 +432,28 @@ function drawMenuScreen(){
   MENU_STATE._opts = opts;
 
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-  ctx.fillText(GAME_VERSION_LABEL+'  —  Made by Sebastian', cx, canvas.height-28);
+  ctx.fillText(GAME_VERSION_LABEL+'  —  Made by Sebastian', cx, GAME_H-28);
   // Show seed hash if a save exists
   if(MENU_STATE.hasAutosave){
     try {
       const _saveSeed = AUTOSAVE_STATE.record?.summary.seed;
       if(_saveSeed){
         ctx.font='12px Courier New'; ctx.fillStyle='#223344';
-        ctx.fillText('seed: #'+_saveSeed, cx, canvas.height-44);
+        ctx.fillText('seed: #'+_saveSeed, cx, GAME_H-44);
       }
     } catch(e){}
   }
   if(MENU_STATE.lastUpdateText !== null && MENU_STATE.lastUpdateText !== undefined){
     ctx.fillStyle = MENU_STATE.lastUpdateText.startsWith('Last update') ? '#2a4a3a' : '#3a3a2a';
     ctx.font='13px Courier New';
-    ctx.fillText(MENU_STATE.lastUpdateText, cx, canvas.height-12);
+    ctx.fillText(MENU_STATE.lastUpdateText, cx, GAME_H-12);
   } else if(MENU_STATE.lastUpdateText === null){
     ctx.fillStyle='#223333'; ctx.font='13px Courier New';
-    ctx.fillText('Checking for updates...', cx, canvas.height-12);
+    ctx.fillText('Checking for updates...', cx, GAME_H-12);
   }
   if(shouldShowDesktopDownload()){
     const _dlBtnW = 240, _dlBtnH = 34;
-    const _dlX = 14, _dlY = canvas.height - 14 - _dlBtnH;
+    const _dlX = 14, _dlY = GAME_H - 14 - _dlBtnH;
     ctx.fillStyle = '#0e0e1a';
     ctx.fillRect(_dlX, _dlY, _dlBtnW, _dlBtnH);
     ctx.strokeStyle = '#2a2a4a';
@@ -449,25 +473,18 @@ function drawMenuScreen(){
 }
 
 function drawOptionsScreen(cx){
-  const ch = canvas.height;
+  const ch = canvas.clientHeight;
   ctx.font='bold 31px Courier New'; ctx.fillStyle='#cccccc'; ctx.textAlign='center';
   ctx.fillText('OPTIONS', cx, 90);
   ctx.fillStyle='#2a2a4a'; ctx.fillRect(cx-200, 106, 400, 1);
 
-  // All rows: uniform 34px height, 14px gap = 48px per row
-  const rowH=34, rowGap=14, rowW=400, startY=150;
-  const rows=[
-    { i:0, label:'Render Mode', right: OPTIONS.asciiMode ? 'ASCII' : 'SPRITES' },
-    { i:1, label:'Movement Keybindings', right:'›' },
-    { i:2, label:'Save Game',   right:'S' },
-    { i:3, label:'Feedback',    right:'F' },
-  ];
+  const rowH=42, rowGap=6, rowW=400, startY=150;
 
-  rows.forEach(row=>{
-    const y = startY + row.i*(rowH+rowGap);
-    const sel = MENU_STATE.optSel === row.i;
-    canvasMenuTarget(cx-rowW/2,y,rowW,rowH,()=>activateOptionsRow(row.i),{hover:()=>{
-      if(MENU_STATE.optSel!==row.i){ MENU_STATE.optSel=row.i; redrawOptions(); }
+  OPTION_ROWS.forEach((row,i)=>{
+    const y = startY + i*(rowH+rowGap);
+    const sel = MENU_STATE.optSel === i;
+    canvasMenuTarget(cx-rowW/2,y,rowW,rowH,()=>activateOptionsRow(i),{hover:()=>{
+      if(MENU_STATE.optSel!==i){ MENU_STATE.optSel=i; redrawOptions(); }
     }});
 
     ctx.fillStyle = sel ? '#14142a' : '#0e0e1a';
@@ -476,25 +493,24 @@ function drawOptionsScreen(cx){
     ctx.lineWidth = sel ? 2 : 1;
     ctx.strokeRect(cx-rowW/2, y, rowW, rowH);
 
-    // ▶ cursor
+    const hint=sel && row.change;
+    const labelY=y+(hint?19:27);
     ctx.font='bold 19px Courier New'; ctx.textAlign='left';
-    if(sel){ ctx.fillStyle='#ffe066'; ctx.fillText('▶', cx-rowW/2+8, y+rowH-8); }
+    if(sel){ ctx.fillStyle='#ffe066'; ctx.fillText('▶', cx-rowW/2+8, labelY); }
 
     // Label
     ctx.fillStyle = sel ? '#ffffff' : '#cccccc';
-    ctx.fillText(row.label, cx-rowW/2+32, y+rowH-8);
+    ctx.fillText(row.label, cx-rowW/2+32, labelY);
 
     // Right hint
     ctx.textAlign='right';
     ctx.fillStyle = sel ? '#ffe066' : '#445566';
-    ctx.fillText(row.right, cx+rowW/2-12, y+rowH-8);
+    ctx.fillText(row.value ? row.value() : row.right, cx+rowW/2-12, labelY);
+    if(hint){
+      ctx.font='12px Courier New'; ctx.fillStyle='#a6b4c7'; ctx.textAlign='left';
+      ctx.fillText('← / → or Enter to change', cx-rowW/2+32, y+34);
+    }
   });
-
-  // Render Mode arrow hints below its row (only when selected)
-  if(MENU_STATE.optSel===0){
-    ctx.font='12px Courier New'; ctx.fillStyle='#445566'; ctx.textAlign='center';
-    ctx.fillText('◄ / ► or Enter to toggle', cx, startY+rowH+8);
-  }
 
   // Footer
   ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
@@ -504,7 +520,7 @@ function drawOptionsScreen(cx){
 }
 
 function drawKeybindingsScreen(cx){
-  const cw = canvas.width, ch = canvas.height;
+  const ch = canvas.clientHeight;
   const kb = OPTIONS.keybinds || DEFAULT_KEYBINDS;
   const rebinding = MENU_STATE._rebinding;
   const sel = MENU_STATE._kbSel || 0;
@@ -590,7 +606,7 @@ function drawKeybindingsScreen(cx){
 //  MENU KEY HANDLER
 // ─────────────────────────────────────────────────────────────────
 function drawCreditsScreen(cx){
-  const ch = canvas.height;
+  const ch = GAME_H;
   ctx.font='bold 31px Courier New'; ctx.fillStyle='#ffdd88'; ctx.textAlign='center';
   ctx.fillText('CREDITS', cx, 70);
   ctx.fillStyle='#443311'; ctx.fillRect(cx-280, 88, 560, 1);
@@ -637,16 +653,53 @@ function redrawOptions(){
   if(G) renderAll(); else drawMenuScreen();
 }
 
-function activateOptionsRow(i){
-  MENU_STATE.optSel=i;
-  if(i===0){ OPTIONS.asciiMode=!OPTIONS.asciiMode; saveOptions(OPTIONS); }
-  else if(i===1){
+const OPTION_ROWS = [
+  {label:'Render Mode', value:()=>OPTIONS.asciiMode?'ASCII':'SPRITES', change:()=>{
+    OPTIONS.asciiMode=!OPTIONS.asciiMode;
+  }},
+  {label:'UI Style', value:()=>UI_STYLES.find(style=>style.id===OPTIONS.uiStyle).label, change:direction=>{
+    const index=UI_STYLES.findIndex(style=>style.id===OPTIONS.uiStyle);
+    OPTIONS.uiStyle=UI_STYLES[(index+direction+UI_STYLES.length)%UI_STYLES.length].id;
+    applyUIStyle();
+  }},
+  {label:'Movement Keybindings', right:'›', shortcut:'k', action:()=>{
     MENU_STATE._kbSel=0;
     MENU_STATE._rebinding=null;
     if(G) G._kbScreen=true; else MENU_STATE.screen='keybindings';
-  } else if(i===2){ saveToFile(); return; }
-  else { openFeedback(); return; }
-  redrawOptions();
+    redrawOptions();
+  }},
+  {label:'Save Game', right:'S', shortcut:'s', action:saveToFile},
+  {label:'Feedback', right:'F', shortcut:'f', action:()=>openFeedback()},
+];
+
+function activateOptionsRow(i,direction=1){
+  const row=OPTION_ROWS[i];
+  if(!row) return;
+  MENU_STATE.optSel=i;
+  if(row.change){
+    row.change(direction);
+    saveOptions(OPTIONS);
+    redrawOptions();
+  } else row.action();
+}
+
+function handleOptionsKey(e){
+  if(e.key==='Escape'){ closeOptionsMenu(); return; }
+  const shortcut=OPTION_ROWS.findIndex(row=>row.shortcut===e.key.toLowerCase());
+  if(shortcut!==-1){ activateOptionsRow(shortcut); return; }
+  const selected=MENU_STATE.optSel ?? 0;
+  if(e.key==='ArrowUp'||e.key==='ArrowDown'){
+    e.preventDefault();
+    const step=e.key==='ArrowUp'?-1:1;
+    MENU_STATE.optSel=(selected+step+OPTION_ROWS.length)%OPTION_ROWS.length;
+    redrawOptions();
+  } else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+    e.preventDefault();
+    if(OPTION_ROWS[selected]?.change) activateOptionsRow(selected,e.key==='ArrowLeft'?-1:1);
+  } else if(e.key===' '||e.key==='Enter'){
+    e.preventDefault();
+    activateOptionsRow(selected);
+  }
 }
 
 function activateKeybindingRow(i){
@@ -765,24 +818,7 @@ function handleMenuKey(e){
   }
 
   if(MENU_STATE.screen==='options'){
-    if(e.key==='Escape'){ closeOptionsMenu(); return; }
-    if(e.key==='f'||e.key==='F'){ openFeedback(); return; }
-    if(e.key==='s'||e.key==='S'){ saveToFile(); return; }
-    if(e.key==='k'||e.key==='K'){ activateOptionsRow(1); return; }
-    if(e.key==='ArrowUp'||e.key==='ArrowDown'){
-      const maxOpt = 3;
-      MENU_STATE.optSel = Number.isInteger(MENU_STATE.optSel) ? MENU_STATE.optSel : 0;
-      MENU_STATE.optSel = e.key==='ArrowUp'
-        ? (MENU_STATE.optSel + maxOpt) % (maxOpt + 1)
-        : (MENU_STATE.optSel + 1) % (maxOpt + 1);
-      drawMenuScreen();
-      return;
-    }
-    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
-      if(MENU_STATE.optSel===0) activateOptionsRow(0);
-      return;
-    }
-    if(e.key===' '||e.key==='Enter') activateOptionsRow(MENU_STATE.optSel);
+    handleOptionsKey(e);
     return;
   }
 

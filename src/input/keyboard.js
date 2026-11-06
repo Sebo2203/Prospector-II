@@ -168,25 +168,7 @@ document.addEventListener('keydown', e=>{
         }
         return;
       }
-      if(e.key==='Escape'){ closeOptionsMenu(); return; }
-      if(e.key==='f'||e.key==='F'){ openFeedback(); return; }
-      if(e.key==='s'||e.key==='S'){ saveToFile(); return; }
-      if(e.key==='k'||e.key==='K'){ activateOptionsRow(1); return; }
-      if(e.key==='ArrowUp'||e.key==='ArrowDown'){
-        e.preventDefault();
-        const maxOpt = 3;
-        MENU_STATE.optSel = Number.isInteger(MENU_STATE.optSel) ? MENU_STATE.optSel : 0;
-        MENU_STATE.optSel = e.key==='ArrowUp'
-          ? (MENU_STATE.optSel + maxOpt) % (maxOpt + 1)
-          : (MENU_STATE.optSel + 1) % (maxOpt + 1);
-        renderAll(); return;
-      }
-      if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
-        e.preventDefault();
-        if(MENU_STATE.optSel===0) activateOptionsRow(0);
-        return;
-      }
-      if(e.key===' '||e.key==='Enter') activateOptionsRow(MENU_STATE.optSel);
+      handleOptionsKey(e);
       return;
     }
 

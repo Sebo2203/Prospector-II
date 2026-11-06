@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────
 //  FULLSCREEN SCALING
 //  Scales #root to fit the viewport while preserving aspect ratio.
-//  The game's natural size is 1298×638. We calculate the scale
+//  The game's natural size is 1400×720. We calculate the scale
 //  factor that fits it into the current window, then use
 //  CSS transform + translate to centre it.
 // ─────────────────────────────────────────────────────────────────
@@ -19,6 +19,7 @@ function scaleToFit(){
   const ty = (window.innerHeight - GAME_H * scale) / 2;
 
   root.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  if(canvas.classList.contains('menu-canvas')) drawMenuScreen();
 }
 
 window.addEventListener('resize', scaleToFit);
