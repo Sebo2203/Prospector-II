@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.31 restores cockpit instruments on dark panels
+
+Released on `experiment/expedition-legacy`.
+
+- Restored the segmented gauges, vessel plate, status readouts, crew and comms console, and raised compass and map controls from experimental.29. The broad surfaces around them use the original dark palette.
+- All 47 repository tests and four headless Edge suites passed. Checked the cockpit at 1400×720 and 800×600 and reran the day-night wait regression. The feedback keyboard test now waits for the dialog's initial focus. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.30 restores dark panels and updates sight while waiting
 
 Released on `experiment/expedition-legacy`.

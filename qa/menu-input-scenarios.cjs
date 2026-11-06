@@ -145,6 +145,7 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     await press('Escape');
     await click(480,309);
     assert.equal(await page.locator('#feedback-overlay').isVisible(),true);
+    await page.waitForFunction(()=>document.activeElement.id==='feedback-email');
     await page.locator('#feedback-msg').click();
     await page.locator('#pointer-keys-toggle').click();
     await page.locator('#pointer-keys').getByRole('button',{name:'a',exact:true}).click();

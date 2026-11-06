@@ -45,7 +45,7 @@ From experimental.27, the sidebar map frame fits the width of the chart at its e
 
 ## Flight interface
 
-From experimental.30, the HUD, gauge panel, map surround, and control deck use the original dark surfaces. The display readout keeps the navigation, orbital view, orbital scan, surface, and station names. The sidebar keeps the Crew Status and Comms Log sections in the dark palette. The reduced-motion preference keeps gauge warnings steady.
+From experimental.31, the broad surfaces behind the cockpit instruments and controls use the original dark palette. The individual readouts, vessel plate, segmented gauges, crew and comms console, compass keys, and map frames use the cockpit finish. The display readout names the current view, including navigation, orbital view, orbital scan, surface, and stations. The reduced-motion preference keeps gauge warnings steady.
 
 ## Source organization and reproduction
 
