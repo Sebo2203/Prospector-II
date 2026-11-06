@@ -57,7 +57,7 @@ The context bar uses the shortcut legend's muted gray for the general Examine, I
 
 The context bar wraps actions onto a second row and scrolls vertically if more space is needed. The playfield can shrink to fit an alert and a wrapped bar while keeping its full aspect ratio. In-game panels use the context bar for shared keyboard hints and keep local instructions for controls the bar does not show.
 
-The compass and map controls sit just above the save and version strip. Their position stays fixed when context actions wrap or an alert appears.
+The compass and map controls sit above the save and version strip, which has its own row. Their position stays fixed when context actions wrap or an alert appears.
 
 ## Source organization and reproduction
 

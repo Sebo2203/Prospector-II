@@ -57,10 +57,14 @@ const assert = require('node:assert/strict');
     const optionsButton=page.locator('#ctx-bar button[data-game-key="o"]');
     const toolPosition=()=>page.evaluate(()=>{
       const tools=document.getElementById('hud-tools').getBoundingClientRect();
+      const footer=document.getElementById('persist-bar').getBoundingClientRect();
       const status=document.getElementById('version-tag').getBoundingClientRect();
+      const scale=document.getElementById('root').getBoundingClientRect().width/GAME_W;
+      if(footer.bottom>status.top+0.1 || (status.top-tools.bottom)/scale<11.5)
+        throw Error('The footer and status need separate rows with room below the tools');
       return {left:tools.left,top:tools.top,bottomGap:status.top-tools.bottom};
     });
-    for(const [width,height] of [[1400,720],[800,600]]){
+    for(const [width,height] of [[1400,720],[800,600],[640,480]]){
       await page.setViewportSize({width,height});
       await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<1,width);
       await page.evaluate(()=>{
@@ -69,7 +73,6 @@ const assert = require('node:assert/strict');
         hideMsg();
       });
       const anchor=await toolPosition();
-      assert.ok(anchor.bottomGap>0,'footer tools stay above the version strip');
       // A long contact name makes both its actions compete for the first row.
       await page.evaluate(()=>{
         G.neutralShips=[{type:'patrol',name:'Long-range Station Patrol '.repeat(3).trim(),x:G.ship.x+1,y:G.ship.y}];

@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-06 — 0.28 experimental.38 separates the controls and status strip
+
+Released on `experiment/expedition-legacy`.
+
+- Gave the save and version strip its own footer row and added space below the compass, minimap, and map button. The controls stay anchored when context actions wrap or a critical alert appears.
+- All 47 repository tests and four headless Edge suites passed. The new spacing check failed on experimental.37 and passed at 1400×720, 800×600, and 640×480 on experimental.38. Existing saves require no migration.
+
 ## 2026-11-06 — 0.28 experimental.37 anchors the compass
 
 Released on `experiment/expedition-legacy`.

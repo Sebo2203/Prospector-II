@@ -844,7 +844,6 @@ html, body {
   flex-direction: column;
   width: 1400px;
   height: 720px;
-  padding-bottom: var(--status-height);
   min-height: 720px;
   max-height: 720px;
   border: 1px solid #333;
@@ -1327,7 +1326,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 
 /* ── Persistent global bar ── */
 #persist-bar {
-  padding: 6px 10px 6px 12px;
+  padding: 6px 10px 12px 12px;
   border-top: 1px solid var(--steel-seam);
   box-shadow: inset 0 1px #34444e;
   font-size: 14px;
@@ -1335,8 +1334,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
-  flex: 1 0 96px;
-  min-height: 96px;
+  flex: 1 0 102px;
   overflow: hidden;
   align-items: stretch;
   position: relative;
@@ -1508,15 +1506,13 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 /* ── Version tag ── */
 #version-tag {
   display: flex;
-  position: absolute;
-  inset: auto 0 0;
+  flex: 0 0 var(--status-height);
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
   font-size: 13px;
   color: #7d8c99;
   text-align: right;
-  height: var(--status-height);
   overflow: hidden;
 }
 #save-state { color: #558877; }
@@ -1834,7 +1830,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.37</span></div>
+  <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span>v0.28 experimental.38</span></div>
 
   <!-- Barter overlay -->
   <div id="barter-overlay">
@@ -1892,8 +1888,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.37';
-const GAME_VERSION_LABEL = 'v0.28 experimental.37';
+const GAME_VERSION = '0.28.0-experimental.38';
+const GAME_VERSION_LABEL = 'v0.28 experimental.38';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
