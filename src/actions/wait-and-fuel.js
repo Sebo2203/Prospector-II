@@ -45,14 +45,15 @@ function doFuelScoop(context){
       addLog('Atmospheric turbulence — scoop aborted.','lw');
     }
     applyScoopRisk('Gas giant', 0.28, 5, 16);
-  }
-  G.turn++;
+  } else return;
+  beginCareerTurn();
   if(!G.dead){
     moveNeutralShips();
     movePirates();
     moveGasEntities();
     tickNpcStranded();
   }
+  finishCareerTurn();
   renderAll();
 }
 
@@ -60,10 +61,9 @@ function doWaitGalaxy(){
   if(G.mode==='shipcombat'){ advanceShipCombat(); return; }
   if(G.mode!=='galaxy'||G.dead||G.retired) return;
   G._bonusMoves = 0;
-  G.turn++;
+  beginCareerTurn();
   maybeCrewGalaxyTalk();
-  tickCrewStatuses('galaxy_wait');
-  checkDeath();
+  finishCareerTurn();
   if(G.dead){ renderAll(); return; }
   if(!DEBUG.infiniteFuel) G.fuel = Math.max(0, G.fuel - 0.5);
 
@@ -108,81 +108,18 @@ function doWaitGalaxy(){
   renderAll();
 }
 
-function doWaitPlanet(turnAlreadyAdvanced=false){
+function doWaitPlanet(){
   if(G.mode!=='planet'||G.dead||G.retired) return;
-  if(!turnAlreadyAdvanced) G.turn++;
+  beginCareerTurn();
 
-  // Advance planet day cycle
   const pdata = G.planets[G.curPlanet];
-  if(pdata){
-    const _Bw   = BIOMES[pdata.biome] || {};
-    const _cycw = (_Bw.dayLength||20)*4;
-    const _rawVrW = (t2) => {
-      if(_Bw.tidalLock==='day') return 10;
-      if(_Bw.tidalLock==='night') return 1;
-      const cv = Math.cos((t2/_cycw)*2*Math.PI - Math.PI/2);
-      let v = 1+(cv+1)/2*9;
-      if(pdata.biome==='ANCIENT') v=Math.min(v,6);
-      return v;
-    };
-    const _vrBeforeW = _rawVrW(pdata.planetTurn % _cycw);
-    pdata.planetTurn++;
-    const _vrAfterW  = _rawVrW(pdata.planetTurn % _cycw);
-    _checkPhaseMessages(_vrBeforeW, _vrAfterW, pdata.biome);
-    // Refresh the current sight mask even when the crew stays on the same tile.
-    revealPlanet(G.curPlanet, G.player.x, G.player.y);
-  }
+  advancePlanetDaylight(pdata);
+  revealPlanet(G.curPlanet,G.player.x,G.player.y);
+  applySurfaceTurnExposure();
+  if(G.dead){ renderAll(); return; }
 
-  // Oxygen drain, including underwater maps. Shared with tryMove()/doCombat() —
-  // keep this in sync with movement via applyOxygenDrain()/applyOxygenWarnings().
-  const biome = atmosphereBiome(G.curPlanet);
-  if(applyOxygenDrain()){ renderAll(); return; }
-  applyOxygenWarnings();
-  if((biome.oxyDrain > 0 || G.underwater) && G.oxygen<=0 && !DEBUG.infiniteOxy){
-    checkDeath();
-    if(G.dead){ renderAll(); return; }
-  }
-
-  // Standing on hazard tiles
-  const waitTile = G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x]?.type;
-  if(waitTile === 'LAVA_FLOOR'){
-    const dmg = 3 + rnd(4);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    G.crew.filter(c=>c.hp>0).forEach(c=>applyCrewInjury(c, 'burns', { amount:2, source:'lava', silent:true }));
-    SFX.crewHit();
-    addLog('Standing in lava — crew takes '+dmg+' damage!','lc');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
-  if(waitTile === 'AMMONIA'){
-    const dmg = 2 + rnd(2);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    G.crew.filter(c=>c.hp>0).forEach(c=>{
-      applyCrewInjury(c, 'burns', { amount:1, source:'ammonia', silent:true });
-      if(Math.random() < 0.25) applyCrewStatus(c, 'toxin_poisoning', { amount:1, stackMode:'add', max:5, source:'ammonia' });
-    });
-    G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - biome.oxyDrain*2);
-    SFX.suffocate();
-    addLog('Ammonia seeps in — '+dmg+' damage and O₂ draining!','lc');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
-  if(waitTile === 'TOXIC_FLOOR2'){
-    const dmg = 1 + rnd(3);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    G.crew.filter(c=>c.hp>0).forEach(c=>{
-      applyCrewInjury(c, 'burns', { amount:1, source:'acid', silent:true });
-      if(Math.random() < 0.30) applyCrewStatus(c, 'toxin_poisoning', { amount:1, stackMode:'add', max:5, source:'acid_pool' });
-    });
-    SFX.crewHit();
-    addLog('Acid pool burns through the suit — '+dmg+' damage!','lc');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
-  if(waitTile === 'TOXIC_FLOOR3' && Math.random() < 0.15){
-    const dmg = 1 + rnd(2);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    SFX.crewHit();
-    addLog('A vent erupts underfoot — '+dmg+' damage!','lw');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
+  applyStandingSurfaceHazards();
+  if(G.dead){ renderAll(); return; }
 
   // Medic — 30% chance to heal 1–3 HP on a random injured crew member
   const medic = G.crew.find(c=>c.role==='medic'&&c.hp>0);
@@ -198,17 +135,18 @@ function doWaitPlanet(turnAlreadyAdvanced=false){
 
   // Enemies act
   if(maybeCivilizationInitiatesContact(pdata)){
+    finishCareerTurn();
     renderAll();
     return;
   }
   moveEnemies();
   if(maybeCivilizationInitiatesContact(pdata)){
+    finishCareerTurn();
     renderAll();
     return;
   }
   processPlanetHazards();
-  checkDeath();
-  if(G.dead){ renderAll(); return; }
+  finishCareerTurn();
   renderAll();
 }
 

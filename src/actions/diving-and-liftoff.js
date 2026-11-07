@@ -17,10 +17,6 @@ function doToggleDive(){
 
   const hasDivingSuit = G.crew.some(c => c.hp > 0 && c.armorUsable === 'armor_diving');
 
-  // Diving itself costs one turn of O2 — sealing and descending is not free
-  const diveCost = hasDivingSuit ? 2 : 8;
-  G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - diveCost);
-
   // Generate underwater overlay lazily (mirrors surface grid)
   const uwKey = G.curPlanet + ':uw';
   if(!G.planets[uwKey]){
@@ -36,13 +32,13 @@ function doToggleDive(){
 
   // Switch to underwater map; player stays at same (x,y)
   G.curPlanet = uwKey;
-  revealPlanet(uwKey, G.player.x, G.player.y);
 
   if(hasDivingSuit){
     addLog('You dive below the surface. The world above dissolves into shifting light. Diving suit sealed — O2 draining slowly.','lw');
   } else {
     addLog('You plunge under without a diving suit. Water pressure immediately stresses the seals — O2 draining fast.','lc');
   }
+  completeSurfaceAction();
   renderAll();
 }
 
@@ -79,7 +75,7 @@ function doUnderwaterSurface(){
     addLog('You surface.','li');
   }
 
-  revealPlanet(G.curPlanet, G.player.x, G.player.y);
+  completeSurfaceAction();
   renderAll();
 }
 function doRefillOxygen(){

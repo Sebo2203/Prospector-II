@@ -137,10 +137,7 @@ function attackCivilizationFromDialogue(ctx){
     doCombat(target);
     return;
   }
-  G.turn++;
-  moveEnemies();
-  processPlanetHazards();
-  checkDeath();
+  completeSurfaceAction();
   renderAll();
 }
 

@@ -552,6 +552,5 @@ function processPlanetHazards(){
   }
 
   applyHallucinogenicExposure();
-  tickCrewStatuses('planet');
 }
 

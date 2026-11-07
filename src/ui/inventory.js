@@ -1191,7 +1191,7 @@ function handleInventoryKey(key,shiftKey=false){
         G.inventory.splice(G._viewInvSel||0, 1);
         G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
         G.mode = G._prevMode;
-        G.turn++; pdata4.planetTurn = (pdata4.planetTurn||0)+1; moveEnemies();
+        completeSurfaceAction();
         renderAll(); return;
       }
       // ── Containment Crate ──────────────────────────────────

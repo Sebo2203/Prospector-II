@@ -29,7 +29,7 @@ function tryMove(dx,dy,confirmed){
     // One galaxy move always advances the world. Chase speed is handled inside
     // movePirates() by comparing pirate engine rating against the player's.
     G._bonusMoves = 0;
-    G.turn++;
+    beginCareerTurn();
     // Tick active sensor drones
     if(G._activeDrones && G._activeDrones.length){
       G._activeDrones = G._activeDrones.filter(d=>{
@@ -173,8 +173,7 @@ function tryMove(dx,dy,confirmed){
     // 0.6% chance per turn a new stranded ship appears somewhere in the galaxy
     if(Math.random()<0.006) spawnNpcStrandedShip();
 
-    tickCrewStatuses('galaxy');
-    checkDeath();
+    finishCareerTurn();
     if(G.dead){ renderAll(); return; }
 
     // -- Passive skill effects — once per galaxy move -------------
@@ -246,14 +245,13 @@ function tryMove(dx,dy,confirmed){
     if(!TILE[cell.type]?.pass){
       // Ringworld locked door — open with [E]
       if(cell.type==='rw_locked_door'){
-        G.turn++;
         cell.type='rw_open_door';
         addLog('Maintenance hatch forced open. The hallway beyond is pressurised.','li');
+        completeSurfaceAction();
         renderAll(); return;
       }
       // Ancient locked door — requires high SCI skill to decipher and open
       if(cell.type==='ancient_locked_door'){
-        G.turn++;
         const bestSci = (G.crew||[]).filter(c=>c.hp>0)
           .reduce((best,c)=>crewSkillValue(c,'sci')>crewSkillValue(best,'sci')?c:best, G.crew[0]);
         const sciVal = bestSci ? crewSkillValue(bestSci,'sci') : 0;
@@ -263,6 +261,7 @@ function tryMove(dx,dy,confirmed){
           addLog(crewDisplayName(bestSci)+' deciphers the lock sequence. The door sighs open.','lg');
           // Disturbing the lock may activate interior defences
           if(!cell._orbSpawned){ cell._orbSpawned = true; maybeSpawnAncientSentinel(pdata, nx, ny); }
+          completeSurfaceAction();
         } else {
           addLog("The door is locked. A sufficiently skilled scientist could crack it.",'lw');
         }
@@ -299,9 +298,6 @@ function tryMove(dx,dy,confirmed){
       }
     }
 
-    // Actual movement — all messages from here onward share this turn number
-    G.turn++;
-
     // Void step: jetpack carriers fly through unprompted; everyone else gets a Y/N confirmation
     if(!confirmed && (cell.type==='ancient_st_void' || cell.type==='rw_void')){
       const jetpack = (G.inventory||[]).find(i=>i.usable==='jetpack' && (i.fuel||0)>0);
@@ -316,8 +312,10 @@ function tryMove(dx,dy,confirmed){
       // Has jetpack with fuel — fall through to move and let tile-entry logic handle the charge burn
     }
 
-    // Actually move
+    // Commit only after movement and any confirmation have been accepted.
+    beginCareerTurn();
     G.player.x=nx; G.player.y=ny;
+    advancePlanetDaylight(pdata);
     noteHallucinationMismatchAt(nx, ny);
 
     // -- Tile entry effects ----------------------------------------
@@ -343,9 +341,11 @@ function tryMove(dx,dy,confirmed){
     if(landingTile === 'EARTH_WATER'){
       const waterRoll = Math.random();
       if(waterRoll < 0.15){
-        pdata.planetTurn++;
         addLog('You lose your footing and struggle in the current!','lw');
         revealPlanet(G.curPlanet, nx, ny, 2);
+        applySurfaceTurnExposure();
+        if(!G.dead){ moveEnemies(); processPlanetHazards(); }
+        finishCareerTurn();
         renderAll(); return;
       } else if(waterRoll < 0.30){
         const slipDirs = [[-1,0],[1,0],[0,-1],[0,1]].filter(([sdx,sdy])=>{
@@ -481,6 +481,10 @@ function tryMove(dx,dy,confirmed){
           addLog('The '+civ.species.toLowerCase()+' respond with immediate aggression.','lc');
         } else if(!civState?.contacted){
           // First contact — auto-open dialogue as before
+          revealPlanet(G.curPlanet,G.player.x,G.player.y);
+          applySurfaceTurnExposure();
+          finishCareerTurn();
+          if(G.dead){ renderAll(); return; }
           startCivilizationDialogue({
             pdata,
             cell: { type: landingTile },
@@ -544,24 +548,6 @@ function tryMove(dx,dy,confirmed){
       addLog('A vent erupts underfoot — '+dmg+' damage!','lw');
       checkDeath(); if(G.dead){ renderAll(); return; }
     }
-    // Advance planet day cycle
-    const pdata2 = G.planets[G.curPlanet];
-    if(pdata2){
-      const _B2   = BIOMES[pdata2.biome] || {};
-      const _cyc2 = (_B2.dayLength||20)*4;
-      const _rawVr2 = (t2) => {
-        if(_B2.tidalLock==='day') return 10;
-        if(_B2.tidalLock==='night') return 1;
-        const cv = Math.cos((t2/_cyc2)*2*Math.PI - Math.PI/2);
-        let v = 1+(cv+1)/2*9;
-        if(pdata2.biome==='ANCIENT') v=Math.min(v,6);
-        return v;
-      };
-      const _vrBefore2 = _rawVr2(pdata2.planetTurn % _cyc2);
-      pdata2.planetTurn++;
-      const _vrAfter2  = _rawVr2(pdata2.planetTurn % _cyc2);
-      _checkPhaseMessages(_vrBefore2, _vrAfter2, pdata2.biome);
-    }
     // Reveal radius — shrink inside smoke or forest (foliage blocks vision)
     const _smokeHere = G.planets[G.curPlanet]?.smokeClouds?.some(c=>c.x===G.player.x&&c.y===G.player.y);
     const _forestHere = pdata.grid[G.player.y]?.[G.player.x]?.type === 'EARTH_FOREST';
@@ -577,7 +563,7 @@ function tryMove(dx,dy,confirmed){
     // handled by the shared applyOxygenDrain() (also used by doWaitPlanet()/doCombat()).
     const biomeKey = G.planets[G.curPlanet]?.biome;
     const biome    = atmosphereBiome(G.curPlanet);
-    if(applyOxygenDrain()){ renderAll(); return; }
+    if(applyOxygenDrain()){ finishCareerTurn(); renderAll(); return; }
     applyCrewMovementInjuryCosts();
     // Auto-surface / wading extras (movement-specific only)
     if(G.underwater){
@@ -707,6 +693,8 @@ function tryMove(dx,dy,confirmed){
           addLog('Jetpack fires, hovering over the void. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' remaining.', 'lg');
           if(fuelLeft <= 3) addLog('Jetpack fuel is low. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' left before the void claims you.','lw');
         }
+        applyOxygenWarnings();
+        finishCareerTurn();
         renderAll(); return;
       }
       G.dead = true;
@@ -728,6 +716,8 @@ function tryMove(dx,dy,confirmed){
           addLog('Jetpack fires, arrested the fall into vacuum. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' remaining.', 'lg');
           if(fuelLeft <= 3) addLog('Jetpack fuel is low. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' left before the void claims you.','lw');
         }
+        applyOxygenWarnings();
+        finishCareerTurn();
         renderAll(); return;
       }
       G.dead = true;
@@ -852,6 +842,9 @@ function tryMove(dx,dy,confirmed){
         addLog('Already searched.','li');
       }
     } else if(cell.type==='CAVE_ENTRANCE'){
+      applyOxygenWarnings();
+      checkDeath();
+      if(G.dead){ renderAll(); return; }
       const caveKey = cell.caveKey || (G.curPlanet+':cave');
       if(!G.planets[caveKey] || G.planets[caveKey].caveGenVersion !== 2){
         const srcBiome = G.planets[G.curPlanet]?.biome||'HABITABLE';
@@ -866,8 +859,12 @@ function tryMove(dx,dy,confirmed){
       addLog('You squeeze through a narrow opening into the cave...','li');
       maybeExposeRandomCrewToInfection(0.03, 'cave_air',
         'Something in the cave air irritates the filters.');
+      finishCareerTurn();
       renderAll(); return;
     } else if(cell.type==='cave_exit'){
+      applyOxygenWarnings();
+      checkDeath();
+      if(G.dead){ renderAll(); return; }
       // Return to surface
       if(G._caveReturn){
         G.curPlanet = G._caveReturn.planet;
@@ -879,6 +876,7 @@ function tryMove(dx,dy,confirmed){
       } else {
         addLog('No way back registered. Lifting off instead.','lw');
       }
+      finishCareerTurn();
       renderAll(); return;
     } else if(cell.type==='uw_exit'){
       // Light shaft rising to the surface — [Z] to surface from anywhere underwater
@@ -920,14 +918,18 @@ function tryMove(dx,dy,confirmed){
     applyOxygenWarnings();
 
     if(maybeCivilizationInitiatesContact(pdata)){
+      finishCareerTurn();
+      renderAll();
       return;
     }
     moveEnemies();
     if(maybeCivilizationInitiatesContact(pdata)){
+      finishCareerTurn();
+      renderAll();
       return;
     }
     processPlanetHazards();
-    checkDeath();
+    finishCareerTurn();
   }
 
   renderAll();

@@ -15,7 +15,7 @@ function doStrandedWait(){
     st.rescueShip  = null;
   }
   st.turnsStranded++;
-  G.turn++;
+  beginCareerTurn();
 
   // Crew oxygen drain — 3 HP per crew member per turn stranded
   const dmgPerCrew = 3;
@@ -24,8 +24,7 @@ function doStrandedWait(){
     if(c.hp<=0) addLog(crewDisplayName(c)+' has succumbed to oxygen depletion!','lc');
   });
   SFX.suffocate();
-  pruneDead();
-  checkDeath();
+  finishCareerTurn();
   if(G.dead){ renderAll(); return; }
 
   // Every 3 turns, log a status message

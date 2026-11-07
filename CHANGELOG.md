@@ -27,9 +27,17 @@ Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 
 Development on `experiment/expedition-legacy`.
 
+### Action timing
+
+- Committed tactical movement, firing, waiting and withdrawal each advance the career clock and crew conditions. Movement and weapon reloads still use tactical rounds, and the arena keeps its own positions.
+- Surface fire, gear use, drilling, diving, and waiting use the same daylight, oxygen, crew and hazard rules. A paid orbital scan or casino buy-in ticks crew conditions once. Menu selections and blocked actions are free.
+- All 47 repository tests and five headless Edge suites passed. The timing check measured oxygen, daylight, crew status, and scan costs. Tactical, rescue, career, and autosave scenarios also passed. Saves from the first experimental.46 checkpoint use the same schema.
+
+### Career saves
+
 - Career saves use a versioned schema and store IDs for combat opponents, radio merchants, rescuers, crew dialogue actors and active casino contestants. Buying fuel after a reload now updates the merchant's real stock. Crew conversations stay with the selected person when names collide, and combat references survive roster reordering.
 - Autosaves and imports share schema and reference validation. Malformed imports leave the active run in place. Start a new career for this version.
-- All 47 repository tests and four headless Edge suites passed. They covered the new identity cases, large-world reload, interrupted writes, debug isolation, and Mercy of Dawn persistence. Action clocks and world generation are separate follow-up changes.
+- All 47 repository tests and four headless Edge suites passed. They covered the new identity cases, large-world reload, interrupted writes, debug isolation, and Mercy of Dawn persistence.
 
 ## 2026-11-07 — 0.28 experimental.45 adds tactical ship combat
 

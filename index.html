@@ -5607,8 +5607,7 @@ function quarantineExamine(x,y){
 }
 
 function quarantineActionTurn(){
-  G.turn++;
-  doWaitPlanet(true); // ordinary oxygen, enemies, hazards and crew status ticking
+  doWaitPlanet();
   if(!G.dead){ discoverQuarantinePeople(); renderAll(); }
 }
 function takeQuarantineItem(usable){
@@ -8987,7 +8986,7 @@ function maybeSpreadDisease(source, id, chance){
   return true;
 }
 
-function tickCrewStatuses(context){
+function tickCrewStatuses(){
   tickQuarantineIncident();
   ensureCrewStatusState();
   if(!G?.crew) return;
@@ -19132,7 +19131,7 @@ function handleInventoryKey(key,shiftKey=false){
         G.inventory.splice(G._viewInvSel||0, 1);
         G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0, G.inventory.length-1));
         G.mode = G._prevMode;
-        G.turn++; pdata4.planetTurn = (pdata4.planetTurn||0)+1; moveEnemies();
+        completeSurfaceAction();
         renderAll(); return;
       }
       // ── Containment Crate ──────────────────────────────────
@@ -19334,7 +19333,9 @@ function casinoStartPoker(){
   if(!casinoSpend(stake.amount)){ c.lastResult={win:false,msg:'Not enough credits for that table.'}; return; }
   const deck=casinoDeck();
   c.poker={phase:'hold', stake:stake.amount, deck, hand:deck.splice(0,5), hold:[false,false,false,false,false], result:null};
-  c.lastResult=null; G.turn++;
+  c.lastResult=null;
+  beginCareerTurn();
+  finishCareerTurn();
 }
 function casinoFinishPoker(){
   const c=ensureCasinoState(), p=c.poker; if(!p) return;
@@ -19353,7 +19354,13 @@ function casinoStartContest(kind){
   if(!casinoSpend(opp.stake)){ addLog('Not enough credits for that stake.','lw'); return; }
   c.lastResult=null;
   c.contest={kind, opp, crew, round:0, strain:0, player:0, rival:0, phase:'active'};
-  G.turn++;
+  beginCareerTurn();
+  finishCareerTurn();
+  if(crew.hp<=0){
+    c.contest=null;
+    casinoLose(opp.stake);
+    return;
+  }
   addLog(crewDisplayName(crew)+' steps up against '+opp.name+'. The ring closes in.','li');
 }
 function casinoResolveContestWin(c, won, note){
@@ -19411,7 +19418,11 @@ function casinoStartArena(){
   if(!fighter){ c.lastResult={win:false,msg:'No living crew can fight.'}; return; }
   if(!casinoSpend(b.bet)){ c.lastResult={win:false,msg:'Not enough credits for that side bet.'}; return; }
   c.arena={round:0,fighter,fighterHp:fighter.hp,beast:{...b,maxHp:b.hp,hp:b.hp},captainBonus:G.crew.some(x=>x.role==='captain'&&x.hp>0)?2:0,log:['The gate slams open. '+crewDisplayName(fighter)+' enters.'],result:null};
-  c.arenaPhase='watch'; G.turn++;
+  c.arenaPhase='watch';
+  beginCareerTurn();
+  finishCareerTurn();
+  c.arena.fighterHp=fighter.hp;
+  if(fighter.hp<=0) casinoFinishArena(false);
 }
 function casinoArenaStep(){
   const c=ensureCasinoState(), a=c.arena; if(!a||a.result) return;
@@ -19670,7 +19681,7 @@ function doStrandedWait(){
     st.rescueShip  = null;
   }
   st.turnsStranded++;
-  G.turn++;
+  beginCareerTurn();
 
   // Crew oxygen drain — 3 HP per crew member per turn stranded
   const dmgPerCrew = 3;
@@ -19679,8 +19690,7 @@ function doStrandedWait(){
     if(c.hp<=0) addLog(crewDisplayName(c)+' has succumbed to oxygen depletion!','lc');
   });
   SFX.suffocate();
-  pruneDead();
-  checkDeath();
+  finishCareerTurn();
   if(G.dead){ renderAll(); return; }
 
   // Every 3 turns, log a status message
@@ -20341,10 +20351,7 @@ function resolveRangedShot(shooter, profile){
 
 function finishRangedFireTurn(){
   G.rangeTarget = null;
-  G.turn++;
-  moveEnemies();
-  processPlanetHazards();
-  checkDeath();
+  completeSurfaceAction();
   renderAll();
 }
 
@@ -23787,10 +23794,7 @@ function attackCivilizationFromDialogue(ctx){
     doCombat(target);
     return;
   }
-  G.turn++;
-  moveEnemies();
-  processPlanetHazards();
-  checkDeath();
+  completeSurfaceAction();
   renderAll();
 }
 
@@ -29228,7 +29232,6 @@ function processPlanetHazards(){
   }
 
   applyHallucinogenicExposure();
-  tickCrewStatuses('planet');
 }
 
 function checkAlarms(){
@@ -29347,7 +29350,7 @@ function tryMove(dx,dy,confirmed){
     // One galaxy move always advances the world. Chase speed is handled inside
     // movePirates() by comparing pirate engine rating against the player's.
     G._bonusMoves = 0;
-    G.turn++;
+    beginCareerTurn();
     // Tick active sensor drones
     if(G._activeDrones && G._activeDrones.length){
       G._activeDrones = G._activeDrones.filter(d=>{
@@ -29491,8 +29494,7 @@ function tryMove(dx,dy,confirmed){
     // 0.6% chance per turn a new stranded ship appears somewhere in the galaxy
     if(Math.random()<0.006) spawnNpcStrandedShip();
 
-    tickCrewStatuses('galaxy');
-    checkDeath();
+    finishCareerTurn();
     if(G.dead){ renderAll(); return; }
 
     // -- Passive skill effects — once per galaxy move -------------
@@ -29564,14 +29566,13 @@ function tryMove(dx,dy,confirmed){
     if(!TILE[cell.type]?.pass){
       // Ringworld locked door — open with [E]
       if(cell.type==='rw_locked_door'){
-        G.turn++;
         cell.type='rw_open_door';
         addLog('Maintenance hatch forced open. The hallway beyond is pressurised.','li');
+        completeSurfaceAction();
         renderAll(); return;
       }
       // Ancient locked door — requires high SCI skill to decipher and open
       if(cell.type==='ancient_locked_door'){
-        G.turn++;
         const bestSci = (G.crew||[]).filter(c=>c.hp>0)
           .reduce((best,c)=>crewSkillValue(c,'sci')>crewSkillValue(best,'sci')?c:best, G.crew[0]);
         const sciVal = bestSci ? crewSkillValue(bestSci,'sci') : 0;
@@ -29581,6 +29582,7 @@ function tryMove(dx,dy,confirmed){
           addLog(crewDisplayName(bestSci)+' deciphers the lock sequence. The door sighs open.','lg');
           // Disturbing the lock may activate interior defences
           if(!cell._orbSpawned){ cell._orbSpawned = true; maybeSpawnAncientSentinel(pdata, nx, ny); }
+          completeSurfaceAction();
         } else {
           addLog("The door is locked. A sufficiently skilled scientist could crack it.",'lw');
         }
@@ -29617,9 +29619,6 @@ function tryMove(dx,dy,confirmed){
       }
     }
 
-    // Actual movement — all messages from here onward share this turn number
-    G.turn++;
-
     // Void step: jetpack carriers fly through unprompted; everyone else gets a Y/N confirmation
     if(!confirmed && (cell.type==='ancient_st_void' || cell.type==='rw_void')){
       const jetpack = (G.inventory||[]).find(i=>i.usable==='jetpack' && (i.fuel||0)>0);
@@ -29634,8 +29633,10 @@ function tryMove(dx,dy,confirmed){
       // Has jetpack with fuel — fall through to move and let tile-entry logic handle the charge burn
     }
 
-    // Actually move
+    // Commit only after movement and any confirmation have been accepted.
+    beginCareerTurn();
     G.player.x=nx; G.player.y=ny;
+    advancePlanetDaylight(pdata);
     noteHallucinationMismatchAt(nx, ny);
 
     // -- Tile entry effects ----------------------------------------
@@ -29661,9 +29662,11 @@ function tryMove(dx,dy,confirmed){
     if(landingTile === 'EARTH_WATER'){
       const waterRoll = Math.random();
       if(waterRoll < 0.15){
-        pdata.planetTurn++;
         addLog('You lose your footing and struggle in the current!','lw');
         revealPlanet(G.curPlanet, nx, ny, 2);
+        applySurfaceTurnExposure();
+        if(!G.dead){ moveEnemies(); processPlanetHazards(); }
+        finishCareerTurn();
         renderAll(); return;
       } else if(waterRoll < 0.30){
         const slipDirs = [[-1,0],[1,0],[0,-1],[0,1]].filter(([sdx,sdy])=>{
@@ -29799,6 +29802,10 @@ function tryMove(dx,dy,confirmed){
           addLog('The '+civ.species.toLowerCase()+' respond with immediate aggression.','lc');
         } else if(!civState?.contacted){
           // First contact — auto-open dialogue as before
+          revealPlanet(G.curPlanet,G.player.x,G.player.y);
+          applySurfaceTurnExposure();
+          finishCareerTurn();
+          if(G.dead){ renderAll(); return; }
           startCivilizationDialogue({
             pdata,
             cell: { type: landingTile },
@@ -29862,24 +29869,6 @@ function tryMove(dx,dy,confirmed){
       addLog('A vent erupts underfoot — '+dmg+' damage!','lw');
       checkDeath(); if(G.dead){ renderAll(); return; }
     }
-    // Advance planet day cycle
-    const pdata2 = G.planets[G.curPlanet];
-    if(pdata2){
-      const _B2   = BIOMES[pdata2.biome] || {};
-      const _cyc2 = (_B2.dayLength||20)*4;
-      const _rawVr2 = (t2) => {
-        if(_B2.tidalLock==='day') return 10;
-        if(_B2.tidalLock==='night') return 1;
-        const cv = Math.cos((t2/_cyc2)*2*Math.PI - Math.PI/2);
-        let v = 1+(cv+1)/2*9;
-        if(pdata2.biome==='ANCIENT') v=Math.min(v,6);
-        return v;
-      };
-      const _vrBefore2 = _rawVr2(pdata2.planetTurn % _cyc2);
-      pdata2.planetTurn++;
-      const _vrAfter2  = _rawVr2(pdata2.planetTurn % _cyc2);
-      _checkPhaseMessages(_vrBefore2, _vrAfter2, pdata2.biome);
-    }
     // Reveal radius — shrink inside smoke or forest (foliage blocks vision)
     const _smokeHere = G.planets[G.curPlanet]?.smokeClouds?.some(c=>c.x===G.player.x&&c.y===G.player.y);
     const _forestHere = pdata.grid[G.player.y]?.[G.player.x]?.type === 'EARTH_FOREST';
@@ -29895,7 +29884,7 @@ function tryMove(dx,dy,confirmed){
     // handled by the shared applyOxygenDrain() (also used by doWaitPlanet()/doCombat()).
     const biomeKey = G.planets[G.curPlanet]?.biome;
     const biome    = atmosphereBiome(G.curPlanet);
-    if(applyOxygenDrain()){ renderAll(); return; }
+    if(applyOxygenDrain()){ finishCareerTurn(); renderAll(); return; }
     applyCrewMovementInjuryCosts();
     // Auto-surface / wading extras (movement-specific only)
     if(G.underwater){
@@ -30025,6 +30014,8 @@ function tryMove(dx,dy,confirmed){
           addLog('Jetpack fires, hovering over the void. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' remaining.', 'lg');
           if(fuelLeft <= 3) addLog('Jetpack fuel is low. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' left before the void claims you.','lw');
         }
+        applyOxygenWarnings();
+        finishCareerTurn();
         renderAll(); return;
       }
       G.dead = true;
@@ -30046,6 +30037,8 @@ function tryMove(dx,dy,confirmed){
           addLog('Jetpack fires, arrested the fall into vacuum. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' remaining.', 'lg');
           if(fuelLeft <= 3) addLog('Jetpack fuel is low. '+fuelLeft+' charge'+(fuelLeft===1?'':'s')+' left before the void claims you.','lw');
         }
+        applyOxygenWarnings();
+        finishCareerTurn();
         renderAll(); return;
       }
       G.dead = true;
@@ -30170,6 +30163,9 @@ function tryMove(dx,dy,confirmed){
         addLog('Already searched.','li');
       }
     } else if(cell.type==='CAVE_ENTRANCE'){
+      applyOxygenWarnings();
+      checkDeath();
+      if(G.dead){ renderAll(); return; }
       const caveKey = cell.caveKey || (G.curPlanet+':cave');
       if(!G.planets[caveKey] || G.planets[caveKey].caveGenVersion !== 2){
         const srcBiome = G.planets[G.curPlanet]?.biome||'HABITABLE';
@@ -30184,8 +30180,12 @@ function tryMove(dx,dy,confirmed){
       addLog('You squeeze through a narrow opening into the cave...','li');
       maybeExposeRandomCrewToInfection(0.03, 'cave_air',
         'Something in the cave air irritates the filters.');
+      finishCareerTurn();
       renderAll(); return;
     } else if(cell.type==='cave_exit'){
+      applyOxygenWarnings();
+      checkDeath();
+      if(G.dead){ renderAll(); return; }
       // Return to surface
       if(G._caveReturn){
         G.curPlanet = G._caveReturn.planet;
@@ -30197,6 +30197,7 @@ function tryMove(dx,dy,confirmed){
       } else {
         addLog('No way back registered. Lifting off instead.','lw');
       }
+      finishCareerTurn();
       renderAll(); return;
     } else if(cell.type==='uw_exit'){
       // Light shaft rising to the surface — [Z] to surface from anywhere underwater
@@ -30238,14 +30239,18 @@ function tryMove(dx,dy,confirmed){
     applyOxygenWarnings();
 
     if(maybeCivilizationInitiatesContact(pdata)){
+      finishCareerTurn();
+      renderAll();
       return;
     }
     moveEnemies();
     if(maybeCivilizationInitiatesContact(pdata)){
+      finishCareerTurn();
+      renderAll();
       return;
     }
     processPlanetHazards();
-    checkDeath();
+    finishCareerTurn();
   }
 
   renderAll();
@@ -30358,13 +30363,7 @@ function doCombat(enemy){
   const attackers = livingAttackers.filter(c=>crewCanContributeCombat(c));
   if(livingAttackers.length && !attackers.length){
     addLog('All crew are stunned — enemies seize the opening!','lc');
-    G.turn++;
-    if(applyOxygenDrain()){ renderAll(); return; }
-    applyOxygenWarnings();
-    moveEnemies();
-    moveEnemies();
-    processPlanetHazards();
-    checkDeath();
+    completeSurfaceAction();
     renderAll();
     return;
   }
@@ -30411,9 +30410,6 @@ function doCombat(enemy){
 
   // Combined attack log
   debugCombatLog('CREW_ATTACK', { target: enemy.name, dmg: totalDmg, enemyHp: enemy.hp, hitters: hitters.map(c=>c.name) });
-  G.turn++;
-  if(applyOxygenDrain()){ renderAll(); return; }
-  applyOxygenWarnings();
   if(enemy.hp > 0){
     const stunNote = stunBatonHit ? ' '+enemy.name+' is stunned!' : '';
     addLog('Your crew strikes '+enemy.name+' for '+totalDmg+' damage.'+stunNote,'lc');
@@ -30427,9 +30423,7 @@ function doCombat(enemy){
     dropAlienDeathLoot(enemy);
   }
 
-  moveEnemies();
-  processPlanetHazards();
-  checkDeath();
+  completeSurfaceAction();
   renderAll();
 }
 
@@ -31182,11 +31176,12 @@ function doFireAtBase(base){
       G.deathCause='The ship was destroyed by defense turrets at '+base.name+'.';
     }
   }
-  G.turn++;
+  beginCareerTurn();
   moveNeutralShips();
   movePirates();
   moveGasEntities();
   tickNpcStranded();
+  finishCareerTurn();
   renderAll();
 }
 
@@ -31328,12 +31323,14 @@ function doShipSurrender(){
       return;
     }
     // Second press — jailed, game over
+    beginCareerTurn();
     addLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
     G.jailed = true;
     G.dead = true;
     G.deathCause = 'You surrendered to '+pirate.name+' and were taken into custody. The crew spent the rest of their days in a station detention block. Your ship was impounded and auctioned.';
     G.shipCombat = null;
     G.mode = 'galaxy';
+    finishCareerTurn();
     renderAll();
     return;
   }
@@ -31346,6 +31343,7 @@ function doShipSurrender(){
     return;
   }
 
+  beginCareerTurn();
   G.credits = Math.max(0, (G.credits||0) - terms.creditTake);
   G.cargo = [];
   for(const {ship} of livingShipCombatEnemies(sc)){
@@ -31359,6 +31357,7 @@ function doShipSurrender(){
   G.mode = 'galaxy';
   addLog('Pirates accepted surrender: -'+terms.creditTake+' cr, cargo hold emptied. They will ignore you for a while.','lw');
   moveShipAwayFromPirate(pirate);
+  finishCareerTurn();
   renderAll();
 }
 function doShipRetreat(){
@@ -31369,6 +31368,9 @@ function doShipRetreat(){
     renderAll();
     return;
   }
+  beginCareerTurn();
+  finishCareerTurn();
+  if(G.dead){ renderAll(); return; }
   const underFire = !shipCombatEscapeReady(combat);
   if(underFire){
     for(const enemy of livingShipCombatEnemies(combat)){
@@ -31668,6 +31670,9 @@ function fireShipCombatEnemy(combat,enemy){
 function advanceShipCombat(combat=G.shipCombat,hitPlayer=false){
   pointerShipCombatAim = null;
   if(!combat || combat!==G.shipCombat){ renderAll(); return; }
+  beginCareerTurn();
+  finishCareerTurn();
+  if(G.dead){ renderAll(); return; }
   for(const enemy of livingShipCombatEnemies(combat)){
     if(shipCombatEnemyThreat(combat,enemy)){
       if(combat.round<enemy.ready) continue;
@@ -31681,7 +31686,6 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false){
     G.shipCombat = null;
     G.mode = 'galaxy';
     addLog(combat.result?.message||'Combat ended.',combat.result?.cls||'li');
-    checkDeath();
   } else {
     updateShipCombatTarget(combat);
     if(!hitPlayer && combat.round%3===0 && combat.playerShields<G.shipStats.shields) combat.playerShields++;
@@ -32515,7 +32519,7 @@ function doScan(){
 
   if(G.fuel<=0){ addLog('Not enough fuel to run scanners.','lw'); renderAll(); return; }
   if(!DEBUG.infiniteFuel){ G.fuel = Math.max(0, G.fuel-1); G.fuelSpent=(G.fuelSpent||0)+1; }
-  G.turn++;
+  beginCareerTurn();
   const B = BIOMES[targetDesc.biome] || {};
   const difficulty = B.scanDifficulty ?? 0.6;
   const bestNavScan  = Math.max(0, ...(G.crew.filter(c=>c.hp>0).map(c=>c.skills?.nav||0)));
@@ -32583,6 +32587,7 @@ function doScan(){
   }
 
   recordSurveyFinding(body);
+  finishCareerTurn();
   renderAll();
 }
 function doToggleDive(){
@@ -32604,10 +32609,6 @@ function doToggleDive(){
 
   const hasDivingSuit = G.crew.some(c => c.hp > 0 && c.armorUsable === 'armor_diving');
 
-  // Diving itself costs one turn of O2 — sealing and descending is not free
-  const diveCost = hasDivingSuit ? 2 : 8;
-  G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - diveCost);
-
   // Generate underwater overlay lazily (mirrors surface grid)
   const uwKey = G.curPlanet + ':uw';
   if(!G.planets[uwKey]){
@@ -32623,13 +32624,13 @@ function doToggleDive(){
 
   // Switch to underwater map; player stays at same (x,y)
   G.curPlanet = uwKey;
-  revealPlanet(uwKey, G.player.x, G.player.y);
 
   if(hasDivingSuit){
     addLog('You dive below the surface. The world above dissolves into shifting light. Diving suit sealed — O2 draining slowly.','lw');
   } else {
     addLog('You plunge under without a diving suit. Water pressure immediately stresses the seals — O2 draining fast.','lc');
   }
+  completeSurfaceAction();
   renderAll();
 }
 
@@ -32666,7 +32667,7 @@ function doUnderwaterSurface(){
     addLog('You surface.','li');
   }
 
-  revealPlanet(G.curPlanet, G.player.x, G.player.y);
+  completeSurfaceAction();
   renderAll();
 }
 function doRefillOxygen(){
@@ -33359,6 +33360,91 @@ function executeBaseAction(actionId){
   renderAll();
 }
 
+function beginCareerTurn(){
+  G.turn++;
+}
+
+function finishCareerTurn(){
+  if(G.dead) return;
+  tickCrewStatuses();
+  checkDeath();
+  if(G.dialogue?.context?.crew?.hp<=0) G.dialogue=null;
+}
+
+function advancePlanetDaylight(pdata){
+  const biome = BIOMES[pdata.biome] || {};
+  const cycle = (biome.dayLength || 20)*4;
+  const brightness = turn=>{
+    const light = 1 + (Math.sin((turn%cycle)/cycle*2*Math.PI)+1)/2*9;
+    return pdata.biome==='ANCIENT' ? Math.min(light,6) : light;
+  };
+  const before = pdata.planetTurn || 0;
+  pdata.planetTurn = before+1;
+  _checkPhaseMessages(brightness(before),brightness(pdata.planetTurn),pdata.biome);
+}
+
+function applySurfaceTurnExposure(){
+  if(applyOxygenDrain()) return;
+  applyOxygenWarnings();
+  checkDeath();
+}
+
+function applyStandingSurfaceHazards(){
+  const waitTile = G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x]?.type;
+  if(waitTile === 'LAVA_FLOOR'){
+    const dmg = 3 + rnd(4);
+    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
+    G.crew.filter(c=>c.hp>0).forEach(c=>applyCrewInjury(c, 'burns', { amount:2, source:'lava', silent:true }));
+    SFX.crewHit();
+    addLog('Standing in lava — crew takes '+dmg+' damage!','lc');
+    checkDeath();
+  }
+  if(waitTile === 'AMMONIA'){
+    const dmg = 2 + rnd(2);
+    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
+    G.crew.filter(c=>c.hp>0).forEach(c=>{
+      applyCrewInjury(c, 'burns', { amount:1, source:'ammonia', silent:true });
+      if(Math.random() < 0.25) applyCrewStatus(c, 'toxin_poisoning', { amount:1, stackMode:'add', max:5, source:'ammonia' });
+    });
+    G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - atmosphereBiome(G.curPlanet).oxyDrain*2);
+    SFX.suffocate();
+    addLog('Ammonia seeps in — '+dmg+' damage and O₂ draining!','lc');
+    checkDeath();
+  }
+  if(waitTile === 'TOXIC_FLOOR2'){
+    const dmg = 1 + rnd(3);
+    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
+    G.crew.filter(c=>c.hp>0).forEach(c=>{
+      applyCrewInjury(c, 'burns', { amount:1, source:'acid', silent:true });
+      if(Math.random() < 0.30) applyCrewStatus(c, 'toxin_poisoning', { amount:1, stackMode:'add', max:5, source:'acid_pool' });
+    });
+    SFX.crewHit();
+    addLog('Acid pool burns through the suit — '+dmg+' damage!','lc');
+    checkDeath();
+  }
+  if(waitTile === 'TOXIC_FLOOR3' && Math.random() < 0.15){
+    const dmg = 1 + rnd(2);
+    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
+    SFX.crewHit();
+    addLog('A vent erupts underfoot — '+dmg+' damage!','lw');
+    checkDeath();
+  }
+}
+
+// Short actions on the surface share the clock, exposure and NPC response.
+// Movement and waiting have additional local effects.
+function completeSurfaceAction(visionRadius){
+  beginCareerTurn();
+  advancePlanetDaylight(G.planets[G.curPlanet]);
+  revealPlanet(G.curPlanet,G.player.x,G.player.y,visionRadius);
+  applySurfaceTurnExposure();
+  if(!G.dead) applyStandingSurfaceHazards();
+  if(!G.dead){
+    moveEnemies();
+    processPlanetHazards();
+  }
+  finishCareerTurn();
+}
 function doFuelScoop(context){
   if(!G || G.dead || G.retired) return;
   if(!(G.installedModules||[]).includes('fuel_scoop')){
@@ -33406,14 +33492,15 @@ function doFuelScoop(context){
       addLog('Atmospheric turbulence — scoop aborted.','lw');
     }
     applyScoopRisk('Gas giant', 0.28, 5, 16);
-  }
-  G.turn++;
+  } else return;
+  beginCareerTurn();
   if(!G.dead){
     moveNeutralShips();
     movePirates();
     moveGasEntities();
     tickNpcStranded();
   }
+  finishCareerTurn();
   renderAll();
 }
 
@@ -33421,10 +33508,9 @@ function doWaitGalaxy(){
   if(G.mode==='shipcombat'){ advanceShipCombat(); return; }
   if(G.mode!=='galaxy'||G.dead||G.retired) return;
   G._bonusMoves = 0;
-  G.turn++;
+  beginCareerTurn();
   maybeCrewGalaxyTalk();
-  tickCrewStatuses('galaxy_wait');
-  checkDeath();
+  finishCareerTurn();
   if(G.dead){ renderAll(); return; }
   if(!DEBUG.infiniteFuel) G.fuel = Math.max(0, G.fuel - 0.5);
 
@@ -33469,81 +33555,18 @@ function doWaitGalaxy(){
   renderAll();
 }
 
-function doWaitPlanet(turnAlreadyAdvanced=false){
+function doWaitPlanet(){
   if(G.mode!=='planet'||G.dead||G.retired) return;
-  if(!turnAlreadyAdvanced) G.turn++;
+  beginCareerTurn();
 
-  // Advance planet day cycle
   const pdata = G.planets[G.curPlanet];
-  if(pdata){
-    const _Bw   = BIOMES[pdata.biome] || {};
-    const _cycw = (_Bw.dayLength||20)*4;
-    const _rawVrW = (t2) => {
-      if(_Bw.tidalLock==='day') return 10;
-      if(_Bw.tidalLock==='night') return 1;
-      const cv = Math.cos((t2/_cycw)*2*Math.PI - Math.PI/2);
-      let v = 1+(cv+1)/2*9;
-      if(pdata.biome==='ANCIENT') v=Math.min(v,6);
-      return v;
-    };
-    const _vrBeforeW = _rawVrW(pdata.planetTurn % _cycw);
-    pdata.planetTurn++;
-    const _vrAfterW  = _rawVrW(pdata.planetTurn % _cycw);
-    _checkPhaseMessages(_vrBeforeW, _vrAfterW, pdata.biome);
-    // Refresh the current sight mask even when the crew stays on the same tile.
-    revealPlanet(G.curPlanet, G.player.x, G.player.y);
-  }
+  advancePlanetDaylight(pdata);
+  revealPlanet(G.curPlanet,G.player.x,G.player.y);
+  applySurfaceTurnExposure();
+  if(G.dead){ renderAll(); return; }
 
-  // Oxygen drain, including underwater maps. Shared with tryMove()/doCombat() —
-  // keep this in sync with movement via applyOxygenDrain()/applyOxygenWarnings().
-  const biome = atmosphereBiome(G.curPlanet);
-  if(applyOxygenDrain()){ renderAll(); return; }
-  applyOxygenWarnings();
-  if((biome.oxyDrain > 0 || G.underwater) && G.oxygen<=0 && !DEBUG.infiniteOxy){
-    checkDeath();
-    if(G.dead){ renderAll(); return; }
-  }
-
-  // Standing on hazard tiles
-  const waitTile = G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x]?.type;
-  if(waitTile === 'LAVA_FLOOR'){
-    const dmg = 3 + rnd(4);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    G.crew.filter(c=>c.hp>0).forEach(c=>applyCrewInjury(c, 'burns', { amount:2, source:'lava', silent:true }));
-    SFX.crewHit();
-    addLog('Standing in lava — crew takes '+dmg+' damage!','lc');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
-  if(waitTile === 'AMMONIA'){
-    const dmg = 2 + rnd(2);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    G.crew.filter(c=>c.hp>0).forEach(c=>{
-      applyCrewInjury(c, 'burns', { amount:1, source:'ammonia', silent:true });
-      if(Math.random() < 0.25) applyCrewStatus(c, 'toxin_poisoning', { amount:1, stackMode:'add', max:5, source:'ammonia' });
-    });
-    G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - biome.oxyDrain*2);
-    SFX.suffocate();
-    addLog('Ammonia seeps in — '+dmg+' damage and O₂ draining!','lc');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
-  if(waitTile === 'TOXIC_FLOOR2'){
-    const dmg = 1 + rnd(3);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    G.crew.filter(c=>c.hp>0).forEach(c=>{
-      applyCrewInjury(c, 'burns', { amount:1, source:'acid', silent:true });
-      if(Math.random() < 0.30) applyCrewStatus(c, 'toxin_poisoning', { amount:1, stackMode:'add', max:5, source:'acid_pool' });
-    });
-    SFX.crewHit();
-    addLog('Acid pool burns through the suit — '+dmg+' damage!','lc');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
-  if(waitTile === 'TOXIC_FLOOR3' && Math.random() < 0.15){
-    const dmg = 1 + rnd(2);
-    G.crew.filter(c=>c.hp>0).forEach(c=>c.hp=Math.max(0,c.hp-dmg));
-    SFX.crewHit();
-    addLog('A vent erupts underfoot — '+dmg+' damage!','lw');
-    checkDeath(); if(G.dead){ renderAll(); return; }
-  }
+  applyStandingSurfaceHazards();
+  if(G.dead){ renderAll(); return; }
 
   // Medic — 30% chance to heal 1–3 HP on a random injured crew member
   const medic = G.crew.find(c=>c.role==='medic'&&c.hp>0);
@@ -33559,17 +33582,18 @@ function doWaitPlanet(turnAlreadyAdvanced=false){
 
   // Enemies act
   if(maybeCivilizationInitiatesContact(pdata)){
+    finishCareerTurn();
     renderAll();
     return;
   }
   moveEnemies();
   if(maybeCivilizationInitiatesContact(pdata)){
+    finishCareerTurn();
     renderAll();
     return;
   }
   processPlanetHazards();
-  checkDeath();
-  if(G.dead){ renderAll(); return; }
+  finishCareerTurn();
   renderAll();
 }
 
@@ -33818,9 +33842,7 @@ document.addEventListener('keydown', e=>{
           G.inventory.splice(aim.invIdx, 1);
           G._viewInvSel = Math.min(aim.invIdx, Math.max(0, G.inventory.length-1));
           addLog('Grappling Hook fires \u2014 you clear the rock face in one swing.','lg');
-          G.turn++; pdata.planetTurn = (pdata.planetTurn||0)+1;
-          revealPlanet(G.curPlanet, G.player.x, G.player.y, 2);
-          moveEnemies();
+          completeSurfaceAction(2);
         } else if(aim.usable==='jetpack'){
           const item = G.inventory[aim.invIdx];
           const jx = G.player.x + lx*2, jy = G.player.y + ly*2;
@@ -33841,9 +33863,7 @@ document.addEventListener('keydown', e=>{
           } else {
             addLog('Jetpack boost \u2014 cleared 2 tiles! Fuel: '+fuelLeft+' charges left.','lg');
           }
-          G.turn++; pdata.planetTurn = (pdata.planetTurn||0)+1;
-          revealPlanet(G.curPlanet, G.player.x, G.player.y, 2);
-          moveEnemies();
+          completeSurfaceAction(2);
         }
         renderAll(); return;
       }
@@ -34192,8 +34212,6 @@ document.addEventListener('keydown', e=>{
           G._miningProgress = { x:G.player.x, y:G.player.y, progress:0, total:_totalNeeded, oreKey:_oreKey, comId:_comId };
         }
         G._miningProgress.progress++;
-        G.turn++; _pdata.planetTurn = (_pdata.planetTurn||0)+1;
-        moveEnemies();
         if(G._miningProgress.progress >= G._miningProgress.total){
           addCargo(makeCommodityItem(_comId, G.curPlanet, _com.basePrice));
           addLog('Extracted '+_com.name+'. (~'+_com.basePrice+' cr at stations)','lg');
@@ -34203,6 +34221,7 @@ document.addEventListener('keydown', e=>{
           const _left = G._miningProgress.total - G._miningProgress.progress;
           addLog('Drilling… '+G._miningProgress.progress+'/'+G._miningProgress.total+' ('+_left+' more press'+((_left===1)?'':'es')+')','li');
         }
+        completeSurfaceAction();
         renderAll(); return;
       }
     }

@@ -114,6 +114,7 @@
     "src/actions/survey-and-scan.js",
     "src/actions/diving-and-liftoff.js",
     "src/actions/station-purchases.js",
+    "src/actions/turns.js",
     "src/actions/wait-and-fuel.js",
     "src/input/keyboard.js",
     "src/debug/playground.js",

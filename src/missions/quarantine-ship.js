@@ -173,8 +173,7 @@ function quarantineExamine(x,y){
 }
 
 function quarantineActionTurn(){
-  G.turn++;
-  doWaitPlanet(true); // ordinary oxygen, enemies, hazards and crew status ticking
+  doWaitPlanet();
   if(!G.dead){ discoverQuarantinePeople(); renderAll(); }
 }
 function takeQuarantineItem(usable){

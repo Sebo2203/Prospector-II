@@ -10,13 +10,7 @@ function doCombat(enemy){
   const attackers = livingAttackers.filter(c=>crewCanContributeCombat(c));
   if(livingAttackers.length && !attackers.length){
     addLog('All crew are stunned — enemies seize the opening!','lc');
-    G.turn++;
-    if(applyOxygenDrain()){ renderAll(); return; }
-    applyOxygenWarnings();
-    moveEnemies();
-    moveEnemies();
-    processPlanetHazards();
-    checkDeath();
+    completeSurfaceAction();
     renderAll();
     return;
   }
@@ -63,9 +57,6 @@ function doCombat(enemy){
 
   // Combined attack log
   debugCombatLog('CREW_ATTACK', { target: enemy.name, dmg: totalDmg, enemyHp: enemy.hp, hitters: hitters.map(c=>c.name) });
-  G.turn++;
-  if(applyOxygenDrain()){ renderAll(); return; }
-  applyOxygenWarnings();
   if(enemy.hp > 0){
     const stunNote = stunBatonHit ? ' '+enemy.name+' is stunned!' : '';
     addLog('Your crew strikes '+enemy.name+' for '+totalDmg+' damage.'+stunNote,'lc');
@@ -79,9 +70,7 @@ function doCombat(enemy){
     dropAlienDeathLoot(enemy);
   }
 
-  moveEnemies();
-  processPlanetHazards();
-  checkDeath();
+  completeSurfaceAction();
   renderAll();
 }
 

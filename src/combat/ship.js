@@ -103,11 +103,12 @@ function doFireAtBase(base){
       G.deathCause='The ship was destroyed by defense turrets at '+base.name+'.';
     }
   }
-  G.turn++;
+  beginCareerTurn();
   moveNeutralShips();
   movePirates();
   moveGasEntities();
   tickNpcStranded();
+  finishCareerTurn();
   renderAll();
 }
 
@@ -249,12 +250,14 @@ function doShipSurrender(){
       return;
     }
     // Second press — jailed, game over
+    beginCareerTurn();
     addLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
     G.jailed = true;
     G.dead = true;
     G.deathCause = 'You surrendered to '+pirate.name+' and were taken into custody. The crew spent the rest of their days in a station detention block. Your ship was impounded and auctioned.';
     G.shipCombat = null;
     G.mode = 'galaxy';
+    finishCareerTurn();
     renderAll();
     return;
   }
@@ -267,6 +270,7 @@ function doShipSurrender(){
     return;
   }
 
+  beginCareerTurn();
   G.credits = Math.max(0, (G.credits||0) - terms.creditTake);
   G.cargo = [];
   for(const {ship} of livingShipCombatEnemies(sc)){
@@ -280,6 +284,7 @@ function doShipSurrender(){
   G.mode = 'galaxy';
   addLog('Pirates accepted surrender: -'+terms.creditTake+' cr, cargo hold emptied. They will ignore you for a while.','lw');
   moveShipAwayFromPirate(pirate);
+  finishCareerTurn();
   renderAll();
 }
 function doShipRetreat(){
@@ -290,6 +295,9 @@ function doShipRetreat(){
     renderAll();
     return;
   }
+  beginCareerTurn();
+  finishCareerTurn();
+  if(G.dead){ renderAll(); return; }
   const underFire = !shipCombatEscapeReady(combat);
   if(underFire){
     for(const enemy of livingShipCombatEnemies(combat)){

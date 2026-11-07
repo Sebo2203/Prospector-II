@@ -9,6 +9,7 @@ const suites = {
   previews: 'palette-icons-scenarios.cjs',
   ships: 'ship-art-scenarios.cjs',
   'ship-combat': 'ship-combat-scenarios.cjs',
+  turns: 'turn-scenarios.cjs',
   'ship-previews': 'ship-art-previews.cjs',
   encounters: 'encounter-discovery.cjs',
   rescue: 'spatial-scenarios.cjs',

@@ -129,7 +129,9 @@ function casinoStartPoker(){
   if(!casinoSpend(stake.amount)){ c.lastResult={win:false,msg:'Not enough credits for that table.'}; return; }
   const deck=casinoDeck();
   c.poker={phase:'hold', stake:stake.amount, deck, hand:deck.splice(0,5), hold:[false,false,false,false,false], result:null};
-  c.lastResult=null; G.turn++;
+  c.lastResult=null;
+  beginCareerTurn();
+  finishCareerTurn();
 }
 function casinoFinishPoker(){
   const c=ensureCasinoState(), p=c.poker; if(!p) return;
@@ -148,7 +150,13 @@ function casinoStartContest(kind){
   if(!casinoSpend(opp.stake)){ addLog('Not enough credits for that stake.','lw'); return; }
   c.lastResult=null;
   c.contest={kind, opp, crew, round:0, strain:0, player:0, rival:0, phase:'active'};
-  G.turn++;
+  beginCareerTurn();
+  finishCareerTurn();
+  if(crew.hp<=0){
+    c.contest=null;
+    casinoLose(opp.stake);
+    return;
+  }
   addLog(crewDisplayName(crew)+' steps up against '+opp.name+'. The ring closes in.','li');
 }
 function casinoResolveContestWin(c, won, note){
@@ -206,7 +214,11 @@ function casinoStartArena(){
   if(!fighter){ c.lastResult={win:false,msg:'No living crew can fight.'}; return; }
   if(!casinoSpend(b.bet)){ c.lastResult={win:false,msg:'Not enough credits for that side bet.'}; return; }
   c.arena={round:0,fighter,fighterHp:fighter.hp,beast:{...b,maxHp:b.hp,hp:b.hp},captainBonus:G.crew.some(x=>x.role==='captain'&&x.hp>0)?2:0,log:['The gate slams open. '+crewDisplayName(fighter)+' enters.'],result:null};
-  c.arenaPhase='watch'; G.turn++;
+  c.arenaPhase='watch';
+  beginCareerTurn();
+  finishCareerTurn();
+  c.arena.fighterHp=fighter.hp;
+  if(fighter.hp<=0) casinoFinishArena(false);
 }
 function casinoArenaStep(){
   const c=ensureCasinoState(), a=c.arena; if(!a||a.result) return;

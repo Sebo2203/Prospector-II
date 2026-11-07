@@ -32,6 +32,12 @@ This is a source organization step, not a conversion to ES modules. The main gam
 
 The root keeps a 1400×720 logical layout. `src/ui/scaling-and-compass.js` fits it to the viewport with CSS layout zoom, with transform scaling as a fallback. Drawing and pointer hit areas use `canvasWidth` and `canvasHeight`. The main canvas backing dimensions are the displayed size in device pixels and can change on resize or display density changes. Use the backing dimensions for pixel reads and writes.
 
+### Action timing
+
+`src/actions/turns.js` coordinates the career clock. A committed action advances the global turn once, and a completed turn ticks crew conditions and timed incidents. Physical surface actions also advance local daylight, refresh sight, and apply oxygen and local hazards. Movement and waiting keep their own effects such as injury costs and medic aid. Paid orbital scans consume one fuel and one turn, and a casino event consumes one turn at buy-in. Menu navigation, inventory management and failed checks that consume no resources remain free.
+
+The tactical arena uses its own rounds for cooldowns, enemy actions and exhaust. Committed actions also advance the career clock while the encounter resolves locally. Galaxy ship movement keeps its existing travel and wait rules.
+
 | Source area | Responsibility |
 | --- | --- |
 | `core`, `input`, `actions`, `movement` | State, startup, controls, player actions and turns |

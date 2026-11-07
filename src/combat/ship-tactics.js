@@ -278,6 +278,9 @@ function fireShipCombatEnemy(combat,enemy){
 function advanceShipCombat(combat=G.shipCombat,hitPlayer=false){
   pointerShipCombatAim = null;
   if(!combat || combat!==G.shipCombat){ renderAll(); return; }
+  beginCareerTurn();
+  finishCareerTurn();
+  if(G.dead){ renderAll(); return; }
   for(const enemy of livingShipCombatEnemies(combat)){
     if(shipCombatEnemyThreat(combat,enemy)){
       if(combat.round<enemy.ready) continue;
@@ -291,7 +294,6 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false){
     G.shipCombat = null;
     G.mode = 'galaxy';
     addLog(combat.result?.message||'Combat ended.',combat.result?.cls||'li');
-    checkDeath();
   } else {
     updateShipCombatTarget(combat);
     if(!hitPlayer && combat.round%3===0 && combat.playerShields<G.shipStats.shields) combat.playerShields++;

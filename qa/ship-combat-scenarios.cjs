@@ -18,6 +18,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
       const pirate={x,y,hp:50,maxHp:50,atk:6,engineRating:2,shields:0,maxShields:0,guns:1,alive:true,pirateType:'guard'};
       G.pirates=[{...pirate,name:'Lead'},{...pirate,name:'Wing',x:x+1},{...pirate,name:'Distant',x:x+5}];
       G.installedWeapons=['railgun','pulse_laser'];
+      applyCrewStatus(G.crew[0],'hangover',{duration:20,silent:true});
       return {x,y,turn:G.turn};
     });
     await page.keyboard.press('f');
@@ -57,7 +58,8 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.evaluate(()=>G.ship.hp),hp-5,'crossing the corvette exhaust takes six damage, minus one shield');
     assert.ok(await page.evaluate(()=>G.shipCombat.trails.some(t=>t.damage===4)),'enemy engine leaves a weaker trail');
-    assert.deepEqual(await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn]),[setup.x,setup.y,setup.turn]);
+    assert.deepEqual(await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn,getCrewStatus(G.crew[0],'hangover').duration]),
+      [setup.x,setup.y,setup.turn+3,17],'each committed tactical action ticks the career and crew once');
     await page.screenshot({path:artifactPath('Tactical-combat.png')});
 
     const combatState=()=>page.evaluate(()=>{

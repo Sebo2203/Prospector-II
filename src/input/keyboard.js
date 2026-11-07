@@ -243,9 +243,7 @@ document.addEventListener('keydown', e=>{
           G.inventory.splice(aim.invIdx, 1);
           G._viewInvSel = Math.min(aim.invIdx, Math.max(0, G.inventory.length-1));
           addLog('Grappling Hook fires \u2014 you clear the rock face in one swing.','lg');
-          G.turn++; pdata.planetTurn = (pdata.planetTurn||0)+1;
-          revealPlanet(G.curPlanet, G.player.x, G.player.y, 2);
-          moveEnemies();
+          completeSurfaceAction(2);
         } else if(aim.usable==='jetpack'){
           const item = G.inventory[aim.invIdx];
           const jx = G.player.x + lx*2, jy = G.player.y + ly*2;
@@ -266,9 +264,7 @@ document.addEventListener('keydown', e=>{
           } else {
             addLog('Jetpack boost \u2014 cleared 2 tiles! Fuel: '+fuelLeft+' charges left.','lg');
           }
-          G.turn++; pdata.planetTurn = (pdata.planetTurn||0)+1;
-          revealPlanet(G.curPlanet, G.player.x, G.player.y, 2);
-          moveEnemies();
+          completeSurfaceAction(2);
         }
         renderAll(); return;
       }
@@ -617,8 +613,6 @@ document.addEventListener('keydown', e=>{
           G._miningProgress = { x:G.player.x, y:G.player.y, progress:0, total:_totalNeeded, oreKey:_oreKey, comId:_comId };
         }
         G._miningProgress.progress++;
-        G.turn++; _pdata.planetTurn = (_pdata.planetTurn||0)+1;
-        moveEnemies();
         if(G._miningProgress.progress >= G._miningProgress.total){
           addCargo(makeCommodityItem(_comId, G.curPlanet, _com.basePrice));
           addLog('Extracted '+_com.name+'. (~'+_com.basePrice+' cr at stations)','lg');
@@ -628,6 +622,7 @@ document.addEventListener('keydown', e=>{
           const _left = G._miningProgress.total - G._miningProgress.progress;
           addLog('Drilling… '+G._miningProgress.progress+'/'+G._miningProgress.total+' ('+_left+' more press'+((_left===1)?'':'es')+')','li');
         }
+        completeSurfaceAction();
         renderAll(); return;
       }
     }
