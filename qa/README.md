@@ -69,6 +69,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `ships` | 384 ship/direction/background/opacity combinations, transparency, subtle radio glyphs over space/nebulae, role/combat art, sensor concealment and ASCII |
 | `ship-previews` | Native ship-selection and hull-change screenshots, old/new ship compositing comparison |
 | `turns` | Oxygen, daylight and crew status during surface fire and waiting, paid orbital scans, and one turn per casino event |
+| `morale` | Actual encouragement rolls, temporary boost, failure, cooldown enforcement, save/load, exact expiry, repeated attempts and zero base morale |
 | `worldgen` | Reachable inhabited aquatic settlements across 100 native worlds, shared underwater diplomacy after reload, and morale at zero |
 | `encounters` | One hidden Mercy at generation, seeded repeatability, sensor-only detection, no exploration spawns, save/load and explicit debug boarding |
 | `rescue` | 15 spatial Mercy rescue scenarios using real door, movement, medicine, carrying, transport and handoff actions |

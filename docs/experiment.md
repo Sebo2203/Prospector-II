@@ -22,6 +22,8 @@ Fly to an edge and use **R** to disengage. Enemies with a clear shot and a ready
 
 The sidebar shows one badge per living crew member. **C** is Captain, **N** Navigator, **E** Engineer, **S** Scientist, **+** Medic, **m** Mercenary, and **r** Redshirt. The meter shows remaining HP in green, amber below 60%, and red below 30%. A pulsing **!** marks an active condition and stays still with reduced motion enabled. Hover for the crew member's name, exact HP, and known conditions. Open **I → CREW** for the full roster.
 
+Talk to a crew member and choose **Check morale → Issue encouragement** to attempt a social check. Success gives +3 current morale for 30 career turns. Failure leaves morale alone. Either result starts a 40-turn cooldown for that crew member. The morale breakdown lists base outlook, the encouragement bonus with its remaining turns, and current morale separately. Saved careers preserve the time remaining.
+
 ## The captain’s log
 
 Open **I → LOG**. The default **6 / RECORDS** view starts with active science contracts, known open rescue leads, and pending deliveries. Survey totals, known civilization relationships, closed incidents, and history follow. Major discoveries and rescue events also appear in ALL and MISSION. The log keeps known discoveries in the save. Repeated scans update the existing finding. Use **J** in the ship inventory tab to jettison cargo.

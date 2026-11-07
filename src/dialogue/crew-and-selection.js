@@ -24,6 +24,8 @@ function crewMoraleBreakdown(c){
   const rows = [
     { label:'Base outlook', value:c.moraleBase ?? 55, col:'#88ccff' },
   ];
+  const encouragement = crewEncouragementBonus(c);
+  if(encouragement) rows.push({ label:'Encouragement', value:'+'+encouragement+' ('+(c.encouragedUntil-G.turn)+'t)', col:'#88dd88' });
   if((c.drinkGlow || 0) > 0) rows.push({ label:'Recent drinks', value:'+'+c.drinkGlow, col:'#ffaa44' });
   if((c.drugRush || 0) > 0) rows.push({ label:'Chemical lift', value:'+'+c.drugRush, col:'#d488ff' });
   if((c.grief || 0) > 0) rows.push({ label:'Grief / stress', value:'-'+c.grief, col:'#ff7777' });

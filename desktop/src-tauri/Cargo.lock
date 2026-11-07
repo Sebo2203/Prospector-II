@@ -2300,7 +2300,7 @@ dependencies = [
 
 [[package]]
 name = "prospector-ii-desktop"
-version = "0.28.0-experimental.47"
+version = "0.28.0-experimental.48"
 dependencies = [
  "tauri",
  "tauri-build",

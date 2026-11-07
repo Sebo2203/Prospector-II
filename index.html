@@ -1819,7 +1819,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
     <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
     <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
-    <div id="version-tag"><span>v0.28 experimental.47</span><span id="save-state" role="status" aria-live="polite"></span></div>
+    <div id="version-tag"><span>v0.28 experimental.48</span><span id="save-state" role="status" aria-live="polite"></span></div>
   </div>
 
   <!-- Canvas + Gauges + Sidebar -->
@@ -1982,8 +1982,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.47';
-const GAME_VERSION_LABEL = 'v0.28 experimental.47';
+const GAME_VERSION = '0.28.0-experimental.48';
+const GAME_VERSION_LABEL = 'v0.28 experimental.48';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -9224,6 +9224,10 @@ function reduceCrewRadiation(amount){
   return treated;
 }
 
+const CREW_ENCOURAGE_BONUS = 3;
+const CREW_ENCOURAGE_DURATION = 30;
+const CREW_ENCOURAGE_COOLDOWN = 40;
+
 function ensureCrewMoraleState(){
   if(!G) return;
   ensureCrewStatusState();
@@ -9281,8 +9285,12 @@ function timeAwayFromPortPenalty(){
 function crewMoraleScore(c){
   ensureCrewMoraleState();
   const awayPenalty = timeAwayFromPortPenalty();
-  const score = (c.moraleBase ?? 55) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
+  const score = (c.moraleBase ?? 55) + crewEncouragementBonus(c) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
   return Math.max(0, Math.min(135, score));
+}
+
+function crewEncouragementBonus(c){
+  return (c.encouragedUntil || 0)>G.turn ? CREW_ENCOURAGE_BONUS : 0;
 }
 
 function crewMoodFace(c){
@@ -21230,6 +21238,8 @@ function crewMoraleBreakdown(c){
   const rows = [
     { label:'Base outlook', value:c.moraleBase ?? 55, col:'#88ccff' },
   ];
+  const encouragement = crewEncouragementBonus(c);
+  if(encouragement) rows.push({ label:'Encouragement', value:'+'+encouragement+' ('+(c.encouragedUntil-G.turn)+'t)', col:'#88dd88' });
   if((c.drinkGlow || 0) > 0) rows.push({ label:'Recent drinks', value:'+'+c.drinkGlow, col:'#ffaa44' });
   if((c.drugRush || 0) > 0) rows.push({ label:'Chemical lift', value:'+'+c.drugRush, col:'#d488ff' });
   if((c.grief || 0) > 0) rows.push({ label:'Grief / stress', value:'-'+c.grief, col:'#ff7777' });
@@ -21657,8 +21667,6 @@ function makeCivilizationHostileFromLocal(e, reason){
   return makeCivilizationHostile(pdata, reason);
 }
 
-const CREW_ENCOURAGE_COOLDOWN = 40;
-
 function crewEncourageCooldown(c){
   if(!c) return 0;
   return Math.max(0, (c.nextEncourageTurn || 0) - (G.turn || 1));
@@ -21669,9 +21677,17 @@ function canEncourageDialogueCrew(){
   return !!c && crewEncourageCooldown(c) <= 0;
 }
 
-function markCrewEncouragementAttempt(){
+function resolveCrewEncouragement(success){
   const c = dialogueCrew();
-  if(c) c.nextEncourageTurn = (G.turn || 1) + CREW_ENCOURAGE_COOLDOWN;
+  if(!c || crewEncourageCooldown(c)>0) return;
+  c.nextEncourageTurn = G.turn + CREW_ENCOURAGE_COOLDOWN;
+  if(success){
+    c.encouragedUntil = G.turn + CREW_ENCOURAGE_DURATION;
+    addLog(crewDisplayName(c)+' feels encouraged. +'+CREW_ENCOURAGE_BONUS+' morale for '+CREW_ENCOURAGE_DURATION+' turns.','lg');
+  } else {
+    addLog('Your encouragement does not reach '+crewDisplayName(c)+'. Morale is unaffected.','li');
+  }
+  updateCrewLowMoraleFlags();
 }
 
 function alienGiftCandidates(){
@@ -27214,7 +27230,7 @@ const DIALOGUE_DEFS = {
       morale: {
         text: ctx => dialogueTextFromTopic(dialogueCrew() || ctx.crew, 'morale'),
         options: [
-          { label:'Issue encouragement', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:'not ready', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
+          { label:'Issue encouragement (+'+CREW_ENCOURAGE_BONUS+' for '+CREW_ENCOURAGE_DURATION+' turns)', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:ctx=>'ready in '+crewEncourageCooldown(dialogueCrew())+' turns', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
           { label:'Request needs', next:'needs' },
           { label:'Back', next:'root' },
         ],
@@ -27227,25 +27243,23 @@ const DIALOGUE_DEFS = {
           return '"Keep the ship supplied, keep the crew paid, and let us have a win now and then. People can survive a lot when they think it means something."';
         },
         options: [
-          { label:'Issue encouragement', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:'not ready', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
+          { label:'Issue encouragement (+'+CREW_ENCOURAGE_BONUS+' for '+CREW_ENCOURAGE_DURATION+' turns)', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:ctx=>'ready in '+crewEncourageCooldown(dialogueCrew())+' turns', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
           { label:'Back', next:'morale' },
         ],
       },
       encourage_success: {
+        repeatable:true,
         text: ctx => '"Thanks, Captain. I needed to hear that."',
-        onEnter: ctx => {
-          const c = dialogueCrew() || ctx.crew;
-          markCrewEncouragementAttempt();
-          if(c){ c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 3); updateCrewLowMoraleFlags(); }
-        },
+        onEnter: ctx => resolveCrewEncouragement(true),
         options: [
           { label:'Continue', next:'root' },
           { label:'Close channel', action:'close' },
         ],
       },
       encourage_fail: {
+        repeatable:true,
         text: ctx => '"I know what you are trying to do. It is just not landing right now."',
-        onEnter: ctx => markCrewEncouragementAttempt(),
+        onEnter: ctx => resolveCrewEncouragement(false),
         options: [
           { label:'Try a practical question', next:'needs' },
           { label:'Back', next:'root' },

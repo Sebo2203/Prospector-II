@@ -1,3 +1,7 @@
+const CREW_ENCOURAGE_BONUS = 3;
+const CREW_ENCOURAGE_DURATION = 30;
+const CREW_ENCOURAGE_COOLDOWN = 40;
+
 function ensureCrewMoraleState(){
   if(!G) return;
   ensureCrewStatusState();
@@ -55,8 +59,12 @@ function timeAwayFromPortPenalty(){
 function crewMoraleScore(c){
   ensureCrewMoraleState();
   const awayPenalty = timeAwayFromPortPenalty();
-  const score = (c.moraleBase ?? 55) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
+  const score = (c.moraleBase ?? 55) + crewEncouragementBonus(c) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
   return Math.max(0, Math.min(135, score));
+}
+
+function crewEncouragementBonus(c){
+  return (c.encouragedUntil || 0)>G.turn ? CREW_ENCOURAGE_BONUS : 0;
 }
 
 function crewMoodFace(c){

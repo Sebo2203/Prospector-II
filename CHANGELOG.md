@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.48 gives encouragement a temporary effect
+
+Released on `experiment/expedition-legacy`.
+
+- Successful encouragement adds +3 to current morale for 30 career turns. The crew's base outlook is preserved. Failed encouragement has no morale effect, and either result starts the existing 40-turn cooldown.
+- Dialogue choices show the boost duration and cooldown. The crew morale breakdown shows encouragement as a separate contribution with its remaining turns. Saving and loading preserve the expiry time.
+- Eligible later attempts now work within the same conversation, while revisiting a result during cooldown cannot award another boost.
+- All 47 repository tests and four headless Edge suites passed. The morale check exercised actual dialogue rolls, cooldown enforcement, save/load, exact expiry, repeat attempts and zero base morale. Earlier permanent gains are already part of saved base outlook. The new rule applies to subsequent attempts and supports experimental.46–47 careers.
+
 ## 2026-11-07 — 0.28 experimental.47 toggles the debug menu
 
 Released on `experiment/expedition-legacy`.

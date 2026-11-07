@@ -1,5 +1,3 @@
-const CREW_ENCOURAGE_COOLDOWN = 40;
-
 function crewEncourageCooldown(c){
   if(!c) return 0;
   return Math.max(0, (c.nextEncourageTurn || 0) - (G.turn || 1));
@@ -10,9 +8,17 @@ function canEncourageDialogueCrew(){
   return !!c && crewEncourageCooldown(c) <= 0;
 }
 
-function markCrewEncouragementAttempt(){
+function resolveCrewEncouragement(success){
   const c = dialogueCrew();
-  if(c) c.nextEncourageTurn = (G.turn || 1) + CREW_ENCOURAGE_COOLDOWN;
+  if(!c || crewEncourageCooldown(c)>0) return;
+  c.nextEncourageTurn = G.turn + CREW_ENCOURAGE_COOLDOWN;
+  if(success){
+    c.encouragedUntil = G.turn + CREW_ENCOURAGE_DURATION;
+    addLog(crewDisplayName(c)+' feels encouraged. +'+CREW_ENCOURAGE_BONUS+' morale for '+CREW_ENCOURAGE_DURATION+' turns.','lg');
+  } else {
+    addLog('Your encouragement does not reach '+crewDisplayName(c)+'. Morale is unaffected.','li');
+  }
+  updateCrewLowMoraleFlags();
 }
 
 function alienGiftCandidates(){
