@@ -10,7 +10,7 @@ function renderContextBar(){
   const btn = (key,label,cls='',action=key==='ESC'?'Escape':key==='Enter'?key:/^[A-Z0-9]$/.test(key)?key.toLowerCase():null) => {
     const content=`<span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}`;
     return action
-      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control>${content}</button>`
+      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control title="${htmlEsc(label)}">${content}</button>`
       : `<div class="ctx-btn ${cls}">${content}</div>`;
   };
   const arrows = (label,horizontal=false) => {

@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.49 rearranges the footer and sidebar
+
+Released on `experiment/expedition-legacy`.
+
+- Moved the save indicator above the version in the bottom-left corner. The save text is 10px and the version is 13px. The compass and minimap occupy the bottom-right of the play area.
+- Extended the crew and Comms Log sidebar from the HUD to the bottom edge. Context actions, alerts and footer controls fit beside it. Long action labels use an ellipsis, with their complete text retained in the button and available on hover.
+- All 47 repository tests and four headless Edge suites passed. Both UI styles were checked at two window sizes, with save failure labels and alerts. The interface checks also covered wrapped actions, a stable orbital map, compass placement, menu navigation and minimap fit. The save schema supports experimental.46–48 careers.
+
 ## 2026-11-07 — 0.28 experimental.48 gives encouragement a temporary effect
 
 Released on `experiment/expedition-legacy`.

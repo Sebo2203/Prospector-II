@@ -45,7 +45,7 @@ const assert = require('node:assert/strict');
     await page.screenshot({ path: artifactPath('Main-menu.png') });
     await page.evaluate(() => initGame('LIGHT_SCOUT', 'Version QA', 'Version QA'));
     await page.waitForFunction(() => G?.galaxy && G.log.some(e => e.msg.includes('Ready for departure')));
-    assert.equal(await page.locator('#version-tag span').first().textContent(), expected.label);
+    assert.equal(await page.locator('#version-label').textContent(), expected.label);
     assert.equal(await page.locator('#version-tag').isVisible(), true);
     const tools = page.locator('#persist-bar');
     const status = page.locator('#version-tag');
@@ -63,22 +63,27 @@ const assert = require('node:assert/strict');
           applyUIStyle();
           if(alert) showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300');
           else hideMsg();
-          const root=document.getElementById('root'), hud=document.getElementById('hud'), status=document.getElementById('version-tag');
-          const rootBounds=root.getBoundingClientRect();
-          const hudBounds=hud.getBoundingClientRect(), statusBounds=status.getBoundingClientRect();
-          const badge=document.getElementById('save-state');
+          const root=document.getElementById('root'), status=document.getElementById('version-tag');
+          const rect=id=>document.getElementById(id).getBoundingClientRect();
+          const rootBounds=root.getBoundingClientRect(), footer=rect('persist-bar'), sidebar=rect('sidebar');
+          const badge=document.getElementById('save-state'), version=document.getElementById('version-label');
           const range=document.createRange();
           const fits=['Saved','Saving…','AUTOSAVE FAILED','DEBUG — career autosave protected'].every(label=>{
             badge.textContent=label;
             range.selectNodeContents(badge);
-            const text=range.getBoundingClientRect();
-            return text.top>=statusBounds.top && text.bottom<=statusBounds.bottom+0.1 &&
-              text.top>=hudBounds.top && text.bottom<=hudBounds.bottom;
+            const text=range.getBoundingClientRect(), bounds=status.getBoundingClientRect();
+            return text.top>=bounds.top && text.bottom<=version.getBoundingClientRect().top &&
+              text.left>=footer.left && text.right<rect('hud-tools').left;
           });
+          const statusBounds=status.getBoundingClientRect();
           const result={
-            inset:hudBounds.right-statusBounds.right,
-            padding:parseFloat(getComputedStyle(hud).paddingRight)*rootBounds.width/GAME_W,
+            inset:statusBounds.left-footer.left,
+            padding:12*rootBounds.width/GAME_W,
             fits,
+            smaller:parseFloat(getComputedStyle(badge).fontSize)<parseFloat(getComputedStyle(version).fontSize),
+            bottom:Math.abs(footer.bottom-statusBounds.bottom-6*rootBounds.width/GAME_W)<0.1,
+            sidebar:Math.abs(sidebar.bottom-footer.bottom)<0.1 && sidebar.top>=rect('hud').bottom-0.1,
+            separate:footer.right<=sidebar.left+0.1 && rect('hud-tools').right<sidebar.left,
             banner:document.getElementById('msg-bar').classList.contains('visible'),
           };
           OPTIONS.uiStyle=previousStyle;
@@ -87,7 +92,9 @@ const assert = require('node:assert/strict');
           return result;
         },{uiStyle,alert});
         assert.equal(layout.banner,alert);
-        assert.ok(layout.fits && Math.abs(layout.inset-layout.padding)<0.1,'every save label fits in the top-right HUD in '+uiStyle);
+        assert.ok(layout.fits && Math.abs(layout.inset-layout.padding)<0.1,'every save label fits above the bottom-left version in '+uiStyle);
+        assert.ok(layout.smaller && layout.bottom && layout.sidebar && layout.separate,
+          'the smaller save label, full-height sidebar and separate tools match the footer layout in '+uiStyle);
       }
     }
     await page.setViewportSize({width:1400,height:720});
@@ -98,6 +105,6 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#game-escape').isVisible(),false);
     await checkMainMenu(['C', 'N', 'L', 'O', 'X', 'Q']);
     assert.deepEqual(errors, []);
-    console.log('PASS: version labels and top-right HUD status, main menu keyboard and mouse routes with and without a save, and retired V shortcut.');
+    console.log('PASS: version labels and bottom-left save status, main menu keyboard and mouse routes with and without a save, and retired V shortcut.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exit(1); });

@@ -58,6 +58,7 @@ function setMenuCanvasMode(){
   const main = document.getElementById('main');
   const wrap = document.getElementById('canvas-wrap');
   if(main){
+    main.style.width = '100%';
     main.style.height = '720px';
     main.style.minHeight = '720px';
     main.style.maxHeight = '720px';
@@ -84,6 +85,7 @@ function setGameCanvasMode(){
   const main = document.getElementById('main');
   const wrap = document.getElementById('canvas-wrap');
   if(main){
+    main.style.width = '';
     main.style.height = '';
     main.style.minHeight = '';
     main.style.maxHeight = '';

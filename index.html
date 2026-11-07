@@ -837,6 +837,7 @@ html, body {
   --alert-height: 28px;
   --context-max-height: 70px;
   --tools-height: 102px;
+  --sidebar-width: 362px;
   --fuel-normal: #48cdb6;
   --hull-normal: #67bcdd;
   background: #0a0a0f;
@@ -936,6 +937,7 @@ html, body {
 /* ── Main area: gauges | canvas | sidebar ── */
 #main {
   display: flex;
+  width: calc(100% - var(--sidebar-width));
   flex-shrink: 1;
   overflow: hidden;
   height: 492px;
@@ -1083,9 +1085,11 @@ canvas {
 
 /* ── Sidebar ── */
 #sidebar {
-  width: 362px;
-  height: 100%;
-  max-height: 492px;
+  position: absolute;
+  top: var(--hud-height);
+  right: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
   flex-shrink: 0;
   background: #111;
   border-left: 1px solid var(--steel-seam);
@@ -1227,6 +1231,7 @@ canvas {
 
 /* ── Message bar ── */
 #msg-bar {
+  width: calc(100% - var(--sidebar-width));
   padding: 4px 8px 4px 12px;
   background: #1e1b19;
   font-size: 15px;
@@ -1253,6 +1258,7 @@ canvas {
 #msg-bar-dismiss:hover { border-color: #888; color: #aaa; }
 /* ── Contextual action bar ── */
 #ctx-bar {
+  width: calc(100% - var(--sidebar-width));
   padding: 7px 12px;
   background: #0e0e1a;
   border-top: 1px solid var(--steel-rim);
@@ -1279,8 +1285,10 @@ canvas {
   font-family: 'Courier New', Courier, monospace;
   color: #aaa;
   cursor: default;
-  max-width: 100%;
-  overflow-wrap: anywhere;
+  max-width: min(100%, 60ch);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ctx-btn .ck { color: #ffe066; font-weight: bold; }
 .ctx-btn.danger { border-color: #5a2a2a; color: #f09090; }
@@ -1332,6 +1340,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 
 /* ── Persistent global bar ── */
 #persist-bar {
+  width: calc(100% - var(--sidebar-width));
   padding: 6px 10px 12px 12px;
   border-top: 1px solid var(--steel-seam);
   box-shadow: inset 0 1px #34444e;
@@ -1358,8 +1367,9 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
+  padding-bottom: 30px;
 }
 #shortcut-toggle {
   --key-face: #202a31;
@@ -1375,9 +1385,11 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(210px, 1fr));
-  align-content: center;
+  align-content: start;
   gap: 5px 14px;
-  overflow: hidden;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 #persist-hints[hidden] { display: none; }
 #gc.map-targeting { cursor: crosshair; }
@@ -1512,15 +1524,24 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 }
 /* ── Version tag ── */
 #version-tag {
-  display: grid;
-  grid-auto-rows: minmax(1lh, auto);
-  flex-shrink: 0;
+  position: absolute;
+  left: 12px;
+  bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
   font-size: 13px;
   line-height: 1.2;
   color: #7d8c99;
-  text-align: right;
+  text-align: left;
 }
-#save-state { color: #558877; }
+#save-state {
+  min-height: 16px;
+  font-size: 10px;
+  line-height: 16px;
+  color: #558877;
+}
 
 #debug-playground-button {
   position: relative;
@@ -1819,10 +1840,9 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
     <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
     <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
-    <div id="version-tag"><span>v0.28 experimental.48</span><span id="save-state" role="status" aria-live="polite"></span></div>
   </div>
 
-  <!-- Canvas + Gauges + Sidebar -->
+  <!-- Canvas and gauges -->
   <div id="main">
 
     <!-- Left gauge panel: swaps between space gauges and planet gauge -->
@@ -1860,19 +1880,6 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       <canvas id="gc"></canvas>
       
     </div>
-    <div id="sidebar">
-      <div class="s-title" id="crew-title">Crew Status</div>
-      <div id="crew-list"></div>
-      <div id="inv-list" style="display:none"></div>
-      <div class="s-title">
-        <span id="log-title">Comms Log</span>
-        <span class="log-size-controls">
-          <button type="button" class="hud-menu-btn" data-menu-control aria-label="Decrease log text size" onclick="adjustLogFont(-1)">−</button>
-          <button type="button" class="hud-menu-btn" data-menu-control aria-label="Increase log text size" onclick="adjustLogFont(1)">+</button>
-        </span>
-      </div>
-      <div id="log-list"></div>
-    </div>
   </div>
 
   <!-- Message bar -->
@@ -1884,6 +1891,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.49</span></div>
     <div id="persist-shortcuts">
       <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
       <div id="persist-hints" hidden>
@@ -1916,6 +1924,21 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       </div>
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
+  </div>
+
+  <!-- Crew and comms span the full right side beneath the HUD. -->
+  <div id="sidebar">
+    <div class="s-title" id="crew-title">Crew Status</div>
+    <div id="crew-list"></div>
+    <div id="inv-list" style="display:none"></div>
+    <div class="s-title">
+      <span id="log-title">Comms Log</span>
+      <span class="log-size-controls">
+        <button type="button" class="hud-menu-btn" data-menu-control aria-label="Decrease log text size" onclick="adjustLogFont(-1)">−</button>
+        <button type="button" class="hud-menu-btn" data-menu-control aria-label="Increase log text size" onclick="adjustLogFont(1)">+</button>
+      </span>
+    </div>
+    <div id="log-list"></div>
   </div>
 
   <!-- Barter overlay -->
@@ -1982,8 +2005,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.48';
-const GAME_VERSION_LABEL = 'v0.28 experimental.48';
+const GAME_VERSION = '0.28.0-experimental.49';
+const GAME_VERSION_LABEL = 'v0.28 experimental.49';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -28155,7 +28178,7 @@ function renderContextBar(){
   const btn = (key,label,cls='',action=key==='ESC'?'Escape':key==='Enter'?key:/^[A-Z0-9]$/.test(key)?key.toLowerCase():null) => {
     const content=`<span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}`;
     return action
-      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control>${content}</button>`
+      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control title="${htmlEsc(label)}">${content}</button>`
       : `<div class="ctx-btn ${cls}">${content}</div>`;
   };
   const arrows = (label,horizontal=false) => {
@@ -35819,6 +35842,7 @@ function setMenuCanvasMode(){
   const main = document.getElementById('main');
   const wrap = document.getElementById('canvas-wrap');
   if(main){
+    main.style.width = '100%';
     main.style.height = '720px';
     main.style.minHeight = '720px';
     main.style.maxHeight = '720px';
@@ -35845,6 +35869,7 @@ function setGameCanvasMode(){
   const main = document.getElementById('main');
   const wrap = document.getElementById('canvas-wrap');
   if(main){
+    main.style.width = '';
     main.style.height = '';
     main.style.minHeight = '';
     main.style.maxHeight = '';

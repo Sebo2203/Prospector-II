@@ -41,10 +41,9 @@
     <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
     <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
-    <div id="version-tag"><span>__GAME_VERSION_LABEL__</span><span id="save-state" role="status" aria-live="polite"></span></div>
   </div>
 
-  <!-- Canvas + Gauges + Sidebar -->
+  <!-- Canvas and gauges -->
   <div id="main">
 
     <!-- Left gauge panel: swaps between space gauges and planet gauge -->
@@ -82,19 +81,6 @@
       <canvas id="gc"></canvas>
       
     </div>
-    <div id="sidebar">
-      <div class="s-title" id="crew-title">Crew Status</div>
-      <div id="crew-list"></div>
-      <div id="inv-list" style="display:none"></div>
-      <div class="s-title">
-        <span id="log-title">Comms Log</span>
-        <span class="log-size-controls">
-          <button type="button" class="hud-menu-btn" data-menu-control aria-label="Decrease log text size" onclick="adjustLogFont(-1)">−</button>
-          <button type="button" class="hud-menu-btn" data-menu-control aria-label="Increase log text size" onclick="adjustLogFont(1)">+</button>
-        </span>
-      </div>
-      <div id="log-list"></div>
-    </div>
   </div>
 
   <!-- Message bar -->
@@ -106,6 +92,7 @@
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">__GAME_VERSION_LABEL__</span></div>
     <div id="persist-shortcuts">
       <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
       <div id="persist-hints" hidden>
@@ -138,6 +125,21 @@
       </div>
       <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
+  </div>
+
+  <!-- Crew and comms span the full right side beneath the HUD. -->
+  <div id="sidebar">
+    <div class="s-title" id="crew-title">Crew Status</div>
+    <div id="crew-list"></div>
+    <div id="inv-list" style="display:none"></div>
+    <div class="s-title">
+      <span id="log-title">Comms Log</span>
+      <span class="log-size-controls">
+        <button type="button" class="hud-menu-btn" data-menu-control aria-label="Decrease log text size" onclick="adjustLogFont(-1)">−</button>
+        <button type="button" class="hud-menu-btn" data-menu-control aria-label="Increase log text size" onclick="adjustLogFont(1)">+</button>
+      </span>
+    </div>
+    <div id="log-list"></div>
   </div>
 
   <!-- Barter overlay -->

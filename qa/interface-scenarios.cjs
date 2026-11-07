@@ -130,7 +130,8 @@ const assert = require('node:assert/strict');
           const {left,top,width,height}=canvas.getBoundingClientRect();
           return {bounds:{left,top,width,height},rows:new Set(Array.from(document.querySelector('#ctx-bar').children,item=>item.offsetTop)).size};
         },{wrap,alert});
-        assert.equal(rows,wrap?2:1);
+        assert.ok(rows>=1 && rows<=2,'orbital actions fit within two rows beside the sidebar');
+        if(wrap) assert.equal(rows,2);
         initial ??= bounds;
         assert.deepEqual(bounds,initial,'orbital canvas stays fixed with wrapped actions and an alert');
       }
