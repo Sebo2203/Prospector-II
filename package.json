@@ -1,6 +1,6 @@
 {
   "name": "prospector-ii",
-  "version": "0.28.0-experimental.60",
+  "version": "0.28.0-experimental.61",
   "private": true,
   "description": "Prospector II experimental development with modular sources and a single HTML build.",
   "engines": { "node": ">=22" },

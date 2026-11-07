@@ -186,7 +186,7 @@ const {isSystemsOpen,canvasText,clickTarget,clickRepair,assertMenuFits}=require(
     await page.evaluate(()=>{
       const combat=G.shipCombat;combat.asteroids=[];
       combat.enemies[0].x=combat.player.x+3;
-      G.ship.heat=shipHeatCapacity()-SHIP_WEAPONS.railgun.heat+1;
+      G.ship.heat=shipHeatCapacity()-Math.min(SHIP_WEAPONS.railgun.heat,SHIP_WEAPONS.mass_driver.heat)+1;
     });
     const hot=await page.evaluate(()=>{const turn=G.turn;doShipFire();return [G.turn-turn,shipCombatWeaponStatus(G.shipCombat,shipCombatWeapons()[0])];});
     assert.deepEqual(hot,[0,'Too hot']);

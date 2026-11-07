@@ -194,8 +194,6 @@ function movePirates(){
     base.lastRespawn = G.turn;
   });
 
-  const playerEngine = Math.max(1,effectiveEngineRating());
-
   G.pirates.forEach(p=>{
     if(!p.alive) return;
     const distToPlayer = Math.abs(p.x-G.ship.x)+Math.abs(p.y-G.ship.y);
@@ -259,20 +257,8 @@ function movePirates(){
       }
     }
 
-    // Engine-rated movement. While chasing, speed is relative to the player's
-    // engine: equal engines trade one tile for one tile, faster pirates gain,
-    // and slower pirates only move on some chase turns.
-    const pirateEngine = effectiveEngineRating(p);
-    if(!pirateEngine) return;
-    let steps;
-    if(isChasing){
-      p._chaseMoveBank = (p._chaseMoveBank || 0) + (pirateEngine / Math.max(1, playerEngine));
-      steps = Math.floor(p._chaseMoveBank);
-      p._chaseMoveBank -= steps;
-    } else {
-      p._chaseMoveBank = 0;
-      steps = Math.max(1, Math.min(pirateEngine, 2)); // relaxed max 2 steps when wandering
-    }
+    // Shared with civilian flight: same engine ratio, bank and relaxed roaming cap.
+    const steps=galaxyShipMoveBudget(p,isChasing);
 
     for(let s=0; s<steps; s++){
       const ctx2 = { tx, ty }; // need current target each step

@@ -123,3 +123,5 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/core/startup.js](../src/core/startup.js) | 2 |
 
 `src/combat/ship-feedback.js` provides disposable shot animation and ordered impact audio; it does not own game rules or save data.
+
+`src/ships/neutral-movement.js` also owns the shared galaxy engine-ratio budget and safe escape-sector candidates used by pirates, civilian flight and tactical exits.

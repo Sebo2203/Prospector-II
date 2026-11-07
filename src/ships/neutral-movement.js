@@ -1,3 +1,42 @@
+// One movement budget for galaxy pursuit and escape. Banks persist on the actual ship.
+function galaxyShipMoveBudget(ship,relative=false){
+  const engine=effectiveEngineRating(ship);
+  if(!engine)return 0;
+  if(!relative){ship._chaseMoveBank=0;return Math.max(1,Math.min(engine,2));}
+  ship._chaseMoveBank=(ship._chaseMoveBank||0)+engine/Math.max(1,effectiveEngineRating());
+  const steps=Math.floor(ship._chaseMoveBank);
+  ship._chaseMoveBank-=steps;
+  return steps;
+}
+
+function galaxyShipEscapeChoices(ship,diagonal=false){
+  const occupied=[...(G.pirates||[]),...(G.neutralShips||[]),...(G.gasEntities||[])];
+  const choices=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if((!dx && !dy) || (!diagonal && dx && dy))continue;
+    const x=ship.x+dx,y=ship.y+dy;
+    if(x<0 || y<0 || x>=MAP_W || y>=MAP_H || (x===G.ship.x && y===G.ship.y))continue;
+    const cell=G.galaxy?.[y]?.[x];
+    if(!cell || ['BLACK_HOLE','PULSAR'].includes(cell.type))continue;
+    if(occupied.some(other=>other!==ship && other.alive!==false && (other.hp??1)>0 && other.x===x && other.y===y))continue;
+    choices.push({x,y});
+  }
+  return choices;
+}
+
+function fleeNeutralShip(ship,steps){
+  const canTrack=!DEBUG.shipInvisible && effectiveSensorRange(ship)>0;
+  if(canTrack)ship.fleeFrom={x:G.ship.x,y:G.ship.y};
+  const threat=ship.fleeFrom||G.ship;
+  for(let step=0;step<steps;step++){
+    const distance=point=>Math.abs(point.x-threat.x)+Math.abs(point.y-threat.y);
+    const next=galaxyShipEscapeChoices(ship).sort((a,b)=>distance(b)-distance(a) ||
+      (b.x-a.x)*(ship.x-threat.x)+(b.y-a.y)*(ship.y-threat.y))[0];
+    if(!next || distance(next)<=distance(ship))break;
+    ship.x=next.x;ship.y=next.y;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 function moveNeutralShips(){
   if(G?.debugPalette && !G.debugPalette.simulate) return;
@@ -34,12 +73,21 @@ function moveNeutralShips(){
 
   (G.neutralShips||[]).forEach(ns=>{
     if(ns.alive===false) return;
-    if(ns.systems && effectiveEngineRating(ns)===0) return;
+    ensureNeutralCombatStats(ns);
+    if(effectiveEngineRating(ns)===0) return;
     // Rescuing — always beeline to stranded player, overrides normal behaviour
     if(ns.rescuing){
       stepToward(ns, G.ship.x, G.ship.y);
       return;
     }
+
+    const distanceToPlayer=Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
+    const unarmed=(shipSystemStats(ns).weaponSlots||0)===0;
+    if(ns.fleeingPlayer && distanceToPlayer>10){ns.fleeingPlayer=false;ns.fleeFrom=null;}
+    if(unarmed && ns.fleeingPlayer){
+      fleeNeutralShip(ns,galaxyShipMoveBudget(ns,true));return;
+    }
+    const steps=unarmed?galaxyShipMoveBudget(ns,distanceToPlayer<=10):ns.speed;
 
     if(ns.type==='patrol'){
       if((G.stationReputation||0) <= -40) ns.hostile = true;
@@ -50,11 +98,11 @@ function moveNeutralShips(){
           const route = ns.patrolRoute;
           if(route && route.length > 0){
             const wp = route[ns.patrolIdx % route.length];
-            stepToward(ns, wp.x, wp.y);
+            stepToward(ns, wp.x, wp.y,steps);
           }
           return;
         }
-        stepToward(ns, G.ship.x, G.ship.y);
+        stepToward(ns, G.ship.x, G.ship.y,steps);
         if(ns.x===G.ship.x && ns.y===G.ship.y && G.mode==='galaxy') startShipCombat(ensureNeutralCombatStats(ns));
         return;
       }
@@ -67,7 +115,7 @@ function moveNeutralShips(){
         // Reached this waypoint — advance to next
         ns.patrolIdx = (ns.patrolIdx + 1) % route.length;
       }
-      stepToward(ns, wp.x, wp.y);
+      stepToward(ns, wp.x, wp.y,steps);
 
     } else if(ns.type==='cargo' || ns.type==='trader'){
       // Shuttle between the two bases
@@ -78,7 +126,7 @@ function moveNeutralShips(){
         // Arrived — flip destination
         ns.destBase = ns.destBase===0 ? 1 : 0;
       }
-      stepToward(ns, target.x, target.y);
+      stepToward(ns, target.x, target.y,steps);
 
     } else if(ns.type==='science'){
       // Wander to a random destination, pick new one on arrival
@@ -87,19 +135,16 @@ function moveNeutralShips(){
         ns.destX = 5+rnd(MAP_W-10);
         ns.destY = 2+rnd(MAP_H-6);
       }
-      // Science ships move every other turn — slower, more meandering
-      if(G.turn % 2 === 0){
-        stepToward(ns, ns.destX, ns.destY);
-      }
+      stepToward(ns, ns.destX, ns.destY,steps);
     }
   });
 }
 
-function stepToward(ns, tx, ty){
+function stepToward(ns, tx, ty,steps=ns.speed){
   const dx = tx - ns.x, dy = ty - ns.y;
   if(dx===0 && dy===0) return;
   // Move `speed` steps per call
-  for(let s=0; s<ns.speed; s++){
+  for(let s=0; s<steps; s++){
     const cx2 = tx - ns.x, cy2 = ty - ns.y;
     if(cx2===0 && cy2===0) break;
     let mx=0, my=0;

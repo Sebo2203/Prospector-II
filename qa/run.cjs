@@ -9,6 +9,7 @@ const suites = {
   previews: 'palette-icons-scenarios.cjs',
   ships: 'ship-art-scenarios.cjs',
   'ship-combat': 'ship-combat-scenarios.cjs',
+  'ship-pursuit': 'ship-pursuit-scenarios.cjs',
   'combat-ui': 'combat-ui-scenarios.cjs',
   'combat-space': 'combat-space-scenarios.cjs',
   'combat-feedback': 'combat-feedback-scenarios.cjs',

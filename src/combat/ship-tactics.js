@@ -69,6 +69,7 @@ function selectShipCombatTarget(index){
   pointerShipCombatAim = null;
   combat.target = index;
   updateShipCombatTarget(combat);
+  selectReadyShipCombatWeapon(combat);
   renderAll();
 }
 
@@ -92,7 +93,33 @@ function shipCombatWeapons(){
 function selectShipCombatWeapon(index){
   if(!shipCombatWeapons()[index]) return;
   G.shipCombat.weapon = index;
+  selectReadyShipCombatWeapon(G.shipCombat);
   renderAll();
+}
+
+function selectReadyShipCombatWeapon(combat=G.shipCombat){
+  const weapons=shipCombatWeapons();
+  if(!weapons.length)return null;
+  if(!weapons[combat.weapon])combat.weapon=0;
+  if(shipCombatWeaponStatus(combat,weapons[combat.weapon])==='Ready')return weapons[combat.weapon];
+  for(let step=1;step<weapons.length;step++){
+    const index=(combat.weapon+step)%weapons.length;
+    if(shipCombatWeaponStatus(combat,weapons[index])==='Ready'){
+      combat.weapon=index;return weapons[index];
+    }
+  }
+  return weapons[combat.weapon];
+}
+
+function shipCombatBlockedFireMessage(entry,status){
+  const reload=status.match(/^Ready in (\d+)$/);
+  const name=entry?.weapon.name||'weapon';
+  if(reload){
+    const turns=Number(reload[1]);
+    return 'Cannot fire '+name+': still reloading ('+turns+' turn'+(turns===1?'':'s')+' remaining). Move or wait to finish reloading.'+
+      (shipCombatWeapons().length>1?' No other weapon can fire at this target.':'');
+  }
+  return 'Cannot fire '+name+': '+combatStatusText(status)+'.';
 }
 
 function shipCombatAsteroid(combat,point){
@@ -156,6 +183,7 @@ function syncShipCombatSystems(combat){
   for(const enemy of combat.enemies) enemy.shields=enemy.ship.shieldCharge;
   updateShipCombatSensors(combat);
   updateShipCombatTarget(combat);
+  selectReadyShipCombatWeapon(combat);
 }
 
 function shipCombatEnemyThreat(combat,enemy){
@@ -265,10 +293,10 @@ function shipCombatHitChance(attackerEngine,defenderEngine,distance){
 function doShipFire(){
   const combat = G.shipCombat;
   if(G.mode!=='shipcombat' || !combat) return;
-  const entry = shipCombatWeapons()[combat.weapon];
+  const entry = selectReadyShipCombatWeapon(combat);
   const status = entry ? shipCombatWeaponStatus(combat,entry) : 'No weapons installed';
   if(status!=='Ready'){
-    addCombatLog(combatStatusText(status)+'.','lw');
+    addCombatLog(shipCombatBlockedFireMessage(entry,status),'lw');
     renderAll();
     return;
   }
@@ -313,9 +341,28 @@ function moveShipCombatEnemy(combat,enemy){
     }
   }
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
-    enemy.escaped = true;
-    addCombatLog(enemy.ship.name+' flies out of the combat area.','li');
+    escapeShipCombatEnemy(combat,enemy);
   }
+}
+
+function escapeShipCombatEnemy(combat,enemy){
+  const ship=enemy.ship;
+  const choices=galaxyShipEscapeChoices(ship);
+  const candidates=choices.length?choices:galaxyShipEscapeChoices(ship,true);
+  const dx=enemy.x===0?-1:enemy.x===COMBAT_MAP.width-1?1:0;
+  const dy=enemy.y===0?-1:enemy.y===COMBAT_MAP.height-1?1:0;
+  const distance=point=>Math.abs(point.x-G.ship.x)+Math.abs(point.y-G.ship.y);
+  candidates.sort((a,b)=>distance(b)-distance(a) || (b.x-a.x)*dx+(b.y-a.y)*dy);
+  if(!candidates.length){
+    if(!enemy.escapeBlocked)addCombatLog(ship.name+' cannot find a clear galaxy escape route.','lw');
+    enemy.escapeBlocked=true;return false;
+  }
+  ship.x=candidates[0].x;ship.y=candidates[0].y;
+  ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;
+  ship.fleeingPlayer=true;ship.fleeFrom={x:G.ship.x,y:G.ship.y};
+  enemy.escaped=true;
+  addCombatLog(ship.name+' escapes into a neighbouring galaxy sector.','li');
+  return true;
 }
 
 function fireShipCombatEnemy(combat,enemy){

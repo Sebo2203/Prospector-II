@@ -23,6 +23,17 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.61 connects civilian escape and weapon readiness
+
+Released on `experiment/expedition-legacy`.
+
+- Unarmed tactical escape now moves the authoritative NPC ship one adjacent safe galaxy sector before marking it escaped. The player is not displaced. Exits prefer cardinal neighbours, fall back to a safe diagonal at obstructed corners, avoid the player, black holes, pulsars and occupied sectors, and refuse escape if every adjacent sector is blocked. Damage, identity and the existing disengagement grace remain on the ship.
+- Shared the pirate fractional engine-ratio movement budget with unarmed civilian ships near the player and during flight. Equal engines trade one step for one; slow ships bank fractional movement and fast ships can open a gap. Distant roaming retains the two-step cap, and damaged engines affect movement. Removed science ships' alternating-turn movement gate. Attacked unarmed ships flee using current or last known threat position until clear of the ten-sector interaction radius, and cannot volunteer to rescue their attacker. Existing patrol and active rescue step rates are preserved; tactical movement allowances are unchanged.
+- Added cyclic weapon fallback using complete target readiness: reload, heat, power, sensor lock, range and cover. An already-ready current mount stays selected; otherwise the next genuinely fireable mount is selected at engagement, target/selection changes, turn synchronization and fire attempts. One action still fires one mount, and existing reload deadlines remain unchanged.
+- Failed reload attempts now name the weapon and explain that it is still reloading, how many turns remain, and that moving or waiting advances it. Multiple-mount refusals also explain that no alternate can fire at the target. Compact readouts retain Reload in 2t. Refusal and auto-selection consume no turn.
+- Validation: all 60 repository tests and 24 headless Edge suites passed. New rule coverage checks fractional/equal/faster/disabled engine budgets, ordinary and fleeing science movement, and safe escape candidates. The new native pursuit scenario covers actual escape/catch-up, identity and save/load continuity, fractional-bank persistence, safe corner exits, sequential alternate-mount firing, unchanged reload deadlines, explicit no-cost refusal and rejected out-of-range/unpowered fallback. Existing combat scenarios were adjusted to test blocked fire only when no alternate can fire. Full rescue, trade, career and persistence checks passed. These checks do not establish whole-career balance.
+- Saves: schema 2 unchanged; no migration added. NPC coordinates, movement bank and fleeing/last-threat data use the existing career snapshot. Weapon damage, heat costs, reload durations, shot sounds and tactical NPC speed are unchanged. [Civilian flight](docs/experiment.md#civilian-flight-and-pursuit), [combat controls](docs/experiment.md#tactical-ship-combat)
+
 ## 2026-11-07 — 0.28 experimental.60 adds distinct combat shot feedback
 
 Released on `experiment/expedition-legacy`.

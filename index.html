@@ -1944,7 +1944,7 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.60</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.61</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2073,8 +2073,8 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.60';
-const GAME_VERSION_LABEL = 'v0.28 experimental.60';
+const GAME_VERSION = '0.28.0-experimental.61';
+const GAME_VERSION_LABEL = 'v0.28 experimental.61';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -20076,6 +20076,45 @@ function handleCasinoKey(key){
 }
 
 //  NEUTRAL SHIP MOVEMENT
+// One movement budget for galaxy pursuit and escape. Banks persist on the actual ship.
+function galaxyShipMoveBudget(ship,relative=false){
+  const engine=effectiveEngineRating(ship);
+  if(!engine)return 0;
+  if(!relative){ship._chaseMoveBank=0;return Math.max(1,Math.min(engine,2));}
+  ship._chaseMoveBank=(ship._chaseMoveBank||0)+engine/Math.max(1,effectiveEngineRating());
+  const steps=Math.floor(ship._chaseMoveBank);
+  ship._chaseMoveBank-=steps;
+  return steps;
+}
+
+function galaxyShipEscapeChoices(ship,diagonal=false){
+  const occupied=[...(G.pirates||[]),...(G.neutralShips||[]),...(G.gasEntities||[])];
+  const choices=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if((!dx && !dy) || (!diagonal && dx && dy))continue;
+    const x=ship.x+dx,y=ship.y+dy;
+    if(x<0 || y<0 || x>=MAP_W || y>=MAP_H || (x===G.ship.x && y===G.ship.y))continue;
+    const cell=G.galaxy?.[y]?.[x];
+    if(!cell || ['BLACK_HOLE','PULSAR'].includes(cell.type))continue;
+    if(occupied.some(other=>other!==ship && other.alive!==false && (other.hp??1)>0 && other.x===x && other.y===y))continue;
+    choices.push({x,y});
+  }
+  return choices;
+}
+
+function fleeNeutralShip(ship,steps){
+  const canTrack=!DEBUG.shipInvisible && effectiveSensorRange(ship)>0;
+  if(canTrack)ship.fleeFrom={x:G.ship.x,y:G.ship.y};
+  const threat=ship.fleeFrom||G.ship;
+  for(let step=0;step<steps;step++){
+    const distance=point=>Math.abs(point.x-threat.x)+Math.abs(point.y-threat.y);
+    const next=galaxyShipEscapeChoices(ship).sort((a,b)=>distance(b)-distance(a) ||
+      (b.x-a.x)*(ship.x-threat.x)+(b.y-a.y)*(ship.y-threat.y))[0];
+    if(!next || distance(next)<=distance(ship))break;
+    ship.x=next.x;ship.y=next.y;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 function moveNeutralShips(){
   if(G?.debugPalette && !G.debugPalette.simulate) return;
@@ -20112,12 +20151,21 @@ function moveNeutralShips(){
 
   (G.neutralShips||[]).forEach(ns=>{
     if(ns.alive===false) return;
-    if(ns.systems && effectiveEngineRating(ns)===0) return;
+    ensureNeutralCombatStats(ns);
+    if(effectiveEngineRating(ns)===0) return;
     // Rescuing — always beeline to stranded player, overrides normal behaviour
     if(ns.rescuing){
       stepToward(ns, G.ship.x, G.ship.y);
       return;
     }
+
+    const distanceToPlayer=Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
+    const unarmed=(shipSystemStats(ns).weaponSlots||0)===0;
+    if(ns.fleeingPlayer && distanceToPlayer>10){ns.fleeingPlayer=false;ns.fleeFrom=null;}
+    if(unarmed && ns.fleeingPlayer){
+      fleeNeutralShip(ns,galaxyShipMoveBudget(ns,true));return;
+    }
+    const steps=unarmed?galaxyShipMoveBudget(ns,distanceToPlayer<=10):ns.speed;
 
     if(ns.type==='patrol'){
       if((G.stationReputation||0) <= -40) ns.hostile = true;
@@ -20128,11 +20176,11 @@ function moveNeutralShips(){
           const route = ns.patrolRoute;
           if(route && route.length > 0){
             const wp = route[ns.patrolIdx % route.length];
-            stepToward(ns, wp.x, wp.y);
+            stepToward(ns, wp.x, wp.y,steps);
           }
           return;
         }
-        stepToward(ns, G.ship.x, G.ship.y);
+        stepToward(ns, G.ship.x, G.ship.y,steps);
         if(ns.x===G.ship.x && ns.y===G.ship.y && G.mode==='galaxy') startShipCombat(ensureNeutralCombatStats(ns));
         return;
       }
@@ -20145,7 +20193,7 @@ function moveNeutralShips(){
         // Reached this waypoint — advance to next
         ns.patrolIdx = (ns.patrolIdx + 1) % route.length;
       }
-      stepToward(ns, wp.x, wp.y);
+      stepToward(ns, wp.x, wp.y,steps);
 
     } else if(ns.type==='cargo' || ns.type==='trader'){
       // Shuttle between the two bases
@@ -20156,7 +20204,7 @@ function moveNeutralShips(){
         // Arrived — flip destination
         ns.destBase = ns.destBase===0 ? 1 : 0;
       }
-      stepToward(ns, target.x, target.y);
+      stepToward(ns, target.x, target.y,steps);
 
     } else if(ns.type==='science'){
       // Wander to a random destination, pick new one on arrival
@@ -20165,19 +20213,16 @@ function moveNeutralShips(){
         ns.destX = 5+rnd(MAP_W-10);
         ns.destY = 2+rnd(MAP_H-6);
       }
-      // Science ships move every other turn — slower, more meandering
-      if(G.turn % 2 === 0){
-        stepToward(ns, ns.destX, ns.destY);
-      }
+      stepToward(ns, ns.destX, ns.destY,steps);
     }
   });
 }
 
-function stepToward(ns, tx, ty){
+function stepToward(ns, tx, ty,steps=ns.speed){
   const dx = tx - ns.x, dy = ty - ns.y;
   if(dx===0 && dy===0) return;
   // Move `speed` steps per call
-  for(let s=0; s<ns.speed; s++){
+  for(let s=0; s<steps; s++){
     const cx2 = tx - ns.x, cy2 = ty - ns.y;
     if(cx2===0 && cy2===0) break;
     let mx=0, my=0;
@@ -20261,6 +20306,7 @@ function doStrandedWait(){
   // Check if a neutral ship is now adjacent or on our tile → offer rescue
   if(!st.rescuePhase){
     const rescuer = (G.neutralShips||[]).find(ns=>{
+      if(ns.fleeingPlayer || ns.alive===false)return false;
       const dist = Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
       return dist <= 1;
     });
@@ -20277,7 +20323,7 @@ function doStrandedWait(){
     // No rescuer yet — occasionally a nearby neutral ship notices you (or SOS attracts)
     const noticeRange = st.sos ? 18 : 8;
     const noticedShip = (G.neutralShips||[]).find(ns=>{
-      if(ns.rescuing) return false;
+      if(ns.rescuing || ns.fleeingPlayer || ns.alive===false) return false;
       const dist = Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
       const chance = st.sos ? 0.45 : 0.12;
       return dist <= noticeRange && Math.random() < chance;
@@ -31808,8 +31854,6 @@ function movePirates(){
     base.lastRespawn = G.turn;
   });
 
-  const playerEngine = Math.max(1,effectiveEngineRating());
-
   G.pirates.forEach(p=>{
     if(!p.alive) return;
     const distToPlayer = Math.abs(p.x-G.ship.x)+Math.abs(p.y-G.ship.y);
@@ -31873,20 +31917,8 @@ function movePirates(){
       }
     }
 
-    // Engine-rated movement. While chasing, speed is relative to the player's
-    // engine: equal engines trade one tile for one tile, faster pirates gain,
-    // and slower pirates only move on some chase turns.
-    const pirateEngine = effectiveEngineRating(p);
-    if(!pirateEngine) return;
-    let steps;
-    if(isChasing){
-      p._chaseMoveBank = (p._chaseMoveBank || 0) + (pirateEngine / Math.max(1, playerEngine));
-      steps = Math.floor(p._chaseMoveBank);
-      p._chaseMoveBank -= steps;
-    } else {
-      p._chaseMoveBank = 0;
-      steps = Math.max(1, Math.min(pirateEngine, 2)); // relaxed max 2 steps when wandering
-    }
+    // Shared with civilian flight: same engine ratio, bank and relaxed roaming cap.
+    const steps=galaxyShipMoveBudget(p,isChasing);
 
     for(let s=0; s<steps; s++){
       const ctx2 = { tx, ty }; // need current target each step
@@ -31935,7 +31967,7 @@ function ensureNeutralCombatStats(ns){
   }
   if(ns.hp === undefined) ns.hp = ns.maxHp;
   if(ns.atk === undefined) ns.atk = ns.type==='patrol' ? 6 : 2;
-  if(ns.engineRating === undefined) ns.engineRating = ns.type==='patrol' ? 3 : 1;
+  if(ns.engineRating === undefined) ns.engineRating = ns.type==='patrol' ? 3 : (ns.speed??1);
   if(ns.shields === undefined) ns.shields = ns.type==='patrol' ? 1 : 0;
   if(ns.maxShields === undefined) ns.maxShields = ns.shields;
   if(ns.guns === undefined) ns.guns = ns.type==='patrol' ? 1 : 0;
@@ -31969,6 +32001,9 @@ function doFireAtNeutral(ns){
   const wasHostile = !!ns.hostile;
   harmStationReputation(ns.type==='patrol' ? 35 : 20, 'attacked '+ns.name);
   if(ns.type==='patrol') ns.hostile = true;
+  if((shipSystemStats(ensureNeutralCombatStats(ns)).weaponSlots||0)===0){
+    ns.fleeingPlayer=true;ns.fleeFrom={x:G.ship.x,y:G.ship.y};ns.rescuing=false;
+  }
   startShipCombat(ns,true);
   ns._wasHostileAtEngagement = wasHostile;
 }
@@ -32059,6 +32094,7 @@ function startShipCombat(pirate,initiatedByPlayer=false){
   createShipCombatArena(G.shipCombat,ships);
   G.examine = null;
   G.mode = 'shipcombat';
+  selectReadyShipCombatWeapon(G.shipCombat);
   addCombatLog(label,'lc');
   G.combatsFought = (G.combatsFought||0) + 1;
   trackEvent('ship_combat_started', analyticsBaseParams({
@@ -32302,6 +32338,7 @@ function selectShipCombatTarget(index){
   pointerShipCombatAim = null;
   combat.target = index;
   updateShipCombatTarget(combat);
+  selectReadyShipCombatWeapon(combat);
   renderAll();
 }
 
@@ -32325,7 +32362,33 @@ function shipCombatWeapons(){
 function selectShipCombatWeapon(index){
   if(!shipCombatWeapons()[index]) return;
   G.shipCombat.weapon = index;
+  selectReadyShipCombatWeapon(G.shipCombat);
   renderAll();
+}
+
+function selectReadyShipCombatWeapon(combat=G.shipCombat){
+  const weapons=shipCombatWeapons();
+  if(!weapons.length)return null;
+  if(!weapons[combat.weapon])combat.weapon=0;
+  if(shipCombatWeaponStatus(combat,weapons[combat.weapon])==='Ready')return weapons[combat.weapon];
+  for(let step=1;step<weapons.length;step++){
+    const index=(combat.weapon+step)%weapons.length;
+    if(shipCombatWeaponStatus(combat,weapons[index])==='Ready'){
+      combat.weapon=index;return weapons[index];
+    }
+  }
+  return weapons[combat.weapon];
+}
+
+function shipCombatBlockedFireMessage(entry,status){
+  const reload=status.match(/^Ready in (\d+)$/);
+  const name=entry?.weapon.name||'weapon';
+  if(reload){
+    const turns=Number(reload[1]);
+    return 'Cannot fire '+name+': still reloading ('+turns+' turn'+(turns===1?'':'s')+' remaining). Move or wait to finish reloading.'+
+      (shipCombatWeapons().length>1?' No other weapon can fire at this target.':'');
+  }
+  return 'Cannot fire '+name+': '+combatStatusText(status)+'.';
 }
 
 function shipCombatAsteroid(combat,point){
@@ -32389,6 +32452,7 @@ function syncShipCombatSystems(combat){
   for(const enemy of combat.enemies) enemy.shields=enemy.ship.shieldCharge;
   updateShipCombatSensors(combat);
   updateShipCombatTarget(combat);
+  selectReadyShipCombatWeapon(combat);
 }
 
 function shipCombatEnemyThreat(combat,enemy){
@@ -32498,10 +32562,10 @@ function shipCombatHitChance(attackerEngine,defenderEngine,distance){
 function doShipFire(){
   const combat = G.shipCombat;
   if(G.mode!=='shipcombat' || !combat) return;
-  const entry = shipCombatWeapons()[combat.weapon];
+  const entry = selectReadyShipCombatWeapon(combat);
   const status = entry ? shipCombatWeaponStatus(combat,entry) : 'No weapons installed';
   if(status!=='Ready'){
-    addCombatLog(combatStatusText(status)+'.','lw');
+    addCombatLog(shipCombatBlockedFireMessage(entry,status),'lw');
     renderAll();
     return;
   }
@@ -32546,9 +32610,28 @@ function moveShipCombatEnemy(combat,enemy){
     }
   }
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
-    enemy.escaped = true;
-    addCombatLog(enemy.ship.name+' flies out of the combat area.','li');
+    escapeShipCombatEnemy(combat,enemy);
   }
+}
+
+function escapeShipCombatEnemy(combat,enemy){
+  const ship=enemy.ship;
+  const choices=galaxyShipEscapeChoices(ship);
+  const candidates=choices.length?choices:galaxyShipEscapeChoices(ship,true);
+  const dx=enemy.x===0?-1:enemy.x===COMBAT_MAP.width-1?1:0;
+  const dy=enemy.y===0?-1:enemy.y===COMBAT_MAP.height-1?1:0;
+  const distance=point=>Math.abs(point.x-G.ship.x)+Math.abs(point.y-G.ship.y);
+  candidates.sort((a,b)=>distance(b)-distance(a) || (b.x-a.x)*dx+(b.y-a.y)*dy);
+  if(!candidates.length){
+    if(!enemy.escapeBlocked)addCombatLog(ship.name+' cannot find a clear galaxy escape route.','lw');
+    enemy.escapeBlocked=true;return false;
+  }
+  ship.x=candidates[0].x;ship.y=candidates[0].y;
+  ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;
+  ship.fleeingPlayer=true;ship.fleeFrom={x:G.ship.x,y:G.ship.y};
+  enemy.escaped=true;
+  addCombatLog(ship.name+' escapes into a neighbouring galaxy sector.','li');
+  return true;
 }
 
 function fireShipCombatEnemy(combat,enemy){

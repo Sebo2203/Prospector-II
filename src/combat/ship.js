@@ -24,7 +24,7 @@ function ensureNeutralCombatStats(ns){
   }
   if(ns.hp === undefined) ns.hp = ns.maxHp;
   if(ns.atk === undefined) ns.atk = ns.type==='patrol' ? 6 : 2;
-  if(ns.engineRating === undefined) ns.engineRating = ns.type==='patrol' ? 3 : 1;
+  if(ns.engineRating === undefined) ns.engineRating = ns.type==='patrol' ? 3 : (ns.speed??1);
   if(ns.shields === undefined) ns.shields = ns.type==='patrol' ? 1 : 0;
   if(ns.maxShields === undefined) ns.maxShields = ns.shields;
   if(ns.guns === undefined) ns.guns = ns.type==='patrol' ? 1 : 0;
@@ -58,6 +58,9 @@ function doFireAtNeutral(ns){
   const wasHostile = !!ns.hostile;
   harmStationReputation(ns.type==='patrol' ? 35 : 20, 'attacked '+ns.name);
   if(ns.type==='patrol') ns.hostile = true;
+  if((shipSystemStats(ensureNeutralCombatStats(ns)).weaponSlots||0)===0){
+    ns.fleeingPlayer=true;ns.fleeFrom={x:G.ship.x,y:G.ship.y};ns.rescuing=false;
+  }
   startShipCombat(ns,true);
   ns._wasHostileAtEngagement = wasHostile;
 }
@@ -148,6 +151,7 @@ function startShipCombat(pirate,initiatedByPlayer=false){
   createShipCombatArena(G.shipCombat,ships);
   G.examine = null;
   G.mode = 'shipcombat';
+  selectReadyShipCombatWeapon(G.shipCombat);
   addCombatLog(label,'lc');
   G.combatsFought = (G.combatsFought||0) + 1;
   trackEvent('ship_combat_started', analyticsBaseParams({

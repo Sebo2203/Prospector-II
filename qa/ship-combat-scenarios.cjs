@@ -23,12 +23,14 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     });
     await page.keyboard.press('f');
     assert.deepEqual(await page.evaluate(()=>[G.mode,G.shipCombat.enemies.length,G.shipCombat.asteroids.length]),['shipcombat',2,0]);
+    await page.evaluate(()=>G.shipCombat.enemies.forEach((enemy,i)=>{enemy.x=26;enemy.y=i?16:0;}));
     await page.keyboard.press('2');
     await page.keyboard.press('f');
     assert.equal(await page.evaluate(()=>G.shipCombat.round),1,'out-of-range fire is free');
     await page.keyboard.press('1');
     await page.evaluate(()=>{
       const combat=G.shipCombat;
+      [[19,8],[18,4]].forEach(([x,y],i)=>{combat.enemies[i].x=x;combat.enemies[i].y=y;});
       combat.asteroids=[{x:14,y:8}];
       combat.enemies.forEach(enemy=>enemy.ship.weaponReadyAt=[G.turn+100]);
     });

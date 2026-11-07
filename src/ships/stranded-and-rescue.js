@@ -71,6 +71,7 @@ function doStrandedWait(){
   // Check if a neutral ship is now adjacent or on our tile → offer rescue
   if(!st.rescuePhase){
     const rescuer = (G.neutralShips||[]).find(ns=>{
+      if(ns.fleeingPlayer || ns.alive===false)return false;
       const dist = Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
       return dist <= 1;
     });
@@ -87,7 +88,7 @@ function doStrandedWait(){
     // No rescuer yet — occasionally a nearby neutral ship notices you (or SOS attracts)
     const noticeRange = st.sos ? 18 : 8;
     const noticedShip = (G.neutralShips||[]).find(ns=>{
-      if(ns.rescuing) return false;
+      if(ns.rescuing || ns.fleeingPlayer || ns.alive===false) return false;
       const dist = Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
       const chance = st.sos ? 0.45 : 0.12;
       return dist <= noticeRange && Math.random() < chance;
