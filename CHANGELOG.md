@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.51 adds hull type to the HUD
+
+Released on `experiment/expedition-legacy`.
+
+- Added a Hull Type readout immediately to the right of the vessel name. It uses the current ship class and refreshes with the HUD.
+- All 47 repository tests and three headless Edge suites passed. The header check covered all three hulls and a long vessel name, alongside the existing menu, scaling and footer checks. The save schema supports experimental.46–50 careers.
+
 ## 2026-11-07 — 0.28 experimental.50 adds the Active Missions dropdown
 
 Released on `experiment/expedition-legacy`.

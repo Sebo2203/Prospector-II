@@ -98,6 +98,8 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.hull-plate { flex-shrink: 0; }
+#h-hull-type { color: #b7c7d2; font-size: 14px; }
 .cy { color: #ffe066; } .cg { color: #70f090; } .co { color: #ffaa44; }
 .cr { color: #f07070; } .cc { color: #70d8ff; }
 #game-escape {

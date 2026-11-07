@@ -1,6 +1,8 @@
 function renderHUD(){
   document.getElementById('h-creds').textContent=G.credits;
   document.getElementById('h-vessel').textContent=G.shipName || 'Unnamed Vessel';
+  document.getElementById('h-hull-type').textContent=G.shipStats?.hullType ||
+    SHIP_CLASSES[G.shipStats?.classId]?.hullType || 'Unknown hull';
 
   // ── Left gauge panel — swap based on mode ────────────────────
   const onPlanet = (G.mode==='planet');

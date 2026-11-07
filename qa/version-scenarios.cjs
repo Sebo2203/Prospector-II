@@ -47,6 +47,22 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(() => G?.galaxy && G.log.some(e => e.msg.includes('Ready for departure')));
     assert.equal(await page.locator('#version-label').textContent(), expected.label);
     assert.equal(await page.locator('#version-tag').isVisible(), true);
+    const hulls=await page.evaluate(()=>{
+      const original=G.shipStats, name=G.shipName, results=[];
+      G.shipName='A vessel name long enough to test the header space '.repeat(3);
+      for(const [id,definition] of Object.entries(SHIP_CLASSES)){
+        G.shipStats=buildShipStats(id);
+        renderHUD();
+        const hull=document.getElementById('h-hull-type');
+        const vessel=document.getElementById('h-vessel').getBoundingClientRect();
+        const bounds=hull.getBoundingClientRect(), hud=document.getElementById('hud').getBoundingClientRect();
+        results.push({id,correct:hull.textContent===definition.hullType,
+          fits:bounds.left>=vessel.right && bounds.right<=hud.right && hull.scrollWidth<=hull.clientWidth});
+      }
+      G.shipStats=original;G.shipName=name;renderHUD();
+      return results;
+    });
+    assert.ok(hulls.every(hull=>hull.correct && hull.fits),'each hull type fits to the right of a long vessel name');
     const tools = page.locator('#persist-bar');
     const status = page.locator('#version-tag');
     for(const bar of [tools,status]){
