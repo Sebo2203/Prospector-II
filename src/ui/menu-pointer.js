@@ -51,7 +51,7 @@ function canvasMenuHit(event){
 
 function canvasMapMode(){
   if(!canvasMapView || !G || G.dead || G.retired || G.showOptions || G.dialogue ||
-     G.stranded || G._itemAimMode || G._voidPrompt || G.forcedMove?.active || DEBUG.on) return;
+     shipAttackConfirmationActive() || G.stranded || G._itemAimMode || G._voidPrompt || G.forcedMove?.active || DEBUG.on) return;
   if(G.mode==='scanview') return 'landing';
   if(G.mode==='planet' && G.rangeTarget) return 'fire';
   if((G.mode==='planet'||G.mode==='galaxy') && G.examine) return 'examine';

@@ -1121,6 +1121,7 @@ canvas {
   min-height: 0;
   display: flex;
   flex-direction: column-reverse;
+  overflow-anchor: none;
   padding: 6px 7px;
   background: var(--terminal);
   border: 1px solid var(--steel-rim);
@@ -1221,6 +1222,7 @@ canvas {
   .gauge-fill { transition: none; }
 }
 .log-entry {
+  flex: 0 0 auto;
   color: #a7b6c1; font-size: var(--log-font, 13px); margin-bottom: 2px;
   border-left: 2px solid var(--steel-rim); padding-left: 5px; line-height: 1.3;
 }
@@ -1885,10 +1887,11 @@ button.ctx-btn:disabled .ck { color:#969da4; }
 
   <!-- Cockpit status rail -->
   <div id="hud">
-    <div class="hud-box" id="h-phase-box" style="display:none"><div class="hud-label">TIME</div><div class="hud-val" id="h-phase">—</div></div>
+    <div class="hud-box" id="h-phase-box" style="display:none"><div class="hud-label">LOCAL</div><div class="hud-val" id="h-phase">—</div></div>
     <div class="hud-box"><div class="hud-label">CREDITS</div><div class="hud-val cy" id="h-creds">500</div></div>
     <div class="hud-box location-readout"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
     <div class="hud-box"><div class="hud-label">TURN</div><div class="hud-val cy" id="h-turn">1</div></div>
+    <div class="hud-box" id="h-clock-box"><div class="hud-label">ELAPSED</div><div class="hud-val cc" id="h-clock">D1 00:00</div></div>
     <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
     <div class="hud-box hull-plate"><div class="hud-label">HULL TYPE</div><div class="hud-val" id="h-hull-type">Light Scout</div></div>
@@ -1944,7 +1947,7 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.62</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.73</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2073,8 +2076,8 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.62';
-const GAME_VERSION_LABEL = 'v0.28 experimental.62';
+const GAME_VERSION = '0.28.0-experimental.73';
+const GAME_VERSION_LABEL = 'v0.28 experimental.73';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -2246,7 +2249,7 @@ function renderCriticalBanner(){
   if(!G || G.dead || G.retired){ hideMsg(); return; }
   if(G.stranded){
     if(G.stranded.rescuePhase==='offer') showMsg('⚡ RESCUE OFFERED — [Y] Accept  [N] Decline','#44ff88');
-    else showMsg(strandedLifeSupportFailing()?'⚠ STRANDED — Crew suffocating. [T] SOS beacon.':'⚠ DRIVE DISABLED — [F3] Engineer repair / bypass or [T] SOS.','#ff4400');
+    else showMsg(strandedLifeSupportFailing()?'⚠ STRANDED — Crew suffocating. [T] SOS beacon.':'⚠ DRIVE DISABLED — [F3] Engineer repair or [T] SOS.','#ff4400');
     return;
   }
 
@@ -6040,6 +6043,9 @@ function currentLogRecords(){
   const record=msg=>({msg,turn:G.turn,cls:'li'});
   const add=msg=>rows.push(record(msg));
   const addActive=msg=>active.push(record(msg));
+  if(G.pirateBounties?.kills)addActive('PIRATE BOUNTIES: '+G.pirateBounties.credits+' cr pending for '+G.pirateBounties.kills+' kills and assets. Collect by docking at a major station.');
+  add('CAREER TIME: '+formatCareerDuration(G.careerTime?.minutes||0));
+  for(const key of CAREER_TIME_LOCATIONS)add(key.toUpperCase()+': '+formatCareerDuration(G.careerTime?.locations[key]||0));
   const science=ensureScienceJobState();
   if(science.active){
     const job=science.active;
@@ -9909,7 +9915,7 @@ function damageShipSystem(ship,id,amount,source='combat'){
     if(id==='fuelTank' && before>50 && component.condition<=50){
       addLog('FUEL TANK RUPTURE — usable capacity halved to '+G.maxFuel+'. '+Math.max(0,oldFuel-G.fuel)+' fuel lost.','lc');
     }
-    if(id==='engine' && effectiveEngineRating()===0) addLog('ENGINES OFFLINE — field repair, engineer bypass or SOS rescue required.','lc');
+    if(id==='engine' && effectiveEngineRating()===0) addLog('ENGINES OFFLINE — field repair, improvised repair or SOS rescue required.','lc');
     if(id==='sensors' && effectiveSensorRange()===0){
       addLog('SENSORS OFFLINE — charts retained. New terrain and live contacts cannot be detected.','lc');
     }
@@ -9975,7 +9981,7 @@ function shipWeaponOnline(ship,slot){
   return true;
 }
 
-function shipSystemCanBypass(ship,id){
+function shipSystemCanImprovise(ship,id){
   const component=ensureShipSystems(ship)[id];
   return id!=='fuelTank' && component.bypassUntil<=G.turn &&
     (component.condition<75 || (component.condition===75 && ['engine','sensors'].includes(id) && shipSystemRating(ship,id)===0));
@@ -9996,26 +10002,41 @@ function repairShipSystem(id,method){
     const cost=(100-component.condition)*2;
     if(G.credits<cost){addLog('Core repair requires '+cost+' cr.','lw');return false;}
     G.credits-=cost;component.condition=100;component.bypassUntil=0;
+    recordCareerTime('services',30,'stations');
   } else {
-    const engineer=(G.crew||[]).find(crew=>crew.hp>0 && crew.role==='engineer');
+    const engineer=(G.crew||[]).filter(crew=>crew.hp>0 && crew.role==='engineer')
+      .sort((a,b)=>crewSkillValue(b,'eng')-crewSkillValue(a,'eng'))[0];
     if(!engineer){addLog('A living engineer is required for field repairs.','lw');return false;}
+    let repairSucceeded=true;
     if(method==='kit'){
       const index=G.inventory.findIndex(item=>item.usable==='repair_kit');
       if(index<0 || component.condition>=85){addLog('Field repairs need a repair kit and stop at 85% integrity.','lw');return false;}
       G.inventory.splice(index,1);
       component.condition=Math.min(85,component.condition+25+shipEngineerSkill()*3);
       component.bypassUntil=0;
-    } else if(method==='bypass'){
-      if(!shipSystemCanBypass(G.ship,id)) return false;
-      component.bypassUntil=G.turn+15;
+    } else if(method==='improvised'){
+      if(!shipSystemCanImprovise(G.ship,id)) return false;
+      const skill=crewSkillValue(engineer,'eng');
+      const successChance=Math.min(0.95,0.25+skill*0.07);
+      const roll=Math.random();
+      repairSucceeded=roll<successChance;
+      if(repairSucceeded){
+        component.bypassUntil=G.turn+15;
+        addLog(crewDisplayName(engineer)+' completes an improvised repair to '+SHIP_SYSTEMS[id].name+'. Temporary support lasts 15 turns.','lg');
+      } else if(skill<=1 && roll>=1-(skill===0?0.25:0.15)){
+        damageShipSystem(G.ship,id,5+rnd(6),'a botched improvised repair');
+        addLog(crewDisplayName(engineer)+' botches the improvised repair to '+SHIP_SYSTEMS[id].name+'.','lc');
+      } else {
+        addLog(crewDisplayName(engineer)+' fails to improvise a repair to '+SHIP_SYSTEMS[id].name+'.','lw');
+      }
     } else return false;
-    giveSkillXP(engineer,'eng',2);
-    addLog(crewDisplayName(engineer)+(method==='bypass'?' rigs a 15-turn bypass for ':' repairs ')+SHIP_SYSTEMS[id].name+'.','lg');
+    giveSkillXP(engineer,'eng',repairSucceeded?2:1);
+    if(method==='kit') addLog(crewDisplayName(engineer)+' repairs '+SHIP_SYSTEMS[id].name+'.','lg');
     if(mode==='shipcombat') advanceShipCombat(G.shipCombat,false,'repair');
     else{
       const previous=G.mode;
       G.mode=mode;
-      if(mode==='planet') completeSurfaceAction();
+      if(mode==='planet') completeSurfaceAction(undefined,'repair');
       else if(mode==='galaxy'){
         if(G.stranded && effectiveEngineRating()>0 && G.fuel>0){
           G.stranded=null;
@@ -10025,9 +10046,9 @@ function repairShipSystem(id,method){
         if(G.stranded){
           // Performing work still costs a turn when a rescue offer is open.
           if(G.stranded.rescuePhase==='offer') G.stranded.rescuePhase=null;
-          doStrandedWait();
-        } else doWaitGalaxy();
-      } else {beginCareerTurn();finishCareerTurn();}
+          doStrandedWait('repair');
+        } else doWaitGalaxy('repair');
+      } else {beginCareerTurn('repair');finishCareerTurn();}
       if(G.mode===mode && previous==='inventory') G.mode=previous;
     }
   }
@@ -10168,6 +10189,7 @@ function initGame(chosenClass, captainName, shipName) {
   G = {
     mode:     'galaxy',   // galaxy | system | planet | base | inventory
     turn:     1,
+    careerTime:newCareerTime(),
     seed:     Math.floor(Math.random() * 0xFFFFFF), // per-run market price seed
     credits:  500,
     oxygen:   100,
@@ -10217,6 +10239,7 @@ function initGame(chosenClass, captainName, shipName) {
     gasEntities: [],   // Nebula gas entities, predatory cloud beings
     nebulaLoot:  [],   // Uncollected nebula crystals left at combat sites
     scienceJob:  { active:null, cooldownUntil:0, nextIndex:rnd(SCIENCE_JOB_TYPES.length), completed:0, completedTypes:[] },
+    pirateBounties:{credits:0,kills:0},
     shipCombat:  null,
     stranded:    null,   // null | { sos, turnsStranded, rescueShip, rescuePhase }
     _voidPrompt: null,   // null | { dx, dy } — pending Y/N before stepping into lethal void
@@ -11089,6 +11112,10 @@ function drawRetirementHumanityScreen() { // eslint-disable-line no-unused-vars
   ctx.textAlign = 'left';
 }
 
+function nebulaEntitySpawnChance(isMassive,isExpansive){
+  return isMassive?0.12:isExpansive?0.04:0.01;
+}
+
 // ═════════════════════════════════════════════════════════════════
 // END DEAD CODE — HUMANITY ARC SCREEN
 // ═════════════════════════════════════════════════════════════════
@@ -11207,8 +11234,7 @@ function generateGalaxy() {
   }
 
   // ── Nebula Gas Entities — predatory cloud beings ──────────────────────────
-  // Spawn 1-2 entities per game. Each inhabits a nebula region — massive nebulae
-  // always spawn one; normal/expansive nebulae have a small chance.
+  // Rare inhabitants, at most one per connected cluster; no guaranteed massive-nebula spawn.
   G.gasEntities = [];
   {
     // Collect all nebula tiles grouped by their nebula cluster (flood-fill by adjacency)
@@ -11250,8 +11276,8 @@ function generateGalaxy() {
       if(!tiles.length) return;
       const isMassive = tiles.some(t=>t.cell.massive);
       const isExpansive = tiles.some(t=>t.cell.expansive);
-      const spawnChance = isMassive ? 1.0 : (isExpansive ? 0.35 : 0.08);
-      if(Math.random() > spawnChance) return;
+      const spawnChance = nebulaEntitySpawnChance(isMassive,isExpansive);
+      if(Math.random() >= spawnChance) return;
       // Pick a random tile in this cluster as spawn point
       const tile = tiles[Math.floor(Math.random()*tiles.length)];
       const variant = tiles[0].cell.nebulaVariant || 'pink';
@@ -14082,13 +14108,47 @@ const DEFAULT_KEYBINDS = {
   wait:'Space',
 };
 
-// Render log entries into #log-list and scroll to the bottom so the
-// newest message (last in DOM after .reverse()) is always visible.
-function setLogHTML(html){
-  const el = document.getElementById('log-list');
-  if(!el) return;
-  el.style.flex = '1 1 0';
-  el.innerHTML = html;
+// Transient sidebar paging keeps large careers responsive without discarding history.
+let commsLogView={career:null,limit:80};
+function renderCommsLog(){
+  const el=document.getElementById('log-list');
+  if(!el)return;
+  if(commsLogView.career!==G){commsLogView={career:G,limit:80};el.innerHTML='';el.scrollTop=0;}
+  const entries=G.log.filter(entry=>!entry.archive);
+  const atLatest=el.scrollTop>=-2;
+  const bounds=el.getBoundingClientRect();
+  const anchor=atLatest?null:[...el.children].find(child=>{
+    const rect=child.getBoundingClientRect();return rect.bottom>bounds.top && rect.top<bounds.bottom;
+  });
+  const anchorEntry=anchor?._commsEntry;
+  const anchorTop=anchor?.getBoundingClientRect().top;
+  // Keep the reader's anchor in the rendered window when new messages arrive.
+  if(anchorEntry)commsLogView.limit=Math.max(commsLogView.limit,entries.indexOf(anchorEntry)+1);
+  const visible=entries.slice(0,commsLogView.limit);
+  const html=visible.map(entry=>{
+    const age=(G.turn||0)-(entry.turn||0);
+    return `<div class="log-entry ${entry.cls||''}" style="opacity:${age===0?1:0.75}">${htmlEsc(logDisplayText(entry))}</div>`;
+  }).join('');
+  el.style.flex='1 1 0';
+  if(el.innerHTML!==html){
+    el.innerHTML=html;
+    [...el.children].forEach((child,index)=>{child._commsEntry=visible[index];});
+    if(atLatest)el.scrollTop=0;
+    else if(anchorEntry){
+      const replacement=[...el.children].find(child=>child._commsEntry===anchorEntry);
+      if(replacement){
+        const scale=bounds.height/el.offsetHeight;
+        el.scrollTop+=(replacement.getBoundingClientRect().top-anchorTop)/scale;
+      }
+    }
+  }
+  el.onscroll=()=>{
+    if(commsLogView.career!==G || el.clientHeight===0)return;
+    if(commsLogView.limit<entries.length && -el.scrollTop>=el.scrollHeight-el.clientHeight-40){
+      commsLogView.limit+=80;
+      renderCommsLog();
+    }
+  };
 }
 
 function addLog(msg,cls,category=G?.mode==='shipcombat'?'combat':undefined){
@@ -14175,7 +14235,7 @@ function canvasMenuHit(event){
 
 function canvasMapMode(){
   if(!canvasMapView || !G || G.dead || G.retired || G.showOptions || G.dialogue ||
-     G.stranded || G._itemAimMode || G._voidPrompt || G.forcedMove?.active || DEBUG.on) return;
+     shipAttackConfirmationActive() || G.stranded || G._itemAimMode || G._voidPrompt || G.forcedMove?.active || DEBUG.on) return;
   if(G.mode==='scanview') return 'landing';
   if(G.mode==='planet' && G.rangeTarget) return 'fire';
   if((G.mode==='planet'||G.mode==='galaxy') && G.examine) return 'examine';
@@ -14394,6 +14454,7 @@ function drawCanvas(){
     resetCanvasMenu();
     drawInGameOptions();
   }
+  drawShipAttackConfirmation();
   if(DEBUG.on || G.forcedMove?.active) resetCanvasMenu();
 
   drawDebugPaletteLabels();
@@ -15261,6 +15322,12 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
     const lvx = loot.x - camX, lvy = loot.y - camY;
     if(lvx<0||lvx>=viewWidth||lvy<0||lvy>=viewHeight) return;
     const lpx = lvx*TS, lpy = lvy*TS;
+    if(loot.item.commodityId!=='nebula_crystal'){
+      ctx.fillStyle=loot.item.col||'#aab8cc';ctx.fillRect(lpx+6,lpy+6,12,12);
+      ctx.strokeStyle='#26303a';ctx.strokeRect(lpx+6,lpy+6,12,12);
+      ctx.beginPath();ctx.moveTo(lpx+6,lpy+12);ctx.lineTo(lpx+18,lpy+12);ctx.stroke();
+      return;
+    }
     // Gentle slow spin effect using time
     const t = (Date.now() % 3000) / 3000;
     const spin = t * Math.PI * 2;
@@ -16675,7 +16742,6 @@ function drawScanView(){
   // Draw all tiles, using scanMask for visibility
   const mask = pdata.scanMask;
   const _W = PW(pdata), _H = PH(pdata);
-  const hasLanded = !!pdata.visited?.some(Boolean);
   // Camera centred on scan cursor, clamped to map
   const scx = G.scanCursorX ?? pdata.spawnX;
   const scy = G.scanCursorY ?? pdata.spawnY;
@@ -16785,10 +16851,7 @@ function drawScanView(){
         else if(cell.type==='MINERAL_SAMPLE') { ctx.fillStyle='#cc8800'; ctx.fillRect(sx+9,sy+9,7,7); ctx.fillStyle='#ffe066'; ctx.fillRect(sx+10,sy+10,4,4); }
       } else if(cell.type==='SHIP'){
         drawScanCellBg();
-        if(hasLanded){
-          if(!OPTIONS.asciiMode) drawSpriteDarkMatteKeyed('ship_tile', sx, sy, '#aaaacc');
-          else drawAsciiTile('SHIP', sx, sy, floorAscii.bg);
-        }
+        // SHIP also stores the remembered landing site; the ship is in orbit during a scan.
       } else if(cell.type==='rw_void'){
         ctx.fillStyle='#02020a'; ctx.fillRect(sx,sy,TS,TS);
         const starSeed=(x*7919+y*1049)%1000;
@@ -19859,7 +19922,7 @@ function casinoStartPoker(){
   const deck=casinoDeck();
   c.poker={phase:'hold', stake:stake.amount, deck, hand:deck.splice(0,5), hold:[false,false,false,false,false], result:null};
   c.lastResult=null;
-  beginCareerTurn();
+  beginCareerTurn('leisure');
   finishCareerTurn();
 }
 function casinoFinishPoker(){
@@ -19879,7 +19942,7 @@ function casinoStartContest(kind){
   if(!casinoSpend(opp.stake)){ addLog('Not enough credits for that stake.','lw'); return; }
   c.lastResult=null;
   c.contest={kind, opp, crew, round:0, strain:0, player:0, rival:0, phase:'active'};
-  beginCareerTurn();
+  beginCareerTurn('leisure');
   finishCareerTurn();
   if(crew.hp<=0){
     c.contest=null;
@@ -19944,7 +20007,7 @@ function casinoStartArena(){
   if(!casinoSpend(b.bet)){ c.lastResult={win:false,msg:'Not enough credits for that side bet.'}; return; }
   c.arena={round:0,fighter,fighterHp:fighter.hp,beast:{...b,maxHp:b.hp,hp:b.hp},captainBonus:G.crew.some(x=>x.role==='captain'&&x.hp>0)?2:0,log:['The gate slams open. '+crewDisplayName(fighter)+' enters.'],result:null};
   c.arenaPhase='watch';
-  beginCareerTurn();
+  beginCareerTurn('leisure');
   finishCareerTurn();
   c.arena.fighterHp=fighter.hp;
   if(fighter.hp<=0) casinoFinishArena(false);
@@ -20148,6 +20211,7 @@ function moveNeutralShips(){
     ns.y = spawnPt.y;
     ns.patrolIdx = 0;
     ns.alive = true;
+    delete ns.combatRewardsResolved;
     ns.hostile = (G.stationReputation||0) <= -40; // inherit current rep state
     for(const key of ['systems','systemStats','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn','ramReadyAt']) delete ns[key];
     ns.hp = ns.maxHp;                             // maxHp was set by ensureNeutralCombatStats
@@ -20248,7 +20312,7 @@ function strandedLifeSupportFailing(){
   return G.fuel<=0 || shipReactorOutput()<2;
 }
 
-function doStrandedWait(){
+function doStrandedWait(activity='waiting'){
   if(!G.stranded) return;
   const st = G.stranded;
 
@@ -20262,7 +20326,7 @@ function doStrandedWait(){
     st.rescueShip  = null;
   }
   st.turnsStranded++;
-  beginCareerTurn();
+  beginCareerTurn(activity);
 
   // Crew oxygen drain — 3 HP per crew member per turn stranded
   const dmgPerCrew = strandedLifeSupportFailing()?3:0;
@@ -20507,7 +20571,7 @@ function getExamineName(x, y){
       if(!DEBUG.fullVision && pdist > SENSOR_RANGE) return 'Unknown Contact';
       return pirate.name;
     }
-    const neutral = liveSensors && (G.neutralShips||[]).find(ns=>ns.x===x&&ns.y===y);
+    const neutral = liveSensors && (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.x===x&&ns.y===y);
     if(neutral){
       const ndist = Math.abs(neutral.x-G.ship.x)+Math.abs(neutral.y-G.ship.y);
       if(!DEBUG.fullVision && ndist > SENSOR_RANGE) return 'Unknown Contact';
@@ -20520,7 +20584,7 @@ function getExamineName(x, y){
       return gasEnt.name + ', a predatory gas entity that hunts ships inside nebulae.';
     }
     const lootThere = liveSensors && (G.nebulaLoot||[]).find(l=>l.x===x&&l.y===y);
-    if(lootThere) return '✦ Nebula Crystal drifting at combat site. Move here or press Enter to collect.';
+    if(lootThere) return '✦ '+lootThere.item.name+' drifting at combat site. Move here or press Enter to collect.';
     // Then the tile itself
     const cell = G.galaxy[y]?.[x];
     if(!cell) return 'Unknown';
@@ -20941,7 +21005,7 @@ function resolveRangedShot(shooter, profile){
 
 function finishRangedFireTurn(){
   G.rangeTarget = null;
-  completeSurfaceAction();
+  completeSurfaceAction(undefined,'combat');
   renderAll();
 }
 
@@ -21005,13 +21069,16 @@ function drawRetirementScreen(){
   const stats = [
     ['Credits Saved',     G.credits+' cr',                         tier.col],
     ['Credits Earned',    (G.creditsEarned||G.credits)+' cr',      '#ffe066'],
-    ['Career Length',     G.turn+' turns',                         '#aaccee'],
+    ['Career Length',     formatCareerDuration(G.careerTime?.minutes||0),                         '#aaccee'],
     ['Systems Visited',   Object.keys(G.planets||{}).length,       '#70d8ff'],
     ['Planets Scanned',   G.planetsScanned||0,                     '#70d8ff'],
     ['Crew Survived',     G.crew.filter(c=>c.hp>0).length+' / '+(G.crewHired||G.crew.length), '#70f090'],
     ['Pirates Defeated',  (G.pirates||[]).filter(p=>!p.alive).length, '#ff8866'],
     ['Fuel Spent',        (G.fuelSpent||0)+' units',               '#ddaa33'],
     ['Combats Fought',    G.combatsFought||0,                      '#ffcc44'],
+    ['Combat time',formatCareerDuration(G.careerTime?.activities.combat||0),'#aaccee'],
+    ['Repair time',formatCareerDuration(G.careerTime?.activities.repair||0),'#aaccee'],
+    ...CAREER_TIME_LOCATIONS.map(key=>[key[0].toUpperCase()+key.slice(1)+' time',formatCareerDuration(G.careerTime?.locations[key]||0),'#aaccee']),
   ];
 
   const col1x = cx-290, col2x = cx+20;
@@ -21103,7 +21170,7 @@ function drawGameOverOverlay(){
     }
     ctx.fillStyle='#2a1000'; ctx.fillRect(cw/2-200,_fy+6,400,1);
     const _sy=_fy+22; ctx.font='14px Courier New';
-    [['Turns survived',G.turn],['Credits earned',G.credits],['Planets visited',Object.keys(G.planets).length]].forEach((_s,_i)=>{
+    [['Elapsed',formatCareerDuration(G.careerTime?.minutes||0)],['Turns survived',G.turn],['Credits earned',G.credits],['Planets visited',Object.keys(G.planets).length]].forEach((_s,_i)=>{
       ctx.fillStyle='#3a1a08'; ctx.textAlign='right'; ctx.fillText(_s[0],cw/2+10,_sy+_i*20);
       ctx.fillStyle='#996644'; ctx.textAlign='left';  ctx.fillText(_s[1],cw/2+20,_sy+_i*20);
     });
@@ -21175,6 +21242,8 @@ function drawGameOverOverlay(){
     ctx.textAlign='left';
     ctx.fillText(s[1], cw/2+20, sy+i*24);
   });
+
+  drawCareerTimeSummary(cw/2,ch-100,cw-80);
 
   // Prompt
   ctx.textAlign='center';
@@ -21653,6 +21722,7 @@ function renderHUD(){
   }
 
   document.getElementById('h-turn').textContent=G.turn;
+  document.getElementById('h-clock').textContent=careerClockText();
 
   const modes={galaxy:'NAVIGATION', system:'ORBITAL VIEW', scanview:'ORBITAL SCAN', planet:'SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
   const classicModes={galaxy:'GALAXY MAP',system:'SYSTEM VIEW',scanview:'SCANVIEW',planet:'PLANET SURFACE'};
@@ -21737,7 +21807,8 @@ function renderHUD(){
       const col   = ph==='night' ? '#4466aa' :
                     ph==='dusk'  ? '#ff6622' :
                     ph==='dawn'  ? '#ffaa44' : '#ffcc44';
-      const label = turnsLeft !== null ? `${icon} ${turnsLeft}t` : icon;
+      const localTime=planetLocalTimeText(G.curPlanet);
+      const label=localTime && !B2.tidalLock?`${icon} ${localTime}`:icon;
       phaseEl.textContent = label;
       phaseEl.style.color = col;
       phaseBox.style.display = '';
@@ -28455,11 +28526,7 @@ function renderSidebar(){
     document.querySelectorAll('#sidebar .s-title').forEach(el=>el.style.display='');
     document.getElementById('crew-list').innerHTML = renderCrewDialogueContextSidebar();
     document.getElementById('inv-list').innerHTML = '';
-    setLogHTML(G.log.slice(0,12).map(l=>{
-      const age = (G.turn||0) - (l.turn||0);
-      const opacity = age === 0 ? 1.0 : 0.75;
-      return `<div class="log-entry ${l.cls}" style="opacity:${opacity}">${htmlEsc(logDisplayText(l))}</div>`;
-    }).join(''));
+    renderCommsLog();
     return;
   }
 
@@ -28687,11 +28754,7 @@ function renderSidebar(){
   // Inventory hidden from sidebar — shown in dedicated inventory overlay only
 
   // Log
-  setLogHTML(G.log.filter(l=>!l.archive).slice(0,18).map(l=>{
-    const age = (G.turn||0) - (l.turn||0);
-    const opacity = age === 0 ? 1.0 : 0.75;
-    return `<div class="log-entry ${l.cls}" style="opacity:${opacity}">${htmlEsc(logDisplayText(l))}</div>`;
-  }).join(''));
+  renderCommsLog();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -28719,6 +28782,11 @@ function renderContextBar(){
     const keys=horizontal?['←','→','ArrowLeft','ArrowRight']:['↑','↓','ArrowUp','ArrowDown'];
     btns.push(btn(keys[0],label,'info',keys[2]),btn(keys[1],label,'info',keys[3]));
   };
+
+  if(shipAttackConfirmationActive()){
+    btns.push(btn('Y','Confirm attack','danger'),btn('N','Cancel','info'));
+    bar.innerHTML=btns.join('');return;
+  }
 
   if(shipSystemsActive()){
     arrows('Select system');
@@ -28771,6 +28839,8 @@ function renderContextBar(){
     else if(civTarget && canCommunicateWithCivilization(civTarget)) btns.push(btn('T','Contact civilization','good'));
     else if(civTarget) btns.push(`<div class="ctx-btn" style="color:#555;border-color:#333"><span class="ck">[T]</span> Move adjacent to contact</div>`);
     if(G.mode === 'galaxy'){
+      const target=galaxyAttackTarget();
+      if(target)btns.push(btn('F',(target.pirateType || target._homeCluster?'Engage ':'Fire on ')+target.name,'danger'));
       const examData = G.visited?.[G.examine.y*MAP_W+G.examine.x] ? getExamineName(G.examine.x, G.examine.y) : null;
       if(examData && typeof examData === 'object' && examData.type === 'galaxy_ship'){
         const inRadioRange = examData.dist <= radioRange();
@@ -28793,7 +28863,7 @@ function renderContextBar(){
     if(livingShipCombatEnemies(combat).length>1) btns.push(btn('Tab','Next target','info','Tab'));
     if(shipCombatEdge(combat.player)){
       const safe = shipCombatEscapeReady(combat);
-      btns.push(btn('R',safe?'Disengage':'Disengage under fire',safe?'info':'warn'));
+      btns.push(btn('R',(safe?'Disengage':'Disengage under fire')+' · 25% fail',safe?'info':'warn'));
     } else btns.push(btn('R','Disengage · Reach map edge','info','r',true));
     if(combat.isNeutralTarget && combat.pirate.type==='patrol'){
       btns.push(btn('H',combat.surrenderWarned?'Confirm arrest':'Surrender to patrol','warn'));
@@ -28819,11 +28889,11 @@ function renderContextBar(){
       const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
       if(quarantineAtShip()){
         btns.push(btn('Enter','Board Mercy of Dawn','good'));
-      } else if(lootHere){
+      } else if(lootHere && (G.cargo.length<(G.shipStats.cargoCapacity||0) || cell.type!=='BASE')){
         const ss = G.shipStats || buildShipStats('LIGHT_SCOUT');
         const cargoFull = (G.cargo||[]).length >= (ss.cargoCapacity||0);
-        if(!cargoFull) btns.push(btn('Enter','Collect Nebula Crystal','good'));
-        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Nebula Crystal here, cargo hold full</div>`);
+        if(!cargoFull) btns.push(btn('Enter','Collect '+lootHere.item.name,'good'));
+        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Salvage here, cargo hold full</div>`);
       } else if(cell.type==='BASE'){
         btns.push(btn('Enter','Dock at Starbase','good'));
       } else if(cell.type==='CASINO'){
@@ -28844,12 +28914,8 @@ function renderContextBar(){
       } else if(cell.type==='SYSTEM'){
         btns.push(btn('Enter','Enter orbit — '+cell.name,'info'));
       }
-      const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-      if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
-      const pirateNear = (effectiveSensorRange()>0 || DEBUG.fullVision) && !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
-      if(pirateNear) btns.push(btn('!','Pirate nearby: '+pirateNear.name,'danger'));
-      const neutralTarget = nearestNeutralTarget(1);
-      if(neutralTarget && !pirateHere) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
+      const attackTarget=galaxyAttackTarget();
+      if(attackTarget)btns.push(btn('F',(attackTarget.pirateType || attackTarget._homeCluster?'Engage ':'Fire on ')+attackTarget.name,'danger'));
       // REP status removed from ctx bar
       const radioContact = nearestRadioContact();
       if(radioContact) btns.push(btn('H','Hail '+radioContact.name+' ('+neutralShipDistance(radioContact)+'u)','info'));
@@ -28863,7 +28929,7 @@ function renderContextBar(){
       }
       // Pirate base on current tile
       const pirateBaseHere = G.pirateBases && G.pirateBases.find(pb=>pb.x===G.ship.x&&pb.y===G.ship.y&&!pb.destroyed);
-      if(pirateBaseHere && !pirateHere && !neutralTarget){
+      if(pirateBaseHere && !attackTarget){
         const pct = Math.round((pirateBaseHere.hp/pirateBaseHere.maxHp)*100);
         btns.push(btn('F','Fire on '+pirateBaseHere.name+'  ('+pct+'% integrity)','danger'));
       }
@@ -29178,6 +29244,7 @@ function activeMissionSummaries(){
   if((G.cargo||[]).some(item=>item.questItem==='mystery_delivery')){
     missions.push({title:'Mysterious package',details:['Deliver to '+missionStationDestination('Waypoint Omega')+' · 300 cr.']});
   }
+  if(G.pirateBounties?.kills)missions.push({title:'Pirate bounty claims',details:[G.pirateBounties.credits+' cr for '+G.pirateBounties.kills+' kills and recovered assets. Dock at any accessible major station.']});
   return missions;
 }
 
@@ -29268,13 +29335,14 @@ function shipSystemsActions(){
   const engineer=G.crew.some(crew=>crew.hp>0 && crew.role==='engineer');
   const kits=G.inventory.filter(item=>item.usable==='repair_kit').length;
   const access=!shipRepairAccess()?'Return to your ship':!engineer?'Requires a living engineer':'';
-  return [
+  const actions=[
     {method:'kit',label:'Repair kit',detail:'Consumes 1 kit and 1 turn. Restores up to 85% integrity.',
-      reason:access || (component.condition>=85?'At the 85% field repair limit':!kits?'No repair kits aboard':'')},
-    {method:'bypass',label:'Bypass for 15 turns',detail:'Costs 1 turn. Supports a damaged core temporarily; no kit used.',
-      reason:access || (id==='fuelTank'?'A ruptured tank needs a kit or station repair':
-        component.bypassUntil>G.turn?'Bypass already active':!shipSystemCanBypass(G.ship,id)?'No bypass needed':'')}
+      reason:access || (component.condition>=85?'At the 85% field repair limit':!kits?'No repair kits aboard':'')}
   ];
+  if(id!=='fuelTank') actions.push({method:'improvised',label:'Attempt improvised repair',detail:'',
+    reason:access || (component.bypassUntil>G.turn?'Improvised repair already active':
+      !shipSystemCanImprovise(G.ship,id)?'No repair needed':'')});
+  return actions;
 }
 
 function activateShipSystemRepair(method){
@@ -29347,9 +29415,9 @@ function drawShipSystems(){
     ctx.textAlign='right';ctx.fillStyle=offline || condition<=50?'#ff9977':'#7799aa';ctx.fillText((offline?'OFF ':'')+condition+'%',x+listW-10,y+19);
     canvasMenuTarget(x,y,listW,30,()=>selectShipSystem(id),{label:SHIP_SYSTEMS[id].name});
   });
-  const component=systems[view.id],bypass=Math.max(0,component.bypassUntil-G.turn);
+  const component=systems[view.id],temporary=Math.max(0,component.bypassUntil-G.turn);
   text(SHIP_SYSTEMS[view.id].name,detailX,top+14,'#aaddff','bold 16px Courier New');
-  text(component.condition+'% integrity'+(bypass?' · bypass '+bypass+' turns':''),detailX,top+35,
+  text(component.condition+'% integrity'+(temporary?' · improvised repair '+temporary+' turns':''),detailX,top+35,
     component.condition<=50?'#ff9977':'#99bbaa');
   ctx.fillStyle='#11151d';ctx.fillRect(detailX,top+43,detailW,5);
   ctx.fillStyle=component.condition<=50?'#bb6644':'#448877';ctx.fillRect(detailX,top+43,detailW*component.condition/100,5);
@@ -30224,7 +30292,7 @@ function tryMove(dx,dy,confirmed){
       if(!G.stranded){
         G.stranded = { sos:false, turnsStranded:0, rescueShip:null, rescuePhase:null };
         (G.neutralShips||[]).forEach(s=>{ s.rescuing = false; }); // fresh strand — reset all rescuers
-        addLog(G.fuel<=0?'OUT OF FUEL — engines dead. Crew oxygen reserves depleting.':'ENGINES OFFLINE — repair or bypass the drive, or signal for rescue.','lc');
+        addLog(G.fuel<=0?'OUT OF FUEL — engines dead. Crew oxygen reserves depleting.':'ENGINES OFFLINE — repair the drive, or signal for rescue.','lc');
         addLog('Press [T] to toggle SOS beacon. Press any move key to wait a turn.','lw');
       } else {
         doStrandedWait();
@@ -31254,7 +31322,7 @@ function doCombat(enemy){
   const attackers = livingAttackers.filter(c=>crewCanContributeCombat(c));
   if(livingAttackers.length && !attackers.length){
     addLog('All crew are stunned — enemies seize the opening!','lc');
-    completeSurfaceAction();
+    completeSurfaceAction(undefined,'combat');
     renderAll();
     return;
   }
@@ -31314,7 +31382,7 @@ function doCombat(enemy){
     dropAlienDeathLoot(enemy);
   }
 
-  completeSurfaceAction();
+  completeSurfaceAction(undefined,'combat');
   renderAll();
 }
 
@@ -31674,11 +31742,11 @@ function collectNebulaLootAt(x, y){
   const stored = addCargo(loot.item);
   if(stored){
     G.nebulaLoot.splice(idx, 1);
-    addLog('Nebula Crystal recovered and loaded into cargo hold.','lg');
+    addLog(loot.item.name+' recovered and loaded into cargo hold.','lg');
     renderAll();
     return true;
   } else {
-    addLog('Nebula Crystal detected here, cargo hold still full. Offload cargo first.','lw');
+    addLog(loot.item.name+' detected here, cargo hold still full. Offload cargo first.','lw');
     renderAll();
     return false;
   }
@@ -31687,7 +31755,6 @@ function collectNebulaLootAt(x, y){
 function moveGasEntities(){
   if(G?.debugPalette && !G.debugPalette.simulate) return;
   if(!G.gasEntities || G.mode !== 'galaxy') return;
-  if((G.turn || 0) < 300) return;  // Entities dormant until turn 300
 
   const playerCell = G.galaxy?.[G.ship.y]?.[G.ship.x];
   const playerInNebula = playerCell?.type === 'NEBULA';
@@ -31732,7 +31799,7 @@ function moveGasEntities(){
     }
 
     // ── Chase: player in nebula and within 6 tiles ─────────────────────────────
-    if(playerInNebula && dist <= 6 && !shipDisengagementActive(ge)){
+    if(playerInNebula && !DEBUG.shipInvisible && dist <= 6 && !shipDisengagementActive(ge)){
       ge._chaseTurns = (ge._chaseTurns||0) + 1;
       const {mx,my} = stepToward(ge.x,ge.y,G.ship.x,G.ship.y);
       tryMoveNebula(ge, mx, my);
@@ -31753,7 +31820,7 @@ function moveGasEntities(){
   });
 
   // Check if any gas entity has reached the player tile → initiate combat
-  if(playerInNebula){
+  if(playerInNebula && !DEBUG.shipInvisible){
     const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y && !shipDisengagementActive(ge));
     if(arrived && G.mode==='galaxy'){
       addLog(arrived.name+' ENGULFS your ship, attempting to devour the hull!','lc');
@@ -31949,6 +32016,62 @@ function movePirates(){
 // -----------------------------------------------------------------
 //  SHIP WEAPON CATALOG
 // -----------------------------------------------------------------
+// Salvage uses existing cargo and equipment catalogs, never quest or installed items.
+const SHIP_SALVAGE_PROFILES = {
+  cargo:{weights:[20,10,10,60],cash:[20,80],cargo:['rations','parts','metal','fabric'],items:['repair_kit','field_rations','oxytank'],units:3},
+  trader:{weights:[20,35,15,30],cash:[40,160],cargo:['parts','fabric','medicine','lenses'],items:['medikit','floodlight','sensor_drone'],units:2},
+  science:{weights:[25,10,35,30],cash:[20,100],cargo:['instruments','datadrives','reagents','lenses'],items:['sensor_drone','floodlight','oxytank','rad_flush'],units:2},
+  patrol:{weights:[35,10,40,15],cash:[20,80],cargo:['parts','metal'],items:['gun','gun_burst','armor_reinforced','repair_kit'],units:1},
+  guard:{weights:[35,10,40,15],cash:[20,80],cargo:['parts','metal','rations'],items:['gun','gun_shotgun','armor_reinforced','repair_kit'],units:1},
+  roamer:{weights:[25,20,25,30],cash:[30,120],cargo:['parts','rations','fabric','ore'],items:['gun','knife','repair_kit','stim_pack'],units:2},
+};
+
+function rollShipSalvage(ship){
+  const profile=SHIP_SALVAGE_PROFILES[ship.pirateType||ship.type]||SHIP_SALVAGE_PROFILES.trader;
+  let roll=rnd(100),kind=0;
+  while(kind<3 && roll>=profile.weights[kind]){roll-=profile.weights[kind];kind++;}
+  if(kind===0)return {kind:'none'};
+  if(kind===1)return {kind:'credits',amount:profile.cash[0]+rnd(profile.cash[1]-profile.cash[0]+1)};
+  if(kind===2){
+    const usable=profile.items[rnd(profile.items.length)];
+    const source=PAWN_ITEM_POOL.find(item=>item.usable===usable);
+    return {kind:'equipment',item:{name:source.name,col:source.col,desc:source.detail,value:0,usable:source.usable}};
+  }
+  const id=profile.cargo[rnd(profile.cargo.length)];
+  return {kind:'cargo',items:Array.from({length:1+rnd(profile.units)},()=>makeCommodityItem(id,'combat salvage',0))};
+}
+
+function awardShipSalvage(ship,pirate){
+  const reward=rollShipSalvage(ship);
+  if(reward.kind==='none'){addCombatLog('No usable salvage remains from '+ship.name+'.','li');return;}
+  if(reward.kind==='credits'){
+    if(pirate){
+      G.pirateBounties.credits+=reward.amount;
+      addCombatLog('Recovered pirate assets worth '+reward.amount+' cr. Added to the station claim.','lg');
+    } else {earnCredits(reward.amount);addCombatLog('Recovered '+reward.amount+' cr from '+ship.name+'.','lg');}
+  } else if(reward.kind==='equipment'){
+    G.inventory.push(reward.item);
+    addCombatLog('Salvaged '+reward.item.name+' from '+ship.name+'. Added to inventory.','lg');
+  } else {
+    let stored=0;
+    for(const item of reward.items){
+      if(addCargo(item))stored++;
+      else {G.nebulaLoot??=[];G.nebulaLoot.push({x:G.ship.x,y:G.ship.y,item});}
+    }
+    addCombatLog('Salvaged '+reward.items.length+' × '+reward.items[0].name+': '+stored+' loaded'+
+      (stored<reward.items.length?'; '+(reward.items.length-stored)+' left at the encounter coordinates':'')+'.','lg');
+  }
+}
+
+function settlePirateBountiesAtStation(stationName){
+  if(G.mode!=='base' || (G.stationReputation||0)<=-40 || G.base?.stationName!==stationName)return;
+  const pending=G.pirateBounties;
+  if(!pending?.kills)return;
+  const {credits,kills}=pending;
+  G.pirateBounties={credits:0,kills:0};
+  earnCredits(credits);
+  addLog(stationName+' pays '+credits+' cr for '+kills+' confirmed pirate kill'+(kills===1?'':'s')+' and recovered assets.','lg');
+}
 const SHIP_WEAPONS = {
   mass_driver:   { id:'mass_driver',   name:'Mass Driver',       minDmg:6,  maxDmg:12, range:5, cooldown:1, heat:12,power:2,mountSize:1,cost:300, desc:'Light mount. Kinetic slugs, low heat, one-action reload.' },
   railgun:       { id:'railgun',       name:'Railgun',           minDmg:8,  maxDmg:13, range:8, cooldown:2, heat:22,power:4,mountSize:2,cost:450, desc:'Medium mount. Long range, two-action reload.' },
@@ -31999,10 +32122,71 @@ function harmStationReputation(amount, reason){
   }
 }
 
-function doFireAtNeutral(ns){
-  if(!ns || ns.alive===false) return;
+let shipAttackPrompt=null;
+function galaxyShipAttackInRange(ship){
+  const range=effectiveSensorRange();
+  return ship && ship.alive!==false && (ship.hp??1)>0 && (DEBUG.fullVision || (range>0 && G.visited?.[ship.y*MAP_W+ship.x] &&
+    Math.abs(ship.x-G.ship.x)+Math.abs(ship.y-G.ship.y)<=range+(ship._homeCluster?2:0)));
+}
+function galaxyAttackTarget(){
+  const ships=[...(G.pirates||[]),...(G.neutralShips||[]),...(G.gasEntities||[])].filter(galaxyShipAttackInRange);
+  if(G.examine){
+    const selected=ships.find(ship=>ship.x===G.examine.x && ship.y===G.examine.y);
+    if(selected)return selected;
+  }
+  return ships.sort((a,b)=>(Math.abs(a.x-G.ship.x)+Math.abs(a.y-G.ship.y))-
+    (Math.abs(b.x-G.ship.x)+Math.abs(b.y-G.ship.y)))[0]||null;
+}
+function shipAttackConfirmationActive(){
+  if(shipAttackPrompt && (shipAttackPrompt.career!==G || G?.mode!=='galaxy' || G.dead || G.retired ||
+    !(G.neutralShips||[]).includes(shipAttackPrompt.ship) || !galaxyShipAttackInRange(shipAttackPrompt.ship)))shipAttackPrompt=null;
+  return !!shipAttackPrompt;
+}
+function resolveShipAttackConfirmation(attack){
+  if(!shipAttackConfirmationActive())return;
+  const {ship}=shipAttackPrompt;shipAttackPrompt=null;
+  if(attack)doFireAtNeutral(ship,true);
+  renderAll();
+}
+function attemptGalaxyAttack(){
+  if(G.mode!=='galaxy'||G.dead||G.retired)return;
+  const target=galaxyAttackTarget();
+  if(target){
+    if(target.pirateType || target._homeCluster)startShipCombat(target,true);
+    else doFireAtNeutral(target);
+    return;
+  }
+  const base=(G.pirateBases||[]).find(base=>base.x===G.ship.x && base.y===G.ship.y && !base.destroyed);
+  if(base){doFireAtBase(base);return;}
+  addLog(effectiveSensorRange()>0?'No ship within sensor range to attack.':'Sensors offline — no ship target lock.','lw');
+  renderAll();
+}
+function drawShipAttackConfirmation(){
+  if(!shipAttackConfirmationActive())return;
+  resetCanvasMenu();canvasMapView=null;
+  const ship=shipAttackPrompt.ship,cx=canvasWidth/2,top=canvasHeight/2-90;
+  ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,canvasWidth,canvasHeight);
+  ctx.fillStyle='#10131d';ctx.fillRect(cx-300,top,600,180);
+  ctx.strokeStyle='#c58d45';ctx.strokeRect(cx-300,top,600,180);
+  ctx.textAlign='center';ctx.fillStyle='#ffe097';ctx.font='bold 18px Courier New';
+  ctx.fillText('REALLY ATTACK '+(ship.type==='patrol'?'STATION PATROL?':'AN UNARMED VESSEL?'),cx,top+30);
+  ctx.font='14px Courier New';ctx.fillStyle='#d8e2ed';ctx.fillText(ship.name,cx,top+58,560);
+  ctx.textAlign='left';ctx.fillStyle='#c1a68b';ctx.font='13px Courier New';
+  drawWrappedText('Attacking damages station reputation and can lead to a docking ban.',cx-270,top+85,540,18,2);
+  canvasMenuButton('Cancel [N]',cx-265,top+135,()=>resolveShipAttackConfirmation(false));
+  canvasMenuButton('Attack [Y]',cx+115,top+135,()=>resolveShipAttackConfirmation(true));
+}
+
+function doFireAtNeutral(ns,confirmed=false){
+  if(G.mode!=='galaxy' || !galaxyShipAttackInRange(ns))return;
   if(!shipCombatWeapons().length){
     addCombatLog('No ship weapons ready to fire.','lw');
+    renderAll();
+    return;
+  }
+  const unarmed=(ns.systemStats?.weaponSlots??ns.guns??(ns.type==='patrol'?1:0))===0;
+  if(!confirmed && !ns.pirateType && !ns._homeCluster && (ns.type==='patrol' || unarmed)){
+    shipAttackPrompt={career:G,ship:ns};
     renderAll();
     return;
   }
@@ -32054,7 +32238,7 @@ function doFireAtBase(base){
       G.deathCause='The ship was destroyed by defense turrets at '+base.name+'.';
     }
   }
-  beginCareerTurn();
+  beginCareerTurn('combat');
   moveNeutralShips();
   movePirates();
   moveGasEntities();
@@ -32115,6 +32299,8 @@ function startShipCombat(pirate,initiatedByPlayer=false){
 
 function resolveShipCombatKill(combat,enemy){
   const ship = enemy.ship;
+  if(ship.combatRewardsResolved)return;
+  ship.combatRewardsResolved=true;
   const report = (message,cls)=>{
     combat.result = {message,cls};
     addCombatLog(message,cls);
@@ -32123,6 +32309,7 @@ function resolveShipCombatKill(combat,enemy){
     report(ship.name+' destroyed.','lc');
     if(ship.type==='patrol') ship.lastRespawn = G.turn;
     if(!ship._wasHostileAtEngagement) harmStationReputation(ship.type==='patrol' ? 30 : 20,'destroyed '+ship.name);
+    awardShipSalvage(ship,false);
   } else if(ship._homeCluster){
     const crystal = makeCommodityItem('nebula_crystal','nebula_combat',COMMODITIES.nebula_crystal.basePrice);
     if(addCargo(crystal)) report(ship.name+' dissipates. Nebula Crystal loaded into cargo.','lg');
@@ -32134,14 +32321,16 @@ function resolveShipCombatKill(combat,enemy){
     trackEvent('gas_entity_defeated',{entity_name:ship.name,was_massive:ship.isMassive ? 1 : 0});
   } else {
     const loot = 50+rnd(100);
-    earnCredits(loot);
-    let salvage = ship.name+' destroyed. Salvaged '+loot+' credits.';
+    G.pirateBounties??={credits:0,kills:0};
+    G.pirateBounties.credits+=loot;G.pirateBounties.kills++;
+    let salvage = ship.name+' destroyed. '+loot+' cr bounty recorded; collect at a major station.';
     if(combat.foughtWhileStranded && G.fuel<=0){
       const fuel = 2+rnd(4);
       G.fuel = Math.min(G.maxFuel||100,fuel);
       salvage += ' Recovered '+fuel+' fuel. Engines back online.';
     }
     report(salvage,'lg');
+    awardShipSalvage(ship,true);
   }
 }
 
@@ -32208,7 +32397,7 @@ function doShipSurrender(){
       return;
     }
     // Second press — jailed, game over
-    beginCareerTurn();
+    beginCareerTurn('combat');
     addCombatLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
     G.jailed = true;
     G.dead = true;
@@ -32228,7 +32417,7 @@ function doShipSurrender(){
     return;
   }
 
-  beginCareerTurn();
+  beginCareerTurn('combat');
   G.credits = Math.max(0, (G.credits||0) - terms.creditTake);
   G.cargo = [];
   for(const {ship} of livingShipCombatEnemies(sc)){
@@ -32255,7 +32444,7 @@ function doShipRetreat(){
   }
   const returningFire=livingShipCombatEnemies(combat).filter(enemy=>shipCombatEnemyCanFire(combat,enemy));
   const underFire=returningFire.length>0;
-  beginCareerTurn();
+  beginCareerTurn('combat');
   finishCareerTurn();
   for(const {ship} of livingShipCombatEnemies(combat)) tickShipSystems(ship);
   syncShipCombatSystems(combat);
@@ -32265,6 +32454,13 @@ function doShipRetreat(){
       if(shipCombatEnemyCanFire(combat,enemy)) fireShipCombatEnemy(combat,enemy);
       if(G.dead){ renderAll(); return; }
     }
+  }
+  if(shipDisengagementFails()){
+    addCombatLog('Disengagement failed! Remaining ships return to their starting positions.','lw');
+    resetShipCombatPositions(combat);
+    combat.round++;
+    renderAll();
+    return;
   }
   for(const {ship} of livingShipCombatEnemies(combat)){
     ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;
@@ -32276,6 +32472,9 @@ function doShipRetreat(){
   renderAll();
 }
 const COMBAT_MAP = { width:27, height:17, x:12, y:12 };
+const SHIP_DISENGAGE_FAILURE_CHANCE = 0.25;
+const COMBAT_PLAYER_START = {x:13,y:8,dx:1,dy:0};
+const COMBAT_ENEMY_STARTS = [[19,8],[18,4],[18,12],[21,6]];
 const COMBAT_STEPS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 let pointerShipCombatAim = null;
 
@@ -32290,13 +32489,12 @@ function shipCombatCollection(ship){
 
 function createShipCombatArena(combat, ships){
   pointerShipCombatAim = null;
-  const positions = [[19,8],[18,4],[18,12],[21,6]];
-  combat.player = { x:13,y:8,dx:1,dy:0 };
+  combat.player = {...COMBAT_PLAYER_START};
   tickShipSystems();
   combat.enemies = ships.map((ship,i)=>{
     tickShipSystems(ship);
     const collection = shipCombatCollection(ship);
-    const [x,y] = positions[i];
+    const [x,y] = COMBAT_ENEMY_STARTS[i];
     return {ship,collection,x,y,dx:-1,dy:0,moveBank:0,
       shields:ship.shieldCharge};
   });
@@ -32323,6 +32521,24 @@ function createShipCombatArena(combat, ships){
        shipCombatAsteroid(combat,point)) continue;
     combat.asteroids.push(point);
   }
+}
+
+// A failed withdrawal changes arena positioning only, never the authoritative ships.
+function resetShipCombatPositions(combat){
+  Object.assign(combat.player,COMBAT_PLAYER_START);
+  combat.enemies.forEach((enemy,index)=>{
+    if(enemy.escaped || enemy.ship.alive===false || enemy.ship.hp<=0) return;
+    const [x,y]=COMBAT_ENEMY_STARTS[index];
+    Object.assign(enemy,{x,y,dx:-1,dy:0,moveBank:0,lastSeenPlayer:{x:combat.player.x,y:combat.player.y}});
+  });
+  combat.trails=[];
+  pointerShipCombatAim=null;
+  clearShipCombatFeedback();
+  syncShipCombatSystems(combat);
+}
+
+function shipDisengagementFails(){
+  return Math.random()<SHIP_DISENGAGE_FAILURE_CHANCE;
 }
 
 function livingShipCombatEnemies(combat){
@@ -32607,7 +32823,9 @@ function moveShipCombatEnemy(combat,enemy,referenceEngine=Math.max(1,effectiveEn
   for(let step=0;step<steps;step++){
     // Closing into firing/ram range uses movement, never an extra attack.
     if(step>0 && shipCombatEnemyThreat(combat,enemy))break;
-    if(!moveShipCombatEnemyStep(combat,enemy))break;
+    const result=moveShipCombatEnemyStep(combat,enemy);
+    if(result==='reset')return 'reset';
+    if(!result)break;
     if(enemy.escaped || enemy.ship.alive===false || enemy.ship.hp<=0 || combat!==G.shipCombat)break;
     if(shipCombatMoveRating(enemy)<rating || (!enemy.ship._homeCluster && effectiveSensorRange(enemy.ship)===0)){
       enemy.moveBank=0;break;
@@ -32639,7 +32857,7 @@ function moveShipCombatEnemyStep(combat,enemy){
     }
   }
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
-    escapeShipCombatEnemy(combat,enemy);
+    if(escapeShipCombatEnemy(combat,enemy)==='reset')return 'reset';
   }
   return !!next || enemy.escaped;
 }
@@ -32655,6 +32873,11 @@ function escapeShipCombatEnemy(combat,enemy){
   if(!candidates.length){
     if(!enemy.escapeBlocked)addCombatLog(ship.name+' cannot find a clear galaxy escape route.','lw');
     enemy.escapeBlocked=true;return false;
+  }
+  if(shipDisengagementFails()){
+    addCombatLog(ship.name+' fails to disengage! Remaining ships return to their starting positions.','lw');
+    resetShipCombatPositions(combat);
+    return 'reset';
   }
   ship.x=candidates[0].x;ship.y=candidates[0].y;
   ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;
@@ -32742,7 +32965,7 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   pointerShipCombatAim = null;
   if(!combat || combat!==G.shipCombat){ renderAll(); return; }
   if(action==='wait') G.ship.extraCooling=shipCoolingRate();
-  beginCareerTurn();
+  beginCareerTurn(action==='repair'?'repair':'combat');
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
   // One player pace for this committed turn, even if an early hit damages the drive.
@@ -32756,7 +32979,7 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
     } else if(shipCombatEnemyThreat(combat,enemy)){
       enemy.moveBank=0;
       enemy.ship.heat=Math.max(0,enemy.ship.heat-shipCoolingRate(enemy.ship));
-    } else moveShipCombatEnemy(combat,enemy,referenceEngine);
+    } else if(moveShipCombatEnemy(combat,enemy,referenceEngine)==='reset')break;
   }
   if(!livingShipCombatEnemies(combat).length){
     G.shipCombat=null;G.mode='galaxy';
@@ -32892,11 +33115,12 @@ function drawShipCombatOverlay(combat=G.shipCombat){
       }
     },{title:ship.name+' · '+ship.hp+' hull · Range '+shipCombatDistance(player,enemy)});
   }
-  drawShipCombatReadout(combat,weapons);
+  drawShipCombatReadout(combat);
+  drawShipCombatMounts(combat,weapons);
   drawShipCombatShotFeedback(combat);
 }
 
-function drawShipCombatReadout(combat,weapons){
+function drawShipCombatReadout(combat){
   const x=674, width=274, textX=x+10, textWidth=width-20;
   const target=combat.enemies[combat.target];
   const text=(value,y,color='#aebdd0',font='12px Courier New')=>{
@@ -32914,7 +33138,8 @@ function drawShipCombatReadout(combat,weapons){
     ctx.fillStyle=color;ctx.fillRect(textX,y+5,Math.round(textWidth*Math.max(0,Math.min(1,max?value/max:0))),3);
     return y+25;
   };
-  ctx.fillStyle='#0c111a';ctx.fillRect(x,12,width,460);
+  const panelBottom=canvasHeight-8;
+  ctx.fillStyle='#0c111a';ctx.fillRect(x,12,width,panelBottom-12);
   let y=heading('YOUR SHIP',30);
   ctx.font='11px Courier New';ctx.fillStyle='#8e9daa';ctx.textAlign='right';
   ctx.fillText(shipCombatSensorRange()?'Sensor range '+shipCombatSensorRange():'Sensors offline',x+width-10,30,textWidth-90);
@@ -32934,14 +33159,25 @@ function drawShipCombatReadout(combat,weapons){
   ctx.font='11px Courier New';ctx.fillStyle='#edaa77';ctx.textAlign='left';
   if(faults.length) y=drawWrappedText(faults.join(' · '),textX,y,textWidth,13,2)+3;
 
-  // Keep the former heading's breathing room between ship and target.
-  y+=21;
   if(target && shipCombatContactVisible(combat,target)){
     const ship=target.ship, natural=!!ship._homeCluster;
-    ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
-    y=drawWrappedText(ship.name,textX,y,textWidth,14,2)+2;
-    y=meter('Hull',ship.hp,ship.maxHp,y,'#e4b98c');
     const targetShields=shipShieldReadout(ship);
+    const armed=!natural && actorShipCombatWeapons(ship).length>0;
+    ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
+    const nameLines=[];
+    let line='';
+    for(const word of ship.name.split(/\s+/)){
+      const next=line?line+' '+word:word;
+      if(line && ctx.measureText(next).width>textWidth){nameLines.push(line);line=word;}
+      else line=next;
+    }
+    if(line)nameLines.push(line);
+    // The last detail stays at the bottom; extra rows grow upward into the gap.
+    const height=Math.min(2,nameLines.length)*14+2+25+(targetShields?25:0)+48+(armed?16:0);
+    y=panelBottom-10-height+16;
+    for(const name of nameLines.slice(0,2)){text(name,y,'#f3dfaa','bold 12px Courier New');y+=14;}
+    y+=2;
+    y=meter('Hull',ship.hp,ship.maxHp,y,'#e4b98c');
     if(targetShields)y=meter('Shields',targetShields.charge,targetShields.capacity,y,'#81c5df',targetShields.state);
     text('Distance '+shipCombatDistance(combat.player,target)+' · '+(natural?'Ram range 1':'Weapon range '+shipCombatEnemyRange(target)),y);y+=16;
     const mobility=shipCombatMoveRating(target);
@@ -32949,31 +33185,43 @@ function drawShipCombatReadout(combat,weapons){
     text((natural?'Mobility ':'Engine ')+mobility+' · Move '+pace+'/'+Math.max(1,effectiveEngineRating())+' per turn',y,'#8e9daa','11px Courier New');y+=16;
     const status=shipCombatEnemyActionStatus(combat,target);
     text(status,y,status==='Can fire'||status==='Can ram'?'#f0a9a6':'#aebdd0');y+=16;
-    if(!natural && actorShipCombatWeapons(ship).length){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
-  } else {text('No live sensor contact',y,'#b8a487');y+=16;}
+    if(armed){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
+  } else {text('No live sensor contact',panelBottom-10,'#b8a487');}
+}
 
-  y=heading('WEAPON MOUNTS',y+1);
-  if(!weapons.length) text('No weapons installed',y,'#b8a487');
-  weapons.forEach((entry,index)=>{
-    const selected=index===combat.weapon, status=shipCombatWeaponStatus(combat,entry);
-    ctx.fillStyle=selected?'#1b3040':'#111b25';ctx.fillRect(textX,y,textWidth,34);
-    const label=combatStatusText(status);
-    ctx.font='11px Courier New';const statusWidth=ctx.measureText(label).width;
-    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf';ctx.font='bold 12px Courier New';ctx.textAlign='left';
-    ctx.fillText((index+1)+' '+entry.weapon.name,textX+6,y+13,textWidth-statusWidth-20);
-    ctx.font='11px Courier New';ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';ctx.textAlign='right';
-    ctx.fillText(label,textX+textWidth-6,y+13);
-    ctx.textAlign='left';ctx.fillStyle='#94a8ba';
-    ctx.fillText(entry.weapon.minDmg+'–'+entry.weapon.maxDmg+' dmg · Range '+entry.weapon.range+' · Heat '+entry.weapon.heat,textX+6,y+27,textWidth-12);
-    canvasMenuTarget(textX,y,textWidth,34,()=>selectShipCombatWeapon(index));
-    y+=37;
-  });
+// Horizontal mount cards use the strip below the arena, with the same action guards.
+function drawShipCombatMounts(combat,weapons){
+  const x=COMBAT_MAP.x, width=COMBAT_MAP.width*TS;
+  const top=COMBAT_MAP.y+COMBAT_MAP.height*TS+8, bottom=canvasHeight-8;
+  ctx.font='bold 12px Courier New';ctx.fillStyle='#a8d8f8';ctx.textAlign='left';
+  ctx.fillText('WEAPON MOUNTS',x,top+6);
   const selected=weapons[combat.weapon];
   if(selected){
     const reload=Math.max(0,(G.ship.weaponReadyAt[selected.slot]||0)-G.turn);
-    text('Peak heat '+(G.ship.heat+selected.weapon.heat)+'/'+shipHeatCapacity()+
-      (reload?' · Reload in '+reload+'t':''),y+10,'#8e9daa','11px Courier New');
+    ctx.font='11px Courier New';ctx.fillStyle='#8e9daa';ctx.textAlign='right';
+    ctx.fillText('Peak heat '+(G.ship.heat+selected.weapon.heat)+'/'+shipHeatCapacity()+
+      (reload?' · Reload in '+reload+'t':''),x+width,top+6,width-130);
   }
+  const y=top+14, height=bottom-y, gap=6;
+  if(!weapons.length){
+    ctx.font='12px Courier New';ctx.fillStyle='#b8a487';ctx.textAlign='left';
+    ctx.fillText('No weapons installed',x,y+18);
+    return;
+  }
+  const cardWidth=(width-gap*(weapons.length-1))/weapons.length;
+  weapons.forEach((entry,index)=>{
+    const left=x+index*(cardWidth+gap), status=shipCombatWeaponStatus(combat,entry);
+    const label=combatStatusText(status), selected=index===combat.weapon;
+    ctx.fillStyle=selected?'#1b3040':'#111b25';ctx.fillRect(left,y,cardWidth,height);
+    ctx.font='11px Courier New';const statusWidth=ctx.measureText(label).width;
+    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf';ctx.font='bold 12px Courier New';ctx.textAlign='left';
+    ctx.fillText((index+1)+' '+entry.weapon.name,left+6,y+12,cardWidth-statusWidth-20);
+    ctx.font='11px Courier New';ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';ctx.textAlign='right';
+    ctx.fillText(label,left+cardWidth-6,y+12);
+    ctx.textAlign='left';ctx.fillStyle='#94a8ba';
+    ctx.fillText(entry.weapon.minDmg+'–'+entry.weapon.maxDmg+' dmg · Range '+entry.weapon.range+' · Heat '+entry.weapon.heat,left+6,y+26,cardWidth-12);
+    canvasMenuTarget(left,y,cardWidth,height,()=>selectShipCombatWeapon(index));
+  });
 }
 
 // Space and its star field are continuous; neither fog nor weapon range paints tile backgrounds.
@@ -33110,7 +33358,7 @@ function doInteract(){
   if(G.mode==='galaxy'){
     // Check for floating nebula loot at current tile first
     const lootHere = (G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
-    if(lootHere){
+    if(lootHere && (G.cargo.length<(G.shipStats.cargoCapacity||0) || G.galaxy[G.ship.y][G.ship.x].type!=='BASE')){
       collectNebulaLootAt(G.ship.x, G.ship.y);
       return;
     }
@@ -33162,6 +33410,8 @@ function doInteract(){
         pawnStock: generatePawnStock(cell.name),
         medbayStock: generateMedbayStock(cell.name),
       };
+      recordCareerTime('docking',15,'stations');
+      settlePirateBountiesAtStation(cell.name);
       G._drinkCount = 0;
       ensureCrewMoraleState();
       updateCrewLowMoraleFlags();
@@ -33223,6 +33473,7 @@ function doInteract(){
     } else if(cell.type==='CASINO'){
       const key='casino:'+G.ship.x+','+G.ship.y;
       if(!G.planets[key]) generateCasinoStationMap(key);
+      recordCareerTime('docking',15,'stations');
       G.mode='planet'; G.curPlanet=key; G.curSystem='';
       G.player={x:5,y:10,hp:G.crew.filter(c=>c.hp>0)[0]?.hp||10};
       G.casino = { screen:'main', sel:0, arenaPhase:null, arenaEnemy:null, arenaLog:[], betSel:0 };
@@ -33333,6 +33584,7 @@ function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
       else generatePlanet(pKey, pDesc.biome);
     }
 
+    recordCareerTime('travel',15,'space');
     G.mode='planet';
     G.examine = null;
     G.rangeTarget = null;
@@ -33682,7 +33934,7 @@ function doScan(){
   if(!body) return;
   const { pDesc, targetDesc, pKey } = body;
   if(effectiveSensorRange()===0){
-    addLog('Sensors offline. Repair or bypass the sensor core before scanning.','lw');
+    addLog('Sensors offline. Repair the sensor core before scanning.','lw');
     renderAll();return;
   }
 
@@ -33694,7 +33946,7 @@ function doScan(){
 
   if(G.fuel<=0){ addLog('Not enough fuel to run scanners.','lw'); renderAll(); return; }
   if(!DEBUG.infiniteFuel){ G.fuel = Math.max(0, G.fuel-1); G.fuelSpent=(G.fuelSpent||0)+1; }
-  beginCareerTurn();
+  beginCareerTurn('scan');
   const B = BIOMES[targetDesc.biome] || {};
   const difficulty = B.scanDifficulty ?? 0.6;
   const bestNavScan  = Math.max(0, ...(G.crew.filter(c=>c.hp>0).map(c=>c.skills?.nav||0)));
@@ -33888,6 +34140,7 @@ function doLiftOff(){
     G.examine = null;
     G.rangeTarget = null;
     G._itemAimMode = null;
+    recordCareerTime('travel',15,leavingCasino?'stations':'space');
     SFX.liftoff();
     addLog(leavingCasino ? 'Undocked from The Void Royale.' : 'Lifted off. Back in orbit.','lg');
   } else {
@@ -34007,6 +34260,7 @@ function applyCorpItem(item){
 }
 
 function executeBaseAction(actionId){
+  const beforeCredits=G.credits,beforeFuel=G.fuel;
   const fuelCost = Math.round((G.maxFuel-G.fuel)*0.8);
   switch(actionId){
     case 'ship_systems': openShipSystems(); return;
@@ -34551,10 +34805,70 @@ function executeBaseAction(actionId){
         if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       }
   }
+  if(G.credits!==beforeCredits || G.fuel!==beforeFuel){
+    const minutes=actionId==='refuel'||actionId==='repair'||actionId.startsWith('up')||actionId.startsWith('buyweapon')?30:5;
+    recordCareerTime('services',minutes,'stations');
+  }
   renderAll();
 }
 
-function beginCareerTurn(){
+// Reporting only: none of these values drive turn-based gameplay or deadlines.
+const CAREER_TIME_LOCATIONS=['space','planets','stations','interiors'];
+const CAREER_TIME_ACTIVITIES=['travel','exploration','waiting','combat','repair','scan','leisure','services','docking'];
+function newCareerTime(){
+  return {minutes:0,locations:Object.fromEntries(CAREER_TIME_LOCATIONS.map(key=>[key,0])),
+    activities:Object.fromEntries(CAREER_TIME_ACTIVITIES.map(key=>[key,0]))};
+}
+function careerTimeLocation(){
+  const mode=G.mode==='inventory'?G._prevMode:G.mode;
+  if(mode==='base' || mode==='casino' || (mode==='planet' && G.planets[G.curPlanet]?.isCasino))return 'stations';
+  if(mode==='planet'){
+    const map=G.planets[G.curPlanet];
+    return map?.isDerelict || map?.isAncientStation || map?.isQuarantine?'interiors':'planets';
+  }
+  return 'space';
+}
+function recordCareerTime(activity,minutes,location=careerTimeLocation()){
+  if(!Number.isSafeInteger(minutes) || minutes<0 || !CAREER_TIME_LOCATIONS.includes(location) || !CAREER_TIME_ACTIVITIES.includes(activity))throw Error('Invalid career time');
+  G.careerTime??=newCareerTime();
+  G.careerTime.minutes+=minutes;G.careerTime.locations[location]+=minutes;G.careerTime.activities[activity]+=minutes;
+}
+function recordCareerActionTime(activity){
+  const mode=G.mode==='inventory'?G._prevMode:G.mode;
+  const location=careerTimeLocation();
+  activity??=mode==='shipcombat'?'combat':mode==='casino'?'leisure':mode==='planet'?'exploration':'travel';
+  const minutes=activity==='repair'?15:activity==='combat'?1:activity==='leisure'?30:
+    location==='planets'||location==='interiors'||location==='stations'?5:mode==='shipcombat'?1:mode==='galaxy'?60:10;
+  recordCareerTime(activity,minutes,location);
+}
+function formatCareerDuration(minutes){
+  const months=Math.floor(minutes/43200);minutes%=43200;
+  const days=Math.floor(minutes/1440);minutes%=1440;
+  const hours=Math.floor(minutes/60),mins=minutes%60;
+  return [months?months+'mo':'',days?days+'d':'',hours?hours+'h':'',mins?mins+'m':''].filter(Boolean).join(' ')||'0m';
+}
+function careerClockText(){
+  const minutes=G.careerTime?.minutes||0,day=Math.floor(minutes/1440)+1;
+  return 'D'+day+' '+String(Math.floor(minutes%1440/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
+}
+function planetLocalTimeText(key){
+  const map=G.planets[key],biome=BIOMES[map?.biome]||{};
+  if(!map || map.isCasino || map.isDerelict || map.isAncientStation || map.isQuarantine || map.isCave)return '';
+  if(map.isRoguePlanet || biome.tidalLock==='night')return 'Permanent night';
+  if(biome.tidalLock==='day')return 'Permanent day';
+  const cycle=(biome.dayLength||20)*4;
+  const minutes=Math.floor((((map.planetTurn||0)%cycle)/cycle*1440+360)%1440);
+  return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
+}
+function drawCareerTimeSummary(cx,y,width){
+  const time=G.careerTime||newCareerTime(),at=time.locations;
+  ctx.textAlign='center';ctx.font='12px Courier New';ctx.fillStyle='#8aaabb';
+  ctx.fillText('Elapsed: '+formatCareerDuration(time.minutes),cx,y,width);
+  ctx.fillText('Space '+formatCareerDuration(at.space)+' · Planets '+formatCareerDuration(at.planets),cx,y+16,width);
+  ctx.fillText('Stations '+formatCareerDuration(at.stations)+' · Interiors '+formatCareerDuration(at.interiors),cx,y+32,width);
+}
+function beginCareerTurn(activity){
+  recordCareerActionTime(activity);
   G.turn++;
 }
 
@@ -34629,8 +34943,8 @@ function applyStandingSurfaceHazards(){
 
 // Short actions on the surface share the clock, exposure and NPC response.
 // Movement and waiting have additional local effects.
-function completeSurfaceAction(visionRadius){
-  beginCareerTurn();
+function completeSurfaceAction(visionRadius,activity){
+  beginCareerTurn(activity);
   advancePlanetDaylight(G.planets[G.curPlanet]);
   revealPlanet(G.curPlanet,G.player.x,G.player.y,visionRadius);
   applySurfaceTurnExposure();
@@ -34700,11 +35014,11 @@ function doFuelScoop(context){
   renderAll();
 }
 
-function doWaitGalaxy(){
+function doWaitGalaxy(activity='waiting'){
   if(G.mode==='shipcombat'){ advanceShipCombat(); return; }
   if(G.mode!=='galaxy'||G.dead||G.retired) return;
   G._bonusMoves = 0;
-  beginCareerTurn();
+  beginCareerTurn(activity);
   maybeCrewGalaxyTalk();
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
@@ -34753,7 +35067,7 @@ function doWaitGalaxy(){
 
 function doWaitPlanet(){
   if(G.mode!=='planet'||G.dead||G.retired) return;
-  beginCareerTurn();
+  beginCareerTurn('waiting');
 
   const pdata = G.planets[G.curPlanet];
   advancePlanetDaylight(pdata);
@@ -34839,6 +35153,14 @@ document.addEventListener('keydown', e=>{
     handleBarterKey(e);
     return;
   }
+  if(shipAttackConfirmationActive()){
+    e.preventDefault();
+    if(!e.repeat){
+      if(e.key.toLowerCase()==='y')resolveShipAttackConfirmation(true);
+      else if(e.key.toLowerCase()==='n' || e.key==='Escape')resolveShipAttackConfirmation(false);
+    }
+    return;
+  }
   const menuControl = e.target.closest?.('button[data-menu-control]');
   if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey || menuControl.id==='shortcut-toggle') && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
@@ -34868,6 +35190,10 @@ document.addEventListener('keydown', e=>{
   }
 
   try {
+
+    if(G.mode==='galaxy' && !G.showOptions && !G.dialogue && (e.key==='f'||e.key==='F')){
+      e.preventDefault();if(!e.repeat)attemptGalaxyAttack();return;
+    }
 
     // F5 — save to file from anywhere in-game
     if(e.key==='F5'){ e.preventDefault(); saveToFile(); return; }
@@ -35476,18 +35802,6 @@ document.addEventListener('keydown', e=>{
       }
     }
 
-    if(e.key==='f'||e.key==='F'){
-      if(G.mode==='galaxy'){
-        const p=G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-        if(p){ startShipCombat(p,true); return; }
-        const ns=nearestNeutralTarget(1);
-        if(ns){ doFireAtNeutral(ns); return; }
-        // Fire on pirate base if standing on it and no live pirate here
-        const base=G.pirateBases&&G.pirateBases.find(pb=>pb.x===G.ship.x&&pb.y===G.ship.y&&!pb.destroyed);
-        if(base){ doFireAtBase(base); return; }
-      }
-      return;
-    }
     // L key: no floodlight toggle — it is always-on passive
     if(e.key==='u'||e.key==='U'){
       if(G.mode==='galaxy'){ doFuelScoop('nebula'); return; }
@@ -36500,6 +36814,20 @@ function parseSaveSnapshot(raw){
      (view==='radio' && !game.radio) || (view==='shipcombat' && !game.shipCombat) ||
      (view==='base' && !game.base)){
     throw invalidCareerSave();
+  }
+  if(game.pirateBounties!==undefined){
+    const claims=game.pirateBounties;
+    if(!claims || !['credits','kills'].every(key=>Number.isSafeInteger(claims[key]) && claims[key]>=0) ||
+       (claims.kills===0 && claims.credits!==0) || (claims.kills>0 && claims.credits<claims.kills*50))throw invalidCareerSave();
+  }
+  if(game.careerTime!==undefined){
+    const clock=game.careerTime;
+    const locationKeys=['space','planets','stations','interiors'];
+    const activityKeys=['travel','exploration','waiting','combat','repair','scan','leisure','services','docking'];
+    if(!clock || !Number.isSafeInteger(clock.minutes) || clock.minutes<0 ||
+       ![ [clock.locations,locationKeys],[clock.activities,activityKeys] ].every(([totals,keys])=>
+         totals && keys.every(key=>Number.isSafeInteger(totals[key]) && totals[key]>=0) &&
+         keys.reduce((sum,key)=>sum+totals[key],0)===clock.minutes))throw invalidCareerSave();
   }
   validateSavedShipSystems(game.ship,game.turn);
   if(!Number.isFinite(game.shipStats.maxFuel) || game.shipStats.maxFuel<=0 ||
@@ -37979,7 +38307,7 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
 // The compass is the only pointer control that can move or wait in the world.
 document.getElementById('compass-grid').addEventListener('mousedown',event=>{
   if(event.button!==0 || !G || G.dead || G.retired || canvasMenuBlocked() ||
-    G.showOptions || G.dialogue || shipSystemsActive() ||
+    G.showOptions || G.dialogue || shipSystemsActive() || shipAttackConfirmationActive() ||
     G._voidPrompt || G.stranded?.rescuePhase==='offer' || DEBUG.on) return;
   const direction = event.target.closest('.cmp-btn');
   if(!direction) return;

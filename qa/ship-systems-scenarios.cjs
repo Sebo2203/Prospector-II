@@ -12,6 +12,7 @@ const {isSystemsOpen,canvasText,clickTarget,clickRepair,assertMenuFits}=require(
     await page.evaluate(()=>initGame('BULK_FREIGHTER','Systems QA','Systems QA'));
     await page.waitForFunction(()=>G?.galaxy && G.log.some(entry=>entry.msg.includes('Ready for departure')));
     const systemsButton=page.getByRole('button',{name:'Ship systems',exact:false});
+    await page.evaluate(()=>{Math.random=()=>0.25;});
     const openingTurn=await page.evaluate(()=>G.turn);
     assert.equal(await systemsButton.count(),0,'galaxy context omits the redundant F3 control');
     await page.keyboard.press('F3');assert.ok(await isSystemsOpen(page));
@@ -71,7 +72,7 @@ const {isSystemsOpen,canvasText,clickTarget,clickRepair,assertMenuFits}=require(
     assert.ok(await page.evaluate(()=>G.stranded));
     await page.keyboard.press('i');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
     await clickInspect();assert.ok(await isSystemsOpen(page),'a stranded overlay must not cover the static inspection control');
-    await clickRepair(page,'engine','bypass');
+    await clickRepair(page,'engine','improvised');
     assert.deepEqual(await page.evaluate(()=>[G.mode,G._viewTab,G.stranded===null,effectiveEngineRating()]),['inventory','ship',true,1]);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');
     await page.evaluate(()=>{
@@ -92,7 +93,7 @@ const {isSystemsOpen,canvasText,clickTarget,clickRepair,assertMenuFits}=require(
     assert.ok(await isSystemsOpen(page));
     await clickTarget(page,'Sensors');
     assert.match(await canvasText(page),/OFFLINE · Existing charts retained/);
-    await clickRepair(page,'sensors','bypass');
+    await clickRepair(page,'sensors','improvised');
     assert.equal(await page.evaluate(()=>effectiveSensorRange()),1,'a bypass can restore a rating-one sensor at 75% integrity');
     await page.evaluate(()=>G.inventory.push({name:'Repair Kit',usable:'repair_kit'}));
     await page.evaluate(()=>renderAll());
@@ -166,10 +167,10 @@ const {isSystemsOpen,canvasText,clickTarget,clickRepair,assertMenuFits}=require(
     const disabled=await page.evaluate(()=>{const {x,y}=G.shipCombat.player,turn=G.turn;moveShipInCombat(-1,0);return [G.turn-turn,G.shipCombat.player.x-x,G.shipCombat.player.y-y];});
     assert.deepEqual(disabled,[0,0,0]);
     await page.keyboard.press('F3');
-    await clickRepair(page,'engine','bypass');
+    await clickRepair(page,'engine','improvised');
     assert.equal(await page.evaluate(()=>effectiveEngineRating()),2);
     const repairTurn=await page.evaluate(()=>G.turn);
-    await clickRepair(page,'sensors','bypass');
+    await clickRepair(page,'sensors','improvised');
     assert.deepEqual(await page.evaluate(turn=>[G.turn-turn,effectiveSensorRange(),G.ship.systems.sensors.bypassUntil-G.turn],repairTurn),[1,1,14]);
     await page.keyboard.press('Escape');
     const boost=await page.evaluate(()=>{
@@ -244,7 +245,7 @@ const {isSystemsOpen,canvasText,clickTarget,clickRepair,assertMenuFits}=require(
     const expiry=await page.evaluate(()=>{
       G.mode='galaxy';G.shipCombat=null;G.pirates=[];G.neutralShips=[];G.gasEntities=[];
       damageShipSystem(G.ship,'sensors',100,'scenario');
-      const before=G.turn;repairShipSystem('sensors','bypass');
+      const before=G.turn;repairShipSystem('sensors','improvised');
       const until=G.ship.systems.sensors.bypassUntil;
       while(G.turn<until){beginCareerTurn();finishCareerTurn();}
       return [G.turn-before,effectiveSensorRange(),G.ship.systems.sensors.condition];

@@ -50,6 +50,7 @@ function renderHUD(){
   }
 
   document.getElementById('h-turn').textContent=G.turn;
+  document.getElementById('h-clock').textContent=careerClockText();
 
   const modes={galaxy:'NAVIGATION', system:'ORBITAL VIEW', scanview:'ORBITAL SCAN', planet:'SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
   const classicModes={galaxy:'GALAXY MAP',system:'SYSTEM VIEW',scanview:'SCANVIEW',planet:'PLANET SURFACE'};
@@ -134,7 +135,8 @@ function renderHUD(){
       const col   = ph==='night' ? '#4466aa' :
                     ph==='dusk'  ? '#ff6622' :
                     ph==='dawn'  ? '#ffaa44' : '#ffcc44';
-      const label = turnsLeft !== null ? `${icon} ${turnsLeft}t` : icon;
+      const localTime=planetLocalTimeText(G.curPlanet);
+      const label=localTime && !B2.tidalLock?`${icon} ${localTime}`:icon;
       phaseEl.textContent = label;
       phaseEl.style.color = col;
       phaseBox.style.display = '';

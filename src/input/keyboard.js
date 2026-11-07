@@ -44,6 +44,14 @@ document.addEventListener('keydown', e=>{
     handleBarterKey(e);
     return;
   }
+  if(shipAttackConfirmationActive()){
+    e.preventDefault();
+    if(!e.repeat){
+      if(e.key.toLowerCase()==='y')resolveShipAttackConfirmation(true);
+      else if(e.key.toLowerCase()==='n' || e.key==='Escape')resolveShipAttackConfirmation(false);
+    }
+    return;
+  }
   const menuControl = e.target.closest?.('button[data-menu-control]');
   if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey || menuControl.id==='shortcut-toggle') && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
@@ -73,6 +81,10 @@ document.addEventListener('keydown', e=>{
   }
 
   try {
+
+    if(G.mode==='galaxy' && !G.showOptions && !G.dialogue && (e.key==='f'||e.key==='F')){
+      e.preventDefault();if(!e.repeat)attemptGalaxyAttack();return;
+    }
 
     // F5 — save to file from anywhere in-game
     if(e.key==='F5'){ e.preventDefault(); saveToFile(); return; }
@@ -681,18 +693,6 @@ document.addEventListener('keydown', e=>{
       }
     }
 
-    if(e.key==='f'||e.key==='F'){
-      if(G.mode==='galaxy'){
-        const p=G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-        if(p){ startShipCombat(p,true); return; }
-        const ns=nearestNeutralTarget(1);
-        if(ns){ doFireAtNeutral(ns); return; }
-        // Fire on pirate base if standing on it and no live pirate here
-        const base=G.pirateBases&&G.pirateBases.find(pb=>pb.x===G.ship.x&&pb.y===G.ship.y&&!pb.destroyed);
-        if(base){ doFireAtBase(base); return; }
-      }
-      return;
-    }
     // L key: no floodlight toggle — it is always-on passive
     if(e.key==='u'||e.key==='U'){
       if(G.mode==='galaxy'){ doFuelScoop('nebula'); return; }

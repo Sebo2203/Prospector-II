@@ -24,6 +24,11 @@ function renderContextBar(){
     btns.push(btn(keys[0],label,'info',keys[2]),btn(keys[1],label,'info',keys[3]));
   };
 
+  if(shipAttackConfirmationActive()){
+    btns.push(btn('Y','Confirm attack','danger'),btn('N','Cancel','info'));
+    bar.innerHTML=btns.join('');return;
+  }
+
   if(shipSystemsActive()){
     arrows('Select system');
     if(shipSystemsActions().length>1) arrows('Select repair',true);
@@ -75,6 +80,8 @@ function renderContextBar(){
     else if(civTarget && canCommunicateWithCivilization(civTarget)) btns.push(btn('T','Contact civilization','good'));
     else if(civTarget) btns.push(`<div class="ctx-btn" style="color:#555;border-color:#333"><span class="ck">[T]</span> Move adjacent to contact</div>`);
     if(G.mode === 'galaxy'){
+      const target=galaxyAttackTarget();
+      if(target)btns.push(btn('F',(target.pirateType || target._homeCluster?'Engage ':'Fire on ')+target.name,'danger'));
       const examData = G.visited?.[G.examine.y*MAP_W+G.examine.x] ? getExamineName(G.examine.x, G.examine.y) : null;
       if(examData && typeof examData === 'object' && examData.type === 'galaxy_ship'){
         const inRadioRange = examData.dist <= radioRange();
@@ -97,7 +104,7 @@ function renderContextBar(){
     if(livingShipCombatEnemies(combat).length>1) btns.push(btn('Tab','Next target','info','Tab'));
     if(shipCombatEdge(combat.player)){
       const safe = shipCombatEscapeReady(combat);
-      btns.push(btn('R',safe?'Disengage':'Disengage under fire',safe?'info':'warn'));
+      btns.push(btn('R',(safe?'Disengage':'Disengage under fire')+' · 25% fail',safe?'info':'warn'));
     } else btns.push(btn('R','Disengage · Reach map edge','info','r',true));
     if(combat.isNeutralTarget && combat.pirate.type==='patrol'){
       btns.push(btn('H',combat.surrenderWarned?'Confirm arrest':'Surrender to patrol','warn'));
@@ -123,11 +130,11 @@ function renderContextBar(){
       const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
       if(quarantineAtShip()){
         btns.push(btn('Enter','Board Mercy of Dawn','good'));
-      } else if(lootHere){
+      } else if(lootHere && (G.cargo.length<(G.shipStats.cargoCapacity||0) || cell.type!=='BASE')){
         const ss = G.shipStats || buildShipStats('LIGHT_SCOUT');
         const cargoFull = (G.cargo||[]).length >= (ss.cargoCapacity||0);
-        if(!cargoFull) btns.push(btn('Enter','Collect Nebula Crystal','good'));
-        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Nebula Crystal here, cargo hold full</div>`);
+        if(!cargoFull) btns.push(btn('Enter','Collect '+lootHere.item.name,'good'));
+        else btns.push(`<div class="ctx-btn" style="color:#884499;border-color:#442266">✦ Salvage here, cargo hold full</div>`);
       } else if(cell.type==='BASE'){
         btns.push(btn('Enter','Dock at Starbase','good'));
       } else if(cell.type==='CASINO'){
@@ -148,12 +155,8 @@ function renderContextBar(){
       } else if(cell.type==='SYSTEM'){
         btns.push(btn('Enter','Enter orbit — '+cell.name,'info'));
       }
-      const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-      if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
-      const pirateNear = (effectiveSensorRange()>0 || DEBUG.fullVision) && !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
-      if(pirateNear) btns.push(btn('!','Pirate nearby: '+pirateNear.name,'danger'));
-      const neutralTarget = nearestNeutralTarget(1);
-      if(neutralTarget && !pirateHere) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
+      const attackTarget=galaxyAttackTarget();
+      if(attackTarget)btns.push(btn('F',(attackTarget.pirateType || attackTarget._homeCluster?'Engage ':'Fire on ')+attackTarget.name,'danger'));
       // REP status removed from ctx bar
       const radioContact = nearestRadioContact();
       if(radioContact) btns.push(btn('H','Hail '+radioContact.name+' ('+neutralShipDistance(radioContact)+'u)','info'));
@@ -167,7 +170,7 @@ function renderContextBar(){
       }
       // Pirate base on current tile
       const pirateBaseHere = G.pirateBases && G.pirateBases.find(pb=>pb.x===G.ship.x&&pb.y===G.ship.y&&!pb.destroyed);
-      if(pirateBaseHere && !pirateHere && !neutralTarget){
+      if(pirateBaseHere && !attackTarget){
         const pct = Math.round((pirateBaseHere.hp/pirateBaseHere.maxHp)*100);
         btns.push(btn('F','Fire on '+pirateBaseHere.name+'  ('+pct+'% integrity)','danger'));
       }

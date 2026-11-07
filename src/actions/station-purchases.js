@@ -109,6 +109,7 @@ function applyCorpItem(item){
 }
 
 function executeBaseAction(actionId){
+  const beforeCredits=G.credits,beforeFuel=G.fuel;
   const fuelCost = Math.round((G.maxFuel-G.fuel)*0.8);
   switch(actionId){
     case 'ship_systems': openShipSystems(); return;
@@ -652,6 +653,10 @@ function executeBaseAction(actionId){
         addLog('Sold '+item.name+': '+rev+' cr '+(prof>=0?'(+'+prof+' profit)':'('+prof+' loss)'),prof>=0?'lg':'lw');
         if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       }
+  }
+  if(G.credits!==beforeCredits || G.fuel!==beforeFuel){
+    const minutes=actionId==='refuel'||actionId==='repair'||actionId.startsWith('up')||actionId.startsWith('buyweapon')?30:5;
+    recordCareerTime('services',minutes,'stations');
   }
   renderAll();
 }

@@ -130,7 +130,7 @@ function casinoStartPoker(){
   const deck=casinoDeck();
   c.poker={phase:'hold', stake:stake.amount, deck, hand:deck.splice(0,5), hold:[false,false,false,false,false], result:null};
   c.lastResult=null;
-  beginCareerTurn();
+  beginCareerTurn('leisure');
   finishCareerTurn();
 }
 function casinoFinishPoker(){
@@ -150,7 +150,7 @@ function casinoStartContest(kind){
   if(!casinoSpend(opp.stake)){ addLog('Not enough credits for that stake.','lw'); return; }
   c.lastResult=null;
   c.contest={kind, opp, crew, round:0, strain:0, player:0, rival:0, phase:'active'};
-  beginCareerTurn();
+  beginCareerTurn('leisure');
   finishCareerTurn();
   if(crew.hp<=0){
     c.contest=null;
@@ -215,7 +215,7 @@ function casinoStartArena(){
   if(!casinoSpend(b.bet)){ c.lastResult={win:false,msg:'Not enough credits for that side bet.'}; return; }
   c.arena={round:0,fighter,fighterHp:fighter.hp,beast:{...b,maxHp:b.hp,hp:b.hp},captainBonus:G.crew.some(x=>x.role==='captain'&&x.hp>0)?2:0,log:['The gate slams open. '+crewDisplayName(fighter)+' enters.'],result:null};
   c.arenaPhase='watch';
-  beginCareerTurn();
+  beginCareerTurn('leisure');
   finishCareerTurn();
   c.arena.fighterHp=fighter.hp;
   if(fighter.hp<=0) casinoFinishArena(false);

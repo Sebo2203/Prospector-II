@@ -1,4 +1,5 @@
-function beginCareerTurn(){
+function beginCareerTurn(activity){
+  recordCareerActionTime(activity);
   G.turn++;
 }
 
@@ -73,8 +74,8 @@ function applyStandingSurfaceHazards(){
 
 // Short actions on the surface share the clock, exposure and NPC response.
 // Movement and waiting have additional local effects.
-function completeSurfaceAction(visionRadius){
-  beginCareerTurn();
+function completeSurfaceAction(visionRadius,activity){
+  beginCareerTurn(activity);
   advancePlanetDaylight(G.planets[G.curPlanet]);
   revealPlanet(G.curPlanet,G.player.x,G.player.y,visionRadius);
   applySurfaceTurnExposure();

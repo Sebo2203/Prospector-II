@@ -19,7 +19,7 @@ async function clickTarget(page,label,prefix=false){
 async function clickRepair(page,id,method){
   const names={engine:'Engines',reactor:'Reactor',shields:'Shield generator',cooling:'Cooling',sensors:'Sensors',fuelTank:'Fuel tank'};
   await clickTarget(page,names[id]);
-  await clickTarget(page,{station:'Restore (',kit:'Repair kit',bypass:'Bypass for 15 turns'}[method],true);
+  await clickTarget(page,{station:'Restore (',kit:'Repair kit',improvised:'Attempt improvised repair'}[method],true);
 }
 async function assertMenuFits(page){
   await page.waitForFunction(()=>{const r=canvas.getBoundingClientRect();return r.right<=innerWidth+1 && r.bottom<=innerHeight+1;});

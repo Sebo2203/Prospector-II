@@ -12,7 +12,7 @@ function tryMove(dx,dy,confirmed){
       if(!G.stranded){
         G.stranded = { sos:false, turnsStranded:0, rescueShip:null, rescuePhase:null };
         (G.neutralShips||[]).forEach(s=>{ s.rescuing = false; }); // fresh strand — reset all rescuers
-        addLog(G.fuel<=0?'OUT OF FUEL — engines dead. Crew oxygen reserves depleting.':'ENGINES OFFLINE — repair or bypass the drive, or signal for rescue.','lc');
+        addLog(G.fuel<=0?'OUT OF FUEL — engines dead. Crew oxygen reserves depleting.':'ENGINES OFFLINE — repair the drive, or signal for rescue.','lc');
         addLog('Press [T] to toggle SOS beacon. Press any move key to wait a turn.','lw');
       } else {
         doStrandedWait();

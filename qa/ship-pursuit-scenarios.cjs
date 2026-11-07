@@ -4,14 +4,16 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
  const browser=await chromium.launch({headless:true});
  try{
   const page=await browser.newPage({viewport:{width:1400,height:720}}),errors=[];
+  page.on('dialog',dialog=>dialog.accept());
   page.on('pageerror',e=>errors.push(e.message));await page.route(/^https?:/,route=>route.abort());await page.goto(gameUrl);
   await page.evaluate(()=>initGame('LIGHT_SCOUT','Pursuit QA','Pursuit QA'));
   await page.waitForFunction(()=>G?.galaxy && G.log.some(e=>e.msg.includes('Ready for departure')));
   await page.evaluate(()=>{
-    G.ship.x=10;G.ship.y=10;G.pirates=[];G.gasEntities=[];G.pirateBases=[];
+    Math.random=()=>0.5;G.ship.x=10;G.ship.y=10;G.pirates=[];G.gasEntities=[];G.pirateBases=[];
     for(let y=5;y<35;y++)for(let x=5;x<35;x++)G.galaxy[y][x]={type:'VOID'};
     const victim={name:'Fleeing Trader',type:'trader',x:10,y:10,hp:45,maxHp:45,guns:0,engineRating:1,speed:1,alive:true,destBase:0};
-    G.neutralShips=[victim];doFireAtNeutral(victim);
+    G.visited[G.ship.y*MAP_W+G.ship.x]=true;
+    G.neutralShips=[victim];doFireAtNeutral(victim);resolveShipAttackConfirmation(true);
     const enemy=G.shipCombat.enemies[0];enemy.x=25;enemy.y=8;
     G.shipCombat.asteroids=[];renderAll();
   });

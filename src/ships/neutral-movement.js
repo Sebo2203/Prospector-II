@@ -67,6 +67,7 @@ function moveNeutralShips(){
     ns.y = spawnPt.y;
     ns.patrolIdx = 0;
     ns.alive = true;
+    delete ns.combatRewardsResolved;
     ns.hostile = (G.stationReputation||0) <= -40; // inherit current rep state
     for(const key of ['systems','systemStats','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn','ramReadyAt']) delete ns[key];
     ns.hp = ns.maxHp;                             // maxHp was set by ensureNeutralCombatStats

@@ -4,6 +4,7 @@ Start at the [project README](../README.md) for the public and experimental down
 
 | I want to… | Read |
 | --- | --- |
+| Understand the intended difficulty and treatment of the player | [Design philosophy](design-philosophy.md) |
 | Use the log, find research work, or explore Mercy of Dawn | [Expedition guide](experiment.md) |
 | Export, restore, or troubleshoot a save | [Autosaves and recovery](autosave.md) |
 | Set up a new checkout or continue in a fresh development chat | [Development handoff](handoff.md) |

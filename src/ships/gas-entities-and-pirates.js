@@ -6,11 +6,11 @@ function collectNebulaLootAt(x, y){
   const stored = addCargo(loot.item);
   if(stored){
     G.nebulaLoot.splice(idx, 1);
-    addLog('Nebula Crystal recovered and loaded into cargo hold.','lg');
+    addLog(loot.item.name+' recovered and loaded into cargo hold.','lg');
     renderAll();
     return true;
   } else {
-    addLog('Nebula Crystal detected here, cargo hold still full. Offload cargo first.','lw');
+    addLog(loot.item.name+' detected here, cargo hold still full. Offload cargo first.','lw');
     renderAll();
     return false;
   }
@@ -19,7 +19,6 @@ function collectNebulaLootAt(x, y){
 function moveGasEntities(){
   if(G?.debugPalette && !G.debugPalette.simulate) return;
   if(!G.gasEntities || G.mode !== 'galaxy') return;
-  if((G.turn || 0) < 300) return;  // Entities dormant until turn 300
 
   const playerCell = G.galaxy?.[G.ship.y]?.[G.ship.x];
   const playerInNebula = playerCell?.type === 'NEBULA';
@@ -64,7 +63,7 @@ function moveGasEntities(){
     }
 
     // ── Chase: player in nebula and within 6 tiles ─────────────────────────────
-    if(playerInNebula && dist <= 6 && !shipDisengagementActive(ge)){
+    if(playerInNebula && !DEBUG.shipInvisible && dist <= 6 && !shipDisengagementActive(ge)){
       ge._chaseTurns = (ge._chaseTurns||0) + 1;
       const {mx,my} = stepToward(ge.x,ge.y,G.ship.x,G.ship.y);
       tryMoveNebula(ge, mx, my);
@@ -85,7 +84,7 @@ function moveGasEntities(){
   });
 
   // Check if any gas entity has reached the player tile → initiate combat
-  if(playerInNebula){
+  if(playerInNebula && !DEBUG.shipInvisible){
     const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y && !shipDisengagementActive(ge));
     if(arrived && G.mode==='galaxy'){
       addLog(arrived.name+' ENGULFS your ship, attempting to devour the hull!','lc');

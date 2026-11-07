@@ -62,6 +62,7 @@ function activeMissionSummaries(){
   if((G.cargo||[]).some(item=>item.questItem==='mystery_delivery')){
     missions.push({title:'Mysterious package',details:['Deliver to '+missionStationDestination('Waypoint Omega')+' · 300 cr.']});
   }
+  if(G.pirateBounties?.kills)missions.push({title:'Pirate bounty claims',details:[G.pirateBounties.credits+' cr for '+G.pirateBounties.kills+' kills and recovered assets. Dock at any accessible major station.']});
   return missions;
 }
 

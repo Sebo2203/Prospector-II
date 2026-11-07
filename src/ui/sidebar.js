@@ -268,11 +268,7 @@ function renderSidebar(){
     document.querySelectorAll('#sidebar .s-title').forEach(el=>el.style.display='');
     document.getElementById('crew-list').innerHTML = renderCrewDialogueContextSidebar();
     document.getElementById('inv-list').innerHTML = '';
-    setLogHTML(G.log.slice(0,12).map(l=>{
-      const age = (G.turn||0) - (l.turn||0);
-      const opacity = age === 0 ? 1.0 : 0.75;
-      return `<div class="log-entry ${l.cls}" style="opacity:${opacity}">${htmlEsc(logDisplayText(l))}</div>`;
-    }).join(''));
+    renderCommsLog();
     return;
   }
 
@@ -500,10 +496,6 @@ function renderSidebar(){
   // Inventory hidden from sidebar — shown in dedicated inventory overlay only
 
   // Log
-  setLogHTML(G.log.filter(l=>!l.archive).slice(0,18).map(l=>{
-    const age = (G.turn||0) - (l.turn||0);
-    const opacity = age === 0 ? 1.0 : 0.75;
-    return `<div class="log-entry ${l.cls}" style="opacity:${opacity}">${htmlEsc(logDisplayText(l))}</div>`;
-  }).join(''));
+  renderCommsLog();
 }
 

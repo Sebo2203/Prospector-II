@@ -1,3 +1,7 @@
+function nebulaEntitySpawnChance(isMassive,isExpansive){
+  return isMassive?0.12:isExpansive?0.04:0.01;
+}
+
 // ═════════════════════════════════════════════════════════════════
 // END DEAD CODE — HUMANITY ARC SCREEN
 // ═════════════════════════════════════════════════════════════════
@@ -116,8 +120,7 @@ function generateGalaxy() {
   }
 
   // ── Nebula Gas Entities — predatory cloud beings ──────────────────────────
-  // Spawn 1-2 entities per game. Each inhabits a nebula region — massive nebulae
-  // always spawn one; normal/expansive nebulae have a small chance.
+  // Rare inhabitants, at most one per connected cluster; no guaranteed massive-nebula spawn.
   G.gasEntities = [];
   {
     // Collect all nebula tiles grouped by their nebula cluster (flood-fill by adjacency)
@@ -159,8 +162,8 @@ function generateGalaxy() {
       if(!tiles.length) return;
       const isMassive = tiles.some(t=>t.cell.massive);
       const isExpansive = tiles.some(t=>t.cell.expansive);
-      const spawnChance = isMassive ? 1.0 : (isExpansive ? 0.35 : 0.08);
-      if(Math.random() > spawnChance) return;
+      const spawnChance = nebulaEntitySpawnChance(isMassive,isExpansive);
+      if(Math.random() >= spawnChance) return;
       // Pick a random tile in this cluster as spawn point
       const tile = tiles[Math.floor(Math.random()*tiles.length)];
       const variant = tiles[0].cell.nebulaVariant || 'pink';

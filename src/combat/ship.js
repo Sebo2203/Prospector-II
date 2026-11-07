@@ -48,10 +48,71 @@ function harmStationReputation(amount, reason){
   }
 }
 
-function doFireAtNeutral(ns){
-  if(!ns || ns.alive===false) return;
+let shipAttackPrompt=null;
+function galaxyShipAttackInRange(ship){
+  const range=effectiveSensorRange();
+  return ship && ship.alive!==false && (ship.hp??1)>0 && (DEBUG.fullVision || (range>0 && G.visited?.[ship.y*MAP_W+ship.x] &&
+    Math.abs(ship.x-G.ship.x)+Math.abs(ship.y-G.ship.y)<=range+(ship._homeCluster?2:0)));
+}
+function galaxyAttackTarget(){
+  const ships=[...(G.pirates||[]),...(G.neutralShips||[]),...(G.gasEntities||[])].filter(galaxyShipAttackInRange);
+  if(G.examine){
+    const selected=ships.find(ship=>ship.x===G.examine.x && ship.y===G.examine.y);
+    if(selected)return selected;
+  }
+  return ships.sort((a,b)=>(Math.abs(a.x-G.ship.x)+Math.abs(a.y-G.ship.y))-
+    (Math.abs(b.x-G.ship.x)+Math.abs(b.y-G.ship.y)))[0]||null;
+}
+function shipAttackConfirmationActive(){
+  if(shipAttackPrompt && (shipAttackPrompt.career!==G || G?.mode!=='galaxy' || G.dead || G.retired ||
+    !(G.neutralShips||[]).includes(shipAttackPrompt.ship) || !galaxyShipAttackInRange(shipAttackPrompt.ship)))shipAttackPrompt=null;
+  return !!shipAttackPrompt;
+}
+function resolveShipAttackConfirmation(attack){
+  if(!shipAttackConfirmationActive())return;
+  const {ship}=shipAttackPrompt;shipAttackPrompt=null;
+  if(attack)doFireAtNeutral(ship,true);
+  renderAll();
+}
+function attemptGalaxyAttack(){
+  if(G.mode!=='galaxy'||G.dead||G.retired)return;
+  const target=galaxyAttackTarget();
+  if(target){
+    if(target.pirateType || target._homeCluster)startShipCombat(target,true);
+    else doFireAtNeutral(target);
+    return;
+  }
+  const base=(G.pirateBases||[]).find(base=>base.x===G.ship.x && base.y===G.ship.y && !base.destroyed);
+  if(base){doFireAtBase(base);return;}
+  addLog(effectiveSensorRange()>0?'No ship within sensor range to attack.':'Sensors offline — no ship target lock.','lw');
+  renderAll();
+}
+function drawShipAttackConfirmation(){
+  if(!shipAttackConfirmationActive())return;
+  resetCanvasMenu();canvasMapView=null;
+  const ship=shipAttackPrompt.ship,cx=canvasWidth/2,top=canvasHeight/2-90;
+  ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,canvasWidth,canvasHeight);
+  ctx.fillStyle='#10131d';ctx.fillRect(cx-300,top,600,180);
+  ctx.strokeStyle='#c58d45';ctx.strokeRect(cx-300,top,600,180);
+  ctx.textAlign='center';ctx.fillStyle='#ffe097';ctx.font='bold 18px Courier New';
+  ctx.fillText('REALLY ATTACK '+(ship.type==='patrol'?'STATION PATROL?':'AN UNARMED VESSEL?'),cx,top+30);
+  ctx.font='14px Courier New';ctx.fillStyle='#d8e2ed';ctx.fillText(ship.name,cx,top+58,560);
+  ctx.textAlign='left';ctx.fillStyle='#c1a68b';ctx.font='13px Courier New';
+  drawWrappedText('Attacking damages station reputation and can lead to a docking ban.',cx-270,top+85,540,18,2);
+  canvasMenuButton('Cancel [N]',cx-265,top+135,()=>resolveShipAttackConfirmation(false));
+  canvasMenuButton('Attack [Y]',cx+115,top+135,()=>resolveShipAttackConfirmation(true));
+}
+
+function doFireAtNeutral(ns,confirmed=false){
+  if(G.mode!=='galaxy' || !galaxyShipAttackInRange(ns))return;
   if(!shipCombatWeapons().length){
     addCombatLog('No ship weapons ready to fire.','lw');
+    renderAll();
+    return;
+  }
+  const unarmed=(ns.systemStats?.weaponSlots??ns.guns??(ns.type==='patrol'?1:0))===0;
+  if(!confirmed && !ns.pirateType && !ns._homeCluster && (ns.type==='patrol' || unarmed)){
+    shipAttackPrompt={career:G,ship:ns};
     renderAll();
     return;
   }
@@ -103,7 +164,7 @@ function doFireAtBase(base){
       G.deathCause='The ship was destroyed by defense turrets at '+base.name+'.';
     }
   }
-  beginCareerTurn();
+  beginCareerTurn('combat');
   moveNeutralShips();
   movePirates();
   moveGasEntities();
@@ -164,6 +225,8 @@ function startShipCombat(pirate,initiatedByPlayer=false){
 
 function resolveShipCombatKill(combat,enemy){
   const ship = enemy.ship;
+  if(ship.combatRewardsResolved)return;
+  ship.combatRewardsResolved=true;
   const report = (message,cls)=>{
     combat.result = {message,cls};
     addCombatLog(message,cls);
@@ -172,6 +235,7 @@ function resolveShipCombatKill(combat,enemy){
     report(ship.name+' destroyed.','lc');
     if(ship.type==='patrol') ship.lastRespawn = G.turn;
     if(!ship._wasHostileAtEngagement) harmStationReputation(ship.type==='patrol' ? 30 : 20,'destroyed '+ship.name);
+    awardShipSalvage(ship,false);
   } else if(ship._homeCluster){
     const crystal = makeCommodityItem('nebula_crystal','nebula_combat',COMMODITIES.nebula_crystal.basePrice);
     if(addCargo(crystal)) report(ship.name+' dissipates. Nebula Crystal loaded into cargo.','lg');
@@ -183,14 +247,16 @@ function resolveShipCombatKill(combat,enemy){
     trackEvent('gas_entity_defeated',{entity_name:ship.name,was_massive:ship.isMassive ? 1 : 0});
   } else {
     const loot = 50+rnd(100);
-    earnCredits(loot);
-    let salvage = ship.name+' destroyed. Salvaged '+loot+' credits.';
+    G.pirateBounties??={credits:0,kills:0};
+    G.pirateBounties.credits+=loot;G.pirateBounties.kills++;
+    let salvage = ship.name+' destroyed. '+loot+' cr bounty recorded; collect at a major station.';
     if(combat.foughtWhileStranded && G.fuel<=0){
       const fuel = 2+rnd(4);
       G.fuel = Math.min(G.maxFuel||100,fuel);
       salvage += ' Recovered '+fuel+' fuel. Engines back online.';
     }
     report(salvage,'lg');
+    awardShipSalvage(ship,true);
   }
 }
 
@@ -257,7 +323,7 @@ function doShipSurrender(){
       return;
     }
     // Second press — jailed, game over
-    beginCareerTurn();
+    beginCareerTurn('combat');
     addCombatLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
     G.jailed = true;
     G.dead = true;
@@ -277,7 +343,7 @@ function doShipSurrender(){
     return;
   }
 
-  beginCareerTurn();
+  beginCareerTurn('combat');
   G.credits = Math.max(0, (G.credits||0) - terms.creditTake);
   G.cargo = [];
   for(const {ship} of livingShipCombatEnemies(sc)){
@@ -304,7 +370,7 @@ function doShipRetreat(){
   }
   const returningFire=livingShipCombatEnemies(combat).filter(enemy=>shipCombatEnemyCanFire(combat,enemy));
   const underFire=returningFire.length>0;
-  beginCareerTurn();
+  beginCareerTurn('combat');
   finishCareerTurn();
   for(const {ship} of livingShipCombatEnemies(combat)) tickShipSystems(ship);
   syncShipCombatSystems(combat);
@@ -314,6 +380,13 @@ function doShipRetreat(){
       if(shipCombatEnemyCanFire(combat,enemy)) fireShipCombatEnemy(combat,enemy);
       if(G.dead){ renderAll(); return; }
     }
+  }
+  if(shipDisengagementFails()){
+    addCombatLog('Disengagement failed! Remaining ships return to their starting positions.','lw');
+    resetShipCombatPositions(combat);
+    combat.round++;
+    renderAll();
+    return;
   }
   for(const {ship} of livingShipCombatEnemies(combat)){
     ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;

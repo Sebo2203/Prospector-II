@@ -16,12 +16,12 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       G.shipCombat.asteroids=[];ship.weaponReadyAt=[G.turn+100];renderAll();
     });
     const readout=()=>page.evaluate(()=>{
-      const text=[],allText=[],lines=[],rects=[],fill=ctx.fillText,stroke=ctx.stroke,rect=ctx.fillRect;
-      ctx.fillText=function(value,x,y,...rest){allText.push(String(value));if(x>=674)text.push({text:String(value),y});return fill.call(this,value,x,y,...rest);};
+      const text=[],allText=[],allPositions=[],lines=[],rects=[],fill=ctx.fillText,stroke=ctx.stroke,rect=ctx.fillRect;
+      ctx.fillText=function(value,x,y,...rest){allText.push(String(value));allPositions.push({text:String(value),x,y});if(x>=674)text.push({text:String(value),y});return fill.call(this,value,x,y,...rest);};
       ctx.fillRect=function(x,y,w,h){rects.push({x,y,w,h,color:this.fillStyle});return rect.call(this,x,y,w,h);};
       ctx.stroke=function(...args){if(ctx.getLineDash().length)lines.push(ctx.strokeStyle);return stroke.apply(this,args);};
       try{drawCanvas();}finally{ctx.fillText=fill;ctx.stroke=stroke;ctx.fillRect=rect;}
-      return {text:text.map(entry=>entry.text),positions:text,lines,allText,rects};
+      return {text:text.map(entry=>entry.text),positions:text,lines,allText,allPositions,rects};
     });
     let view=await readout();
     assert.ok(!view.text.some(text=>/shield|recharg/i.test(text)),'unfitted shields have no combat readout');
@@ -114,7 +114,10 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       const gas={name:'Natural Wraith',x:G.ship.x,y:G.ship.y,hp:40,maxHp:40,alive:true,atk:4,engineRating:2,guns:1,_homeCluster:[{x:G.ship.x,y:G.ship.y}]};
       G.gasEntities=[gas];startShipCombat(gas);renderAll();
     });
-    view=await readout();let target=view.text.slice(view.text.indexOf('Natural Wraith'),view.text.indexOf('WEAPON MOUNTS'));
+    view=await readout();let target=view.text.slice(view.text.indexOf('Natural Wraith'));
+    assert.ok(!view.text.includes('WEAPON MOUNTS'),'mounts no longer interrupt the right-hand ship readouts');
+    assert.ok(view.allPositions.some(entry=>entry.text==='WEAPON MOUNTS' && entry.x<674 && entry.y>420),'mounts occupy the strip under the arena');
+    assert.equal(view.positions.at(-1).y,462,'natural target details are anchored to the panel bottom');
     assert.ok(target.some(text=>text.includes('Ram range')));assert.ok(!target.some(text=>/Heat|Shields|Weapon range/.test(text)));
     await page.evaluate(()=>{
       G.mode='galaxy';G.shipCombat=null;
@@ -133,7 +136,22 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     });
     for(const viewport of [{width:1400,height:720},{width:1000,height:620}]){
       await page.setViewportSize(viewport);view=await readout();
-      assert.ok(view.positions.every(entry=>entry.y<=472),'three mounts and damaged systems fit the readout');
+      assert.ok(view.allPositions.every(entry=>entry.y<=472),'three mounts and damaged systems fit the canvas');
+      assert.equal(view.positions.at(-1).y,462,'expanded enemy details retain the bottom anchor');
+      const shipEnd=view.positions.filter(entry=>entry.y<200).at(-1).y;
+      const enemyStart=view.positions.find(entry=>entry.text.startsWith('Long Range Heavy')).y;
+      assert.ok(enemyStart>shipEnd+40,'ship and enemy details leave flexible space in the middle');
+      const cards=await page.evaluate(()=>canvasMenuTargets.filter(target=>target.x<674 && target.y>420 && target.activate).map(target=>({x:target.x,y:target.y,w:target.w,h:target.h})));
+      assert.equal(cards.length,3,'all three mount cards remain interactive below the map');
+      assert.ok(cards.every(card=>card.x>=12 && card.x+card.w<=660 && card.y+card.h<=472));
+      assert.ok(await page.evaluate(()=>{
+        const before=G.turn;
+        const cards=canvasMenuTargets.filter(target=>target.x<674 && target.y>420 && target.activate);
+        cards[1].activate();
+        const selected=G.shipCombat.weapon===1 && G.turn===before;
+        selectShipCombatWeapon(0);
+        return selected;
+      }),'mount card activation selects its weapon without spending a turn');
       await page.screenshot({path:artifactPath('Combat-UI-damaged-'+viewport.width+'.png')});
     }
 

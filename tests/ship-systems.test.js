@@ -113,3 +113,49 @@ test('weapon heat, deadlines and shield absorption share persistent state for pl
     assert.equal(ship.shieldCharge,11);
   }
 });
+
+function improvisingCareer(skill,roll){
+ const c=career();
+ c.G.mode='galaxy';c.G.inventory=[];c.G.crew=[{role:'engineer',name:'Test Engineer',hp:20,skills:{eng:skill}}];
+ c.G.ship.systems.sensors.condition=50;
+ c.giveSkillXP=(crew,id,amount)=>{crew.earned=amount;};c.crewDisplayName=crew=>crew.name;
+ c.renderAll=()=>{};c.revealAround=()=>{};
+ c.doWaitGalaxy=()=>{c.G.turn++;c.tickShipSystems();};
+ vm.runInContext('Math.random=()=>'+roll,c);
+ return c;
+}
+
+test('improvised repair skill check distinguishes support, failure and low-skill damage',()=>{
+ for(const [skill,roll,outcome] of [[0,0.24,'success'],[0,0.25,'failure'],[0,0.75,'damage'],[1,0.85,'damage'],[2,0.99,'failure'],[10,0.94,'success'],[10,0.95,'failure']]){
+  const c=improvisingCareer(skill,roll),turn=c.G.turn;
+  assert.equal(c.repairShipSystem('sensors','improvised'),true);
+  assert.equal(c.G.turn,turn+1,'every committed attempt spends one turn');
+  assert.equal(c.G.inventory.length,0,'no kit required or consumed');
+  const core=c.G.ship.systems.sensors;
+  assert.equal(core.condition,outcome==='damage'?45:50);
+  assert.equal(core.bypassUntil,outcome==='success'?turn+15:0);
+  assert.equal(c.G.crew[0].earned,outcome==='success'?2:1);
+ }
+});
+
+test('improvised repair uses the strongest living engineer and awards that engineer experience',()=>{
+ const c=improvisingCareer(0,0.8),novice=c.G.crew[0];
+ const expert={role:'engineer',name:'Expert',hp:20,skills:{eng:10}};
+ c.G.crew.push(expert,{role:'engineer',name:'Dead',hp:0,skills:{eng:10}});
+ c.repairShipSystem('sensors','improvised');
+ assert.ok(c.G.ship.systems.sensors.bypassUntil>c.G.turn);
+ assert.equal(novice.earned,undefined);assert.equal(expert.earned,2);
+});
+
+test('unavailable improvised repairs consume no action, skill roll or experience',()=>{
+ for(const state of ['tank','healthy','active','noengineer','away']){
+  const c=improvisingCareer(0,0.99),turn=c.G.turn;
+  if(state==='healthy')c.G.ship.systems.sensors.condition=100;
+  if(state==='active')c.G.ship.systems.sensors.bypassUntil=turn+5;
+  if(state==='noengineer')c.G.crew[0].hp=0;
+  if(state==='away'){c.G.mode='planet';c.G.planets={};c.G.player={x:0,y:0};}
+  vm.runInContext('Math.random=()=>{throw Error("Invalid attempt rolled");}',c);
+  assert.equal(c.repairShipSystem(state==='tank'?'fuelTank':'sensors','improvised'),false);
+  assert.equal(c.G.turn,turn);assert.equal(c.G.crew[0].earned,undefined);
+ }
+});

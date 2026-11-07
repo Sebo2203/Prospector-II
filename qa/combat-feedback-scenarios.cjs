@@ -26,13 +26,16 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     ctx.stroke=function(...args){strokes.push({color:this.strokeStyle,dash:this.getLineDash()});return stroke.apply(this,args);};
     ctx.fillText=function(t,x,y,...args){text.push({text:String(t),x,y});return fill.call(this,t,x,y,...args);};
     try{drawCanvas();}finally{ctx.stroke=stroke;ctx.fillText=fill;}
-    return {strokes,text,turn:G.turn,cores:JSON.stringify(G.ship.systems)};
+    return {strokes,text,turn:G.turn,cores:JSON.stringify(G.ship.systems),targetBottom:canvasHeight-18};
   });
   assert.ok(projectile.strokes.some(stroke=>stroke.color==='#9dedd4' && !stroke.dash.length),'a short travelling player shot replaces the dotted line');
   assert.ok(!projectile.strokes.some(stroke=>stroke.dash.length));
   assert.ok(projectile.text.some(t=>t.text==='Reload in 1t'));
   assert.ok(!projectile.text.some(t=>/SELECTED TARGET|Nearby plasma/.test(t.text)));
-  assert.equal(projectile.text.find(t=>t.text==='Feedback Raider').y,96,'removing the heading preserves the target-name spacing');
+  const targetName=projectile.text.find(t=>t.text==='Feedback Raider');
+  const targetHeat=projectile.text.filter(t=>t.x===targetName.x && /^Heat \d+\//.test(t.text)).at(-1);
+  assert.equal(targetHeat.y,projectile.targetBottom,'shot feedback preserves the bottom-anchored enemy details');
+  assert.ok(targetName.y>projectile.text.find(t=>t.text==='YOUR SHIP').y+100,'enemy details retain flexible space below the player information');
   await page.evaluate(()=>{G.shipCombat.enemies[0].ship.weaponReadyAt=[G.turn+1];Math.random=()=>0.5;});
   await page.keyboard.press('Space');
   await page.evaluate(()=>{G.shipCombat.enemies[0].ship.weaponReadyAt=[G.turn+1];Math.random=()=>0;});
@@ -60,6 +63,6 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
   const count=await page.evaluate(()=>window.cues.length);await page.waitForTimeout(450);
   assert.equal(await page.evaluate(()=>window.cues.length),count,'menu return cancels pending combat cues');
   assert.deepEqual(errors,[]);
-  console.log('PASS: travelling shots, no idle dotted line/footer/target heading, preserved spacing, compact reloads, real ordered outgoing/incoming/core cues, state-free playback and menu cancellation.');
+  console.log('PASS: travelling shots, no idle dotted line/footer/target heading, bottom-anchored target details, compact reloads, real ordered outgoing/incoming/core cues, state-free playback and menu cancellation.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

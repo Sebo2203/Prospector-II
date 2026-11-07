@@ -17,7 +17,7 @@ function getExamineName(x, y){
       if(!DEBUG.fullVision && pdist > SENSOR_RANGE) return 'Unknown Contact';
       return pirate.name;
     }
-    const neutral = liveSensors && (G.neutralShips||[]).find(ns=>ns.x===x&&ns.y===y);
+    const neutral = liveSensors && (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.x===x&&ns.y===y);
     if(neutral){
       const ndist = Math.abs(neutral.x-G.ship.x)+Math.abs(neutral.y-G.ship.y);
       if(!DEBUG.fullVision && ndist > SENSOR_RANGE) return 'Unknown Contact';
@@ -30,7 +30,7 @@ function getExamineName(x, y){
       return gasEnt.name + ', a predatory gas entity that hunts ships inside nebulae.';
     }
     const lootThere = liveSensors && (G.nebulaLoot||[]).find(l=>l.x===x&&l.y===y);
-    if(lootThere) return '✦ Nebula Crystal drifting at combat site. Move here or press Enter to collect.';
+    if(lootThere) return '✦ '+lootThere.item.name+' drifting at combat site. Move here or press Enter to collect.';
     // Then the tile itself
     const cell = G.galaxy[y]?.[x];
     if(!cell) return 'Unknown';

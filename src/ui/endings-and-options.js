@@ -29,13 +29,16 @@ function drawRetirementScreen(){
   const stats = [
     ['Credits Saved',     G.credits+' cr',                         tier.col],
     ['Credits Earned',    (G.creditsEarned||G.credits)+' cr',      '#ffe066'],
-    ['Career Length',     G.turn+' turns',                         '#aaccee'],
+    ['Career Length',     formatCareerDuration(G.careerTime?.minutes||0),                         '#aaccee'],
     ['Systems Visited',   Object.keys(G.planets||{}).length,       '#70d8ff'],
     ['Planets Scanned',   G.planetsScanned||0,                     '#70d8ff'],
     ['Crew Survived',     G.crew.filter(c=>c.hp>0).length+' / '+(G.crewHired||G.crew.length), '#70f090'],
     ['Pirates Defeated',  (G.pirates||[]).filter(p=>!p.alive).length, '#ff8866'],
     ['Fuel Spent',        (G.fuelSpent||0)+' units',               '#ddaa33'],
     ['Combats Fought',    G.combatsFought||0,                      '#ffcc44'],
+    ['Combat time',formatCareerDuration(G.careerTime?.activities.combat||0),'#aaccee'],
+    ['Repair time',formatCareerDuration(G.careerTime?.activities.repair||0),'#aaccee'],
+    ...CAREER_TIME_LOCATIONS.map(key=>[key[0].toUpperCase()+key.slice(1)+' time',formatCareerDuration(G.careerTime?.locations[key]||0),'#aaccee']),
   ];
 
   const col1x = cx-290, col2x = cx+20;
@@ -127,7 +130,7 @@ function drawGameOverOverlay(){
     }
     ctx.fillStyle='#2a1000'; ctx.fillRect(cw/2-200,_fy+6,400,1);
     const _sy=_fy+22; ctx.font='14px Courier New';
-    [['Turns survived',G.turn],['Credits earned',G.credits],['Planets visited',Object.keys(G.planets).length]].forEach((_s,_i)=>{
+    [['Elapsed',formatCareerDuration(G.careerTime?.minutes||0)],['Turns survived',G.turn],['Credits earned',G.credits],['Planets visited',Object.keys(G.planets).length]].forEach((_s,_i)=>{
       ctx.fillStyle='#3a1a08'; ctx.textAlign='right'; ctx.fillText(_s[0],cw/2+10,_sy+_i*20);
       ctx.fillStyle='#996644'; ctx.textAlign='left';  ctx.fillText(_s[1],cw/2+20,_sy+_i*20);
     });
@@ -199,6 +202,8 @@ function drawGameOverOverlay(){
     ctx.textAlign='left';
     ctx.fillText(s[1], cw/2+20, sy+i*24);
   });
+
+  drawCareerTimeSummary(cw/2,ch-100,cw-80);
 
   // Prompt
   ctx.textAlign='center';

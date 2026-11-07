@@ -82,6 +82,7 @@ function drawCanvas(){
     resetCanvasMenu();
     drawInGameOptions();
   }
+  drawShipAttackConfirmation();
   if(DEBUG.on || G.forcedMove?.active) resetCanvasMenu();
 
   drawDebugPaletteLabels();

@@ -44,13 +44,14 @@ function shipSystemsActions(){
   const engineer=G.crew.some(crew=>crew.hp>0 && crew.role==='engineer');
   const kits=G.inventory.filter(item=>item.usable==='repair_kit').length;
   const access=!shipRepairAccess()?'Return to your ship':!engineer?'Requires a living engineer':'';
-  return [
+  const actions=[
     {method:'kit',label:'Repair kit',detail:'Consumes 1 kit and 1 turn. Restores up to 85% integrity.',
-      reason:access || (component.condition>=85?'At the 85% field repair limit':!kits?'No repair kits aboard':'')},
-    {method:'bypass',label:'Bypass for 15 turns',detail:'Costs 1 turn. Supports a damaged core temporarily; no kit used.',
-      reason:access || (id==='fuelTank'?'A ruptured tank needs a kit or station repair':
-        component.bypassUntil>G.turn?'Bypass already active':!shipSystemCanBypass(G.ship,id)?'No bypass needed':'')}
+      reason:access || (component.condition>=85?'At the 85% field repair limit':!kits?'No repair kits aboard':'')}
   ];
+  if(id!=='fuelTank') actions.push({method:'improvised',label:'Attempt improvised repair',detail:'',
+    reason:access || (component.bypassUntil>G.turn?'Improvised repair already active':
+      !shipSystemCanImprovise(G.ship,id)?'No repair needed':'')});
+  return actions;
 }
 
 function activateShipSystemRepair(method){
@@ -123,9 +124,9 @@ function drawShipSystems(){
     ctx.textAlign='right';ctx.fillStyle=offline || condition<=50?'#ff9977':'#7799aa';ctx.fillText((offline?'OFF ':'')+condition+'%',x+listW-10,y+19);
     canvasMenuTarget(x,y,listW,30,()=>selectShipSystem(id),{label:SHIP_SYSTEMS[id].name});
   });
-  const component=systems[view.id],bypass=Math.max(0,component.bypassUntil-G.turn);
+  const component=systems[view.id],temporary=Math.max(0,component.bypassUntil-G.turn);
   text(SHIP_SYSTEMS[view.id].name,detailX,top+14,'#aaddff','bold 16px Courier New');
-  text(component.condition+'% integrity'+(bypass?' · bypass '+bypass+' turns':''),detailX,top+35,
+  text(component.condition+'% integrity'+(temporary?' · improvised repair '+temporary+' turns':''),detailX,top+35,
     component.condition<=50?'#ff9977':'#99bbaa');
   ctx.fillStyle='#11151d';ctx.fillRect(detailX,top+43,detailW,5);
   ctx.fillStyle=component.condition<=50?'#bb6644':'#448877';ctx.fillRect(detailX,top+43,detailW*component.condition/100,5);

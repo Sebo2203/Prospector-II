@@ -226,6 +226,12 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
     const lvx = loot.x - camX, lvy = loot.y - camY;
     if(lvx<0||lvx>=viewWidth||lvy<0||lvy>=viewHeight) return;
     const lpx = lvx*TS, lpy = lvy*TS;
+    if(loot.item.commodityId!=='nebula_crystal'){
+      ctx.fillStyle=loot.item.col||'#aab8cc';ctx.fillRect(lpx+6,lpy+6,12,12);
+      ctx.strokeStyle='#26303a';ctx.strokeRect(lpx+6,lpy+6,12,12);
+      ctx.beginPath();ctx.moveTo(lpx+6,lpy+12);ctx.lineTo(lpx+18,lpy+12);ctx.stroke();
+      return;
+    }
     // Gentle slow spin effect using time
     const t = (Date.now() % 3000) / 3000;
     const spin = t * Math.PI * 2;

@@ -23,6 +23,137 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-08 — difficulty philosophy and experimental.73 publication
+
+Branch: `experiment/expedition-legacy`; publication requested by the user.
+
+- Added `docs/design-philosophy.md` as the governing difficulty direction: hard roguelike, common early death from accidents/monsters/pirates/environments/bad luck, temporary relief from earned progress, and intended escalation with run age regardless of player readiness. Consistently outrunning the curve should require exceptional cunning. Distinguished legitimate lethal outcomes from broken controls, save corruption and state defects.
+- Linked the philosophy from contributor instructions, the documentation index, player introduction and roadmap. Revised the planned Titan's discovery-gated clock so future crisis design agrees with independent run-age pressure. Clearly marked full escalation as future work; the reporting calendar remains cosmetic.
+- Publishes the accumulated experimental.63–73 source, generated standalone HTML, guides and portable QA from this chat to the active experimental branch. Main/public release and Windows executable are outside this publication. Local review copies, generated QA artifacts and dependencies remain ignored.
+- Updated the combat-feedback regression check to assert the requested bottom-anchored enemy details instead of their obsolete top position; gameplay rendering is unchanged by that test correction.
+- Validation: `npm run build` and all 77 repository tests passed; all 33 headless browser suites passed across the initial run and resumed remaining suites after correcting that stale layout assertion. Three bounded smoke careers (scout, freighter, corvette; 80 actions each) completed without JavaScript errors. These are automated scenario checks, not whole-career human playtesting or evidence of final difficulty balance. Prior per-change evidence and limits remain below. Documentation-only philosophy changes do not bump the game version, which remains experimental.73.
+- Saves: no additional schema or gameplay change from the philosophy document. Remaining: implement and balance the complete run-age escalation curve through the roadmap; human whole-career playtesting remains outstanding.
+
+## 2026-11-08 — 0.28 experimental.73 restore rare nebula encounters
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Fixed manual initiation: gas entities were omitted from the shared F-target roster. They now use the same natural-entity detection radius as their marker (sensors + 2), enter combat directly and do not invoke civilian confirmation/reputation penalties. Nearest/Examine selection and context controls share that target.
+- Fixed automatic early encounters: visible monsters previously had all AI disabled until turn 300. Removed that gate so living threats can pursue/engulf immediately. Kept nebula confinement, six-sector prey detection, disengagement grace and safe-space exclusions, and made debug ship invisibility suppress pursuit/engulf as intended. Natural ram behavior, tactical mobility and crystal rewards are unchanged.
+- Greatly reduced fresh-generation spawn rates per connected cluster: massive 100% → 12%, expansive 35% → 4%, ordinary 8% → 1%. Removed the guaranteed massive-nebula spawn; at most one entity per cluster. Existing saved populations are not silently deleted or rerolled.
+- Validation: rebuilt HTML and all 77 repository tests passed, with new early pursuit, manual targeting, guard and rarity coverage. Four headless Edge suites passed: nebula encounters, attack confirmation, combat UI and palette. The tactical monster screenshot was inspected. Actual gameplay scenarios verified manual and early automatic encounters, natural ram damage, no exhaust, safe-space/grace/blind-player behavior and crystal reward without pirate bounty. Reproducible generation over the same 40 seeds produced 23 entities under new rates versus 216 under old rates (fixture-assisted sample, not a universal density guarantee). Human full-career balance remains unverified.
+- Saves: no schema change or migration. Encounter fixes apply to existing entities; rarer generation requires a fresh galaxy. Existing interactive gas playground factories are retained and exercised. Unique standalone HTML delivered in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-08 — 0.28 experimental.72 restore manual galaxy attacks
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Replaced experimental.69's native browser confirmation with an in-game canvas prompt. Embedded browsers can suppress native dialogs, silently cancelling civilian attacks. Explicit Attack [Y], Cancel [N] and Escape now work without browser dialogs. Opening/cancelling is free and blocks movement, inspection and world cursor controls; acceptance revalidates the current career and target.
+- Unified F/context targeting: manually engage the nearest detected, charted live ship within sensor range, or the ship selected in Examine. This replaces same-tile-only pirates and the one-tile civilian limit. Raiders remain immediate; forced interceptions are unchanged. Fire is handled before movement remaps/Examine; repeated galaxy keydown cannot approve or fire an attack. Unavailable locks report why no target can be engaged.
+- Preserved pirate-base Fire fallback and removed stale context references. Existing pursuit fixtures now explicitly approve their intended civilian attack.
+- Validation: all 73 repository tests passed and the rebuilt HTML check passed. New headless confirmation/targeting scenarios pass with window.confirm deliberately disabled, including cancel invariance, pointer/keyboard acceptance, nearby pirates/civilians, examined targets, binding conflicts, sensor limits, dead/stale targets, compass blocking and base controls. Five headless Edge suites passed: attack confirmation, ship pursuit, ship combat, interface and combat UI. Inspected the in-game prompt screenshot. Human testing in the user's embedded browser remains outstanding.
+- Saves: no schema change; confirmation state is transient and never saved. Unique standalone HTML delivered in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-08 — 0.28 experimental.71 orbital landing-site presentation
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Orbital scans now draw only the underlying terrain at the saved landing site, including on previously visited planets. Removed the visit-dependent player-ship sprite/ASCII marker, which incorrectly made the ship appear left behind after liftoff. Landing coordinates and stored surface tiles remain unchanged.
+- Validation: rebuilt HTML and all 73 repository tests passed. Two headless Edge suites passed: new scan-landing scenarios and existing station/terrain rendering checks. Covered initial scan, land/liftoff/revisit, sprite and ASCII modes, render state invariance, save/reload, landing at the remembered spot and moving to a new one. Inspected the returning-scan screenshot. Human playtesting remains outstanding.
+- Saves: no schema or gameplay change. Unique standalone HTML delivered in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-07 — 0.28 experimental.70 parallel calendar reporting
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Added a saved reporting calendar alongside the unchanged turn simulation. Galaxy turns record 1 hour, surface/interior exploration 5 minutes, orbital actions 10 minutes, combat actions 1 minute, field repair attempts 15 minutes and casino events 30 minutes. Explicit station docking/transit/services record time without adding gameplay turns. Menus, inspection and failed checks remain free. See the current [rates and limits](docs/time-reporting.md).
+- HUD retains TURN and adds ELAPSED. Planet LOCAL time maps the existing daylight cycle to a 24-hour solar dial rather than changing lighting progression. Fixed-light/interior environments retain appropriate existing indicators. No gameplay reads the reporting clock: resource costs, NPC responses, statuses, rescue/mission timers, reloads and daylight remain turn-based.
+- Added elapsed/location totals to records and endings, plus combat/field-repair totals to retirement. Standard days are 24 hours and reporting months 30 days. Saved location/activity sums are validated before loading. Existing careers do not receive invented historical durations; use a new career for full-career totals.
+- Validation: rebuilt HTML and all 73 repository tests passed, including four new calendar rules tests. Nine affected headless Edge suites passed: calendar, turns, combat speed, improvised repair, interface, LOG, autosave, ship systems and hangar systems. Final calendar and persistence/repair checks include tactical waiting in combat totals. Deterministic off/on comparison confirmed identical serialized gameplay state apart from the reporting clock. HUD at two sizes and retirement/death screenshots were inspected. Human pacing/readability playtesting remains outstanding.
+- Saves: schema 2 unchanged, new optional validated reporting state. No migration or timer conversion. No GitHub upload or Windows executable build; unique standalone HTML delivered in chat.
+
+## 2026-11-07 — 0.28 experimental.69 confirm civilian attacks
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Player-initiated attacks on station patrols and unarmed civilian vessels now ask “Do you REALLY want to attack” and name the target/reputation risk. Cancelling does not spend a turn, harm reputation or change hostility/flight state. Keyboard and pointer fire share the same guard. Raiders, other armed civilians and automatic hostile interception retain existing behavior.
+- Recorded a proposed elapsed-calendar/activity-time design in the roadmap for discussion. Time rules, turn costs, timers and retirement reports are unchanged in this build; the proposal is not described as implemented.
+- Validation: rebuilt HTML and all 69 repository tests passed. Three headless Edge suites passed: attack confirmation, ship pursuit and interface, covering free cancellation, pointer/keyboard acceptance, raiders and forced defense; human playtesting remains outstanding.
+- Saves: no schema or state change; confirmation is a transient native browser dialog. Unique standalone HTML delivered in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-07 — 0.28 experimental.68 full-height comms history
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Removed the fixed 18-message sidebar and 12-message crew-dialogue limits. Comms fills the remaining sidebar height; wrapped rows retain their natural height rather than shrinking into overlapping/clipped lines.
+- Uses an initial 80-message rendering window with older pages loaded on upward scrolling. Saved messages are not discarded. New traffic follows the bottom only when already viewing the newest messages; otherwise a scaled visual entry anchor preserves the reader's place. History paging does not advance time or save UI state, and a fresh career resets it. Archive-only entries remain in the dedicated LOG tab.
+- Validation: rebuilt HTML, all 69 repository tests and four headless Edge suites passed (comms log, interface, LOG and combat UI), including both themes at 1400×720 and 1000×620, all 240 historical messages, multiline rows, reading position during new messages, latest following and career reset. Screenshots were inspected. Human playtesting remains outstanding.
+- Saves: no schema change or migration; existing log history retained. Unique standalone review HTML delivered in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-07 — 0.28 experimental.67 ship salvage and station bounties
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Replaced money-only pirate salvage and empty civilian wreck rewards with role-weighted nothing/credits/equipment/cargo tables. Freighters favor bulk goods, researchers instruments/supplies, traders money/trade goods, patrols and guards crew equipment, and roamers stolen cargo. Reuses runtime shop and commodity catalogs, excluding quest items and installed ship weapons. Civilian reputation consequences remain.
+- Pirate kills retain their 50–149 cr bounty but now defer it to accessible major BASE docking; pirate cash salvage joins the claim. Docking settles once before payroll. Pending claims appear in Active Missions and LOG records and survive saves. Civilian cash is immediate. Pirate-base bonuses and gas-entity rewards are unchanged.
+- Overflow cargo remains at encounter coordinates using existing persistent cargo drops, with generic item labels, cargo markers and one-unit recovery. Full holds no longer block docking at a station under a drop. Dead civilian markers no longer hide salvage from Examine. Per-ship resolution guards prevent repeat rewards; replacement patrols receive fresh eligibility.
+- Validation: build and all 69 repository tests passed; deterministic tables cover each role/outcome, real catalog items, duplicate prevention, deferred cash and overflow recovery. Seven headless Edge suites passed: ship rewards, ship combat, combat UI, missions, pursuit, autosave and career. Scenarios verify actual kills, pending records, saved claims/drops, single settlement, malformed-claim rejection, full-hold docking and patrol replacement; final rewards/autosave/career checks include payment before payroll. Human economic/career balance remains unverified; weights and amounts are initial choices.
+- Saves: schema 2 unchanged; new pending-claim totals are validated when present. No migration or retroactive bounties. Existing roster/drop serialization preserves flags and cargo. New uniquely named standalone HTML delivered in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-07 — 0.28 experimental.66 shorter repair label
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Shortened the ship-system action to “Attempt improvised repair” and updated its existing browser scenarios and current guide. Skill checks, costs, repair outcomes and reactor power rules are unchanged.
+- Validation: rebuilt HTML, all 65 repository tests and the headless Edge improvised-repair scenario passed. Reactor explanation checked against actual output, core thresholds, shield capacity, mount allocation, cooling and stranded life-support code. Human playtesting remains outstanding.
+- Saves: no schema or gameplay change. Deliver a new standalone HTML in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-07 — 0.28 experimental.65 improvised repair checks
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Removed the impossible fuel-tank improvised action and the explanatory bypass hint. Replaced ship-system bypass labels, countdown text and relevant flight warnings with improvised repair terminology. The action is now “Try to do an improvised repair.” Quarantine life-support rewiring is a separate mechanic and is unchanged.
+- Replaced guaranteed temporary support with an engineering check by the strongest living engineer: success 25% + 7 points per effective skill, capped at 95%. Skill 0 has a 25% botch band and skill 1 a 15% band, causing 5–10 additional core damage; other failed rolls leave integrity unchanged. Skill 2+ failures cannot worsen damage. Each valid outcome costs one turn, no kit, and gives the normal combat/NPC response. Success earns 2 XP; failed/botched work earns 1 after the check.
+- Success retains 15-career-turn temporary support without healing physical integrity (14 turns after installation). Kit/station repair limits and prices are unchanged. Added deterministic boundary/guard/performer tests and portable browser coverage for real outcomes, controls, persistence and menu fit.
+- Validation: root build and all 65 repository tests passed. Five headless Edge suites passed: improvised repair, ship systems, hangar systems, disengagement and combat UI. Checked mouse/keyboard success, failure and botched work, exact combat action costs, saved temporary support, omitted fuel-tank action and hint, and screenshots at 1400×720 and 1000×620. Human balance/playtesting remains outstanding. The skill probabilities are an initial balance choice.
+- Saves: schema unchanged; the existing internal temporary-support deadline field is retained. No migration. Deliver a unique standalone HTML in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-07 — 0.28 experimental.64 failed disengagement
+
+Branch: `experiment/expedition-legacy`; local review candidate only.
+
+- Player and NPC edge escape attempts now share a 25% failure chance. Failed attempts reposition the player and all remaining opponents to their original arena starts, clear exhaust and movement credit, and preserve damage, equipment, resources, deadlines and galaxy identities/positions. Dead and escaped ships stay out. This replaces guaranteed escape on an otherwise eligible attempt.
+- Failed player attempts retain normal return fire and cost one career turn/local round. Failed NPC attempts stop the NPC phase without extra actions or clock ticks. No-safe-route NPCs cannot roll. Existing successful escape consequences remain.
+- The Disengage button shows the failure chance. Bypass help now explains the damage threshold and temporary integrity support; bypass rules are unchanged. Updated current guides and portable QA registration.
+- Validation: root build, all 62 repository tests and seven headless Edge suites passed (disengagement, ship combat, pursuit, tactical speed, combat UI, hangar systems and ship systems); deterministic headless checks cover both failure paths, success boundary, resource/deadline preservation, save/load, blocked exits, no revival and bypass guards. Human combat balance/playtesting remains outstanding; 25% is an initial balance choice.
+- Saves: no schema change or migration; existing encounter spawn positions are deterministic. Deliver a new versioned standalone HTML in chat; no GitHub upload or Windows executable build.
+
+## 2026-11-07 — 0.28 experimental.63 local review candidate
+
+Branch: `experiment/expedition-legacy`; delivered locally, not published.
+
+- Packages this chat's combat presentation changes: mounts below the arena, player status at the top-right and enemy details anchored to the bottom-right with flexible space between them. The intermediate mounts-under-player layout is superseded.
+- Changed delivery to a unique, versioned standalone HTML file linked in chat, matching the previous chat's file delivery. Added ignored `outputs/` and recorded the workflow in the handoff guide. No GitHub upload or Windows executable build.
+- Validation: rebuilt HTML, all 62 repository tests passed and the delivered file SHA-256 matches generated `index.html`. The UI/space scenarios and two-size screenshot inspection passed before this version-only packaging step. Opening the delivered file in the user's browser remains to be confirmed.
+- Saves: schema and gameplay unchanged.
+
+## 2026-11-07 — Place combat mounts below the arena
+
+Branch: `experiment/expedition-legacy`; version unchanged (presentation only).
+
+- Replaced the preceding vertical mount arrangement with horizontal selectable cards in the empty strip below the combat map. Mount readiness, damage/range/heat and selected-mount peak heat/reload remain visible.
+- Kept player status at the top of the right panel and anchored enemy details to its bottom. Wrapped names, shields and weapon details expand upward into the flexible middle gap.
+- Saves: no format or gameplay changes.
+- Validation: rebuilt the HTML; all 62 repository tests and headless Edge combat UI/space scenarios passed. Checked bottom anchoring, the flexible gap, three selectable mount cards, ASCII and scaled rendering; inspected screenshots at 1400×720 and 1000×620. Human playtesting remains outstanding.
+
+## 2026-11-07 — Group player mounts under the player ship
+
+Branch: `experiment/expedition-legacy`; version unchanged (presentation only).
+
+- Moved the weapon-mount list and selected-mount heat/reload detail directly below YOUR SHIP status. Selected enemy information follows the complete player section so it no longer separates the ship from its weapons.
+- Saves: no format or gameplay changes.
+- Validation: rebuilt the HTML; all 62 repository tests and the headless Edge combat UI suite passed, including section order and the damaged three-mount layout at 1400×720 and 1000×620. Inspected the crowded-layout screenshot. Human playtesting remains outstanding.
+
 ## 2026-11-07 — 0.28 experimental.62 applies engine pace to tactical movement
 
 Released on `experiment/expedition-legacy`.

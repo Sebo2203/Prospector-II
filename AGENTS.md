@@ -1,5 +1,7 @@
 # Working on Prospector II
 
+- Read `docs/design-philosophy.md` before gameplay/balance work. Preserve the intended harsh roguelike: frequent early deaths, lethal bad luck, progress that buys breathing room, and difficulty escalating with run age independently of player progress. Do not treat a player or test pilot death alone as a defect. The full escalation curve is design direction, not a claim of current implementation.
+
 - Edit `src/`, then run `npm run build`. `index.html` is generated and remains the single-file release artifact. Never patch it directly.
 - Maintain the current release version only in root `package.json`. The build injects runtime/HTML labels and synchronizes desktop metadata; `npm run check` rejects stale versions. Do not manually bump generated copies or rewrite historical version references. See `docs/architecture.md`.
 - **Backward save compatibility is not a requirement.** Do not add migrations, compatibility shims or work to preserve obsolete save formats unless the user explicitly requests it. Change/bump the career schema when useful and clearly reject unsupported saves. Keep current-format validation, transactional save integrity and preservation of the active career on load failure.

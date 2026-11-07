@@ -60,7 +60,7 @@ function renderCriticalBanner(){
   if(!G || G.dead || G.retired){ hideMsg(); return; }
   if(G.stranded){
     if(G.stranded.rescuePhase==='offer') showMsg('⚡ RESCUE OFFERED — [Y] Accept  [N] Decline','#44ff88');
-    else showMsg(strandedLifeSupportFailing()?'⚠ STRANDED — Crew suffocating. [T] SOS beacon.':'⚠ DRIVE DISABLED — [F3] Engineer repair / bypass or [T] SOS.','#ff4400');
+    else showMsg(strandedLifeSupportFailing()?'⚠ STRANDED — Crew suffocating. [T] SOS beacon.':'⚠ DRIVE DISABLED — [F3] Engineer repair or [T] SOS.','#ff4400');
     return;
   }
 

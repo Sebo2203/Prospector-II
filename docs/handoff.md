@@ -16,3 +16,7 @@ For a fresh career, open the experimental HTML from the [download instructions](
 > Continue development on Sebo2203/Prospector-II on `experiment/expedition-legacy`. Read `AGENTS.md` and the recent `CHANGELOG.md` entries. Use `docs/README.md` to find the relevant guide and `docs/roadmap.md` for priorities. Exercise gameplay changes with the scripted tests in `qa/` and keep the public release on `main` separate.
 
 The [archive](archive/README.md) holds dated playthroughs and the original foundation audit. Use the [roadmap](roadmap.md) for the current follow-up list.
+
+## Local review builds
+
+For the current chat, deliver each experimental candidate as a uniquely versioned standalone HTML file in ignored `outputs/`, linked directly in the chat. Bump the version in root `package.json`, rebuild, run the relevant checks and copy generated `index.html` byte-for-byte to `outputs/Prospector-II-v<VERSION>.html`. Never overwrite a previously delivered candidate. This gives each review a distinct file and visible version. Do not upload or publish to GitHub until the user explicitly requests it.

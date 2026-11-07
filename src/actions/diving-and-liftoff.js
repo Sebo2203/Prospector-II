@@ -121,6 +121,7 @@ function doLiftOff(){
     G.examine = null;
     G.rangeTarget = null;
     G._itemAimMode = null;
+    recordCareerTime('travel',15,leavingCasino?'stations':'space');
     SFX.liftoff();
     addLog(leavingCasino ? 'Undocked from The Void Royale.' : 'Lifted off. Back in orbit.','lg');
   } else {

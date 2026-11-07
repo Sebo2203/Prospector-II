@@ -115,7 +115,7 @@ function resolveRangedShot(shooter, profile){
 
 function finishRangedFireTurn(){
   G.rangeTarget = null;
-  completeSurfaceAction();
+  completeSurfaceAction(undefined,'combat');
   renderAll();
 }
 

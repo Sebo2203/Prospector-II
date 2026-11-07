@@ -57,11 +57,11 @@ function doFuelScoop(context){
   renderAll();
 }
 
-function doWaitGalaxy(){
+function doWaitGalaxy(activity='waiting'){
   if(G.mode==='shipcombat'){ advanceShipCombat(); return; }
   if(G.mode!=='galaxy'||G.dead||G.retired) return;
   G._bonusMoves = 0;
-  beginCareerTurn();
+  beginCareerTurn(activity);
   maybeCrewGalaxyTalk();
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
@@ -110,7 +110,7 @@ function doWaitGalaxy(){
 
 function doWaitPlanet(){
   if(G.mode!=='planet'||G.dead||G.retired) return;
-  beginCareerTurn();
+  beginCareerTurn('waiting');
 
   const pdata = G.planets[G.curPlanet];
   advancePlanetDaylight(pdata);

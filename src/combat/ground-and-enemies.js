@@ -10,7 +10,7 @@ function doCombat(enemy){
   const attackers = livingAttackers.filter(c=>crewCanContributeCombat(c));
   if(livingAttackers.length && !attackers.length){
     addLog('All crew are stunned — enemies seize the opening!','lc');
-    completeSurfaceAction();
+    completeSurfaceAction(undefined,'combat');
     renderAll();
     return;
   }
@@ -70,7 +70,7 @@ function doCombat(enemy){
     dropAlienDeathLoot(enemy);
   }
 
-  completeSurfaceAction();
+  completeSurfaceAction(undefined,'combat');
   renderAll();
 }
 

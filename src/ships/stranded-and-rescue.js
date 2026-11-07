@@ -5,7 +5,7 @@ function strandedLifeSupportFailing(){
   return G.fuel<=0 || shipReactorOutput()<2;
 }
 
-function doStrandedWait(){
+function doStrandedWait(activity='waiting'){
   if(!G.stranded) return;
   const st = G.stranded;
 
@@ -19,7 +19,7 @@ function doStrandedWait(){
     st.rescueShip  = null;
   }
   st.turnsStranded++;
-  beginCareerTurn();
+  beginCareerTurn(activity);
 
   // Crew oxygen drain — 3 HP per crew member per turn stranded
   const dmgPerCrew = strandedLifeSupportFailing()?3:0;

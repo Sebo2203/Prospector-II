@@ -81,6 +81,20 @@ function parseSaveSnapshot(raw){
      (view==='base' && !game.base)){
     throw invalidCareerSave();
   }
+  if(game.pirateBounties!==undefined){
+    const claims=game.pirateBounties;
+    if(!claims || !['credits','kills'].every(key=>Number.isSafeInteger(claims[key]) && claims[key]>=0) ||
+       (claims.kills===0 && claims.credits!==0) || (claims.kills>0 && claims.credits<claims.kills*50))throw invalidCareerSave();
+  }
+  if(game.careerTime!==undefined){
+    const clock=game.careerTime;
+    const locationKeys=['space','planets','stations','interiors'];
+    const activityKeys=['travel','exploration','waiting','combat','repair','scan','leisure','services','docking'];
+    if(!clock || !Number.isSafeInteger(clock.minutes) || clock.minutes<0 ||
+       ![ [clock.locations,locationKeys],[clock.activities,activityKeys] ].every(([totals,keys])=>
+         totals && keys.every(key=>Number.isSafeInteger(totals[key]) && totals[key]>=0) &&
+         keys.reduce((sum,key)=>sum+totals[key],0)===clock.minutes))throw invalidCareerSave();
+  }
   validateSavedShipSystems(game.ship,game.turn);
   if(!Number.isFinite(game.shipStats.maxFuel) || game.shipStats.maxFuel<=0 ||
      !Number.isFinite(game.maxFuel) || game.maxFuel<0 || !Number.isFinite(game.fuel) || game.fuel<0 || game.fuel>game.maxFuel) throw invalidCareerSave();

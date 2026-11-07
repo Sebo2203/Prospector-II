@@ -17,6 +17,9 @@ function currentLogRecords(){
   const record=msg=>({msg,turn:G.turn,cls:'li'});
   const add=msg=>rows.push(record(msg));
   const addActive=msg=>active.push(record(msg));
+  if(G.pirateBounties?.kills)addActive('PIRATE BOUNTIES: '+G.pirateBounties.credits+' cr pending for '+G.pirateBounties.kills+' kills and assets. Collect by docking at a major station.');
+  add('CAREER TIME: '+formatCareerDuration(G.careerTime?.minutes||0));
+  for(const key of CAREER_TIME_LOCATIONS)add(key.toUpperCase()+': '+formatCareerDuration(G.careerTime?.locations[key]||0));
   const science=ensureScienceJobState();
   if(science.active){
     const job=science.active;

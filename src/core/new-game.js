@@ -5,6 +5,7 @@ function initGame(chosenClass, captainName, shipName) {
   G = {
     mode:     'galaxy',   // galaxy | system | planet | base | inventory
     turn:     1,
+    careerTime:newCareerTime(),
     seed:     Math.floor(Math.random() * 0xFFFFFF), // per-run market price seed
     credits:  500,
     oxygen:   100,
@@ -54,6 +55,7 @@ function initGame(chosenClass, captainName, shipName) {
     gasEntities: [],   // Nebula gas entities, predatory cloud beings
     nebulaLoot:  [],   // Uncollected nebula crystals left at combat sites
     scienceJob:  { active:null, cooldownUntil:0, nextIndex:rnd(SCIENCE_JOB_TYPES.length), completed:0, completedTypes:[] },
+    pirateBounties:{credits:0,kills:0},
     shipCombat:  null,
     stranded:    null,   // null | { sos, turnsStranded, rescueShip, rescuePhase }
     _voidPrompt: null,   // null | { dx, dy } — pending Y/N before stepping into lethal void

@@ -1,4 +1,7 @@
 const COMBAT_MAP = { width:27, height:17, x:12, y:12 };
+const SHIP_DISENGAGE_FAILURE_CHANCE = 0.25;
+const COMBAT_PLAYER_START = {x:13,y:8,dx:1,dy:0};
+const COMBAT_ENEMY_STARTS = [[19,8],[18,4],[18,12],[21,6]];
 const COMBAT_STEPS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 let pointerShipCombatAim = null;
 
@@ -13,13 +16,12 @@ function shipCombatCollection(ship){
 
 function createShipCombatArena(combat, ships){
   pointerShipCombatAim = null;
-  const positions = [[19,8],[18,4],[18,12],[21,6]];
-  combat.player = { x:13,y:8,dx:1,dy:0 };
+  combat.player = {...COMBAT_PLAYER_START};
   tickShipSystems();
   combat.enemies = ships.map((ship,i)=>{
     tickShipSystems(ship);
     const collection = shipCombatCollection(ship);
-    const [x,y] = positions[i];
+    const [x,y] = COMBAT_ENEMY_STARTS[i];
     return {ship,collection,x,y,dx:-1,dy:0,moveBank:0,
       shields:ship.shieldCharge};
   });
@@ -46,6 +48,24 @@ function createShipCombatArena(combat, ships){
        shipCombatAsteroid(combat,point)) continue;
     combat.asteroids.push(point);
   }
+}
+
+// A failed withdrawal changes arena positioning only, never the authoritative ships.
+function resetShipCombatPositions(combat){
+  Object.assign(combat.player,COMBAT_PLAYER_START);
+  combat.enemies.forEach((enemy,index)=>{
+    if(enemy.escaped || enemy.ship.alive===false || enemy.ship.hp<=0) return;
+    const [x,y]=COMBAT_ENEMY_STARTS[index];
+    Object.assign(enemy,{x,y,dx:-1,dy:0,moveBank:0,lastSeenPlayer:{x:combat.player.x,y:combat.player.y}});
+  });
+  combat.trails=[];
+  pointerShipCombatAim=null;
+  clearShipCombatFeedback();
+  syncShipCombatSystems(combat);
+}
+
+function shipDisengagementFails(){
+  return Math.random()<SHIP_DISENGAGE_FAILURE_CHANCE;
 }
 
 function livingShipCombatEnemies(combat){
@@ -330,7 +350,9 @@ function moveShipCombatEnemy(combat,enemy,referenceEngine=Math.max(1,effectiveEn
   for(let step=0;step<steps;step++){
     // Closing into firing/ram range uses movement, never an extra attack.
     if(step>0 && shipCombatEnemyThreat(combat,enemy))break;
-    if(!moveShipCombatEnemyStep(combat,enemy))break;
+    const result=moveShipCombatEnemyStep(combat,enemy);
+    if(result==='reset')return 'reset';
+    if(!result)break;
     if(enemy.escaped || enemy.ship.alive===false || enemy.ship.hp<=0 || combat!==G.shipCombat)break;
     if(shipCombatMoveRating(enemy)<rating || (!enemy.ship._homeCluster && effectiveSensorRange(enemy.ship)===0)){
       enemy.moveBank=0;break;
@@ -362,7 +384,7 @@ function moveShipCombatEnemyStep(combat,enemy){
     }
   }
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
-    escapeShipCombatEnemy(combat,enemy);
+    if(escapeShipCombatEnemy(combat,enemy)==='reset')return 'reset';
   }
   return !!next || enemy.escaped;
 }
@@ -378,6 +400,11 @@ function escapeShipCombatEnemy(combat,enemy){
   if(!candidates.length){
     if(!enemy.escapeBlocked)addCombatLog(ship.name+' cannot find a clear galaxy escape route.','lw');
     enemy.escapeBlocked=true;return false;
+  }
+  if(shipDisengagementFails()){
+    addCombatLog(ship.name+' fails to disengage! Remaining ships return to their starting positions.','lw');
+    resetShipCombatPositions(combat);
+    return 'reset';
   }
   ship.x=candidates[0].x;ship.y=candidates[0].y;
   ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;
@@ -465,7 +492,7 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   pointerShipCombatAim = null;
   if(!combat || combat!==G.shipCombat){ renderAll(); return; }
   if(action==='wait') G.ship.extraCooling=shipCoolingRate();
-  beginCareerTurn();
+  beginCareerTurn(action==='repair'?'repair':'combat');
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
   // One player pace for this committed turn, even if an early hit damages the drive.
@@ -479,7 +506,7 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
     } else if(shipCombatEnemyThreat(combat,enemy)){
       enemy.moveBank=0;
       enemy.ship.heat=Math.max(0,enemy.ship.heat-shipCoolingRate(enemy.ship));
-    } else moveShipCombatEnemy(combat,enemy,referenceEngine);
+    } else if(moveShipCombatEnemy(combat,enemy,referenceEngine)==='reset')break;
   }
   if(!livingShipCombatEnemies(combat).length){
     G.shipCombat=null;G.mode='galaxy';

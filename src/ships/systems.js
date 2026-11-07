@@ -132,7 +132,7 @@ function damageShipSystem(ship,id,amount,source='combat'){
     if(id==='fuelTank' && before>50 && component.condition<=50){
       addLog('FUEL TANK RUPTURE — usable capacity halved to '+G.maxFuel+'. '+Math.max(0,oldFuel-G.fuel)+' fuel lost.','lc');
     }
-    if(id==='engine' && effectiveEngineRating()===0) addLog('ENGINES OFFLINE — field repair, engineer bypass or SOS rescue required.','lc');
+    if(id==='engine' && effectiveEngineRating()===0) addLog('ENGINES OFFLINE — field repair, improvised repair or SOS rescue required.','lc');
     if(id==='sensors' && effectiveSensorRange()===0){
       addLog('SENSORS OFFLINE — charts retained. New terrain and live contacts cannot be detected.','lc');
     }
@@ -198,7 +198,7 @@ function shipWeaponOnline(ship,slot){
   return true;
 }
 
-function shipSystemCanBypass(ship,id){
+function shipSystemCanImprovise(ship,id){
   const component=ensureShipSystems(ship)[id];
   return id!=='fuelTank' && component.bypassUntil<=G.turn &&
     (component.condition<75 || (component.condition===75 && ['engine','sensors'].includes(id) && shipSystemRating(ship,id)===0));
@@ -219,26 +219,41 @@ function repairShipSystem(id,method){
     const cost=(100-component.condition)*2;
     if(G.credits<cost){addLog('Core repair requires '+cost+' cr.','lw');return false;}
     G.credits-=cost;component.condition=100;component.bypassUntil=0;
+    recordCareerTime('services',30,'stations');
   } else {
-    const engineer=(G.crew||[]).find(crew=>crew.hp>0 && crew.role==='engineer');
+    const engineer=(G.crew||[]).filter(crew=>crew.hp>0 && crew.role==='engineer')
+      .sort((a,b)=>crewSkillValue(b,'eng')-crewSkillValue(a,'eng'))[0];
     if(!engineer){addLog('A living engineer is required for field repairs.','lw');return false;}
+    let repairSucceeded=true;
     if(method==='kit'){
       const index=G.inventory.findIndex(item=>item.usable==='repair_kit');
       if(index<0 || component.condition>=85){addLog('Field repairs need a repair kit and stop at 85% integrity.','lw');return false;}
       G.inventory.splice(index,1);
       component.condition=Math.min(85,component.condition+25+shipEngineerSkill()*3);
       component.bypassUntil=0;
-    } else if(method==='bypass'){
-      if(!shipSystemCanBypass(G.ship,id)) return false;
-      component.bypassUntil=G.turn+15;
+    } else if(method==='improvised'){
+      if(!shipSystemCanImprovise(G.ship,id)) return false;
+      const skill=crewSkillValue(engineer,'eng');
+      const successChance=Math.min(0.95,0.25+skill*0.07);
+      const roll=Math.random();
+      repairSucceeded=roll<successChance;
+      if(repairSucceeded){
+        component.bypassUntil=G.turn+15;
+        addLog(crewDisplayName(engineer)+' completes an improvised repair to '+SHIP_SYSTEMS[id].name+'. Temporary support lasts 15 turns.','lg');
+      } else if(skill<=1 && roll>=1-(skill===0?0.25:0.15)){
+        damageShipSystem(G.ship,id,5+rnd(6),'a botched improvised repair');
+        addLog(crewDisplayName(engineer)+' botches the improvised repair to '+SHIP_SYSTEMS[id].name+'.','lc');
+      } else {
+        addLog(crewDisplayName(engineer)+' fails to improvise a repair to '+SHIP_SYSTEMS[id].name+'.','lw');
+      }
     } else return false;
-    giveSkillXP(engineer,'eng',2);
-    addLog(crewDisplayName(engineer)+(method==='bypass'?' rigs a 15-turn bypass for ':' repairs ')+SHIP_SYSTEMS[id].name+'.','lg');
+    giveSkillXP(engineer,'eng',repairSucceeded?2:1);
+    if(method==='kit') addLog(crewDisplayName(engineer)+' repairs '+SHIP_SYSTEMS[id].name+'.','lg');
     if(mode==='shipcombat') advanceShipCombat(G.shipCombat,false,'repair');
     else{
       const previous=G.mode;
       G.mode=mode;
-      if(mode==='planet') completeSurfaceAction();
+      if(mode==='planet') completeSurfaceAction(undefined,'repair');
       else if(mode==='galaxy'){
         if(G.stranded && effectiveEngineRating()>0 && G.fuel>0){
           G.stranded=null;
@@ -248,9 +263,9 @@ function repairShipSystem(id,method){
         if(G.stranded){
           // Performing work still costs a turn when a rescue offer is open.
           if(G.stranded.rescuePhase==='offer') G.stranded.rescuePhase=null;
-          doStrandedWait();
-        } else doWaitGalaxy();
-      } else {beginCareerTurn();finishCareerTurn();}
+          doStrandedWait('repair');
+        } else doWaitGalaxy('repair');
+      } else {beginCareerTurn('repair');finishCareerTurn();}
       if(G.mode===mode && previous==='inventory') G.mode=previous;
     }
   }

@@ -101,6 +101,8 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/crew/oxygen.js](../src/crew/oxygen.js) | 86 |
 | [src/combat/ground-and-enemies.js](../src/combat/ground-and-enemies.js) | 434 |
 | [src/ships/gas-entities-and-pirates.js](../src/ships/gas-entities-and-pirates.js) | 294 |
+| [src/actions/calendar.js](../src/actions/calendar.js) | Reporting-only calendar, local solar display and activity/location totals |
+| [src/combat/ship-rewards.js](../src/combat/ship-rewards.js) | Role-weighted salvage, persistent pirate bounty claims and station settlement |
 | [src/combat/ship.js](../src/combat/ship.js) | 761 |
 | [src/combat/ship-tactics.js](../src/combat/ship-tactics.js) | Added later: tactical arena, movement, weapon timing, exhaust, and enemy actions |
 | [src/rendering/ship-combat.js](../src/rendering/ship-combat.js) | Added later: tactical arena display, contacts, and weapons |

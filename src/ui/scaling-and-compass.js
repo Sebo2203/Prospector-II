@@ -95,7 +95,7 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
 // The compass is the only pointer control that can move or wait in the world.
 document.getElementById('compass-grid').addEventListener('mousedown',event=>{
   if(event.button!==0 || !G || G.dead || G.retired || canvasMenuBlocked() ||
-    G.showOptions || G.dialogue || shipSystemsActive() ||
+    G.showOptions || G.dialogue || shipSystemsActive() || shipAttackConfirmationActive() ||
     G._voidPrompt || G.stranded?.rescuePhase==='offer' || DEBUG.on) return;
   const direction = event.target.closest('.cmp-btn');
   if(!direction) return;

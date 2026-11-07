@@ -50,11 +50,12 @@ function drawShipCombatOverlay(combat=G.shipCombat){
       }
     },{title:ship.name+' · '+ship.hp+' hull · Range '+shipCombatDistance(player,enemy)});
   }
-  drawShipCombatReadout(combat,weapons);
+  drawShipCombatReadout(combat);
+  drawShipCombatMounts(combat,weapons);
   drawShipCombatShotFeedback(combat);
 }
 
-function drawShipCombatReadout(combat,weapons){
+function drawShipCombatReadout(combat){
   const x=674, width=274, textX=x+10, textWidth=width-20;
   const target=combat.enemies[combat.target];
   const text=(value,y,color='#aebdd0',font='12px Courier New')=>{
@@ -72,7 +73,8 @@ function drawShipCombatReadout(combat,weapons){
     ctx.fillStyle=color;ctx.fillRect(textX,y+5,Math.round(textWidth*Math.max(0,Math.min(1,max?value/max:0))),3);
     return y+25;
   };
-  ctx.fillStyle='#0c111a';ctx.fillRect(x,12,width,460);
+  const panelBottom=canvasHeight-8;
+  ctx.fillStyle='#0c111a';ctx.fillRect(x,12,width,panelBottom-12);
   let y=heading('YOUR SHIP',30);
   ctx.font='11px Courier New';ctx.fillStyle='#8e9daa';ctx.textAlign='right';
   ctx.fillText(shipCombatSensorRange()?'Sensor range '+shipCombatSensorRange():'Sensors offline',x+width-10,30,textWidth-90);
@@ -92,14 +94,25 @@ function drawShipCombatReadout(combat,weapons){
   ctx.font='11px Courier New';ctx.fillStyle='#edaa77';ctx.textAlign='left';
   if(faults.length) y=drawWrappedText(faults.join(' · '),textX,y,textWidth,13,2)+3;
 
-  // Keep the former heading's breathing room between ship and target.
-  y+=21;
   if(target && shipCombatContactVisible(combat,target)){
     const ship=target.ship, natural=!!ship._homeCluster;
-    ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
-    y=drawWrappedText(ship.name,textX,y,textWidth,14,2)+2;
-    y=meter('Hull',ship.hp,ship.maxHp,y,'#e4b98c');
     const targetShields=shipShieldReadout(ship);
+    const armed=!natural && actorShipCombatWeapons(ship).length>0;
+    ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
+    const nameLines=[];
+    let line='';
+    for(const word of ship.name.split(/\s+/)){
+      const next=line?line+' '+word:word;
+      if(line && ctx.measureText(next).width>textWidth){nameLines.push(line);line=word;}
+      else line=next;
+    }
+    if(line)nameLines.push(line);
+    // The last detail stays at the bottom; extra rows grow upward into the gap.
+    const height=Math.min(2,nameLines.length)*14+2+25+(targetShields?25:0)+48+(armed?16:0);
+    y=panelBottom-10-height+16;
+    for(const name of nameLines.slice(0,2)){text(name,y,'#f3dfaa','bold 12px Courier New');y+=14;}
+    y+=2;
+    y=meter('Hull',ship.hp,ship.maxHp,y,'#e4b98c');
     if(targetShields)y=meter('Shields',targetShields.charge,targetShields.capacity,y,'#81c5df',targetShields.state);
     text('Distance '+shipCombatDistance(combat.player,target)+' · '+(natural?'Ram range 1':'Weapon range '+shipCombatEnemyRange(target)),y);y+=16;
     const mobility=shipCombatMoveRating(target);
@@ -107,31 +120,43 @@ function drawShipCombatReadout(combat,weapons){
     text((natural?'Mobility ':'Engine ')+mobility+' · Move '+pace+'/'+Math.max(1,effectiveEngineRating())+' per turn',y,'#8e9daa','11px Courier New');y+=16;
     const status=shipCombatEnemyActionStatus(combat,target);
     text(status,y,status==='Can fire'||status==='Can ram'?'#f0a9a6':'#aebdd0');y+=16;
-    if(!natural && actorShipCombatWeapons(ship).length){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
-  } else {text('No live sensor contact',y,'#b8a487');y+=16;}
+    if(armed){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
+  } else {text('No live sensor contact',panelBottom-10,'#b8a487');}
+}
 
-  y=heading('WEAPON MOUNTS',y+1);
-  if(!weapons.length) text('No weapons installed',y,'#b8a487');
-  weapons.forEach((entry,index)=>{
-    const selected=index===combat.weapon, status=shipCombatWeaponStatus(combat,entry);
-    ctx.fillStyle=selected?'#1b3040':'#111b25';ctx.fillRect(textX,y,textWidth,34);
-    const label=combatStatusText(status);
-    ctx.font='11px Courier New';const statusWidth=ctx.measureText(label).width;
-    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf';ctx.font='bold 12px Courier New';ctx.textAlign='left';
-    ctx.fillText((index+1)+' '+entry.weapon.name,textX+6,y+13,textWidth-statusWidth-20);
-    ctx.font='11px Courier New';ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';ctx.textAlign='right';
-    ctx.fillText(label,textX+textWidth-6,y+13);
-    ctx.textAlign='left';ctx.fillStyle='#94a8ba';
-    ctx.fillText(entry.weapon.minDmg+'–'+entry.weapon.maxDmg+' dmg · Range '+entry.weapon.range+' · Heat '+entry.weapon.heat,textX+6,y+27,textWidth-12);
-    canvasMenuTarget(textX,y,textWidth,34,()=>selectShipCombatWeapon(index));
-    y+=37;
-  });
+// Horizontal mount cards use the strip below the arena, with the same action guards.
+function drawShipCombatMounts(combat,weapons){
+  const x=COMBAT_MAP.x, width=COMBAT_MAP.width*TS;
+  const top=COMBAT_MAP.y+COMBAT_MAP.height*TS+8, bottom=canvasHeight-8;
+  ctx.font='bold 12px Courier New';ctx.fillStyle='#a8d8f8';ctx.textAlign='left';
+  ctx.fillText('WEAPON MOUNTS',x,top+6);
   const selected=weapons[combat.weapon];
   if(selected){
     const reload=Math.max(0,(G.ship.weaponReadyAt[selected.slot]||0)-G.turn);
-    text('Peak heat '+(G.ship.heat+selected.weapon.heat)+'/'+shipHeatCapacity()+
-      (reload?' · Reload in '+reload+'t':''),y+10,'#8e9daa','11px Courier New');
+    ctx.font='11px Courier New';ctx.fillStyle='#8e9daa';ctx.textAlign='right';
+    ctx.fillText('Peak heat '+(G.ship.heat+selected.weapon.heat)+'/'+shipHeatCapacity()+
+      (reload?' · Reload in '+reload+'t':''),x+width,top+6,width-130);
   }
+  const y=top+14, height=bottom-y, gap=6;
+  if(!weapons.length){
+    ctx.font='12px Courier New';ctx.fillStyle='#b8a487';ctx.textAlign='left';
+    ctx.fillText('No weapons installed',x,y+18);
+    return;
+  }
+  const cardWidth=(width-gap*(weapons.length-1))/weapons.length;
+  weapons.forEach((entry,index)=>{
+    const left=x+index*(cardWidth+gap), status=shipCombatWeaponStatus(combat,entry);
+    const label=combatStatusText(status), selected=index===combat.weapon;
+    ctx.fillStyle=selected?'#1b3040':'#111b25';ctx.fillRect(left,y,cardWidth,height);
+    ctx.font='11px Courier New';const statusWidth=ctx.measureText(label).width;
+    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf';ctx.font='bold 12px Courier New';ctx.textAlign='left';
+    ctx.fillText((index+1)+' '+entry.weapon.name,left+6,y+12,cardWidth-statusWidth-20);
+    ctx.font='11px Courier New';ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';ctx.textAlign='right';
+    ctx.fillText(label,left+cardWidth-6,y+12);
+    ctx.textAlign='left';ctx.fillStyle='#94a8ba';
+    ctx.fillText(entry.weapon.minDmg+'–'+entry.weapon.maxDmg+' dmg · Range '+entry.weapon.range+' · Heat '+entry.weapon.heat,left+6,y+26,cardWidth-12);
+    canvasMenuTarget(left,y,cardWidth,height,()=>selectShipCombatWeapon(index));
+  });
 }
 
 // Space and its star field are continuous; neither fog nor weapon range paints tile backgrounds.

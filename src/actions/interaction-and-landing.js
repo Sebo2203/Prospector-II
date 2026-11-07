@@ -17,7 +17,7 @@ function doInteract(){
   if(G.mode==='galaxy'){
     // Check for floating nebula loot at current tile first
     const lootHere = (G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
-    if(lootHere){
+    if(lootHere && (G.cargo.length<(G.shipStats.cargoCapacity||0) || G.galaxy[G.ship.y][G.ship.x].type!=='BASE')){
       collectNebulaLootAt(G.ship.x, G.ship.y);
       return;
     }
@@ -69,6 +69,8 @@ function doInteract(){
         pawnStock: generatePawnStock(cell.name),
         medbayStock: generateMedbayStock(cell.name),
       };
+      recordCareerTime('docking',15,'stations');
+      settlePirateBountiesAtStation(cell.name);
       G._drinkCount = 0;
       ensureCrewMoraleState();
       updateCrewLowMoraleFlags();
@@ -130,6 +132,7 @@ function doInteract(){
     } else if(cell.type==='CASINO'){
       const key='casino:'+G.ship.x+','+G.ship.y;
       if(!G.planets[key]) generateCasinoStationMap(key);
+      recordCareerTime('docking',15,'stations');
       G.mode='planet'; G.curPlanet=key; G.curSystem='';
       G.player={x:5,y:10,hp:G.crew.filter(c=>c.hp>0)[0]?.hp||10};
       G.casino = { screen:'main', sel:0, arenaPhase:null, arenaEnemy:null, arenaLog:[], betSel:0 };
@@ -240,6 +243,7 @@ function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
       else generatePlanet(pKey, pDesc.biome);
     }
 
+    recordCareerTime('travel',15,'space');
     G.mode='planet';
     G.examine = null;
     G.rangeTarget = null;

@@ -2,6 +2,8 @@
 
 Prospector II should become a turn-based expedition roguelite about making a living at the edge of a changing sector. A run starts with a vulnerable ship, a small crew, and practical work: survey, trade, salvage, research, or fight. The player can retire with what they earned, or stay long enough to uncover ancient places, meet another spacefaring people, and decide what happens when the sector faces a crisis. The ending should remember the places visited, people helped or harmed, and dangers left unresolved.
 
+The [difficulty philosophy](design-philosophy.md) governs this roadmap: frequent early death and lethal bad luck are expected. Progress buys temporary breathing room, while the intended threat curve escalates with run age independently of player progress. Only exceptional cunning should consistently stay ahead of that curve. A coherent, complete game does not mean that most runs survive. This is the intended design; a comprehensive run-age escalation system is not yet implemented.
+
 The design follows Matthias Mennel’s *Prospector*. Captains earn their living through exploration, trade, research, salvage, and combat, then choose when to retire. Preserve the five civilization tiers and their distinct rules for language, gifts, aid, permission, and boundaries. The original design notes supply many of the worlds and threats below. [Original manual](https://ruzzoli.de/roguelikes/shrine/prospector/manual.html) · [Manual PDF](https://ruzzoli.de/roguelikes/shrine/prospector/Manual.pdf) · [Historical design notes](../src/html/legacy-design-notes.html)
 
 The milestones below describe planned work. See the [expedition guide](experiment.md) for current mechanics and the [changelog](../CHANGELOG.md) for shipped changes.
@@ -81,9 +83,9 @@ Peace opens cooperation and new ways to solve a crisis; hostility creates a sust
 
 ## Release 0.74 — The sector in danger
 
-Make the **planet-killing Titan** the major late-run crisis. Rumors and debris foreshadow it; direct discovery starts a clearly shown clock. The player can investigate a weakness, assemble help, disable or redirect it, attack at great cost, or leave it alone. Targets, warnings, and deadlines must be readable. The robot factory's spreading ships form a slower, smaller crisis that can intersect with faction and alien choices.
+Make the **planet-killing Titan** the major late-run crisis. Its threat schedule should advance with run age independently of the player's readiness. Rumors, debris and direct discovery reveal its progress and remaining time rather than granting a fresh clock. The player can investigate a weakness, assemble help, disable or redirect it, attack at great cost, or leave it alone. Targets, warnings, and deadlines must be readable. The robot factory's spreading ships form a slower, smaller crisis that can intersect with faction and alien choices.
 
-Crises should escalate through encounters, map state, station news, and lost or protected worlds. A player who retires before resolving one is making a valid choice; the ending tells the truth about that risk. No crisis timer starts invisibly at game creation, and no critical resolution depends on a single rare random drop.
+Crises should escalate through encounters, map state, station news, and lost or protected worlds. A player who retires before resolving one is making a valid choice; the ending tells the truth about that risk. Sector escalation must not wait for player progress or discovery. Threats may already be advancing before the captain learns about them; the world need not grant a safe preparation period. Knowledge and earlier clues can improve the odds, without making every disaster avoidable. No critical resolution should depend on a single mandatory rare random drop.
 
 **Exit:** The Titan can be resolved by more than one route or allowed to strike, and the sector changes accordingly. The robot threat can be contained, redirected, or left to spread.
 
@@ -106,3 +108,10 @@ The old comments have enough ideas for years of additions: a prison planet that 
 ## How to build it
 
 Deliver each milestone as a playable slice that includes discovery, choice, response, departure, save and reload, and any promised later consequence. Use the [contributor rules](../AGENTS.md) and [testing guide](../qa/README.md) to verify the player path. For ongoing work on terrain transitions and planetary visual cohesion, see [art direction](art-direction.md).
+
+
+## Calendar and activity time
+
+Experimental.70 implements a reporting-only elapsed clock alongside unchanged turn-based rules. It totals location/activity time, shows a normalized local solar clock tied to the existing daylight cycle, and includes durations in the career record. See [parallel time reporting](time-reporting.md) for current rates and limits.
+
+A later gameplay redesign could intentionally move illness/recovery, payroll, morale, rescue deadlines, contracts and temporary repairs onto calendar durations. That conversion is not implemented: tactical sequencing, daylight progression and all gameplay timers still use their original turn rules. Keep weapon reload and combat presentation on an appropriate tactical clock. Do not silently reinterpret every old deadline or invent past activity times.

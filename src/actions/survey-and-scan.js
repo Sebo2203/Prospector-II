@@ -251,7 +251,7 @@ function doScan(){
   if(!body) return;
   const { pDesc, targetDesc, pKey } = body;
   if(effectiveSensorRange()===0){
-    addLog('Sensors offline. Repair or bypass the sensor core before scanning.','lw');
+    addLog('Sensors offline. Repair the sensor core before scanning.','lw');
     renderAll();return;
   }
 
@@ -263,7 +263,7 @@ function doScan(){
 
   if(G.fuel<=0){ addLog('Not enough fuel to run scanners.','lw'); renderAll(); return; }
   if(!DEBUG.infiniteFuel){ G.fuel = Math.max(0, G.fuel-1); G.fuelSpent=(G.fuelSpent||0)+1; }
-  beginCareerTurn();
+  beginCareerTurn('scan');
   const B = BIOMES[targetDesc.biome] || {};
   const difficulty = B.scanDifficulty ?? 0.6;
   const bestNavScan  = Math.max(0, ...(G.crew.filter(c=>c.hp>0).map(c=>c.skills?.nav||0)));

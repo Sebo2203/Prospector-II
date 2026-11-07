@@ -2,6 +2,8 @@
 
 A sci-fi roguelike about exploring space, surveying planets, managing a crew, and earning enough to retire.
 
+Survival is uncertain. Expect frequent early deaths from accidents, pirates, monsters, hostile worlds and bad luck. Better equipment buys breathing room; the sector is not built around your readiness. [Difficulty philosophy](docs/design-philosophy.md)
+
 ## Play
 
 - **Public release** on `main`. [Play in your browser](https://sebo2203.github.io/Prospector-II/) or [download the Windows app](https://sebo2203.github.io/Prospector-II/downloads/Prospector-II-v0.26-portable.exe).

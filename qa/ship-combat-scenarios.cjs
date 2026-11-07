@@ -91,7 +91,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.keyboard.press('2');
     await page.evaluate(()=>{G.shipCombat.enemies[1].x=G.shipCombat.player.x+2;G.shipCombat.enemies[1].y=G.shipCombat.player.y;});
     await page.keyboard.press('f');
-    assert.deepEqual(await page.evaluate(()=>[G.mode,G.pirates[1].alive,G.pirates[2].alive,G.credits]),['galaxy',false,true,650]);
+    assert.deepEqual(await page.evaluate(()=>[G.mode,G.pirates[1].alive,G.pirates[2].alive,G.credits]),['galaxy',false,true,500]);
 
     await page.evaluate(()=>{
       const ship=G.pirates[2];

@@ -15,7 +15,6 @@ function drawScanView(){
   // Draw all tiles, using scanMask for visibility
   const mask = pdata.scanMask;
   const _W = PW(pdata), _H = PH(pdata);
-  const hasLanded = !!pdata.visited?.some(Boolean);
   // Camera centred on scan cursor, clamped to map
   const scx = G.scanCursorX ?? pdata.spawnX;
   const scy = G.scanCursorY ?? pdata.spawnY;
@@ -125,10 +124,7 @@ function drawScanView(){
         else if(cell.type==='MINERAL_SAMPLE') { ctx.fillStyle='#cc8800'; ctx.fillRect(sx+9,sy+9,7,7); ctx.fillStyle='#ffe066'; ctx.fillRect(sx+10,sy+10,4,4); }
       } else if(cell.type==='SHIP'){
         drawScanCellBg();
-        if(hasLanded){
-          if(!OPTIONS.asciiMode) drawSpriteDarkMatteKeyed('ship_tile', sx, sy, '#aaaacc');
-          else drawAsciiTile('SHIP', sx, sy, floorAscii.bg);
-        }
+        // SHIP also stores the remembered landing site; the ship is in orbit during a scan.
       } else if(cell.type==='rw_void'){
         ctx.fillStyle='#02020a'; ctx.fillRect(sx,sy,TS,TS);
         const starSeed=(x*7919+y*1049)%1000;

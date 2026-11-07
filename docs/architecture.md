@@ -50,9 +50,9 @@ Combat events use ordinary `addLog` entries with category `combat`, and appear i
 
 ### Ship equipment
 
-`src/ships/systems.js` owns hull mount profiles, installed-versus-effective core ratings, power allocation, heat, shields, critical damage and engineer repairs. Nominal player equipment stays in `G.shipStats`; the physical six-core integrity/bypass map, heat, shield charge/recharge deadline, system clock and per-mount `weaponReadyAt` deadlines live on `G.ship`. NPCs use the same persistent fields and a generated `systemStats`/weapon loadout on their authoritative roster actor. Encounters retain display aliases, synchronized from that actor; loading rebinds reload-array aliases and actor IDs.
+`src/ships/systems.js` owns hull mount profiles, installed-versus-effective core ratings, power allocation, heat, shields, critical damage and engineer repairs. Nominal player equipment stays in `G.shipStats`; the physical six-core integrity/temporary repair map, heat, shield charge/recharge deadline, system clock and per-mount `weaponReadyAt` deadlines live on `G.ship`. NPCs use the same persistent fields and a generated `systemStats`/weapon loadout on their authoritative roster actor. Encounters retain display aliases, synchronized from that actor; loading rebinds reload-array aliases and actor IDs.
 
-`G.shipStats.maxFuel` is installed capacity, while `G.maxFuel` is the usable limit after tank damage. `syncPlayerShipSystems` clamps actual fuel and shields without creating either resource. Temporary bypasses derive effective values from the current career turn and never heal integrity. NPCs catch up cooling and shield recharge on entering an encounter. Replacing a destroyed patrol creates healthy core state; retreating preserves the same damaged ship. The debug palette uses an explicit 1,000-unit tank and resets core/readiness state when returning to a gallery.
+`G.shipStats.maxFuel` is installed capacity, while `G.maxFuel` is the usable limit after tank damage. `syncPlayerShipSystems` clamps actual fuel and shields without creating either resource. Temporary improvised repairs derive effective values from the current career turn and never heal integrity. NPCs catch up cooling and shield recharge on entering an encounter. Replacing a destroyed patrol creates healthy core state; retreating preserves the same damaged ship. The debug palette uses an explicit 1,000-unit tank and resets core/readiness state when returning to a gallery.
 
 `src/ui/ship-systems.js` draws an in-canvas detail page, with the Hangar frame or shared inventory tabs according to its entry point. Its cursor is ephemeral, outside the saved career; it leaves the underlying gameplay mode intact so `repairShipSystem` still invokes the correct location turn process. Temporary mode restoration inside a field repair keeps the page open; a real career/location change discards it. Mouse and keyboard share component selection and repair actions, movement is blocked while inspecting, and browsing remains free. See the [equipment guide](experiment.md#mounts-core-systems-and-damage) for the rules and `qa/ship-systems-scenarios.cjs` for native integration coverage.
 
@@ -94,3 +94,42 @@ Run `npm run verify:migration` to compare assembled output with the SHA-256 and 
 `selectReadyShipCombatWeapon` uses the same complete readiness query as actual firing, checking the current mount before scanning cyclically for a valid alternate. Selection runs at engagement/target/manual-selection/turn synchronization and again before fire. Failed attempts use `shipCombatBlockedFireMessage`; neither fallback selection nor refusal advances time or changes absolute reload deadlines.
 
 Tactical movement wraps `shipRelativeMoveBudget` with a separate fractional `moveBank` on each arena actor. New actors start at zero; the snapshot retains the fraction and rejects non-finite/out-of-range credit before installation. One player reference engine is captured per NPC phase. Only movement decisions spend/earn movement credit; firing or holding range clears it. Multi-step movement reuses the normal single-step planner, collision/cover, heat, exhaust, damage and escape paths, stopping on range, death, escape or drive/sensor failure. It never repeats attacks or career ticks. `NEUTRAL_ENGINE_RATINGS` in `src/ships/classes.js` is the single default source for generation and neutral stat initialization; explicit individual fittings remain authoritative.
+
+
+### Failed tactical disengagement
+
+Player and NPC withdrawals share `SHIP_DISENGAGE_FAILURE_CHANCE` (25%). Arena spawn constants are reused for creation and failed-withdrawal repositioning; no new save fields or migrations are needed. Failure clears trails, pending visual feedback, aiming and active opponents' movement credit, refreshes sensors/readiness, and preserves authoritative ship damage, resources and world coordinates. Dead/escaped actors are not revived. NPC failure propagates a reset result through the step planner and stops the phase; it does not repeat NPC actions or career ticks. A failed player attempt retains normal return fire and its single career tick, advances the local round once and remains in combat. No-safe-route NPC failures do not roll or reset.
+
+
+### Improvised ship repair
+
+`repairShipSystem(id, 'improvised')` replaces the guaranteed bypass action. It selects the living engineer with the highest effective engineering skill and resolves one random skill check before awarding XP. Success uses the existing `bypassUntil` deadline as the internal temporary-support field; no new save state or migration is introduced. Failure/botch still follows the normal field-action turn path, including the combat response. Only effective skill 0–1 can botch, using ordinary core damage and synchronization. The fuel-tank UI omits this method and the action guard rejects it. Public-facing labels/logs refer to improvised repair; legacy internal save-field naming is not UI terminology.
+
+
+### Ship rewards and deferred claims
+
+`src/combat/ship-rewards.js` owns role-weighted salvage and station bounty settlement. `resolveShipCombatKill` marks each roster ship `combatRewardsResolved` before applying rewards; patrol replacement clears the marker. The existing inventory/commodity catalogs supply items. Overflow cargo reuses the persistent `nebulaLoot` cargo-drop collection with item-specific labels and non-crystal cargo markers.
+
+`G.pirateBounties` stores aggregate pending `credits` and `kills`, initialized for new careers and created on the first new kill when absent. No historical kills are paid retroactively. Current-format parsing validates present totals before installing a save. Authorized BASE docking clears the claim before crediting it, ahead of payroll; no menu or render path pays claims. Active missions and records derive pending information from the same state. No schema change or migration is required.
+
+
+### Sidebar comms history
+
+`renderCommsLog` owns transient sidebar history paging outside the career save. The flex log fills the remaining right sidebar height and message rows do not shrink. It initially renders 80 non-archived messages; scrolling toward the oldest visible edge loads another 80 without dropping saved history or advancing time. New messages follow the latest edge only while already there; otherwise the visible entry is anchored across redraws using the displayed scale. A new career resets the transient window. Crew dialogue uses the same log view. The dedicated LOG tab remains the full archive, including archive-only entries.
+
+
+### Parallel reporting calendar
+
+`src/actions/calendar.js` records reporting minutes through `beginCareerTurn(activity)` and explicit turn-free station/transit hooks. This sidecar never drives gameplay. `G.careerTime` contains elapsed minutes plus independent location/activity sums; all present counters are validated before save installation. The HUD, current records and endings read it. Local solar text derives from the existing `planetTurn` cycle, preserving lighting and off-world pause. See [rates and boundaries](time-reporting.md).
+
+
+### Galaxy attack targeting and confirmation
+
+`galaxyAttackTarget` is shared by the galaxy Fire action and context bar. It chooses the examined eligible ship, otherwise the nearest living pirate/civilian/gas entity in current Manhattan detection range on charted terrain. Gas entities use the same sensor-plus-two radius as their drawn marker. Radio-only/out-of-range contacts are not target locks. Fire routes before movement remaps and Examine routing, with repeats ignored outside combat. Pirate-base fire remains the fallback when no eligible ship is selected.
+
+Patrol/unarmed confirmation is a transient `shipAttackPrompt` outside `G`, drawn as a blocking canvas menu. The keyboard and compass block world actions while open; Y/N and canvas buttons share the resolver. The resolver revalidates career identity, actor presence, life and range before accepting. Cancelling and opening do not alter gameplay or reporting time; reload/menu/career transitions cannot resurrect an approved action. Native `window.confirm` is no longer used, so embedded browser suppression cannot silently cancel an attack. Automatic interceptions bypass the player-initiation confirmation as before.
+
+
+### Nebula encounter activity and rarity
+
+`moveGasEntities` no longer defers AI until turn 300. Natural pursuit/engulf checks retain nebula confinement, six-sector prey detection and disengagement grace, and now honor debug ship invisibility. The shared galaxy Fire selector includes the authoritative gas roster and sends natural entities directly to `startShipCombat`, bypassing civilian reputation logic. `nebulaEntitySpawnChance` in galaxy generation supplies the new per-connected-cluster rates; it does not repopulate or thin loaded galaxies. The existing gas-object playground factory remains the source for disposable interactive specimens.
