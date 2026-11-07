@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.54 removes redundant ship controls
+
+Released on `experiment/expedition-legacy`.
+
+- Unfitted shields leave a blank core slot in the ship overview. Fitted generators continue to show their actual integrity and charge.
+- Core overview cards are passive readouts with no click action, hover tooltip or pointer cursor. The static **Inspect / repair [F3]** button opens the existing board; the global F3 shortcut still works.
+- Removed the duplicate F3 context button from galaxy and inventory views, and removed Jettison/Confirm jettison from the context bar. The ship menu retains its static jettison/confirmation control and the J shortcut. Other context views retain their systems access.
+- Validation: all 55 repository tests and affected browser scenarios passed, including blank/fitted shield rendering, passive card clicks/cursor, static inspection and F3, context cleanup, stranded inventory repair, layout and existing menu/combat behavior. Equipment rules and career schema 2 are unchanged; experimental.52–53 saves remain supported.
+
 ## 2026-11-07 — 0.28 experimental.53 exposes ship systems throughout play
 
 Released on `experiment/expedition-legacy`.

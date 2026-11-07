@@ -384,7 +384,6 @@ function renderContextBar(){
       arrows('Select cargo');
       if(G._cargoExamine) btns.push(btn('X','Close examine','info'));
       else btns.push(btn('X','Examine cargo','info'));
-      btns.push(btn('J', G._jettisonConfirm ? 'Confirm jettison' : 'Jettison', G._jettisonConfirm ? 'danger' : 'warn'));
       if(G._jettisonConfirm) btns.push(btn('ESC','Cancel','info'));
     }
     btns.push(btn('ESC','Close','info'));
@@ -398,7 +397,7 @@ function renderContextBar(){
   }
   if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
      !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt &&
-     (G.mode!=='inventory' || (G._viewTab==='ship' && !G._cargoExamine))){
+     G.mode!=='galaxy' && G.mode!=='inventory'){
     btns.push(btn('F3','Ship systems','routine','F3'));
   }
   bar.innerHTML = btns.join('');

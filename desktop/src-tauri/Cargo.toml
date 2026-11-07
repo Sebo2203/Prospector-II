@@ -1,6 +1,6 @@
 [package]
 name = "prospector-ii-desktop"
-version = "0.28.0-experimental.53"
+version = "0.28.0-experimental.54"
 description = "Fullscreen desktop wrapper for Prospector II"
 authors = ["Sebastian"]
 edition = "2021"

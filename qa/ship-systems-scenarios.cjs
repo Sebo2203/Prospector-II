@@ -13,31 +13,45 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     const dialog=page.getByRole('dialog',{name:'Ship Systems'});
     const systemsButton=page.getByRole('button',{name:'Ship systems',exact:false});
     const openingTurn=await page.evaluate(()=>G.turn);
-    assert.ok(await systemsButton.isVisible(),'ordinary galaxy play exposes the systems button');
-    await systemsButton.click();assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+    assert.equal(await systemsButton.count(),0,'galaxy context omits the redundant F3 control');
     await page.keyboard.press('F3');assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
     await page.keyboard.press('i');
     await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
     assert.equal(await page.evaluate(()=>G._viewTab),'ship');
-    const clickCore=async name=>{
-      const point=await page.evaluate(name=>{
-        const target=canvasMenuTargets.find(target=>target.title?.startsWith(name+' — inspect and repair'));
-        if(!target) throw Error('Missing inventory core '+name);
+    const clickInspect=async()=>{
+      const point=await page.evaluate(()=>{
+        const target=canvasMenuTargets.find(target=>target.activate===openShipSystems);
+        if(!target) throw Error('Missing static Inspect / repair button');
         const bounds=canvas.getBoundingClientRect();
         return {x:bounds.x+(target.x+target.w/2)*bounds.width/canvasWidth,y:bounds.y+(target.y+target.h/2)*bounds.height/canvasHeight};
-      },name);
+      });
       await page.mouse.click(point.x,point.y);
     };
+    const coreText=()=>page.evaluate(()=>{
+      const labels=[],fillText=ctx.fillText;
+      ctx.fillText=function(text,x,y,...rest){if(y>=230 && y<=265) labels.push(text);return fillText.call(this,text,x,y,...rest);};
+      try{drawCanvas();}finally{ctx.fillText=fillText;}
+      return labels;
+    });
     for(const viewport of [{width:1400,height:720},{width:800,height:600}]){
       await page.setViewportSize(viewport);
       await page.waitForFunction(()=>canvas.width===Math.round(canvas.getBoundingClientRect().width*devicePixelRatio));
-      assert.ok(await systemsButton.isVisible(),'ship inventory exposes the same systems action');
-      for(const name of ['Engines','Reactor','Shield generator','Cooling','Sensors','Fuel tank']){
-        await clickCore(name);assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
-        assert.deepEqual(await page.evaluate(()=>[G.mode,G._viewTab]),['inventory','ship']);
+      assert.equal(await systemsButton.count(),0,'ship inventory context omits the redundant F3 control');
+      assert.equal(await page.locator('#ctx-bar [data-game-key="j"]').count(),0,'jettison remains in the ship menu, not the context bar');
+      assert.ok(!(await coreText()).some(text=>String(text).startsWith('Shields')),'an unfitted shield slot has no label or integrity text');
+      for(let index=0;index<6;index++){
+        const point=await page.evaluate(index=>{
+          const width=(canvasWidth-110)/6,x=40+index*(width+6)+width/2,y=247;
+          if(canvasMenuTargets.some(target=>x>=target.x && x<target.x+target.w && y>=target.y && y<target.y+target.h)) throw Error('Core readout is still interactive');
+          const bounds=canvas.getBoundingClientRect();
+          return {x:bounds.x+x*bounds.width/canvasWidth,y:bounds.y+y*bounds.height/canvasHeight};
+        },index);
+        await page.mouse.move(point.x,point.y);
+        assert.notEqual(await page.locator('#gc').evaluate(element=>getComputedStyle(element).cursor),'pointer');
+        await page.mouse.click(point.x,point.y);assert.equal(await dialog.isVisible(),false);
       }
-      await systemsButton.focus();await page.keyboard.press('Enter');assert.ok(await dialog.isVisible());
-      await page.keyboard.press('Escape');await systemsButton.blur();
+      await clickInspect();assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+      await page.keyboard.press('F3');assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
       await page.screenshot({path:artifactPath('Ship-overview-'+viewport.width+'.png')});
     }
     assert.equal(await page.evaluate(()=>G.turn),openingTurn,'all inspection paths remain free');
@@ -46,7 +60,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     await page.evaluate(()=>{damageShipSystem(G.ship,'engine',25,'access scenario');tryMove(1,0);});
     assert.ok(await page.evaluate(()=>G.stranded));
     await page.keyboard.press('i');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
-    await clickCore('Engines');assert.ok(await dialog.isVisible(),'a stranded overlay must not cover inventory hit areas');
+    await clickInspect();assert.ok(await dialog.isVisible(),'a stranded overlay must not cover the static inspection control');
     await dialog.locator('[data-system-action="engine:bypass"]').click();
     assert.deepEqual(await page.evaluate(()=>[G.mode,G._viewTab,G.stranded===null,effectiveEngineRating()]),['inventory','ship',true,1]);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');
@@ -107,6 +121,9 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     // A fresh real career exercises the shared combat and core rules.
     await page.evaluate(()=>initGame('ATTACK_CORVETTE','Mount QA','Mount QA'));
     await page.waitForFunction(()=>G?.galaxy && G.shipName==='Mount QA' && G.log.some(entry=>entry.msg.includes('Ready for departure')));
+    await page.keyboard.press('i');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
+    assert.ok((await coreText()).includes('Shields 100%'),'a fitted shield generator still has a visible status');
+    await page.keyboard.press('Escape');
     await page.evaluate(()=>{
       Math.random=()=>0.25;
       G.pirates=[];G.neutralShips=[];G.gasEntities=[];
@@ -266,6 +283,6 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       await page.keyboard.press('Escape');
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS: outside-combat and inventory mouse/keyboard access, stranded inventory repair, core damage, blind travel/locks/scans, engineer repair/bypass/expiry, heat, independent reloads, shield delay, persistent retreat/load, SOS recovery, fitting and upgrades.');
+    console.log('PASS: passive core readouts, empty unfitted shields, static inspect access, context cleanup, stranded inventory repair, core damage, blind travel/locks/scans, engineer repair/bypass/expiry, heat, independent reloads, shield delay, persistent retreat/load, SOS recovery, fitting and upgrades.');
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

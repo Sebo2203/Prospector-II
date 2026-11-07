@@ -470,8 +470,8 @@ function drawInventoryOverlay(){
     statRow('Max Crew',       G.crew.filter(c=>c.hp>0).length, ss.maxUpgradeCrew??ss.maxCrew, col2x, startY+rowH*3, '#70f090');
 
     // Weapon loadout + Module loadout — side by side below the stat columns
-    // All six cores are visible in the ship overview; every card opens the
-    // same detailed inspection/repair board used by F3 and the context button.
+    // Core readouts are passive. Only Inspect / repair opens the detailed board;
+    // an unfitted shield generator leaves an empty slot.
     ctx.fillStyle='#708b9c';ctx.font='bold 12px Courier New';
     ctx.fillText('CORE SYSTEMS',40,217);
     canvasMenuButton('Inspect / repair [F3]',cw-210,202,openShipSystems);
@@ -479,7 +479,7 @@ function drawInventoryOverlay(){
     const coreValues={
       engine:'Rating '+effectiveEngineRating()+'/'+ss.engineRating,
       reactor:shipReactorOutput()+' power',
-      shields:ss.shields?Math.floor(sh.shieldCharge)+'/'+shipShieldCapacity()+' charge':'Not fitted',
+      shields:Math.floor(sh.shieldCharge)+'/'+shipShieldCapacity()+' charge',
       cooling:shipCoolingRate()+'/turn',
       sensors:effectiveSensorRange()?'Range '+effectiveSensorRange():'OFFLINE',
       fuelTank:G.maxFuel+'/'+ss.maxFuel+' capacity',
@@ -489,12 +489,13 @@ function drawInventoryOverlay(){
       const x=40+index*(coreWidth+6), y=230, component=sh.systems[id];
       const failed=(id==='engine' && effectiveEngineRating()===0) || (id==='sensors' && effectiveSensorRange()===0);
       ctx.fillStyle='#080b10';ctx.fillRect(x,y,coreWidth,35);
-      ctx.strokeStyle=component.condition<100?'#66513a':'#2a3541';ctx.lineWidth=1;ctx.strokeRect(x,y,coreWidth,35);
+      const installed=id!=='shields' || ss.shields>0;
+      ctx.strokeStyle=installed && component.condition<100?'#66513a':'#2a3541';ctx.lineWidth=1;ctx.strokeRect(x,y,coreWidth,35);
+      if(!installed) return;
       ctx.font='bold 11px Courier New';ctx.fillStyle='#9eb5c5';
       ctx.fillText(coreNames[id]+' '+component.condition+'%',x+5,y+13,coreWidth-10);
       ctx.font='11px Courier New';ctx.fillStyle=failed || component.condition<=50?'#edaa77':'#8193a1';
       ctx.fillText(coreValues[id],x+5,y+28,coreWidth-10);
-      canvasMenuTarget(x,y,coreWidth,35,openShipSystems,{title:SHIP_SYSTEMS[id].name+' — inspect and repair [F3]'});
     });
     const loadoutY = 280;
     const midX = col1x + (col2x - col1x) / 2 + 20;

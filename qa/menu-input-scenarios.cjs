@@ -114,7 +114,7 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
         if(!dock||getComputedStyle(dock).color===labelColor) throw Error('Docking lost its accent');
         return labels;
       });
-      assert.deepEqual(result,['[X] Examine','[I] Inventory','[O] Options','[F3] Ship systems']);
+      assert.deepEqual(result,['[X] Examine','[I] Inventory','[O] Options']);
     };
     await checkRoutineColors();
     const display=()=>page.evaluate(()=>{

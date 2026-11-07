@@ -1951,7 +1951,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.53</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.54</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2075,8 +2075,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </dialog>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.53';
-const GAME_VERSION_LABEL = 'v0.28 experimental.53';
+const GAME_VERSION = '0.28.0-experimental.54';
+const GAME_VERSION_LABEL = 'v0.28 experimental.54';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -18858,8 +18858,8 @@ function drawInventoryOverlay(){
     statRow('Max Crew',       G.crew.filter(c=>c.hp>0).length, ss.maxUpgradeCrew??ss.maxCrew, col2x, startY+rowH*3, '#70f090');
 
     // Weapon loadout + Module loadout — side by side below the stat columns
-    // All six cores are visible in the ship overview; every card opens the
-    // same detailed inspection/repair board used by F3 and the context button.
+    // Core readouts are passive. Only Inspect / repair opens the detailed board;
+    // an unfitted shield generator leaves an empty slot.
     ctx.fillStyle='#708b9c';ctx.font='bold 12px Courier New';
     ctx.fillText('CORE SYSTEMS',40,217);
     canvasMenuButton('Inspect / repair [F3]',cw-210,202,openShipSystems);
@@ -18867,7 +18867,7 @@ function drawInventoryOverlay(){
     const coreValues={
       engine:'Rating '+effectiveEngineRating()+'/'+ss.engineRating,
       reactor:shipReactorOutput()+' power',
-      shields:ss.shields?Math.floor(sh.shieldCharge)+'/'+shipShieldCapacity()+' charge':'Not fitted',
+      shields:Math.floor(sh.shieldCharge)+'/'+shipShieldCapacity()+' charge',
       cooling:shipCoolingRate()+'/turn',
       sensors:effectiveSensorRange()?'Range '+effectiveSensorRange():'OFFLINE',
       fuelTank:G.maxFuel+'/'+ss.maxFuel+' capacity',
@@ -18877,12 +18877,13 @@ function drawInventoryOverlay(){
       const x=40+index*(coreWidth+6), y=230, component=sh.systems[id];
       const failed=(id==='engine' && effectiveEngineRating()===0) || (id==='sensors' && effectiveSensorRange()===0);
       ctx.fillStyle='#080b10';ctx.fillRect(x,y,coreWidth,35);
-      ctx.strokeStyle=component.condition<100?'#66513a':'#2a3541';ctx.lineWidth=1;ctx.strokeRect(x,y,coreWidth,35);
+      const installed=id!=='shields' || ss.shields>0;
+      ctx.strokeStyle=installed && component.condition<100?'#66513a':'#2a3541';ctx.lineWidth=1;ctx.strokeRect(x,y,coreWidth,35);
+      if(!installed) return;
       ctx.font='bold 11px Courier New';ctx.fillStyle='#9eb5c5';
       ctx.fillText(coreNames[id]+' '+component.condition+'%',x+5,y+13,coreWidth-10);
       ctx.font='11px Courier New';ctx.fillStyle=failed || component.condition<=50?'#edaa77':'#8193a1';
       ctx.fillText(coreValues[id],x+5,y+28,coreWidth-10);
-      canvasMenuTarget(x,y,coreWidth,35,openShipSystems,{title:SHIP_SYSTEMS[id].name+' — inspect and repair [F3]'});
     });
     const loadoutY = 280;
     const midX = col1x + (col2x - col1x) / 2 + 20;
@@ -28978,7 +28979,6 @@ function renderContextBar(){
       arrows('Select cargo');
       if(G._cargoExamine) btns.push(btn('X','Close examine','info'));
       else btns.push(btn('X','Examine cargo','info'));
-      btns.push(btn('J', G._jettisonConfirm ? 'Confirm jettison' : 'Jettison', G._jettisonConfirm ? 'danger' : 'warn'));
       if(G._jettisonConfirm) btns.push(btn('ESC','Cancel','info'));
     }
     btns.push(btn('ESC','Close','info'));
@@ -28992,7 +28992,7 @@ function renderContextBar(){
   }
   if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
      !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt &&
-     (G.mode!=='inventory' || (G._viewTab==='ship' && !G._cargoExamine))){
+     G.mode!=='galaxy' && G.mode!=='inventory'){
     btns.push(btn('F3','Ship systems','routine','F3'));
   }
   bar.innerHTML = btns.join('');
