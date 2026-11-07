@@ -19,6 +19,7 @@ function spawnCivilizationLocals(key, pdata){
 
     function canStand(x,y){
       if(x<0||x>=PW(pdata)||y<0||y>=PH(pdata)) return false;
+      if(pdata.aquaticHabitat && !aquaticHabitatContains(pdata.aquaticHabitat,x,y)) return false;
       if(occupied.has(x+','+y)) return false;
       const t = pdata.grid[y]?.[x]?.type;
       return !!TILE[t]?.pass && !badTiles.has(t);
@@ -51,6 +52,7 @@ function spawnCivilizationLocals(key, pdata){
       : traits.social === 'collective'
       ? 'One of a band of hunter-gatherers. They do not act alone.'
       : 'A hunter-gatherer moving through their territory.';
+    const localDescHostile = 'A hunter moving to intercept the crew.';
 
     for(let i=0; i<count; i++){
       if(!pool.length) break;

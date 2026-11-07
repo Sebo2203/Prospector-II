@@ -55,7 +55,7 @@ function timeAwayFromPortPenalty(){
 function crewMoraleScore(c){
   ensureCrewMoraleState();
   const awayPenalty = timeAwayFromPortPenalty();
-  const score = (c.moraleBase || 55) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
+  const score = (c.moraleBase ?? 55) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
   return Math.max(0, Math.min(135, score));
 }
 
@@ -81,7 +81,7 @@ function adjustCrewMoraleBase(delta, livingOnly=true){
   ensureCrewMoraleState();
   (G.crew||[]).forEach(c=>{
     if(livingOnly && c.hp <= 0) return;
-    c.moraleBase = Math.max(0, Math.min(100, (c.moraleBase || 55) + delta));
+    c.moraleBase = Math.max(0, Math.min(100, (c.moraleBase ?? 55) + delta));
   });
   updateCrewLowMoraleFlags();
 }
@@ -91,7 +91,7 @@ function applyCrewDeathMorale(deadCrew){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.grief = Math.min(45, (c.grief || 0) + 14);
-    c.moraleBase = Math.max(0, (c.moraleBase || 55) - 8);
+    c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 8);
   });
   if(deadCrew?.length && G.crew.some(c=>c.hp>0)){
     const names = deadCrew.map(crewDisplayName).join(', ');
@@ -105,7 +105,7 @@ function boostCrewFromDrink(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drinkGlow = Math.min(16, (c.drinkGlow || 0) + 6);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 3);
+    c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 3);
     c.grief = Math.max(0, (c.grief || 0) - 2);
   });
   updateCrewLowMoraleFlags();
@@ -116,7 +116,7 @@ function boostCrewFromDrugs(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drugRush = Math.min(60, (c.drugRush || 0) + 48);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 6);
+    c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 6);
     c.grief = Math.max(0, (c.grief || 0) - 4);
   });
   updateCrewLowMoraleFlags();
@@ -127,7 +127,7 @@ function boostCrewFromMildAntidepressants(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drugRush = Math.min(28, (c.drugRush || 0) + 16);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 2);
+    c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 2);
     c.grief = Math.max(0, (c.grief || 0) - 6);
   });
   updateCrewLowMoraleFlags();
@@ -150,7 +150,7 @@ function processCrewPayrollAtStarbase(stationName){
   }
   payable.forEach(c=>{
     c.unpaidDocks = Math.min(4, (c.unpaidDocks || 0) + 1);
-    c.moraleBase = Math.max(0, (c.moraleBase || 55) - 10);
+    c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 10);
   });
   G.lastPayrollTurn = G.turn || 1;
   addLog('You cannot cover crew payroll at '+stationName+'. Morale takes a hit.','lw');

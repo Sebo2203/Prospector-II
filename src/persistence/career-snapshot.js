@@ -16,6 +16,12 @@ function serializeCareer(game){
     }
   }
   const snapshot = {...game,saveVersion:CAREER_SAVE_VERSION};
+  for(const [key,planet] of Object.entries(game.planets)){
+    if(planet.isUnderwater && planet.civilization && planet.civilization===game.planets[planet.sourcePlanet]?.civilization){
+      if(snapshot.planets===game.planets) snapshot.planets = {...game.planets};
+      snapshot.planets[key] = {...planet,civilization:undefined,civilizationFromSurface:true};
+    }
+  }
   if(game.dialogue){
     const context = {...game.dialogue.context};
     if(context.crew) context.crew = context.crew._careerId;
@@ -68,6 +74,14 @@ function parseSaveSnapshot(raw){
 }
 
 function resolveCareerReferences(game){
+  for(const planet of Object.values(game.planets)){
+    if(!planet || typeof planet!=='object') throw invalidCareerSave();
+    if(!planet.civilizationFromSurface) continue;
+    const owner = game.planets[planet.sourcePlanet];
+    if(!planet.isUnderwater || owner?.isUnderwater || owner?.civilization?.species!=='Aquatic') throw invalidCareerSave();
+    planet.civilization = owner.civilization;
+    delete planet.civilizationFromSurface;
+  }
   const ids = new Set();
   const rosters = {};
   if(!Number.isSafeInteger(game.entitySerial) || game.entitySerial<0) throw invalidCareerSave();

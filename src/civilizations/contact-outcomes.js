@@ -79,7 +79,7 @@ function civAidText(civ, state){
   const treatment = civHealCrewByTier(civ);
   if(civ.tier === 'primitive'){
     const traits = civ.traits || {};
-    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase || 55) + 1); });
+    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 1); });
     const effect = treatment.healed ? '\n\nCrew injuries recover by '+treatment.healed+' total HP.' : '';
     if(traits.diet === 'herbivore') return 'They bring water, edible plants, and something wrapped in broad leaves. It is simple and exactly what is needed.'+effect;
     if(traits.diet === 'carnivore') return 'They leave fresh-killed game and a clear gesture toward a sheltered area. Practical help, no ceremony.'+effect;
@@ -88,7 +88,7 @@ function civAidText(civ, state){
     return 'They offer water, shelter, and a place to rest. It helps more than the instruments can measure.'+effect;
   }
   if(civ.tier === 'tribal'){
-    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase || 55) + 1); });
+    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 1); });
     const tTraits = civ.traits || {};
     const healNote = treatment.healed ? '\n\nCrew injuries recover by '+treatment.healed+' total HP.' : '';
     if(tTraits.ritual === 'animist') return 'They bring prepared plants, stripped bark, and something that smells medicinal. The animist relationship with the land runs to practical knowledge — they know what heals and they share it without hesitation.'+healNote;

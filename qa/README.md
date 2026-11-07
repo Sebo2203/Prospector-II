@@ -69,6 +69,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `ships` | 384 ship/direction/background/opacity combinations, transparency, subtle radio glyphs over space/nebulae, role/combat art, sensor concealment and ASCII |
 | `ship-previews` | Native ship-selection and hull-change screenshots, old/new ship compositing comparison |
 | `turns` | Oxygen, daylight and crew status during surface fire and waiting, paid orbital scans, and one turn per casino event |
+| `worldgen` | Reachable inhabited aquatic settlements across 100 native worlds, shared underwater diplomacy after reload, and morale at zero |
 | `encounters` | One hidden Mercy at generation, seeded repeatability, sensor-only detection, no exploration spawns, save/load and explicit debug boarding |
 | `rescue` | 15 spatial Mercy rescue scenarios using real door, movement, medicine, carrying, transport and handoff actions |
 | `career` | 54 fixture-assisted renewable contract completions across three hulls, station sales, provenance, reloads and physical research-console recovery |
@@ -76,8 +77,6 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `autosave` | Actual IndexedDB failure/recovery, large saves/reload, stale windows, import/export and save-before-transition behavior |
 
 `fixtures/palette-orbit-baseline.js` is the original `src/rendering/system.js` from gameplay commit `826210e`, before the shared body-art extraction. It is a visual regression reference, not production code. Do not regenerate it from current code just to make a comparison pass.
-
-`node qa/foundation-worldgen.cjs` is a separate diagnostic for the already documented dry-aquatic-world defect. It reports current counts rather than asserting that the known defect is fixed; it is not part of the passing suite. Broader older ad hoc foundation scripts assumed synchronous legacy storage and are superseded by the maintained autosave suite and repository tests.
 
 Keep these scripts with relevant code changes. Add a focused scenario for a changed behavior, rebuild `index.html`, and run the affected suite. Do not edit production code or weaken assertions merely to make an existing fixture/controller work. Report manual readability, desktop behavior and whole-career balance separately from scripted evidence.
 

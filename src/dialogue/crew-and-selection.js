@@ -22,7 +22,7 @@ function crewMoraleBreakdown(c){
   if(!c) return [];
   const awayPenalty = timeAwayFromPortPenalty();
   const rows = [
-    { label:'Base outlook', value:c.moraleBase || 55, col:'#88ccff' },
+    { label:'Base outlook', value:c.moraleBase ?? 55, col:'#88ccff' },
   ];
   if((c.drinkGlow || 0) > 0) rows.push({ label:'Recent drinks', value:'+'+c.drinkGlow, col:'#ffaa44' });
   if((c.drugRush || 0) > 0) rows.push({ label:'Chemical lift', value:'+'+c.drugRush, col:'#d488ff' });

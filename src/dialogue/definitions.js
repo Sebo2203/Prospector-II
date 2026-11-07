@@ -2226,7 +2226,7 @@ const DIALOGUE_DEFS = {
         onEnter: ctx => {
           const c = dialogueCrew() || ctx.crew;
           markCrewEncouragementAttempt();
-          if(c){ c.moraleBase = Math.min(100, (c.moraleBase || 55) + 3); updateCrewLowMoraleFlags(); }
+          if(c){ c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 3); updateCrewLowMoraleFlags(); }
         },
         options: [
           { label:'Continue', next:'root' },

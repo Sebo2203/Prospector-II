@@ -174,8 +174,7 @@ function generateCivDescriptor(pKey){
 }
 
 // Place civilization structures onto a planet grid
-function placeCivilization(pKey, grid){
-  const civ = generateCivDescriptor(pKey);
+function placeCivilization(pKey, grid, civ=generateCivDescriptor(pKey)){
   if(!civ) return null;
 
   // Aquatic civilizations live entirely underwater — their structures and roam
@@ -216,6 +215,10 @@ function placeCivilization(pKey, grid){
   }
   if(placed === 0) return null;
   return civ;
+}
+
+function aquaticHabitatContains(habitat,x,y){
+  return x>=habitat.x && x<habitat.x+habitat.size && y>=habitat.y && y<habitat.y+habitat.size;
 }
 
 function ensureCivilizationState(pdata){

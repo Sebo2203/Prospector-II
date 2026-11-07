@@ -435,7 +435,7 @@ function applyHallucinogenicExposure(){
       const target = living.length ? living[rnd(living.length)] : null;
       if(target){
         if(Math.random() < 0.55){
-          target.moraleBase = Math.max(0, (target.moraleBase || 55) - (1 + rnd(3)));
+          target.moraleBase = Math.max(0, (target.moraleBase ?? 55) - (1 + rnd(3)));
           addLog(crewDisplayName(target)+' nearly loses composure.','lw');
         } else {
           const dmg = 1 + rnd(strength);
@@ -600,7 +600,7 @@ function tickCrewStatuses(){
           s.tick = 0;
           const dmg = Math.max(1, Math.floor(sev / 2));
           if(!DEBUG.infiniteCrewHp) c.hp = Math.max(0, c.hp - dmg);
-          c.moraleBase = Math.max(0, (c.moraleBase || 55) - 1);
+          c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 1);
           addLog(crewDisplayName(c)+' is burning with fever. -'+dmg+' HP.','lw');
         }
         s.progressCounter = (s.progressCounter || 0) + 1;
@@ -690,7 +690,7 @@ function tickCrewStatuses(){
         s.painCounter = (s.painCounter || 0) + 1;
         if(s.painCounter >= 18){
           s.painCounter = 0;
-          c.moraleBase = Math.max(0, (c.moraleBase || 55) - 1);
+          c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 1);
           const def = CREW_STATUS_DEFS[s.id] || { label:'injury' };
           addLog(crewDisplayName(c)+' is worn down by untreated '+def.label.toLowerCase()+'.','lw');
           if(s.id === 'burns') maybeExposeCrewToInfection(c, 0.02, 'burns',

@@ -23,9 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
-## 2026-11-07 — 0.28 experimental.46 stabilizes save identity
+## 2026-11-07 — 0.28 experimental.46 stabilizes saves, turns and generation
 
 Development on `experiment/expedition-legacy`.
+
+### World generation and morale
+
+- Aquatic civilizations now have a connected basin next to the default landing site. Settlements and locals spawn inside it, and seabed obstacles stay outside that footprint. Surface and underwater views share the civilization's diplomacy state after a reload. Hostile primitive locals now initialize with their own description.
+- A base morale of zero remains zero until a real modifier applies. The crew screen uses the same value as the morale rules.
+- All 47 repository tests passed. The seeded Edge regression verified reachable inhabitants across 100 native aquatic worlds and all five technology tiers. It also checked diplomacy after reload and morale moving from 0 to 3 and back to 0. Freshly generated planets use the new terrain rules.
 
 ### Action timing
 

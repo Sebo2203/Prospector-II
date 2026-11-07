@@ -6647,8 +6647,10 @@ function generateUnderwaterMap(key, surfaceKey){
   const W = PLANET_W, H = PLANET_H;
   G.enemies[key] = [];
 
-  const surfaceGrid = G.planets[surfaceKey]?.grid;
+  const surface = G.planets[surfaceKey];
+  const surfaceGrid = surface?.grid;
   if(!surfaceGrid){ return; }
+  const habitat = surface.aquaticHabitat;
 
   // Build overlay grid
   const grid = [];
@@ -6660,7 +6662,7 @@ function generateUnderwaterMap(key, surfaceKey){
       const isWater = surfType === 'EARTH_WATER';
       const cell = isWater ? {type:'uw_floor'} : {type:'uw_wall'};
       row.push(cell);
-      if(isWater) floors.push({x,y});
+      if(isWater && !(habitat && aquaticHabitatContains(habitat,x,y))) floors.push({x,y});
     }
     grid.push(row);
   }
@@ -6686,7 +6688,7 @@ function generateUnderwaterMap(key, surfaceKey){
       if(dx*dx+dy*dy>r*r+r) continue;
       const tx=cx+dx, ty=cy+dy;
       if(tx<0||ty<0||tx>=W||ty>=H) continue;
-      if(grid[ty][tx].type==='uw_floor' && Math.random()<0.50){
+      if(grid[ty][tx].type==='uw_floor' && !(habitat && aquaticHabitatContains(habitat,tx,ty)) && Math.random()<0.50){
         grid[ty][tx]={type:'uw_kelp'};
         const fi=floors.findIndex(f=>f.x===tx&&f.y===ty);
         if(fi>=0) floors.splice(fi,1);
@@ -6712,7 +6714,7 @@ function generateUnderwaterMap(key, surfaceKey){
 
   G.planets[key]={
     grid,
-    biome:'UNDERWATER', isUnderwater:true, sourcePlanet:surfaceKey,
+    biome:'UNDERWATER', isUnderwater:true, sourcePlanet:surfaceKey, aquaticHabitat:habitat,
     visited:  new Array(W*H).fill(false),
     explored: new Array(W*H).fill(false),
     planetTurn:0, surveySoldValue:0, spawnedAliens:0,
@@ -6726,7 +6728,9 @@ function generateUnderwaterMap(key, surfaceKey){
     const uwPdata = G.planets[key];
     const uwFloors = [];
     for(let fy=1;fy<H-1;fy++) for(let fx=1;fx<W-1;fx++){
-      if(grid[fy][fx]?.type === 'uw_floor') uwFloors.push({x:fx,y:fy});
+      if(grid[fy][fx]?.type === 'uw_floor' && (!habitat || aquaticHabitatContains(habitat,fx,fy))){
+        uwFloors.push({x:fx,y:fy});
+      }
     }
     for(let i=uwFloors.length-1;i>0;i--){ const j=rnd(i+1); [uwFloors[i],uwFloors[j]]=[uwFloors[j],uwFloors[i]]; }
     if(surfaceCiv.tier === 'primitive'){
@@ -7182,8 +7186,7 @@ function generateCivDescriptor(pKey){
 }
 
 // Place civilization structures onto a planet grid
-function placeCivilization(pKey, grid){
-  const civ = generateCivDescriptor(pKey);
+function placeCivilization(pKey, grid, civ=generateCivDescriptor(pKey)){
   if(!civ) return null;
 
   // Aquatic civilizations live entirely underwater — their structures and roam
@@ -7224,6 +7227,10 @@ function placeCivilization(pKey, grid){
   }
   if(placed === 0) return null;
   return civ;
+}
+
+function aquaticHabitatContains(habitat,x,y){
+  return x>=habitat.x && x<habitat.x+habitat.size && y>=habitat.y && y<habitat.y+habitat.size;
 }
 
 function ensureCivilizationState(pdata){
@@ -8050,6 +8057,7 @@ function spawnCivilizationLocals(key, pdata){
 
     function canStand(x,y){
       if(x<0||x>=PW(pdata)||y<0||y>=PH(pdata)) return false;
+      if(pdata.aquaticHabitat && !aquaticHabitatContains(pdata.aquaticHabitat,x,y)) return false;
       if(occupied.has(x+','+y)) return false;
       const t = pdata.grid[y]?.[x]?.type;
       return !!TILE[t]?.pass && !badTiles.has(t);
@@ -8082,6 +8090,7 @@ function spawnCivilizationLocals(key, pdata){
       : traits.social === 'collective'
       ? 'One of a band of hunter-gatherers. They do not act alone.'
       : 'A hunter-gatherer moving through their territory.';
+    const localDescHostile = 'A hunter moving to intercept the crew.';
 
     for(let i=0; i<count; i++){
       if(!pool.length) break;
@@ -8884,7 +8893,7 @@ function applyHallucinogenicExposure(){
       const target = living.length ? living[rnd(living.length)] : null;
       if(target){
         if(Math.random() < 0.55){
-          target.moraleBase = Math.max(0, (target.moraleBase || 55) - (1 + rnd(3)));
+          target.moraleBase = Math.max(0, (target.moraleBase ?? 55) - (1 + rnd(3)));
           addLog(crewDisplayName(target)+' nearly loses composure.','lw');
         } else {
           const dmg = 1 + rnd(strength);
@@ -9049,7 +9058,7 @@ function tickCrewStatuses(){
           s.tick = 0;
           const dmg = Math.max(1, Math.floor(sev / 2));
           if(!DEBUG.infiniteCrewHp) c.hp = Math.max(0, c.hp - dmg);
-          c.moraleBase = Math.max(0, (c.moraleBase || 55) - 1);
+          c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 1);
           addLog(crewDisplayName(c)+' is burning with fever. -'+dmg+' HP.','lw');
         }
         s.progressCounter = (s.progressCounter || 0) + 1;
@@ -9139,7 +9148,7 @@ function tickCrewStatuses(){
         s.painCounter = (s.painCounter || 0) + 1;
         if(s.painCounter >= 18){
           s.painCounter = 0;
-          c.moraleBase = Math.max(0, (c.moraleBase || 55) - 1);
+          c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 1);
           const def = CREW_STATUS_DEFS[s.id] || { label:'injury' };
           addLog(crewDisplayName(c)+' is worn down by untreated '+def.label.toLowerCase()+'.','lw');
           if(s.id === 'burns') maybeExposeCrewToInfection(c, 0.02, 'burns',
@@ -9272,7 +9281,7 @@ function timeAwayFromPortPenalty(){
 function crewMoraleScore(c){
   ensureCrewMoraleState();
   const awayPenalty = timeAwayFromPortPenalty();
-  const score = (c.moraleBase || 55) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
+  const score = (c.moraleBase ?? 55) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
   return Math.max(0, Math.min(135, score));
 }
 
@@ -9298,7 +9307,7 @@ function adjustCrewMoraleBase(delta, livingOnly=true){
   ensureCrewMoraleState();
   (G.crew||[]).forEach(c=>{
     if(livingOnly && c.hp <= 0) return;
-    c.moraleBase = Math.max(0, Math.min(100, (c.moraleBase || 55) + delta));
+    c.moraleBase = Math.max(0, Math.min(100, (c.moraleBase ?? 55) + delta));
   });
   updateCrewLowMoraleFlags();
 }
@@ -9308,7 +9317,7 @@ function applyCrewDeathMorale(deadCrew){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.grief = Math.min(45, (c.grief || 0) + 14);
-    c.moraleBase = Math.max(0, (c.moraleBase || 55) - 8);
+    c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 8);
   });
   if(deadCrew?.length && G.crew.some(c=>c.hp>0)){
     const names = deadCrew.map(crewDisplayName).join(', ');
@@ -9322,7 +9331,7 @@ function boostCrewFromDrink(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drinkGlow = Math.min(16, (c.drinkGlow || 0) + 6);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 3);
+    c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 3);
     c.grief = Math.max(0, (c.grief || 0) - 2);
   });
   updateCrewLowMoraleFlags();
@@ -9333,7 +9342,7 @@ function boostCrewFromDrugs(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drugRush = Math.min(60, (c.drugRush || 0) + 48);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 6);
+    c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 6);
     c.grief = Math.max(0, (c.grief || 0) - 4);
   });
   updateCrewLowMoraleFlags();
@@ -9344,7 +9353,7 @@ function boostCrewFromMildAntidepressants(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drugRush = Math.min(28, (c.drugRush || 0) + 16);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 2);
+    c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 2);
     c.grief = Math.max(0, (c.grief || 0) - 6);
   });
   updateCrewLowMoraleFlags();
@@ -9367,7 +9376,7 @@ function processCrewPayrollAtStarbase(stationName){
   }
   payable.forEach(c=>{
     c.unpaidDocks = Math.min(4, (c.unpaidDocks || 0) + 1);
-    c.moraleBase = Math.max(0, (c.moraleBase || 55) - 10);
+    c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 10);
   });
   G.lastPayrollTurn = G.turn || 1;
   addLog('You cannot cover crew payroll at '+stationName+'. Morale takes a hit.','lw');
@@ -11973,8 +11982,39 @@ function generateHabitablePlanet(key){
     grid.push(row);
   }
 
-  // ── Loot (only on walkable non-water tiles) ─────────────────────
+  const civ = generateCivDescriptor(key);
   const floor = 'EARTH_FLOOR';
+  function chooseLandingPoint(){
+    for(const [type,attempts] of [[floor,500],['EARTH_WATER',500]]){
+      for(let i=0;i<attempts;i++){
+        const x=1+rnd(W-2), y=1+rnd(H-2);
+        if(grid[y][x].type===type) return {x,y};
+      }
+    }
+    return {x:Math.floor(W/2),y:Math.floor(H/2)};
+  }
+  let landing, aquaticHabitat;
+  if(civ?.species==='Aquatic'){
+    landing = chooseLandingPoint();
+    const size = Math.max(7,Math.ceil(Math.sqrt(civ.count+8)));
+    const y = Math.max(1,Math.min(H-size-1,landing.y-Math.floor(size/2)));
+    const shores = [landing.x-size,landing.x+1].filter(x=>x>=1 && x+size<W);
+    // Prefer the shore that already has the most water. Reserve a contiguous
+    // basin before scattering pickups and wildlife over the surface.
+    const waterCount = x=>{
+      let count = 0;
+      for(let row=y;row<y+size;row++) for(let col=x;col<x+size;col++){
+        if(grid[row][col].type==='EARTH_WATER') count++;
+      }
+      return count;
+    };
+    const x = shores.sort((a,b)=>waterCount(b)-waterCount(a))[0];
+    aquaticHabitat = {x,y,size};
+    for(let row=y;row<y+size;row++) for(let col=x;col<x+size;col++) grid[row][col]={type:'EARTH_WATER'};
+    grid[landing.y][landing.x].type='SHIP';
+  }
+
+  // ── Loot (only on walkable non-water tiles) ─────────────────────
   for(let i=0;i<B.minerals;i++) placeTile(grid,'MINERAL',floor);
 
   // ── Enemies + Nests ──────────────────────────────────────────────
@@ -11984,25 +12024,18 @@ function generateHabitablePlanet(key){
     for(let i=0;i<B.biodata;i++) placeTile(grid,'BIODATA',floor);
   }
 
-  // ── Ship landing pad — must be on open ground ────────────────────
-  let sx,sy,st=0;
-  do{ sx=1+rnd(W-2); sy=1+rnd(H-2); st++; }
-  while(grid[sy][sx].type!==floor && st<500);
-  // Fallback: if no open ground found (ocean world), place on water
-  if(st>=500){
-    do{ sx=1+rnd(W-2); sy=1+rnd(H-2); st++; }
-    while(grid[sy][sx].type!=='EARTH_WATER' && st<1000);
-  }
+  const {x:sx,y:sy} = landing || chooseLandingPoint();
   grid[sy][sx].type='SHIP';
 
   G.planets[key]={ grid, spawnX:sx, spawnY:sy, biome:'HABITABLE', visited: new Array(W*H).fill(false), explored: new Array(W*H).fill(false), planetTurn:0, surveySoldValue:0, spawnedAliens: enemies.length };
+  if(aquaticHabitat) G.planets[key].aquaticHabitat=aquaticHabitat;
   G.enemies[key]=enemies;
   if(spawnCreatures._pendingTemplates){
     G.planets[key].creatureTemplates = spawnCreatures._pendingTemplates;
     spawnCreatures._pendingTemplates = null;
   }
   // Place civilization structures (habitable planets only)
-  const civData = placeCivilization(key, grid);
+  const civData = placeCivilization(key, grid, civ);
   if(civData){
     G.planets[key].civilization = civData;
     G.enemies[key].push(...spawnCivilizationLocals(key, G.planets[key]));
@@ -21195,7 +21228,7 @@ function crewMoraleBreakdown(c){
   if(!c) return [];
   const awayPenalty = timeAwayFromPortPenalty();
   const rows = [
-    { label:'Base outlook', value:c.moraleBase || 55, col:'#88ccff' },
+    { label:'Base outlook', value:c.moraleBase ?? 55, col:'#88ccff' },
   ];
   if((c.drinkGlow || 0) > 0) rows.push({ label:'Recent drinks', value:'+'+c.drinkGlow, col:'#ffaa44' });
   if((c.drugRush || 0) > 0) rows.push({ label:'Chemical lift', value:'+'+c.drugRush, col:'#d488ff' });
@@ -23736,7 +23769,7 @@ function civAidText(civ, state){
   const treatment = civHealCrewByTier(civ);
   if(civ.tier === 'primitive'){
     const traits = civ.traits || {};
-    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase || 55) + 1); });
+    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 1); });
     const effect = treatment.healed ? '\n\nCrew injuries recover by '+treatment.healed+' total HP.' : '';
     if(traits.diet === 'herbivore') return 'They bring water, edible plants, and something wrapped in broad leaves. It is simple and exactly what is needed.'+effect;
     if(traits.diet === 'carnivore') return 'They leave fresh-killed game and a clear gesture toward a sheltered area. Practical help, no ceremony.'+effect;
@@ -23745,7 +23778,7 @@ function civAidText(civ, state){
     return 'They offer water, shelter, and a place to rest. It helps more than the instruments can measure.'+effect;
   }
   if(civ.tier === 'tribal'){
-    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase || 55) + 1); });
+    G.crew.filter(c=>c.hp>0).forEach(c=>{ c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 1); });
     const tTraits = civ.traits || {};
     const healNote = treatment.healed ? '\n\nCrew injuries recover by '+treatment.healed+' total HP.' : '';
     if(tTraits.ritual === 'animist') return 'They bring prepared plants, stripped bark, and something that smells medicinal. The animist relationship with the land runs to practical knowledge — they know what heals and they share it without hesitation.'+healNote;
@@ -27203,7 +27236,7 @@ const DIALOGUE_DEFS = {
         onEnter: ctx => {
           const c = dialogueCrew() || ctx.crew;
           markCrewEncouragementAttempt();
-          if(c){ c.moraleBase = Math.min(100, (c.moraleBase || 55) + 3); updateCrewLowMoraleFlags(); }
+          if(c){ c.moraleBase = Math.min(100, (c.moraleBase ?? 55) + 3); updateCrewLowMoraleFlags(); }
         },
         options: [
           { label:'Continue', next:'root' },
@@ -35180,6 +35213,12 @@ function serializeCareer(game){
     }
   }
   const snapshot = {...game,saveVersion:CAREER_SAVE_VERSION};
+  for(const [key,planet] of Object.entries(game.planets)){
+    if(planet.isUnderwater && planet.civilization && planet.civilization===game.planets[planet.sourcePlanet]?.civilization){
+      if(snapshot.planets===game.planets) snapshot.planets = {...game.planets};
+      snapshot.planets[key] = {...planet,civilization:undefined,civilizationFromSurface:true};
+    }
+  }
   if(game.dialogue){
     const context = {...game.dialogue.context};
     if(context.crew) context.crew = context.crew._careerId;
@@ -35232,6 +35271,14 @@ function parseSaveSnapshot(raw){
 }
 
 function resolveCareerReferences(game){
+  for(const planet of Object.values(game.planets)){
+    if(!planet || typeof planet!=='object') throw invalidCareerSave();
+    if(!planet.civilizationFromSurface) continue;
+    const owner = game.planets[planet.sourcePlanet];
+    if(!planet.isUnderwater || owner?.isUnderwater || owner?.civilization?.species!=='Aquatic') throw invalidCareerSave();
+    planet.civilization = owner.civilization;
+    delete planet.civilizationFromSurface;
+  }
   const ids = new Set();
   const rosters = {};
   if(!Number.isSafeInteger(game.entitySerial) || game.entitySerial<0) throw invalidCareerSave();

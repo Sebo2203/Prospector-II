@@ -198,8 +198,10 @@ function generateUnderwaterMap(key, surfaceKey){
   const W = PLANET_W, H = PLANET_H;
   G.enemies[key] = [];
 
-  const surfaceGrid = G.planets[surfaceKey]?.grid;
+  const surface = G.planets[surfaceKey];
+  const surfaceGrid = surface?.grid;
   if(!surfaceGrid){ return; }
+  const habitat = surface.aquaticHabitat;
 
   // Build overlay grid
   const grid = [];
@@ -211,7 +213,7 @@ function generateUnderwaterMap(key, surfaceKey){
       const isWater = surfType === 'EARTH_WATER';
       const cell = isWater ? {type:'uw_floor'} : {type:'uw_wall'};
       row.push(cell);
-      if(isWater) floors.push({x,y});
+      if(isWater && !(habitat && aquaticHabitatContains(habitat,x,y))) floors.push({x,y});
     }
     grid.push(row);
   }
@@ -237,7 +239,7 @@ function generateUnderwaterMap(key, surfaceKey){
       if(dx*dx+dy*dy>r*r+r) continue;
       const tx=cx+dx, ty=cy+dy;
       if(tx<0||ty<0||tx>=W||ty>=H) continue;
-      if(grid[ty][tx].type==='uw_floor' && Math.random()<0.50){
+      if(grid[ty][tx].type==='uw_floor' && !(habitat && aquaticHabitatContains(habitat,tx,ty)) && Math.random()<0.50){
         grid[ty][tx]={type:'uw_kelp'};
         const fi=floors.findIndex(f=>f.x===tx&&f.y===ty);
         if(fi>=0) floors.splice(fi,1);
@@ -263,7 +265,7 @@ function generateUnderwaterMap(key, surfaceKey){
 
   G.planets[key]={
     grid,
-    biome:'UNDERWATER', isUnderwater:true, sourcePlanet:surfaceKey,
+    biome:'UNDERWATER', isUnderwater:true, sourcePlanet:surfaceKey, aquaticHabitat:habitat,
     visited:  new Array(W*H).fill(false),
     explored: new Array(W*H).fill(false),
     planetTurn:0, surveySoldValue:0, spawnedAliens:0,
@@ -277,7 +279,9 @@ function generateUnderwaterMap(key, surfaceKey){
     const uwPdata = G.planets[key];
     const uwFloors = [];
     for(let fy=1;fy<H-1;fy++) for(let fx=1;fx<W-1;fx++){
-      if(grid[fy][fx]?.type === 'uw_floor') uwFloors.push({x:fx,y:fy});
+      if(grid[fy][fx]?.type === 'uw_floor' && (!habitat || aquaticHabitatContains(habitat,fx,fy))){
+        uwFloors.push({x:fx,y:fy});
+      }
     }
     for(let i=uwFloors.length-1;i>0;i--){ const j=rnd(i+1); [uwFloors[i],uwFloors[j]]=[uwFloors[j],uwFloors[i]]; }
     if(surfaceCiv.tier === 'primitive'){
