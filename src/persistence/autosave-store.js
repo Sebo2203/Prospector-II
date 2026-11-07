@@ -7,19 +7,6 @@ let autosaveBaseKnown=false,autosaveExpectedToken=null;
 
 function autosaveRecordToken(record){return record?record.savedAt+':'+record.checksum:null;}
 
-function parseSaveSnapshot(raw){
-  const game=JSON.parse(raw);
-  if(!game || !Array.isArray(game.galaxy) || !game.galaxy.length ||
-     !game.galaxy.every(row=>Array.isArray(row)&&row.length) ||
-     !Array.isArray(game.crew) || !game.crew.every(c=>c&&Number.isFinite(c.hp)) ||
-     !game.ship || !['x','y','hp','maxHp'].every(k=>Number.isFinite(game.ship[k])) ||
-     !Number.isFinite(game.turn) || typeof game.mode!=='string' ||
-     !game.galaxy[game.ship.y]?.[game.ship.x] || game.debugPalette){
-    throw new Error('This file does not contain a valid career save.');
-  }
-  return game;
-}
-
 function autosaveChecksum(raw){
   let hash=0x811c9dc5;
   for(let i=0;i<raw.length;i++)hash=Math.imul(hash^raw.charCodeAt(i),0x01000193);

@@ -3,12 +3,9 @@
 //
 //  Three mechanisms:
 //    autoSave()      — commits a captured snapshot to IndexedDB
-//    saveToFile()    — downloads G as prospector_save.json
+//    saveToFile()    — downloads a career snapshot as prospector_save.json
 //    loadFromFile()  — reads a .json file the player picks
-//    loadFromStorage()— restores IndexedDB, with legacy localStorage import
-//
-//  G.visited is a plain Array (JSON-safe).
-//  Everything else in G is primitives, arrays, plain objects — safe.
+//    loadFromStorage()— restores a validated career snapshot from IndexedDB
 // ─────────────────────────────────────────────────────────────────
 const SAVE_KEY = 'prospector_autosave';
 const AUTOSAVE_STATE={phase:'idle',record:null,error:null,notice:'',ready:false,revision:0,loading:false};
@@ -61,7 +58,7 @@ function autoSave(){
   if(!G || G.debugPalette)return Promise.resolve(true);
   try {
     // Capture now: queued writes never read a later game or debug world.
-    return autosaveQueue.save(makeAutosaveRecord(JSON.stringify(G)));
+    return autosaveQueue.save(makeAutosaveRecord(serializeCareer(G)));
   } catch(e) {
     AUTOSAVE_STATE.phase='error';AUTOSAVE_STATE.error=e;renderAutosaveStatus();
     return Promise.resolve(false);
@@ -83,8 +80,11 @@ async function readStoredAutosave(){
     const raw=localStorage.getItem(SAVE_KEY);
     if(raw){const record=makeAutosaveRecord(raw);return {record,source:'legacy',recovered:!!(slots?.current||slots?.previous),storageError:error,baseToken:autosaveRecordToken(slots?.current)};}
   }catch(e){if(!error)error=e;}
+  if(slots?.current || slots?.previous){
+    if(!error)error=new Error('Neither autosave copy is readable in this build. Import a current save or start a new career.');
+    error.baseToken=autosaveRecordToken(slots.current);
+  }
   if(error)throw error;
-  if(slots?.current||slots?.previous)throw new Error('Neither autosave copy is readable. Import a saved file to recover.');
   return null;
 }
 
@@ -97,7 +97,12 @@ async function refreshSavedGameMenu(){
       if(G===null && !autosaveQueue.busy){autosaveBaseKnown=true;autosaveExpectedToken=saved?.baseToken||null;}
     }
     if(saved?.storageError)throw saved.storageError;
-  }catch(error){AUTOSAVE_STATE.error=error;AUTOSAVE_STATE.phase='error';}
+  }catch(error){
+    if(revision===AUTOSAVE_STATE.revision && G===null && !autosaveQueue.busy && 'baseToken' in error){
+      autosaveBaseKnown=true;autosaveExpectedToken=error.baseToken;
+    }
+    AUTOSAVE_STATE.error=error;AUTOSAVE_STATE.phase='error';
+  }
   if(G===null){MENU_STATE.hasAutosave=hasSave();drawMenuScreen();}
   renderAutosaveStatus();
 }
@@ -111,7 +116,7 @@ async function saveToFile(){
   if(G?.debugPalette){addLog('DEBUG: Use Return to Career in the Debug Palette before exporting a save.','li');renderAll();return;}
   const active=G;
   try {
-    const raw = active ? JSON.stringify(active) : (await readStoredAutosave())?.record.raw;
+    const raw = active ? serializeCareer(active) : (await readStoredAutosave())?.record.raw;
     if(!raw) throw new Error('No save data');
     const json = JSON.stringify(JSON.parse(raw), null, 2);
     const blob = new Blob([json], {type:'application/json'});
@@ -143,75 +148,7 @@ function installSaveSnapshot(loaded){
     ensureExpeditionState();
     restoreStrandedShipMarkers();
     removeInteriorOreDeposits(G.planets);
-    // Back-compat: old saves won't have shipStats or cargo
-    if(!G.shipStats) G.shipStats = buildShipStats('LIGHT_SCOUT');
-    if(!G.cargo)     G.cargo = [];
-    if(G.maxFuel === undefined) G.maxFuel = G.shipStats.maxFuel;
-    if(!G.installedWeapons){
-      G.installedWeapons = [];
-      if((G.shipStats.weaponSlots||0) > 0)
-        G.installedWeapons[0] = (G.shipStats.classId === 'ATTACK_CORVETTE') ? 'railgun' : 'mass_driver';
-    }
-    if(!G.installedModules) G.installedModules = [];
-    if(!G.seed) G.seed = Math.floor(Math.random() * 0xFFFFFF); // back-compat
-    // Patch pirate bases — old saves lack hp/destroyed/lastRespawn
-    if(G.pirateBases) G.pirateBases.forEach(pb=>{
-      if(pb.hp === undefined)   pb.hp         = 1000;
-      if(pb.maxHp === undefined) pb.maxHp     = 1000;
-      if(pb.destroyed === undefined) pb.destroyed = false;
-      if(pb.lastRespawn === undefined) pb.lastRespawn = 0;
-    });
-    if(G.pirateBases && G._pirateGuardPerBaseTarget === undefined){
-      const guardTarget = G._pirateGuardTarget || scaledGalaxyCount(8, 5);
-      G._pirateGuardPerBaseTarget = Math.max(1, Math.ceil(guardTarget / 2));
-      G._pirateGuardTarget = G._pirateGuardPerBaseTarget * Math.max(1, G.pirateBases.length);
-    }
-    // Patch pirates — old saves lack pirateType / chase state
-    if(G.pirates) G.pirates.forEach(p=>{
-      if(!p.pirateType) p.pirateType = 'guard';
-      if(p._chaseTurns === undefined) p._chaseTurns = 0;
-    });
-    // Patch gas entities — absent in saves before this feature
-    if(!G.gasEntities) G.gasEntities = [];
-    // Patch nebula loot — absent in saves before this feature
-    if(!G.nebulaLoot) G.nebulaLoot = [];
-    if(G._bonusMoves === undefined) G._bonusMoves = 0;
-    if(!G.npcStranded) G.npcStranded = [];
-    if(G._caveReturn===undefined) G._caveReturn=null;
-    if(!G.derelicts) G.derelicts = [];
-    if(G._ancientStationPlaced===undefined) G._ancientStationPlaced=false;
-    // _specialPlanetType/_specialPlanetPlaced removed: specials now roll independently per planet.
-    if(!G._stationCorps){
-      const _corpPool = CORPORATIONS.slice().sort(() => Math.random() - 0.5);
-      G._stationCorps = {
-        'Starbase Alpha': _corpPool[0].id,
-        'Waypoint Omega':  _corpPool[1].id,
-      };
-    }
-    if(G.planets) Object.entries(G.planets).forEach(([key,p])=>{
-      // (small station migration removed)
-    });
-    // Patch crew — old saves won't have skills or _skillXp
-    if(G.crew) G.crew.forEach(c=>{
-      if(!c.skills){
-        const base = ROLE_STARTING_SKILLS[c.role] || { nav:0, sci:0, cbt:0, soc:0, med:0, eng:0 };
-        c.skills = { ...base };
-      }
-      if(c.skills.com !== undefined){
-        if(c.skills.cbt === undefined) c.skills.cbt = c.skills.com;
-        if(c.skills.soc === undefined) c.skills.soc = c.role === 'captain' ? Math.max(4, c.skills.com) : Math.max(0, Math.floor(c.skills.com/2));
-        delete c.skills.com;
-      }
-      ['nav','sci','cbt','soc','med','eng'].forEach(sk=>{ if(c.skills[sk] === undefined) c.skills[sk] = 0; });
-      if(!c._skillXp) c._skillXp = {};
-      if(c._skillXp.com !== undefined){
-        c._skillXp.cbt = (c._skillXp.cbt || 0) + c._skillXp.com;
-        delete c._skillXp.com;
-      }
-      if(!c.statuses) c.statuses = {};
-    });
     ensureCrewStatusState();
-    restoreShipCombatArena();
     return G;
   }catch(error){G=before;throw error;}
 }

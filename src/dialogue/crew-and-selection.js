@@ -130,7 +130,7 @@ function crewDialogueAction(topic){
 function dialogueCrew(){
   const dlg = G?.dialogue;
   if(!dlg || (dlg.id !== 'crew_basic' && dlg.id !== 'captain_log')) return null;
-  const name = dlg.context?.crewName;
-  return (G.crew||[]).find(c=>c.hp>0 && c.name===name) || selectedCrewMember();
+  const crew = dlg.context?.crew;
+  return crew?.hp>0 && G.crew.includes(crew) ? crew : null;
 }
 

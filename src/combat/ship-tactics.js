@@ -18,7 +18,7 @@ function createShipCombatArena(combat, ships){
   combat.enemies = ships.map((ship,i)=>{
     const collection = shipCombatCollection(ship);
     const [x,y] = positions[i];
-    return {ship,collection,index:(G[collection]||[]).indexOf(ship),x,y,dx:-1,dy:0,
+    return {ship,collection,x,y,dx:-1,dy:0,
       shields:i===0 ? combat.pirateShields : ship.shields||0,ready:1};
   });
   combat.target = 0;
@@ -41,26 +41,6 @@ function createShipCombatArena(combat, ships){
        shipCombatAsteroid(combat,point)) continue;
     combat.asteroids.push(point);
   }
-}
-
-function restoreShipCombatArena(){
-  const combat = G.shipCombat;
-  if(G.mode!=='shipcombat' || !combat?.pirate) return;
-  if(!combat.enemies){
-    const saved = combat.pirate;
-    const collection = G[shipCombatCollection(saved)]||[];
-    const ship = collection.find(entry=>entry.name===saved.name && entry.x===saved.x && entry.y===saved.y);
-    if(ship) combat.pirate = Object.assign(ship,saved);
-    combat.pirateShields ??= combat.pirate.shields||0;
-    combat.playerShields ??= G.shipStats.shields||0;
-    createShipCombatArena(combat,[combat.pirate]);
-  } else {
-    for(const enemy of combat.enemies){
-      const ship = G[enemy.collection]?.[enemy.index];
-      if(ship) enemy.ship = Object.assign(ship,enemy.ship);
-    }
-  }
-  updateShipCombatTarget(combat);
 }
 
 function livingShipCombatEnemies(combat){

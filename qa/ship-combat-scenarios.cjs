@@ -67,11 +67,17 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     });
     assert.ok(await page.evaluate(async()=>await autoSave()));
     const before=await combatState();
+    await page.evaluate(()=>{
+      // Reordering the world roster must not redirect damage or overwrite another ship.
+      G.pirates.reverse();
+    });
+    assert.ok(await page.evaluate(()=>autoSave()));
     assert.ok(await page.evaluate(async()=>await loadFromStorage()));
     assert.deepEqual(await combatState(),before);
-    assert.ok(await page.evaluate(()=>G.shipCombat.enemies.every((enemy,i)=>enemy.ship===G.pirates[i])));
+    assert.ok(await page.evaluate(()=>G.shipCombat.enemies.every((enemy,i)=>enemy.ship===G.pirates[2-i])));
     await page.evaluate(()=>{
       const combat=G.shipCombat;
+      G.pirates.reverse();
       combat.enemies.forEach(enemy=>enemy.ship.hp=8);
       combat.trails=[];
     });
@@ -114,10 +120,10 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     assert.deepEqual(await page.evaluate(()=>[G.mode,G.ship.hp]),['galaxy',retreatHp-4]);
 
     await page.evaluate(()=>{
-      const legacy=JSON.parse(JSON.stringify(G));
-      legacy.mode='shipcombat';
-      legacy.shipCombat={pirate:{...legacy.pirates[2],hp:31},playerShields:0,pirateShields:0,log:['Legacy encounter']};
-      installSaveSnapshot(legacy);
+      G.pirates[2].hp=31;
+      startShipCombat(G.pirates[2]);
+      G.shipCombat.playerShields=0;
+      installSaveSnapshot(parseSaveSnapshot(serializeCareer(G)));
       renderAll();
     });
     assert.deepEqual(await page.evaluate(()=>[G.shipCombat.pirate===G.pirates[2],G.pirates[2].hp,G.shipCombat.playerShields]),[true,31,0]);

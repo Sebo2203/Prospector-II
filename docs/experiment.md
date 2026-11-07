@@ -68,6 +68,6 @@ Docking at a major station transfers only actual onboard passengers to medical c
 
 ### Saves
 
-All deck, door, supply, repair, survivor and passenger state persists in ordinary saves. Older saves without this encounter remain playable. Resolved incidents from experimental.1 retain their history and cannot be replayed for new rewards. A fresh career uses the current wreck placement rules.
+All deck, door, supply, repair, survivor and passenger state persists in ordinary saves. A resolved incident retains its history and cannot be replayed for new rewards. A fresh career uses the current wreck placement rules. [Save format and recovery](autosave.md)
 
 Use the Mercy sample in the [debug playground](debug-playground.md) to practice boarding and rescue. The maintained [encounter and rescue checks](../qa/README.md#regression-scenarios) cover detection, boarding, survivor movement, and save recovery.

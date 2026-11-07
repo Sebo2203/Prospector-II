@@ -39,22 +39,66 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),f
  assert.match(await page.locator('#save-notice-text').textContent(),/Recovered the previous autosave/);
  assert.equal(await page.evaluate(()=>autoSave()),true);
  checks.push('corrupted primary recovers the checked previous snapshot without destroying that backup');
- const legacy=await page.evaluate(async()=>{
-  const raw=JSON.parse(JSON.stringify(G));delete raw.shipStats;delete raw.cargo;delete raw.installedModules;delete raw.installedWeapons;raw.crew[0].skills={com:3,nav:2};
-  const json=JSON.stringify(raw);const db=await openAutosaveDatabase();await new Promise(resolve=>{const tx=db.transaction('slots','readwrite');tx.objectStore('slots').clear();tx.oncomplete=resolve;});
-  localStorage.setItem(SAVE_KEY,json);G=null;return json;
+ await page.evaluate(()=>{
+  const [captain,scout]=G.crew;
+  scout.name=captain.name;
+  G._viewCrewSel=1;
+  startCrewDialogue();
+  if(dialogueCrew()!==scout)throw Error('Crew conversation followed the name instead of the selected crew member');
+  G.crew.reverse();
  });
+ assert.equal(await page.evaluate(()=>autoSave()),true);
  assert.equal(await page.evaluate(()=>loadFromStorage()),true);
- const normalized=await page.evaluate(()=>({stats:!!G.shipStats,cargo:Array.isArray(G.cargo),modules:Array.isArray(G.installedModules),cbt:G.crew[0].skills.cbt,oldSkill:G.crew[0].skills.com===undefined}));
- assert.deepEqual(normalized,{stats:true,cargo:true,modules:true,cbt:3,oldSkill:true});
- assert.equal(await page.evaluate(()=>autoSave()),true);assert.equal(await page.evaluate(()=>localStorage.getItem(SAVE_KEY)),legacy);
- checks.push('legacy autosave migrates to durable storage while preserving its original localStorage copy');
- let chooserPromise=page.waitForEvent('filechooser');await page.evaluate(()=>loadFromFile());let chooser=await chooserPromise;await chooser.setFiles({name:'old-save.json',mimeType:'application/json',buffer:Buffer.from(legacy)});
- await page.waitForFunction(()=>G?.crew[0]?.skills.cbt===3&&G.shipStats&&Array.isArray(G.installedModules));await page.evaluate(()=>autosaveQueue.idle());
- assert.deepEqual(await page.evaluate(()=>({stats:!!G.shipStats,cargo:Array.isArray(G.cargo),modules:Array.isArray(G.installedModules),cbt:G.crew[0].skills.cbt,oldSkill:G.crew[0].skills.com===undefined})),normalized);
- const intact=await page.evaluate(()=>JSON.stringify(G));chooserPromise=page.waitForEvent('filechooser');await page.evaluate(()=>loadFromFile());chooser=await chooserPromise;await chooser.setFiles({name:'broken.json',mimeType:'application/json',buffer:Buffer.from('{"galaxy":[],"crew":[]}')});
- await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>JSON.stringify(G)),intact);
- checks.push('file and storage migrations agree; invalid file import preserves the active run');
+ assert.ok(await page.evaluate(()=>dialogueCrew()===G.crew.find(c=>c.role==='scout')));
+ checks.push('crew dialogue stays with the selected crew member through duplicate names and roster changes');
+ await page.evaluate(()=>{
+  G.mode='galaxy';G.fuel=20;
+  const trader={...G.neutralShips.find(ship=>ship.type==='trader'),name:'Audit Merchant',
+    x:G.ship.x,y:G.ship.y,radioStock:[],radioFuelStock:30,radioFuelPrice:2};
+  delete trader._careerId;
+  G.neutralShips.push(trader);
+  startGalaxyShipDialogue(trader);
+ });
+ assert.equal(await page.evaluate(()=>autoSave()),true);
+ assert.equal(await page.evaluate(()=>loadFromStorage()),true);
+ await page.evaluate(()=>chooseDialogueOption(dialogueVisibleOptions().findIndex(option=>option.action==='radio_trade')));
+ assert.equal(await page.evaluate(()=>G.mode),'radio');
+ assert.equal(await page.evaluate(()=>autoSave()),true);
+ const current=await page.evaluate(async()=>(await readStoredAutosave()).record.raw);
+ assert.equal(typeof JSON.parse(current).radio.ship,'number');
+ async function importFile(name,raw){
+  const chooserPromise=page.waitForEvent('filechooser');
+  await page.evaluate(()=>loadFromFile());
+  const chooser=await chooserPromise;
+  await chooser.setFiles({name,mimeType:'application/json',buffer:Buffer.from(raw)});
+ }
+ await page.evaluate(()=>executeRadioTrade('close'));
+ await importFile('career.json',current);
+ await page.waitForFunction(()=>G.mode==='radio' && !AUTOSAVE_STATE.transition);
+ assert.ok(await page.evaluate(()=>G.radio.ship===G.neutralShips.find(ship=>ship.name==='Audit Merchant')));
+ await page.evaluate(()=>executeRadioTrade('fuel'));
+ assert.equal(await page.evaluate(()=>G.neutralShips.find(ship=>ship.name==='Audit Merchant').radioFuelStock),5);
+ await page.evaluate(()=>executeRadioTrade('close'));
+ const intact=await page.evaluate(()=>serializeCareer(G));
+ const damaged=JSON.parse(current);damaged.radio.ship=damaged.entitySerial+1;
+ await importFile('missing-merchant.json',JSON.stringify(damaged));
+ await page.waitForFunction(()=>!AUTOSAVE_STATE.transition);
+ const incompatible=JSON.parse(current);delete incompatible.saveVersion;
+ await importFile('old-career.json',JSON.stringify(incompatible));
+ await page.waitForFunction(()=>!AUTOSAVE_STATE.transition);
+ for(let i=0;i<30&&dialogs.length<2;i++)await page.waitForTimeout(50);
+ assert.match(dialogs.at(-2),/valid career save/);assert.match(dialogs.at(-1),/different format/);
+ assert.equal(await page.evaluate(()=>serializeCareer(G)),intact);
+ checks.push('radio trade alters authoritative stock after import; invalid actor references and older formats preserve the active career');
+ await page.evaluate(()=>{
+  G.mode='casino';
+  casinoStartContest('drink');
+ });
+ assert.equal(await page.evaluate(()=>autoSave()),true);
+ assert.equal(await page.evaluate(()=>loadFromStorage()),true);
+ assert.ok(await page.evaluate(()=>G.crew.includes(G.casino.contest.crew)));
+ await page.evaluate(()=>{casinoQuitContest();G.mode='galaxy';});
+ checks.push('a resumed casino contest uses the actual crew member');
  const growth=await page.evaluate(()=>{
   const bodies=[];for(let y=0;y<MAP_H;y++)for(let x=0;x<MAP_W;x++){const cell=G.galaxy[y][x];if(cell.type==='SYSTEM')for(let i=0;i<(cell.planets||[]).length;i++)if(cell.planets[i].biome!=='GAS_GIANT')bodies.push({key:x+','+y+':'+i,biome:cell.planets[i].biome});}
   for(const b of bodies)getOrCreateScanPlanetData(b.key,b.biome,'full');

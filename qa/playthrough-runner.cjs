@@ -91,7 +91,7 @@ async function run(mode, args = process.argv.slice(2)) {
             console.log('PROGRESS', config.id, JSON.stringify(status)); nextReport = status.actions + 250;
             fs.writeFileSync(artifactPath(`${config.id}-progress.json`), JSON.stringify(status, null, 2));
             // Checkpoints are generated test artifacts; no personal saves are bundled.
-            fs.writeFileSync(artifactPath(`${config.id}-checkpoint.json`), await page.evaluate(() => JSON.stringify({ game: G, pilot: PILOT, randomState: careerRngState })));
+            fs.writeFileSync(artifactPath(`${config.id}-checkpoint.json`), await page.evaluate(() => JSON.stringify({ game: JSON.parse(serializeCareer(G)), pilot: PILOT, randomState: careerRngState })));
           }
           if (errors.length) { reason = 'JavaScript error'; break; }
           if (status.dead || status.retired || status.stop || status.actions >= options.maxActions) { reason = status.dead ? 'death' : status.retired ? 'retirement' : status.stop || 'action limit'; break; }

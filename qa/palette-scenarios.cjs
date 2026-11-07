@@ -11,10 +11,10 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  const tools = () => click('Debug Palette');
  assert.equal(await button('Debug Palette').isVisible(),false);
  await page.keyboard.press('Shift+B');
- const original=await page.evaluate(()=>JSON.stringify(G));
+ const original=await page.evaluate(()=>serializeCareer(G));
  await page.keyboard.press('ArrowRight');
  await page.keyboard.press('F2');
- assert.equal(await page.evaluate(()=>JSON.stringify(G)),original);
+ assert.equal(await page.evaluate(()=>serializeCareer(G)),original);
  await click('Galaxy Spawn Report');
  assert.ok(await page.getByText('Map size',{exact:true}).isVisible());
  await click('Back to Tools');
@@ -178,14 +178,14 @@ const {chromium}=require('./runtime.cjs'),assert=require('node:assert/strict'),p
  assert.ok(await page.evaluate(()=>G.cargo.some(item=>item.commodityId==='future_goods')));
  await click('Back to Tools');
  await click('Return to Career');
- assert.equal(await page.evaluate(()=>JSON.stringify(G)),original);
+ assert.equal(await page.evaluate(()=>serializeCareer(G)),original);
  assert.equal(await button('Debug Palette').isVisible(),false);
  await page.keyboard.press('Shift+B');
  await click('Surface Gallery');
  assert.equal(await page.evaluate(()=>!!G.debugPalette && G.mode==='planet'),true);
  await tools();
  await click('Return to Career');
- assert.equal(await page.evaluate(()=>JSON.stringify(G)),original);
+ assert.equal(await page.evaluate(()=>serializeCareer(G)),original);
  await page.evaluate(()=>{
    delete TILE.PALETTE_FUTURE_TEST;
    DEBUG_ITEM_CATALOG.pop();DEBUG_GALAXY_OBJ_TYPES.pop();

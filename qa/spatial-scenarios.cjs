@@ -150,7 +150,7 @@ const {pathToFileURL}=require('node:url');
   assert.equal(await page.evaluate(()=>quarantinePeople().find(s=>s.id==='ilya').status),'carried');
   await reload();
   const fixturePath=artifactPath('spatial-save.json');
-  fs.writeFileSync(fixturePath,await page.evaluate(()=>JSON.stringify(G)));
+  fs.writeFileSync(fixturePath,await page.evaluate(()=>serializeCareer(G)));
   const chooser=page.waitForEvent('filechooser');await page.evaluate(()=>loadFromFile());
   await (await chooser).setFiles(fixturePath);
   await page.waitForFunction(()=>!AUTOSAVE_STATE.transition &&

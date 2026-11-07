@@ -119,6 +119,7 @@
     "src/debug/playground.js",
     "src/debug/menu.js",
     "src/audio/sound-effects.js",
+    "src/persistence/career-snapshot.js",
     "src/persistence/autosave-store.js",
     "src/persistence/save-load.js",
     "src/platform/desktop-download.js",
