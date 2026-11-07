@@ -64,7 +64,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `menu-input` | Persisted Classic and Cockpit selection, canvas density and input at fractional scales, on-screen naming, routine context button contrast, shared Escape behavior, compass waiting and cursor movement, day-night visibility while waiting on a ship, and crew and cargo |
 | `stations` | Station and wreck transparency, boarding and career restoration, galaxy art and fog, minimap layout, seamless walking and landing scans at fractional scales, and sand and snow grain |
 | `version` | Version and save status in the top-right HUD at two scales, main menu keyboard and mouse navigation with and without a save, and retired changelog shortcut |
-| `palette` | Runtime catalog coverage, category filtering, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |
+| `palette` | Shift+B open/close, repeat-key and search-focus handling, runtime catalog coverage, category filtering, real interactions, NPC pause/live, search, rebuilding, future catalog injection, exact career restoration and save isolation |
 | `previews` | Galaxy sample art/boarding, ASCII, and 80 pixel comparisons with the preserved pre-extraction orbital renderer |
 | `ships` | 384 ship/direction/background/opacity combinations, transparency, subtle radio glyphs over space/nebulae, role/combat art, sensor concealment and ASCII |
 | `ship-previews` | Native ship-selection and hull-change screenshots, old/new ship compositing comparison |

@@ -19,7 +19,14 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(debugDialog.open || e.target===debugPlaygroundButton) return;
+  if(debugDialog.open){
+    if(e.shiftKey && e.key.toLowerCase()==='b'){
+      e.preventDefault();
+      if(!e.repeat) dismissDebugMenu();
+    }
+    return;
+  }
+  if(e.target===debugPlaygroundButton) return;
   // Block all game keys while feedback overlay is open
   if(document.getElementById('feedback-overlay').style.display==='flex') return;
   if(document.getElementById('minimap-overlay')?.classList.contains('visible')){

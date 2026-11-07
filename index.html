@@ -1819,7 +1819,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
     <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
     <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
     <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
-    <div id="version-tag"><span>v0.28 experimental.46</span><span id="save-state" role="status" aria-live="polite"></span></div>
+    <div id="version-tag"><span>v0.28 experimental.47</span><span id="save-state" role="status" aria-live="polite"></span></div>
   </div>
 
   <!-- Canvas + Gauges + Sidebar -->
@@ -1982,8 +1982,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.46';
-const GAME_VERSION_LABEL = 'v0.28 experimental.46';
+const GAME_VERSION = '0.28.0-experimental.47';
+const GAME_VERSION_LABEL = 'v0.28 experimental.47';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -33661,7 +33661,14 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(debugDialog.open || e.target===debugPlaygroundButton) return;
+  if(debugDialog.open){
+    if(e.shiftKey && e.key.toLowerCase()==='b'){
+      e.preventDefault();
+      if(!e.repeat) dismissDebugMenu();
+    }
+    return;
+  }
+  if(e.target===debugPlaygroundButton) return;
   // Block all game keys while feedback overlay is open
   if(document.getElementById('feedback-overlay').style.display==='flex') return;
   if(document.getElementById('minimap-overlay')?.classList.contains('visible')){

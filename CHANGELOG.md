@@ -23,6 +23,13 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.47 toggles the debug menu
+
+Released on `experiment/expedition-legacy`.
+
+- Pressing Shift+B while the debug menu is open now closes it through the normal dismiss action, including from a focused search field. Holding the shortcut does not close the menu immediately after opening.
+- All 47 repository tests and three headless Edge suites passed. The regression checks opening, closing, reopening, key repeat, search focus and career preservation. The save schema supports experimental.46 careers.
+
 ## 2026-11-07 — 0.28 experimental.46 stabilizes saves, turns and generation
 
 Development on `experiment/expedition-legacy`.
