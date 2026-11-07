@@ -1944,7 +1944,7 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.59</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.60</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2073,8 +2073,8 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.59';
-const GAME_VERSION_LABEL = 'v0.28 experimental.59';
+const GAME_VERSION = '0.28.0-experimental.60';
+const GAME_VERSION_LABEL = 'v0.28 experimental.60';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -2416,7 +2416,11 @@ const COMBAT_SPRITES_B64 = {
   "combat_plasma_0": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAATUlEQVR42mNgGAWjgK7gvzHDf5oZjI5pY/hMKluCYjAIn0FiU8MSFAtAhv9HsoRSC7Aa/p8elpyhVRDRIg5onorokg/okpNHwSgYWAAAC7WvHo0J12MAAAAASUVORK5CYII=",
   "combat_plasma_1": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAR0lEQVR42mNgGAWjYHiB/8YM/2lmMBjPhNLUtAhuOJoFVLMExfD/VPYF3GCY4f+RLJlJTUto5QO6xAHNUxFd8sEoGAXDHAAANC10JlL+FhMAAAAASUVORK5CYII=",
   "combat_plasma_2": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAPklEQVR42mNgGAWjYBQQBRoYGP7/N0ZgEJ82hs+kgSUohp9BtYR6FsAMP4NqydDwAc3jgOapaBSMglFAOQAA5B1jO6tYnkIAAAAASUVORK5CYII=",
-  "combat_plasma_3": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAPElEQVR42mNgGAWjYBQQBRoYGP6jY6ob/t8YgalqCYrhM1Etoa4FIMPPICwZWj6gaRzQPBWNglEwCigHACIgVB9t5HxdAAAAAElFTkSuQmCC"
+  "combat_plasma_3": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAPElEQVR42mNgGAWjYBQQBRoYGP6jY6ob/t8YgalqCYrhM1Etoa4FIMPPICwZWj6gaRzQPBWNglEwCigHACIgVB9t5HxdAAAAAElFTkSuQmCC",
+  "combat_asteroid_0": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAACUklEQVR42u2VTU8TYRSFG40i/ZhOZ6addjotQ9vBUiyU0gqUz7bSVg3yrcFAqERBCxrRoInWRBNdmBg1JhA3bty4kY1b1/oL/Cu4MITH0IVxW2BDwkne7Xny5p57rsVyrCOj4aifhKFhqE7Shsahmq/k2pnPtJAw3EQDCoWYxkLfOco9qYODbg1muJOL8nltnKl0CwHVwXR3Cx8qJW5nu2mW5T/7Nn8+Pkx5MMpSIcGXp/Pcu5wiFpTQXTaWh0y+vV2pQfZlfr84zGYlz2oxTimuMdoVIhtVCTpO4DhpYSAs8r5SqAHsDQ31QSa7Onl8rcTGgyIzGZNCZ5B0xEtQse0ZcdpiQTpjqf1iItmE014n4NHYCJvrUwxEFWYHmklFJNKmj4hPIeRzEQ97SJgq7SEvkmhDER31AcrZ7O/Xi/10+G30RETa9Qau90VYLSVZGEmyPNnPlUwbpi4jiw4EwbldF2A0kdjZWLrEm3KWs8oZouopnk2n2HoyylZ1hhvFFJnWIKok4JYduAVht+4hf385x69P67wqXyDXqVOdTfPz3VUqk93Emj2YuoIqibhFccdhtdYf1a/VcX58fFiL4t2pHsYyIdamuyicD6OrTiJ+Fx6XiNUqbO9vB+Z6ebGYp3rzIhNDreRTQWKGRJNPRnOL+D1OvJKw/00eNDXyHQFyyQiZeIDemIbhk9A94j+IT7IfrCoMSaLNUGjySOhuF2FVJqC60Fz22oB1Sdo+cBf1meauvbFxx2lrRBEFZKeAV5Z3vaJwuI26F8X/3/EBOzr6C5YD+wJe2ClhAAAAAElFTkSuQmCC",
+  "combat_asteroid_1": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAC6UlEQVR42u2V3U+TZxiHn+f96Nu3b2ldQdASLKUUtHRYAaWSoggpGldhFApU5NMaPmxwnWhF7ZxbnBvbokIaP7K4uOzAZNnhDrbswCWLf8H+gP0X2xLDZVTiIVazExN/yX16XU+e3PndQrzLW5vl2VGuL83w853P+fHWp/wv0E8WUiyfGuJabpzVwjwPvlni4doFvjo3TW6y/80lj+5f4u/fi/xyO8/31+b47uo89wpZ7n+xwOqVafIzCbLpI3z0upK755I8Wsvy18OLLA5H+Wz2MIVMLzeWkhQLE3z58SDZ9AHm053kM/1czow+E8iS4HdyCf5cy/C4OMvKXA8PCikWh1opnh8gP95Jpr+Frsh2Whu2EG+tIdUdZjF1jL59+/57JfzKiRg/FZL8tnKcs6k2zgxEOJ9uZ2X2EB2hCvxbBcPdQSIBN9Uewc5qk+iu7cR21xHyev/ZjC3HDoW4MBLlh4v9TMUbGD7oZy4R4sZCFy21Jv4KlcGOGvravTT5LDyWwLfVTr3Xyc6qKqLB4L+bvn66t5lfv54g27eHkQN1zPQ2cjt3mONdfpp3lLG3oZzJniC1lQYuh8RlCdyWgmVK3IbxRAihbCp4vHqawniMiXiYE/FG5vuauToVo7vZw4ftPnoj1QSqbLgdAlMXGDaBXZeU2TVcDturt+jbU0mWRjo5PdDG4lA7t3IJpo40cfJomMFYgKYdLjyWgk0VqIpAUwWGJp9LStqesY793M2nWZ6Mc3bsIFPH9jJ5NEKyaxct9eVUuA0M7QVcyg2JlKXv/x/F69zMjZOIhdn/fi2xtnp6oo2Eg9sod9vRN+CK3Bgh1lUh1ksWnBn9gD0BHyFfJU5TpSFQRaCukopyC13XUBT5YqR8KXjtatgdqCHs9+I0NVwuDY/HxLI0dP3Zn6uoirIhkOtv3D/vmTp2VVLm0HBaKg5TYpoqdkPFrqvYVAml1sJmMQyJ3SaxHDpbXAYup413x+rtylPYC0xqRqzmVwAAAABJRU5ErkJggg==",
+  "combat_asteroid_2": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAEO0lEQVR42u2V209UVxSH59zPnJk5M4e5MwMz4AB2cEDrBUcKWpCKRRAQMV4QlQpIiMBYULQo2gDVQUVQ0zZearTa2Ma2+tCkL6YPfWz60v+mKV8z2MQ0bVM1PrqSlb1f1u9b2Wvv37bZ3sTriN6WWg621tNQXcVrE22pTfHVxQwXBjt5cOU086cGOHNoOz2dLdSsSlFVFn91WHlxmEezh3n8aYa7072cHdrDx11bOX/0IOM7G7gw+SFb1pQw2JxmZZH35UHnB1q5nmnm0eV+nlzuZ3Kgnaljh1nITnBj9gwLHx1huLmKAw2rGWhbx76NxXTUlL8YqKN+LdNHOvlybAcPZw7x/Vwfd7OD3JwZ57Orc1yaGObJ/CSXR/bRvHE1Pa1p+puS9LdUsKHYw7rl+f8N2rl9G9mBVqYH2rh37Sz35k7w3UKGKyd307uvjUezw/z49RfMTIzR1rSZQJ7JmlIv+zcVsqN6GWUFblwOBY+h/hMyP76X+xdP8ODSEHemRzh/boyr2bPcvjjJkUMd/PbTY54uHGf9+rVkBvto39ZIanmCaMhD15Y1S2ssGsBvOYj5dDRBeA754doQT28c48mdeb7NjnE3O8poTycN777Dqb21XDk+yLnuzdSlK9ldV8m2+mq6298jEfHS8HYJXrcdy21gOlTy3Dr5lkqhW34GeDh3lKc3M0z0tjM1cpCZ7laGT44yuGcXv9yfYry5gF8fX2CkcSVRn4tb08P072oknYoRcjtwGzI+U8dpqFguA8ulE/AYRCwVj6Zguz7azucnmvjm0lEO1K3i4e1Z2gr9/DzfRzIkke1ezwf1Zdw6vYvDjRU0pZO0bk5TGMzDockoog2HIuDTRfJywkGLwpBFLJcBL7a+9yvYvyFAZ02MhvRyKsrj1FUkmc50sbXExic9VXTVF5PwK2yvNHBpNhIhk6DHQJUFRNGGJosETJ2gqZJvOQlaJgHLJB7yPzumZMTB/i0rKAuo3B6qJtNZS7IkSm97DXXlFh01haRiJh7Dhq6KOB06qiTgtmvk+0wqS8PoqkxhPEYoHKQg4CUa9BH3uZ8POmppVJcHScWcRDwqmiqxqcJPMu6nPBHBocsosoCiSOiajF1TcNi1nAB+08ZbRQkst4vSeJxl8QJKYxFKo4G/X1enppAIugibEl7DRklYw+dxoMkSoiguicuyhMPQkCUBuyqyoiiAbpeQBBvRcICg101pUYSSgiDF4dC/PzqPLhE2JMxcoSgiiCKiKKApEooiI0kCHodGnlMjnOciFbQoiIYpzvdTFLKI+tzkW+b/W4cq5wRFNE161r0kIggCqiotAZyahM/MDVskaGiEfR68ph3TbkeTpBc2wd8lUVyUZRlVlbHngKr0V8romo7H5ViyB5ehYlcVZFFcfFUnXyrWNA1dUdBUdVFXZHRVXcztBUH44833/NLxJ32H+6vEjN0EAAAAAElFTkSuQmCC",
+  "combat_asteroid_3": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAD7UlEQVR42u2V20+TZxjA36+0pV+hQKWFcrAth1pOnWhRTiK0nI8DCq0DLScr0uGQ0+YwAznqphmZMOMBE8RlCZtZ9MJpdmOyXWyL2d3ul+xid/sDdjF+CzAFHWq8XLYn+fLePO/v9x6e5/2E+D/+tdF1OInpjgL66py402PI2BXKawG++DDI9Ik3GfEeZmG0jcHmPOoLHeuQtaOudKaOVzEXcNFamEjNPgt6IZCFWFMLsfZK+P1P3mW6q5ZjNQdw56TgdWfhK8mkJMtE8+E9TByvZz5QxEygiIq98ZjDVSiFQCUECiE2FvFC+O2JHmYCDbSV7ScxWkanUaIWgsRIQUNhCjMdxaxO+bk+XE+100RylMCk1aBTKtbB27+dJWf8lTQUpGHUPEkM2RhNehWe3HgeLJ7i6/lBzncUccCqpc2VRonDQlrCrucF/7yTxfc76WspJd9uQFrfsmpzVbJagS02FJteMNRexfxQM+OBcrzFZjrce6jLt+EwG18u+Hi0k6XZAYK+cuxJpo0ESdpMTDSosMXJ+MuyuX1hlG9uznLlrIeydB2ljngyE/TIauXmnBcJluZGuTI5zNtdXpJiI1FLgrgoDcmxMoXpZjyH0hnoaGRxvJ+f7l3j0qCH3FQD0aotoPSiHUyNBFlePM+NmUFOtlRiNxvQySrys3bT6HIwGWziwtgJ7l4+w2+PPuPX7+/yUa+POqeZxDAJlUKgkLbASkkQqtguODPA1dkh7l0e4T1fAQ6znuS4cGoPOZjtb+X6xTG+/PQcD2/O8ccPd/jl8znm+304jTLWiBD02mcrSKMQWGVpSzAU7OGUv45LA00Eax2491tIT4ln2F/FjbG3uH91gscPVlj7/Wf+fHyH5eEuilOM7NYpMGqVyErpGYFSiDXlZplKYmz4HQL+do40VeEpyaK7PpeKvAyG+46wcLqV71ZmeLQ8x48PV/n2q1tcm+ij05VN9N9NFbLz2W/1wOrKEh+MnqbdU4evpoiTvhr62hvobiph/mwft8YDLEyOMDXUS9Dv4WjtIXKsMUSrFU8FL22wi9PnGOjtoeNII13eWrpbKqkrzcNbX0pNQRblRXm4Cp2UFuVwMMtGTmrsRlPFaNUbAmlnuPRUcMzbSlNtNRWuQqpcBeQ7HWTarOgjtaSaTSRGCOxxGvbb49hrSyDHbiFCDkFI0vPgnZ+GSreLClcxB51v4MiwERmmIVxWE2uMwRSlxiQLkg0S++zxVObvJcMSh0pIrwZvj/rqCircxVgS4glVKZ7WtCwECVqJJJ0gN9lIbpqVbKsZg073pEpeP0JDQlArFBtv+zpkfdwdFopFp+W/+Wv9C6k9C2MFgR6HAAAAAElFTkSuQmCC"
 };
 const IMG = {};
 function loadSprites(){
@@ -14331,6 +14335,13 @@ function drawCanvas(){
     canvas.classList.remove('map-targeting');
     pointerFireAim=null;
     drawShipSystems();
+    return;
+  }
+
+  const feedback=activeShipCombatFeedback();
+  if(feedback && G.mode==='galaxy' && !G.dead && !G.retired && !G.showOptions && !G.dialogue){
+    drawShipCombatOverlay(feedback.combat);
+    resetCanvasMenu();
     return;
   }
 
@@ -32427,10 +32438,14 @@ function moveShipCombatActor(combat,actor,to,engine){
   return shipCombatPlasma(combat,to)?.damage || 0;
 }
 
-function damageShipCombatPlayer(combat,damage){
+function damageShipCombatPlayer(combat,damage,deferFeedback=false){
+  const before=Object.values(ensureShipSystems()).map(component=>component.condition);
   const hull=absorbShipHit(G.ship,damage,'combat impact');
   combat.playerShields=G.ship.shieldCharge;
-  if(hull) SFX.hullHit();
+  if(!deferFeedback && damage>0){
+    const critical=Object.values(G.ship.systems).some((component,index)=>component.condition<before[index]);
+    queueShipCombatFeedback(combat,combat.player,combat.player,{side:'enemy',hit:true,hull,critical,impactOnly:true});
+  }
   if(G.ship.hp===0){
     G.deathCause = 'The ship was destroyed in combat with '+combat.pirate.name+'.';
     G.dead = true;
@@ -32499,8 +32514,10 @@ function doShipFire(){
     const absorbed=Math.min(damage,enemy.ship.shieldCharge,shipShieldCapacity(enemy.ship));
     addCombatLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+(damage-absorbed)+' hull).','lg');
     damageShipCombatEnemy(combat,enemy,damage);
+    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:true});
   } else {
     addCombatLog(weapon.name+' misses '+enemy.ship.name+'.','ln');
+    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:false});
   }
   advanceShipCombat(combat,false,'fire');
 }
@@ -32545,7 +32562,11 @@ function fireShipCombatEnemy(combat,enemy){
   const absorbed=Math.min(damage,G.ship.shieldCharge,shipShieldCapacity());
   const hull=DEBUG.infiniteHull?0:Math.min(G.ship.hp,damage-absorbed);
   addCombatLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),damage?'lc':'ll');
-  if(damage) damageShipCombatPlayer(combat,damage);
+  const visible=shipCombatInSensorRange(combat,enemy);
+  const before=Object.values(ensureShipSystems()).map(component=>component.condition);
+  if(damage) damageShipCombatPlayer(combat,damage,true);
+  const critical=Object.values(G.ship.systems).some((component,index)=>component.condition<before[index]);
+  queueShipCombatFeedback(combat,enemy,combat.player,{side:'enemy',hit:damage>0,hull,critical,visible,impactOnly:!entry});
   return damage>0;
 }
 
@@ -32561,14 +32582,14 @@ function shipCombatBoostStatus(combat=G.shipCombat){
 }
 
 function combatStatusText(status){
-  return status.replace(/^Ready in (\d+)$/,(_,turns)=>'Reload '+turns+' action'+(turns==='1'?'':'s'));
+  return status.replace(/^Ready in (\d+)$/,(_,turns)=>'Reload in '+turns+'t');
 }
 
 function shipCombatEnemyActionStatus(combat,enemy){
   const ship=enemy.ship;
   if(ship._homeCluster){
     const turns=Math.max(0,(ship.ramReadyAt||0)-G.turn);
-    if(turns) return 'Ram reloading: '+turns+' action'+(turns===1?'':'s');
+    if(turns) return 'Ram reload in '+turns+'t';
     return shipCombatEnemyCanFire(combat,enemy)?'Can ram':'Out of ram range';
   }
   const weapons=actorShipCombatWeapons(ship);
@@ -32630,8 +32651,79 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   }
   renderAll();
 }
-function drawShipCombatOverlay(){
-  const combat = G.shipCombat;
+// Disposable audiovisual playback. Rules, RNG and saves still resolve on the career turn.
+const SHIP_FEEDBACK={career:null,combat:null,active:null,pending:[],timer:null};
+
+function clearShipCombatFeedback(){
+  clearTimeout(SHIP_FEEDBACK.timer);
+  SHIP_FEEDBACK.career=SHIP_FEEDBACK.combat=SHIP_FEEDBACK.active=null;
+  SHIP_FEEDBACK.pending.length=0;
+}
+
+function activeShipCombatFeedback(){
+  if(SHIP_FEEDBACK.career!==G || !G ||
+     (G.shipCombat && G.shipCombat!==SHIP_FEEDBACK.combat) || !['shipcombat','galaxy'].includes(G.mode)){
+    clearShipCombatFeedback();return null;
+  }
+  return SHIP_FEEDBACK.active;
+}
+
+function queueShipCombatFeedback(combat,from,to,result){
+  activeShipCombatFeedback();
+  if(SHIP_FEEDBACK.combat && SHIP_FEEDBACK.combat!==combat)clearShipCombatFeedback();
+  SHIP_FEEDBACK.career=G;SHIP_FEEDBACK.combat=combat;
+  SFX.prepare();
+  SHIP_FEEDBACK.pending.push({combat,from:{x:from.x,y:from.y},to:{x:to.x,y:to.y},
+    visible:result.visible??shipCombatInSensorRange(combat,from),...result});
+  // Rapid repeat input must not leave seconds of obsolete presentation behind.
+  if(SHIP_FEEDBACK.pending.length>12)SHIP_FEEDBACK.pending.shift();
+  if(!SHIP_FEEDBACK.active)playNextShipCombatFeedback();
+}
+
+function playNextShipCombatFeedback(){
+  if(SHIP_FEEDBACK.career!==G){clearShipCombatFeedback();return;}
+  const event=SHIP_FEEDBACK.pending.shift();
+  SHIP_FEEDBACK.active=event||null;
+  if(!event){if(G)renderAll();return;}
+  event.born=performance.now();
+  event.flight=event.impactOnly?0:110;
+  event.hold=event.critical?430:event.side==='enemy' && event.hit?300:190;
+  SHIP_FEEDBACK.timer=setTimeout(()=>{
+    if(activeShipCombatFeedback()!==event)return;
+    if(event.hit){
+      if(event.side==='player')SFX.shipHit();
+      else if(event.critical)SFX.coreHit();
+      else if(event.hull>0)SFX.hullHit();
+      else SFX.shieldHit();
+    }
+    if(G)drawCanvas();
+    SHIP_FEEDBACK.timer=setTimeout(playNextShipCombatFeedback,event.hold);
+  },event.flight);
+}
+
+function drawShipCombatShotFeedback(combat){
+  const event=activeShipCombatFeedback();
+  if(!event || event.combat!==combat)return;
+  const age=performance.now()-event.born;
+  const from={x:COMBAT_MAP.x+(event.from.x+0.5)*TS,y:COMBAT_MAP.y+(event.from.y+0.5)*TS};
+  const to={x:COMBAT_MAP.x+(event.to.x+0.5)*TS,y:COMBAT_MAP.y+(event.to.y+0.5)*TS};
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  ctx.save();
+  ctx.beginPath();ctx.rect(COMBAT_MAP.x,COMBAT_MAP.y,COMBAT_MAP.width*TS,COMBAT_MAP.height*TS);ctx.clip();
+  if(age<event.flight && event.visible && !reduced){
+    const progress=Math.min(1,age/event.flight),dx=to.x-from.x,dy=to.y-from.y,length=Math.hypot(dx,dy)||1;
+    const x=from.x+dx*progress,y=from.y+dy*progress+(event.hit?0:8*progress);
+    ctx.strokeStyle=event.side==='player'?'#9dedd4':'#ff9974';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x-dx/length*8,y-dy/length*8);ctx.lineTo(x,y);ctx.stroke();
+    ctx.fillStyle='#fff3c9';ctx.fillRect(Math.round(x)-1,Math.round(y)-1,3,3);
+  } else if(event.hit && age>=event.flight && age<event.flight+85 && (event.visible || event.side==='enemy')){
+    ctx.fillStyle=event.critical?'#ff6655':event.side==='player'?'#aaffcc':'#ffbb88';
+    ctx.globalAlpha=1-(age-event.flight)/85;
+    ctx.fillRect(to.x-4,to.y-4,8,8);
+  }
+  ctx.restore();
+}
+function drawShipCombatOverlay(combat=G.shipCombat){
   if(!combat) return;
   const map = COMBAT_MAP;
   const w = map.width*TS, h = map.height*TS;
@@ -32646,25 +32738,13 @@ function drawShipCombatOverlay(){
   for(const rock of combat.asteroids){
     if(!DEBUG.fullVision && !combat.seenTiles[rock.y*map.width+rock.x]) continue;
     const x=px(rock), y=py(rock);
-    ctx.fillStyle='#38414f'; ctx.fillRect(x+3,y+5,18,14);
-    ctx.fillStyle='#788797'; ctx.fillRect(x+6,y+4,10,4);
-    ctx.fillStyle='#252f3a'; ctx.fillRect(x+13,y+13,8,6);
     if(OPTIONS.asciiMode){
       ctx.fillStyle='#c5ceda';ctx.font='bold 18px Courier New';ctx.textAlign='left';ctx.fillText('#',x+6,y+18);
-    }
+    } else drawSprite('combat_asteroid_'+((Math.imul(rock.x+1,7)+rock.y*11)>>>0)%4,x,y);
   }
   ctx.strokeStyle=shipCombatEscapeReady(combat)?'#87d8a6':shipCombatEdge(player)?'#995c60':'#457661';
   ctx.strokeRect(map.x+0.5,map.y+0.5,w-1,h-1);
 
-  if(selected && shipCombatContactVisible(combat,selected)){
-    ctx.strokeStyle=weapons[combat.weapon] && shipCombatWeaponStatus(combat,weapons[combat.weapon])==='Ready'?'#81d7aa':'#a18159';
-    ctx.setLineDash([3,5]);
-    ctx.beginPath();
-    ctx.moveTo(px(player)+TS/2,py(player)+TS/2);
-    ctx.lineTo(px(selected)+TS/2,py(selected)+TS/2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
   drawDirectionalShip(G.shipStats.sprite||'player_ship',px(player),py(player),player.dx,player.dy);
   for(const enemy of living){
     if(!shipCombatContactVisible(combat,enemy)) continue;
@@ -32696,7 +32776,7 @@ function drawShipCombatOverlay(){
     },{title:ship.name+' · '+ship.hp+' hull · Range '+shipCombatDistance(player,enemy)});
   }
   drawShipCombatReadout(combat,weapons);
-  drawShipCombatNearbyPlasma(combat);
+  drawShipCombatShotFeedback(combat);
 }
 
 function drawShipCombatReadout(combat,weapons){
@@ -32737,7 +32817,8 @@ function drawShipCombatReadout(combat,weapons){
   ctx.font='11px Courier New';ctx.fillStyle='#edaa77';ctx.textAlign='left';
   if(faults.length) y=drawWrappedText(faults.join(' · '),textX,y,textWidth,13,2)+3;
 
-  y=heading('SELECTED TARGET',y+1);
+  // Keep the former heading's breathing room between ship and target.
+  y+=21;
   if(target && shipCombatContactVisible(combat,target)){
     const ship=target.ship, natural=!!ship._homeCluster;
     ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
@@ -32767,8 +32848,12 @@ function drawShipCombatReadout(combat,weapons){
     canvasMenuTarget(textX,y,textWidth,34,()=>selectShipCombatWeapon(index));
     y+=37;
   });
-  const selected=weapons[combat.weapon]?.weapon;
-  if(selected) text('Peak heat '+(G.ship.heat+selected.heat)+'/'+shipHeatCapacity()+' · Reload '+selected.cooldown+' action'+(selected.cooldown===1?'':'s'),y+10,'#8e9daa','11px Courier New');
+  const selected=weapons[combat.weapon];
+  if(selected){
+    const reload=Math.max(0,(G.ship.weaponReadyAt[selected.slot]||0)-G.turn);
+    text('Peak heat '+(G.ship.heat+selected.weapon.heat)+'/'+shipHeatCapacity()+
+      (reload?' · Reload in '+reload+'t':''),y+10,'#8e9daa','11px Courier New');
+  }
 }
 
 // Space and its star field are continuous; neither fog nor weapon range paints tile backgrounds.
@@ -32795,23 +32880,6 @@ function drawShipCombatPlasma(combat){
       canvasMenuTarget(x,y,TS,TS,null,{title:'Plasma exhaust · '+trail.damage+' damage · '+remaining+' rounds left'});
     }
   }
-}
-
-function drawShipCombatNearbyPlasma(combat){
-  const player=combat.player,boostEnd={x:player.x+player.dx*2,y:player.y+player.dy*2};
-  const hazards=combat.trails.filter(trail=>shipCombatInSensorRange(combat,trail) &&
-    (shipCombatDistance(player,trail)<=1 || (trail.x===boostEnd.x && trail.y===boostEnd.y)));
-  if(!hazards.length) return;
-  const entries=hazards.map(trail=>{
-    const dx=trail.x-player.x,dy=trail.y-player.y;
-    const direction=Math.abs(dx)>1 || Math.abs(dy)>1?'Boost end':dx===0 && dy===0?'Here':
-      (dy<0?'N':dy>0?'S':'')+(dx<0?'W':dx>0?'E':'');
-    return direction+' '+trail.damage+'/'+Math.max(0,trail.expires-combat.round);
-  });
-  const x=COMBAT_MAP.x+4,y=COMBAT_MAP.y+COMBAT_MAP.height*TS+17;
-  ctx.font='11px Courier New';ctx.textAlign='left';ctx.fillStyle='#bb9778';
-  ctx.fillText('Nearby plasma: direction · damage / rounds remaining',x,y);
-  ctx.fillStyle='#d8ad80';drawWrappedText(entries.join(' · '),x,y+14,COMBAT_MAP.width*TS-8,12,2);
 }
 function doRadioHailLegacy(ns){
   // Fallback for unknown ship types
@@ -36014,6 +36082,31 @@ const SFX = (() => {
 
   return {
 
+    prepare(){try{const c=ctx();if(c.state==='suspended')void c.resume().catch(()=>{});}catch(e){}},
+
+    // Short confirmation for our successful ship shot; distinct from an incoming metal hit.
+    shipHit(){
+      try{const t=ctx().currentTime;
+        oscRamp('triangle',720,260,0.17,t,0.12);
+        osc('sine',1040,0.09,0,t+0.035,0.12);
+      }catch(e){}
+    },
+    shieldHit(){
+      try{const t=ctx().currentTime;
+        oscRamp('sine',350,140,0.19,t,0.20);
+        oscRamp('triangle',900,360,0.07,t,0.12);
+      }catch(e){}
+    },
+    // A heavier mechanical failure followed by an urgent, brief electrical alarm.
+    coreHit(){
+      try{const t=ctx().currentTime;
+        oscRamp('sawtooth',140,28,0.27,t,0.25);
+        oscRamp('square',1200,120,0.08,t,0.12);
+        osc('square',660,0.10,0,t+0.16,0.08);
+        osc('square',440,0.11,0,t+0.29,0.10);
+      }catch(e){}
+    },
+
     // Landing: high-freq engine whine descending to a low thud
     land() {
       try {
@@ -37727,6 +37820,8 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     _fpsLast = _now;
     if(window.devicePixelRatio!==fittedPixelRatio) scaleToFit();
   }
+
+  if(activeShipCombatFeedback())drawCanvas();
 
   if(G && !G.dead && !G.retired){
     let needsDraw = false;

@@ -58,6 +58,8 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     if(window.devicePixelRatio!==fittedPixelRatio) scaleToFit();
   }
 
+  if(activeShipCombatFeedback())drawCanvas();
+
   if(G && !G.dead && !G.retired){
     let needsDraw = false;
 

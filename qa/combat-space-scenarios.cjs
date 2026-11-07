@@ -43,14 +43,17 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     G.ship.systems.sensors.condition=100;
     const combat=G.shipCombat;
     combat.trails=Array.from({length:4},(_,index)=>({x:4+index,y:8,dx:1,dy:0,damage:8,expires:combat.round+index+1}));
+    combat.asteroids=[4,5,6,7].map(x=>({x,y:4}));
     combat.trails.push({x:24,y:9,dx:-1,dy:0,damage:4,expires:combat.round+2});renderAll();
   });
   view=await observe();
   assert.ok(!view.strokes.some(stroke=>stroke.width>1),'plasma renders as separate sprites without connecting strokes');
+  assert.equal(new Set(view.images.filter(image=>image.key?.startsWith('combat_asteroid_')).map(image=>image.key)).size,4,'original asteroid silhouettes replace block drawings');
   assert.equal(view.images.filter(image=>image.key?.startsWith('combat_plasma_')).length,4,'four original fade stages render; out-of-range exhaust stays hidden');
   assert.equal(new Set(view.images.filter(image=>image.key?.startsWith('combat_plasma_')).map(image=>image.key)).size,4);
   assert.ok(!view.text.some(t=>t.x<660 && t.y<420 && /^\d+$/.test(t.text)),'no numeric plasma tiles');
-  assert.ok(view.text.some(t=>t.text.startsWith('Nearby plasma:')) && view.text.some(t=>t.text.includes('W 8/4')),'nearby hazard amounts and lifetimes are readable without hover');
+  assert.ok(!view.text.some(t=>t.text.startsWith('Nearby plasma:')),'the requested plasma footer is removed');
+  assert.ok(!view.text.some(t=>t.text==='SELECTED TARGET'),'the target name owns the target heading');
   const before=await page.evaluate(()=>JSON.stringify([G.turn,G.ship.hp,G.shipCombat.trails]));
   for(const viewport of [{width:1400,height:720},{width:900,height:600}]){
     await page.setViewportSize(viewport);

@@ -29,6 +29,13 @@ function drawCanvas(){
     return;
   }
 
+  const feedback=activeShipCombatFeedback();
+  if(feedback && G.mode==='galaxy' && !G.dead && !G.retired && !G.showOptions && !G.dialogue){
+    drawShipCombatOverlay(feedback.combat);
+    resetCanvasMenu();
+    return;
+  }
+
   if(G.mode==='planet'){
     drawPlanet();
   } else if(G.mode==='scanview'){

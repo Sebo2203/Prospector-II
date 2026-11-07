@@ -23,6 +23,17 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.60 adds distinct combat shot feedback
+
+Released on `experiment/expedition-legacy`.
+
+- Removed the nearby-plasma footer and SELECTED TARGET heading at the user's request. Target names retain their previous vertical spacing below the player section. Remaining reloads read Reload in 2t across combat status/context text; the redundant static duration footer now shows an actual countdown only while reloading.
+- Replaced rectangle asteroids with four shaded original Prospector rock/debris sprites from the retained space atlas. Existing matte cleanup gives them clean transparent edges; native pixel scale and ASCII rock symbols remain. Position-based variants consume no random rolls.
+- Removed the permanent dotted hit/aim line. Shots show a fast 110ms travelling projectile and short impact flash, with impact-only feedback for natural rams and reduced-motion preferences. Plasma remains separate original sprites.
+- Added distinct synthesized outgoing-hit confirmation and incoming shield/hull/core cues. Actual core integrity changes select the heavier critical cue. An ephemeral queue separates projectile/impact feedback in attack order, including multiple attackers, and cancels on career/menu/encounter changes. Rules and logs resolve on the original turn; playback adds no time or damage and is not serialized. Rapid repeated input bounds pending presentation to twelve events.
+- Validation: all 57 repository tests and 23 headless Edge suites passed. New coverage verifies real outgoing/hull/core outcomes and ordered cue timing, animation strokes, no idle dotted line/footer/target heading, preserved spacing, reload labels, reduced-motion behavior, menu cancellation and unchanged turn/damage state. Asset checks verify four distinct asteroid imports with clean edges and reproducibility. Existing combat, controls, repairs, log, save/load and world scenarios passed; screenshots were inspected. Cue scheduling and synthesis calls were tested; subjective sound balance and aesthetic approval require human playtesting.
+- Saves: schema 2 unchanged, no migration added. Heat, reload deadlines, sensors, exhaust strength/lifetime, core damage rolls, action costs and NPC speed are unchanged. [Combat presentation and controls](docs/experiment.md#tactical-ship-combat), [feedback boundary](docs/architecture.md#tactical-audiovisual-feedback)
+
 ## 2026-11-07 — 0.28 experimental.59 simplifies combat readouts and menu access
 
 Released on `experiment/expedition-legacy`.

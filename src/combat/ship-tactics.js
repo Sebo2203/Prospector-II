@@ -205,10 +205,14 @@ function moveShipCombatActor(combat,actor,to,engine){
   return shipCombatPlasma(combat,to)?.damage || 0;
 }
 
-function damageShipCombatPlayer(combat,damage){
+function damageShipCombatPlayer(combat,damage,deferFeedback=false){
+  const before=Object.values(ensureShipSystems()).map(component=>component.condition);
   const hull=absorbShipHit(G.ship,damage,'combat impact');
   combat.playerShields=G.ship.shieldCharge;
-  if(hull) SFX.hullHit();
+  if(!deferFeedback && damage>0){
+    const critical=Object.values(G.ship.systems).some((component,index)=>component.condition<before[index]);
+    queueShipCombatFeedback(combat,combat.player,combat.player,{side:'enemy',hit:true,hull,critical,impactOnly:true});
+  }
   if(G.ship.hp===0){
     G.deathCause = 'The ship was destroyed in combat with '+combat.pirate.name+'.';
     G.dead = true;
@@ -277,8 +281,10 @@ function doShipFire(){
     const absorbed=Math.min(damage,enemy.ship.shieldCharge,shipShieldCapacity(enemy.ship));
     addCombatLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+(damage-absorbed)+' hull).','lg');
     damageShipCombatEnemy(combat,enemy,damage);
+    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:true});
   } else {
     addCombatLog(weapon.name+' misses '+enemy.ship.name+'.','ln');
+    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:false});
   }
   advanceShipCombat(combat,false,'fire');
 }
@@ -323,7 +329,11 @@ function fireShipCombatEnemy(combat,enemy){
   const absorbed=Math.min(damage,G.ship.shieldCharge,shipShieldCapacity());
   const hull=DEBUG.infiniteHull?0:Math.min(G.ship.hp,damage-absorbed);
   addCombatLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),damage?'lc':'ll');
-  if(damage) damageShipCombatPlayer(combat,damage);
+  const visible=shipCombatInSensorRange(combat,enemy);
+  const before=Object.values(ensureShipSystems()).map(component=>component.condition);
+  if(damage) damageShipCombatPlayer(combat,damage,true);
+  const critical=Object.values(G.ship.systems).some((component,index)=>component.condition<before[index]);
+  queueShipCombatFeedback(combat,enemy,combat.player,{side:'enemy',hit:damage>0,hull,critical,visible,impactOnly:!entry});
   return damage>0;
 }
 
@@ -339,14 +349,14 @@ function shipCombatBoostStatus(combat=G.shipCombat){
 }
 
 function combatStatusText(status){
-  return status.replace(/^Ready in (\d+)$/,(_,turns)=>'Reload '+turns+' action'+(turns==='1'?'':'s'));
+  return status.replace(/^Ready in (\d+)$/,(_,turns)=>'Reload in '+turns+'t');
 }
 
 function shipCombatEnemyActionStatus(combat,enemy){
   const ship=enemy.ship;
   if(ship._homeCluster){
     const turns=Math.max(0,(ship.ramReadyAt||0)-G.turn);
-    if(turns) return 'Ram reloading: '+turns+' action'+(turns===1?'':'s');
+    if(turns) return 'Ram reload in '+turns+'t';
     return shipCombatEnemyCanFire(combat,enemy)?'Can ram':'Out of ram range';
   }
   const weapons=actorShipCombatWeapons(ship);

@@ -33,7 +33,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     assert.equal(await page.evaluate(()=>G.turn),turn);
     assert.match(await page.locator('#log-list').textContent(),/Out of range/,'failed action messages use the sidebar');
     await page.evaluate(()=>{const combat=G.shipCombat;combat.enemies[0].x=combat.player.x+3;combat.enemies[0].y=combat.player.y;renderAll();});
-    assert.ok(await fire.isEnabled());assert.ok((await readout()).lines.includes('#81d7aa'));
+    assert.ok(await fire.isEnabled());assert.equal((await readout()).lines.length,0,'idle targeting has no dotted line');
     for(const condition of ['reload','heat','power','sensors','cover']){
       await page.evaluate(condition=>{
         G.ship.heat=0;G.ship.weaponReadyAt=[G.turn];
@@ -114,7 +114,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       const gas={name:'Natural Wraith',x:G.ship.x,y:G.ship.y,hp:40,maxHp:40,alive:true,atk:4,engineRating:2,guns:1,_homeCluster:[{x:G.ship.x,y:G.ship.y}]};
       G.gasEntities=[gas];startShipCombat(gas);renderAll();
     });
-    view=await readout();let target=view.text.slice(view.text.indexOf('SELECTED TARGET')+1,view.text.indexOf('WEAPON MOUNTS'));
+    view=await readout();let target=view.text.slice(view.text.indexOf('Natural Wraith'),view.text.indexOf('WEAPON MOUNTS'));
     assert.ok(target.some(text=>text.includes('Ram range')));assert.ok(!target.some(text=>/Heat|Shields|Weapon range/.test(text)));
     await page.evaluate(()=>{
       G.mode='galaxy';G.shipCombat=null;
@@ -156,7 +156,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       const combat=G.shipCombat;combat.asteroids=[];combat.enemies[0].x=combat.player.x+3;combat.enemies[0].y=combat.player.y;renderAll();
     });
     view=await readout();
-    const own=view.text.slice(0,view.text.indexOf('SELECTED TARGET'));
+    const own=view.text.slice(0,view.text.indexOf('Color Raider'));
     assert.ok(!own.some(text=>text.startsWith('Hull ')),'the left gauge owns the player hull display');
     for(const [label,color] of [['Hull 150/300','#e4b98c'],['Shields 10/20','#81c5df']]){
       const y=view.positions.find(entry=>entry.text===label).y;

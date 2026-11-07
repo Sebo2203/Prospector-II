@@ -112,6 +112,7 @@
     "src/ships/gas-entities-and-pirates.js",
     "src/combat/ship.js",
     "src/combat/ship-tactics.js",
+    "src/combat/ship-feedback.js",
     "src/rendering/ship-combat.js",
     "src/economy/radio-trade.js",
     "src/actions/interaction-and-landing.js",

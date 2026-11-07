@@ -47,6 +47,31 @@ const SFX = (() => {
 
   return {
 
+    prepare(){try{const c=ctx();if(c.state==='suspended')void c.resume().catch(()=>{});}catch(e){}},
+
+    // Short confirmation for our successful ship shot; distinct from an incoming metal hit.
+    shipHit(){
+      try{const t=ctx().currentTime;
+        oscRamp('triangle',720,260,0.17,t,0.12);
+        osc('sine',1040,0.09,0,t+0.035,0.12);
+      }catch(e){}
+    },
+    shieldHit(){
+      try{const t=ctx().currentTime;
+        oscRamp('sine',350,140,0.19,t,0.20);
+        oscRamp('triangle',900,360,0.07,t,0.12);
+      }catch(e){}
+    },
+    // A heavier mechanical failure followed by an urgent, brief electrical alarm.
+    coreHit(){
+      try{const t=ctx().currentTime;
+        oscRamp('sawtooth',140,28,0.27,t,0.25);
+        oscRamp('square',1200,120,0.08,t,0.12);
+        osc('square',660,0.10,0,t+0.16,0.08);
+        osc('square',440,0.11,0,t+0.29,0.10);
+      }catch(e){}
+    },
+
     // Landing: high-freq engine whine descending to a low thud
     land() {
       try {

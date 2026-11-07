@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Prospector II Experimental",
-  "version": "0.28.0-experimental.59",
+  "version": "0.28.0-experimental.60",
   "identifier": "com.sebo2203.prospector-ii.experimental",
   "build": {
     "frontendDist": "../app"

@@ -18,3 +18,21 @@ test('original plasma import retains its verified source, colored pixels and tra
   assert.ok(counts[0]>counts[3],'the original fading sprites have a smaller visible footprint');
   assert.equal(fs.readFileSync(path.join(__dirname,'../src/assets/combat-sprites.js'),'utf8').replace(/\r\n/g,'\n'),generatePlasmaAssets());
 });
+
+test('original asteroid variants have cleaned alpha edges and reproduce in the embedded combat catalog',()=>{
+  const vm=require('node:vm'),context=vm.createContext({});
+  vm.runInContext(generatePlasmaAssets()+';globalThis.assets=COMBAT_SPRITES_B64;',context);
+  const rocks=Object.entries(context.assets).filter(([key])=>key.startsWith('combat_asteroid_'));
+  assert.equal(rocks.length,4);assert.equal(new Set(rocks.map(([,png])=>png)).size,4);
+  const {extractFrame}=require('../tools/import-prospector-ships.js');
+  const bitmap=readBitmap(fs.readFileSync(path.join(__dirname,'../art/source/prospector/space.bmp')));
+  for(const [col,row] of [[11,4],[0,2],[1,2],[3,2]]){
+    const pixels=extractFrame(bitmap,col,row);let clear=0,colored=0;
+    for(let i=0;i<pixels.length;i+=4){
+      if(!pixels[i+3]){clear++;continue;}
+      colored++;
+      assert.ok(!(pixels[i]>200 && pixels[i+1]<50 && pixels[i+2]>200),'no bright magenta matte survives on a rock');
+    }
+    assert.ok(clear>0 && colored>20);
+  }
+});

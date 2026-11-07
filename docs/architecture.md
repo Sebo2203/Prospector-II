@@ -82,3 +82,7 @@ Orbital-body colors and drawing helpers live in `src/rendering/system-body-icons
 ## Migration audit
 
 Run `npm run verify:migration` to compare assembled output with the SHA-256 and byte count of the original committed HTML. This catches any altered or missing byte, including code, CSS, markup and assets. It is a one-time migration invariant, not an ongoing gameplay test: intentional later changes will make it fail. The historical design comment is retained in `src/html/legacy-design-notes.html` solely to preserve that exact output; use this document for the current development workflow.
+
+## Tactical audiovisual feedback
+
+`src/combat/ship-feedback.js` owns an ephemeral queue outside the career. Real weapon/core outcomes enqueue immutable source/destination and hit metadata after rules resolve; it sequences 110ms projectile travel and separated impact cues without applying damage or advancing the clock. The rendering animation loop redraws active playback. Final encounter feedback can finish over the combat view before the galaxy returns. Career/mode/encounter changes cancel playback; repeated input bounds pending presentation to twelve events. No callbacks mutate saved combat state. Reduced-motion preferences suppress projectile travel. `src/audio/sound-effects.js` supplies separate outgoing, shield, hull and core cues; existing browser autoplay requirements still apply. Native `combat-feedback` scenarios verify timing, real critical metadata, cancellation and unchanged gameplay state.
