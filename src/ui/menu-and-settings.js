@@ -125,6 +125,7 @@ function showMenu(){
   document.getElementById('ctx-bar').style.display     = 'none';
   document.getElementById('persist-bar').style.display = 'none';
   document.getElementById('version-tag').style.display = 'none';
+  toggleActiveMissions(false);
   hideMsg();
   document.getElementById('ctx-bar').innerHTML = '';
   drawMenuScreen();
@@ -169,6 +170,7 @@ function toggleShortcutLegend(){
   const legend = document.getElementById('persist-hints');
   legend.hidden = !legend.hidden;
   document.getElementById('shortcut-toggle').setAttribute('aria-expanded',String(!legend.hidden));
+  if(!legend.hidden) toggleActiveMissions(false);
 }
 
 async function returnToMainMenuFromGame(){

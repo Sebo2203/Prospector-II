@@ -1366,12 +1366,27 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 #persist-shortcuts {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 14px;
-  padding-bottom: 30px;
+  padding-bottom: 36px;
 }
-#shortcut-toggle {
+#footer-toggles {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  gap: 4px;
+}
+#footer-panels {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+#shortcut-toggle, #active-missions-toggle {
   --key-face: #202a31;
   --key-hover: #29343c;
   --key-pressed: #192228;
@@ -1392,6 +1407,24 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   overflow-y: auto;
 }
 #persist-hints[hidden] { display: none; }
+#active-missions-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #a7aeb5;
+  overflow-wrap: anywhere;
+  padding: 0 6px 0 0;
+}
+#active-missions-panel[hidden] { display: none; }
+#active-missions-panel:focus-visible { outline: 1px solid #56728b; outline-offset: -1px; }
+.active-mission + .active-mission { margin-top: 8px; }
+.active-mission strong { color: #c0cbd2; font-size: 12px; }
+.no-active-missions { color: var(--shortcut-text); }
 #gc.map-targeting { cursor: crosshair; }
 #hud-tools {
   flex-shrink: 0;
@@ -1793,7 +1826,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 [data-ui-style="classic"] #minimap-max-btn { --key-face: #0e0e18; color: #667788; }
 [data-ui-style="classic"] .cmp-btn { font-size: 10px; }
 [data-ui-style="classic"] .cmp-btn.cmp-center { --key-face: #0a0a12; font-size: 9px; }
-[data-ui-style="classic"] #shortcut-toggle { --key-face: #17181d; color: #999da7; }
+[data-ui-style="classic"] :is(#shortcut-toggle,#active-missions-toggle) { --key-face: #17181d; color: #999da7; }
 [data-ui-style="classic"] .minimap-legend-title { color: #ffe066; }
 </style>
 </head>
@@ -1891,17 +1924,23 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.49</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.50</span></div>
     <div id="persist-shortcuts">
-      <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
-      <div id="persist-hints" hidden>
-        <div><span class="ck">WASD</span> cardinal move</div>
-        <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
-        <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
-        <div><span class="ck">Enter</span> interact / dock / land</div>
-        <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
-        <div><span class="ck">ESC</span> back / close</div>
-        <div><span class="ck">.</span> wait / repair (galaxy)</div>
+      <div id="footer-toggles">
+        <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
+        <button type="button" id="active-missions-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="active-missions-panel" onclick="toggleActiveMissions()">Active Missions</button>
+      </div>
+      <div id="footer-panels">
+        <div id="persist-hints" hidden>
+          <div><span class="ck">WASD</span> cardinal move</div>
+          <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
+          <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
+          <div><span class="ck">Enter</span> interact / dock / land</div>
+          <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
+          <div><span class="ck">ESC</span> back / close</div>
+          <div><span class="ck">.</span> wait / repair (galaxy)</div>
+        </div>
+        <div id="active-missions-panel" tabindex="0" role="region" aria-label="Active missions and contracts" hidden></div>
       </div>
     </div>
     <div id="hud-tools">
@@ -2005,8 +2044,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </div>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.49';
-const GAME_VERSION_LABEL = 'v0.28 experimental.49';
+const GAME_VERSION = '0.28.0-experimental.50';
+const GAME_VERSION_LABEL = 'v0.28 experimental.50';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -13920,6 +13959,7 @@ function renderAll(){
   renderHUD();
   renderSidebar();
   renderContextBar();
+  renderActiveMissions();
   renderPointerKeys();
   renderGalaxyMinimap();
   renderCriticalBanner();
@@ -28565,6 +28605,114 @@ function renderContextBar(){
   }
   bar.innerHTML = btns.join('');
 }
+function missionStationDestination(name){
+  for(let y=0;y<(G.galaxy||[]).length;y++){
+    const x=G.galaxy[y].findIndex(cell=>cell.type==='BASE' && cell.name===name);
+    if(x>=0) return name+' [X:'+(x+1)+' Y:'+(y+1)+']';
+  }
+  return name;
+}
+
+function activeMissionSummaries(){
+  const missions=[], science=ensureScienceJobState(), job=science.active;
+  if(job){
+    const details=[];
+    if(job.target?.reportedX!==undefined && job.target?.reportedY!==undefined){
+      details.push('Last reported [X:'+(job.target.reportedX+1)+' Y:'+(job.target.reportedY+1)+']. Search nearby for drift.');
+    } else if(Number.isInteger(job.target?.x) && Number.isInteger(job.target?.y)){
+      details.push((job.target.planetName ? job.target.planetName+' · ' : '')+
+        (job.target.systemName ? job.target.systemName+' ' : '')+
+        '[X:'+(job.target.x+1)+' Y:'+(job.target.y+1)+']');
+    }
+    if(job.type==='alien_corpses' || job.type==='biodata'){
+      const name=job.type==='biodata'?'Biodata Sample':'Alien Corpse';
+      const required=job.required || (job.type==='biodata'?20:5);
+      const collected=countInventoryByName(name);
+      details.push(collected+' / '+required+' '+(job.type==='biodata'?'biodata samples':'alien corpses')+
+        ' · '+Math.max(0,required-collected)+' remaining.');
+      if(collected>=required) details.push('Ready to return to a Science Office.');
+    } else if(job.type==='artifact'){
+      details.push(countInventoryByName('Ancient Artifact')>0
+        ? 'Artifact recovered. Return to a Science Office.'
+        : 'Recover an ancient artifact and return it to a Science Office.');
+    } else if(job.type==='research_ship'){
+      const recovered=(G.inventory||[]).some(item=>item.name==='Research Ship Data' && (!job.id || item.scienceJobId===job.id));
+      details.push(recovered ? 'Research data recovered. Return to a Science Office.' : 'Board the research ship and retrieve its data.');
+    } else if(job.type==='data_box'){
+      const carried=(G.cargo||[]).some(item=>item.questItem==='science_data_box' && item.targetStation===job.targetStation);
+      details.push('Deliver to '+missionStationDestination(job.targetStation)+'.');
+      details.push(carried ? 'Secured data box aboard.' : 'Data box missing. Recover it or relinquish the contract at a Science Office.');
+    } else if(job.type==='civilization'){
+      const ready=Object.entries(G.planets||{}).some(([key,planet])=>planet.civilization &&
+        !science.reportedCivilizations.includes(key) && planet.visited?.some(Boolean) && getSurveySaleValue(planet)>0);
+      details.push(ready ? 'Civilization documented. Return to a Science Office.' : 'Visit an intelligent civilization and return with its documentation.');
+    } else details.push(job.status || 'Return to a Science Office for instructions.');
+    missions.push({title:scienceJobName(job),details});
+  }
+  const incident=ensureExpeditionState().quarantine;
+  if(incident && incident.discovered!==false && incident.status!=='closed' && !incident.choice){
+    const details=['Mercy of Dawn [X:'+(incident.x+1)+' Y:'+(incident.y+1)+']'];
+    if(!incident.startedTurn) details.push('Board and investigate the distress call.');
+    else{
+      const people=incident.survivors||[];
+      const aboard=people.filter(person=>person.status==='onboard').length;
+      const delivered=people.filter(person=>person.status==='delivered').length;
+      if(aboard) details.push(aboard+' passenger'+(aboard===1?'':'s')+' aboard. Deliver to a major station.');
+      if(delivered) details.push(delivered+' delivered.');
+      const waiting=people.filter(person=>(person.met || incident.rosterKnown) &&
+        !['onboard','delivered','lost'].includes(person.status) && person.seenCondition!=='found dead').length;
+      if(waiting) details.push(waiting+' known survivor'+(waiting===1?'':'s')+' still on the wreck.');
+      else if(!aboard) details.push('Continue investigating the wreck.');
+    }
+    missions.push({title:'Mercy of Dawn rescue',details});
+  }
+  if((G.cargo||[]).some(item=>item.questItem==='mystery_delivery')){
+    missions.push({title:'Mysterious package',details:['Deliver to '+missionStationDestination('Waypoint Omega')+' · 300 cr.']});
+  }
+  return missions;
+}
+
+let activeMissionsMarkup='';
+
+function renderActiveMissions(){
+  const panel=document.getElementById('active-missions-panel');
+  if(panel.hidden || !G) return;
+  const missions=activeMissionSummaries();
+  const html=missions.length ? missions.map(mission=>
+    '<section class="active-mission"><strong>'+htmlEsc(mission.title)+'</strong>'+
+    mission.details.map(detail=>'<div>'+htmlEsc(detail)+'</div>').join('')+'</section>').join('')
+    : '<div class="no-active-missions">No active missions or contracts.</div>';
+  // Keep scroll position and keyboard focus while the objective text is stable.
+  if(activeMissionsMarkup!==html){
+    panel.innerHTML=html;
+    activeMissionsMarkup=html;
+  }
+}
+
+function toggleActiveMissions(open){
+  const panel=document.getElementById('active-missions-panel');
+  const expanded=typeof open==='boolean'?open:panel.hidden;
+  panel.hidden=!expanded;
+  document.getElementById('active-missions-toggle').setAttribute('aria-expanded',String(expanded));
+  if(expanded){
+    document.getElementById('persist-hints').hidden=true;
+    document.getElementById('shortcut-toggle').setAttribute('aria-expanded','false');
+    renderActiveMissions();
+  }
+}
+
+document.getElementById('active-missions-panel').addEventListener('keydown',event=>{
+  if(event.key==='Escape'){
+    event.preventDefault();
+    event.stopPropagation();
+    toggleActiveMissions(false);
+    document.getElementById('active-missions-toggle').focus();
+  } else if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End',' ','Enter'].includes(event.key)){
+    event.stopPropagation();
+  } else if(!['Tab','Shift','Control','Alt','Meta'].includes(event.key)){
+    event.currentTarget.blur();
+  }
+});
 function crewAlive(){ return G.crew.some(c=>c.hp>0); }
 
 function atmosphereBiomeKey(key){
@@ -35909,6 +36057,7 @@ function showMenu(){
   document.getElementById('ctx-bar').style.display     = 'none';
   document.getElementById('persist-bar').style.display = 'none';
   document.getElementById('version-tag').style.display = 'none';
+  toggleActiveMissions(false);
   hideMsg();
   document.getElementById('ctx-bar').innerHTML = '';
   drawMenuScreen();
@@ -35953,6 +36102,7 @@ function toggleShortcutLegend(){
   const legend = document.getElementById('persist-hints');
   legend.hidden = !legend.hidden;
   document.getElementById('shortcut-toggle').setAttribute('aria-expanded',String(!legend.hidden));
+  if(!legend.hidden) toggleActiveMissions(false);
 }
 
 async function returnToMainMenuFromGame(){

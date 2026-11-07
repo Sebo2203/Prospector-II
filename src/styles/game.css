@@ -556,12 +556,27 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 #persist-shortcuts {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 14px;
-  padding-bottom: 30px;
+  padding-bottom: 36px;
 }
-#shortcut-toggle {
+#footer-toggles {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  gap: 4px;
+}
+#footer-panels {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+#shortcut-toggle, #active-missions-toggle {
   --key-face: #202a31;
   --key-hover: #29343c;
   --key-pressed: #192228;
@@ -582,6 +597,24 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   overflow-y: auto;
 }
 #persist-hints[hidden] { display: none; }
+#active-missions-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #a7aeb5;
+  overflow-wrap: anywhere;
+  padding: 0 6px 0 0;
+}
+#active-missions-panel[hidden] { display: none; }
+#active-missions-panel:focus-visible { outline: 1px solid #56728b; outline-offset: -1px; }
+.active-mission + .active-mission { margin-top: 8px; }
+.active-mission strong { color: #c0cbd2; font-size: 12px; }
+.no-active-missions { color: var(--shortcut-text); }
 #gc.map-targeting { cursor: crosshair; }
 #hud-tools {
   flex-shrink: 0;
@@ -983,5 +1016,5 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 [data-ui-style="classic"] #minimap-max-btn { --key-face: #0e0e18; color: #667788; }
 [data-ui-style="classic"] .cmp-btn { font-size: 10px; }
 [data-ui-style="classic"] .cmp-btn.cmp-center { --key-face: #0a0a12; font-size: 9px; }
-[data-ui-style="classic"] #shortcut-toggle { --key-face: #17181d; color: #999da7; }
+[data-ui-style="classic"] :is(#shortcut-toggle,#active-missions-toggle) { --key-face: #17181d; color: #999da7; }
 [data-ui-style="classic"] .minimap-legend-title { color: #ffe066; }

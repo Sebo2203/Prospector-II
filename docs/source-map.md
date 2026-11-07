@@ -12,6 +12,7 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/missions/quarantine-ship.js](../src/missions/quarantine-ship.js) | Added later: spatial rescue, survivor state, atmosphere and transport |
 | [src/rendering/quarantine.js](../src/rendering/quarantine.js) | Added later: deck fixtures and visible survivors |
 | [src/ui/log-records.js](../src/ui/log-records.js) | Added later: integrated LOG records, history and wrapping |
+| [src/ui/active-missions.js](../src/ui/active-missions.js) | Compact footer objectives derived from active contracts, rescue knowledge and carried quest cargo |
 | [src/ui/menu-pointer.js](../src/ui/menu-pointer.js) | Canvas menu hit areas, pointer routing, wheel navigation, and hover previews |
 | [src/ui/pointer-keys.js](../src/ui/pointer-keys.js) | On-screen keys for setup, feedback, and movement rebinding |
 | [src/core/identity-and-config.js](../src/core/identity-and-config.js) | 109 |

@@ -17,6 +17,7 @@ const suites = {
   rescue: 'spatial-scenarios.cjs',
   career: 'career-scenarios.cjs',
   log: 'log-tests.cjs',
+  missions: 'active-missions-scenarios.cjs',
   autosave: 'autosave-scenarios.cjs'
 };
 const names = process.argv.slice(2);

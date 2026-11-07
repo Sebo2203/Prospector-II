@@ -7,6 +7,7 @@ function renderAll(){
   renderHUD();
   renderSidebar();
   renderContextBar();
+  renderActiveMissions();
   renderPointerKeys();
   renderGalaxyMinimap();
   renderCriticalBanner();

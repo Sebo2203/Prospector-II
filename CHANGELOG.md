@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.50 adds the Active Missions dropdown
+
+Released on `experiment/expedition-legacy`.
+
+- Added a collapsed Active Missions button below Shortcuts. Its footer panel shows accepted science contracts, discovered Mercy of Dawn rescue work and the mysterious package delivery. General survey records and completed work are excluded.
+- Objectives show destination coordinates, specimen totals and remaining counts, recovered data, missing delivery cargo and known passenger progress. Research searches use the reported fix, preserving the hidden ship location. Hidden rescue details stay concealed.
+- Progress refreshes during ordinary play. The scrollable panel supports keyboard focus, navigation and Escape. It shares its space with Shortcuts, and the compass, minimap and version remain clear.
+- All 47 repository tests and five headless Edge suites passed. The new scenario covers six contract types, updates and completion, knowledge boundaries, keyboard scrolling, actual save/load and footer placement in both UI styles at two window sizes. The save schema supports experimental.46–49 careers.
+
 ## 2026-11-07 — 0.28 experimental.49 rearranges the footer and sidebar
 
 Released on `experiment/expedition-legacy`.

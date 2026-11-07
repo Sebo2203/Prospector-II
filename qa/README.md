@@ -75,6 +75,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `rescue` | 15 spatial Mercy rescue scenarios using real door, movement, medicine, carrying, transport and handoff actions |
 | `career` | 54 fixture-assisted renewable contract completions across three hulls, station sales, provenance, reloads and physical research-console recovery |
 | `log` | Removed journal controls, integrated LOG filters, active work first in Records, hidden knowledge, wrapping/deduplication and legacy UI cleanup |
+| `missions` | Footer dropdown, six contract types, live progress, destinations, hidden intel, completion, keyboard scrolling, save/load and layout |
 | `autosave` | Actual IndexedDB failure/recovery, large saves/reload, stale windows, import/export and save-before-transition behavior |
 
 `fixtures/palette-orbit-baseline.js` is the original `src/rendering/system.js` from gameplay commit `826210e`, before the shared body-art extraction. It is a visual regression reference, not production code. Do not regenerate it from current code just to make a comparison pass.

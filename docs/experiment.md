@@ -8,6 +8,8 @@ Click the context bar actions or use their displayed shortcuts. During play, the
 
 Open Inventory with **I** or Options with **O**, or click their context buttons. Click menu choices or use their displayed keys. Select cargo and press **X**, or click its slot, to open the same details. Hover gives a quick preview. Use **On-screen keys** to enter names or feedback text, or to choose a common movement key while rebinding.
 
+Open **Active Missions** below **Shortcuts** for a compact view of accepted contracts, known rescue work and package deliveries. It shows destination coordinates, collection counts and remaining objectives. General survey work stays in the log's Records view. The footer displays either Shortcuts or Active Missions at a time. Use the mouse wheel to scroll, or Tab into the mission panel and use the arrow keys, Page Up/Down or Home/End. Escape closes the panel.
+
 Use **Shift+Z** to dive or surface, **Shift+O** to refill oxygen at the ship, and **Shift+X** to release a tow. These commands also appear as context actions when available.
 
 ## Tactical ship combat

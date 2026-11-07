@@ -99,6 +99,7 @@
     "src/dialogue/engine.js",
     "src/ui/sidebar.js",
     "src/ui/context-bar.js",
+    "src/ui/active-missions.js",
     "src/core/death-and-debug-actions.js",
     "src/world/hazards.js",
     "src/movement/galaxy-animation-and-alarms.js",
