@@ -10,7 +10,48 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     await page.goto(gameUrl);
     await page.evaluate(()=>initGame('BULK_FREIGHTER','Systems QA','Systems QA'));
     await page.waitForFunction(()=>G?.galaxy && G.log.some(entry=>entry.msg.includes('Ready for departure')));
+    const dialog=page.getByRole('dialog',{name:'Ship Systems'});
+    const systemsButton=page.getByRole('button',{name:'Ship systems',exact:false});
+    const openingTurn=await page.evaluate(()=>G.turn);
+    assert.ok(await systemsButton.isVisible(),'ordinary galaxy play exposes the systems button');
+    await systemsButton.click();assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+    await page.keyboard.press('F3');assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+    await page.keyboard.press('i');
+    await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
+    assert.equal(await page.evaluate(()=>G._viewTab),'ship');
+    const clickCore=async name=>{
+      const point=await page.evaluate(name=>{
+        const target=canvasMenuTargets.find(target=>target.title?.startsWith(name+' — inspect and repair'));
+        if(!target) throw Error('Missing inventory core '+name);
+        const bounds=canvas.getBoundingClientRect();
+        return {x:bounds.x+(target.x+target.w/2)*bounds.width/canvasWidth,y:bounds.y+(target.y+target.h/2)*bounds.height/canvasHeight};
+      },name);
+      await page.mouse.click(point.x,point.y);
+    };
+    for(const viewport of [{width:1400,height:720},{width:800,height:600}]){
+      await page.setViewportSize(viewport);
+      await page.waitForFunction(()=>canvas.width===Math.round(canvas.getBoundingClientRect().width*devicePixelRatio));
+      assert.ok(await systemsButton.isVisible(),'ship inventory exposes the same systems action');
+      for(const name of ['Engines','Reactor','Shield generator','Cooling','Sensors','Fuel tank']){
+        await clickCore(name);assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+        assert.deepEqual(await page.evaluate(()=>[G.mode,G._viewTab]),['inventory','ship']);
+      }
+      await systemsButton.focus();await page.keyboard.press('Enter');assert.ok(await dialog.isVisible());
+      await page.keyboard.press('Escape');await systemsButton.blur();
+      await page.screenshot({path:artifactPath('Ship-overview-'+viewport.width+'.png')});
+    }
+    assert.equal(await page.evaluate(()=>G.turn),openingTurn,'all inspection paths remain free');
+    await page.setViewportSize({width:1400,height:720});
+    await page.keyboard.press('Escape');
+    await page.evaluate(()=>{damageShipSystem(G.ship,'engine',25,'access scenario');tryMove(1,0);});
+    assert.ok(await page.evaluate(()=>G.stranded));
+    await page.keyboard.press('i');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
+    await clickCore('Engines');assert.ok(await dialog.isVisible(),'a stranded overlay must not cover inventory hit areas');
+    await dialog.locator('[data-system-action="engine:bypass"]').click();
+    assert.deepEqual(await page.evaluate(()=>[G.mode,G._viewTab,G.stranded===null,effectiveEngineRating()]),['inventory','ship',true,1]);
+    await page.keyboard.press('Escape');await page.keyboard.press('Escape');
     await page.evaluate(()=>{
+      const engine=G.ship.systems.engine;engine.condition=100;engine.bypassUntil=0;
       DEBUG.shipInvisible=true;
       damageShipSystem(G.ship,'sensors',25,'scenario');
       G.ship.x=3;G.ship.y=3;
@@ -24,7 +65,6 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     assert.equal(await page.evaluate(()=>G.visited.filter(Boolean).length),discovery,'blind travel must not reveal new terrain');
     assert.equal(await page.evaluate(()=>G.visited[3*MAP_W+4]),false);
     await page.keyboard.press('F3');
-    const dialog=page.getByRole('dialog',{name:'Ship Systems'});
     assert.ok(await dialog.isVisible());
     assert.match(await dialog.textContent(),/OFFLINE · Existing charts retained/);
     await dialog.locator('[data-system-action="sensors:bypass"]').click();
@@ -59,7 +99,8 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     });
     const scan=await page.evaluate(()=>{const before=[G.turn,G.fuel];doScan();return [G.turn-before[0],G.fuel-before[1]];});
     assert.deepEqual(scan,[0,0],'offline scanning is blocked before charging time or fuel');
-    await page.keyboard.press('F3');
+    await systemsButton.click();
+    assert.ok(await dialog.isVisible(),'orbital play exposes the same mouse-accessible board');
     await page.screenshot({path:artifactPath('Ship-systems.png')});
     await page.keyboard.press('Escape');
 
@@ -225,6 +266,6 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       await page.keyboard.press('Escape');
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS: core damage, blind travel/locks/scans, engineer repair/bypass/expiry, heat, independent reloads, shield delay, persistent retreat/load, SOS recovery, fitting and upgrades.');
+    console.log('PASS: outside-combat and inventory mouse/keyboard access, stranded inventory repair, core damage, blind travel/locks/scans, engineer repair/bypass/expiry, heat, independent reloads, shield delay, persistent retreat/load, SOS recovery, fitting and upgrades.');
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.53 exposes ship systems throughout play
+
+Released on `experiment/expedition-legacy`.
+
+- Fixed incomplete equipment UI integration from experimental.52: the F3 shortcut already worked outside combat, but the context button appeared only during combat/stranding. Ordinary play now shows the same muted **Ship systems [F3]** control, including the ship inventory tab.
+- Added all six core integrity/effective readouts directly to **I → SHIP**, alongside weapon mounts and utility slots. Click a core or **Inspect / repair [F3]** to open the existing board; F3 and keyboard activation of the context button invoke the same action. Inspection stays free, and closing the board preserves the inventory tab.
+- Fixed the stranded overlay covering inventory and clearing its pointer hit areas. An engineer can now use the actual ship-inventory core controls to bypass a disabled drive while stranded. Shortened the ellipsis limit on long context labels to keep the extra action within the existing wrapped layout; full action text remains available in the button title.
+- Validation: all **55 repository tests** and the affected headless Edge scenarios passed, including native galaxy/orbit access, I → SHIP mouse and keyboard paths, all six core cards at two window sizes, free inspection, actual repair while stranded, and existing context wrapping/menu input. This is a UI/access correction; equipment rules and career schema 2 are unchanged, so experimental.52 saves remain supported.
+
 ## 2026-11-07 — 0.28 experimental.52 gives tactical ships persistent equipment
 
 Released on `experiment/expedition-legacy`.

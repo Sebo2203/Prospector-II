@@ -52,9 +52,10 @@ function drawCanvas(){
     resetCanvasMenu();
     if(G.dead) drawGameOverOverlay(); else drawRetirementScreen();
   }
-  if(G.stranded || G.examine || G.rangeTarget || G._itemAimMode){
+  const strandedView=G.stranded && G.mode==='galaxy';
+  if(strandedView || G.examine || G.rangeTarget || G._itemAimMode){
     resetCanvasMenu();
-    if(G.stranded) drawStrandedOverlay();
+    if(strandedView) drawStrandedOverlay();
     if(G.examine) drawExamineCursor();
     if(G.rangeTarget) drawRangeCursor();
     if(G._itemAimMode) drawItemAimOverlay();

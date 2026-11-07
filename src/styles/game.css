@@ -477,7 +477,7 @@ canvas {
   font-family: 'Courier New', Courier, monospace;
   color: #aaa;
   cursor: default;
-  max-width: min(100%, 60ch);
+  max-width: min(100%, 48ch);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

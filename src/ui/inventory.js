@@ -428,7 +428,7 @@ function drawInventoryOverlay(){
     ctx.fillStyle='#1a1a2a'; ctx.fillRect(40, 96, cw-80, 1);
 
     // Two-column stat layout — tighter rowH to leave more space for loadout tables
-    const col1x=40, col2x=cw/2+20, rowH=24, startY=114;
+    const col1x=40, col2x=cw/2+20, rowH=20, startY=110;
 
     function statRow(label, val, maxVal, x, y, col){
       ctx.font='12px Courier New'; ctx.fillStyle='#445566';
@@ -470,7 +470,33 @@ function drawInventoryOverlay(){
     statRow('Max Crew',       G.crew.filter(c=>c.hp>0).length, ss.maxUpgradeCrew??ss.maxCrew, col2x, startY+rowH*3, '#70f090');
 
     // Weapon loadout + Module loadout — side by side below the stat columns
-    const loadoutY = startY + rowH*5 + 10;
+    // All six cores are visible in the ship overview; every card opens the
+    // same detailed inspection/repair board used by F3 and the context button.
+    ctx.fillStyle='#708b9c';ctx.font='bold 12px Courier New';
+    ctx.fillText('CORE SYSTEMS',40,217);
+    canvasMenuButton('Inspect / repair [F3]',cw-210,202,openShipSystems);
+    const coreNames={engine:'Engines',reactor:'Reactor',shields:'Shields',cooling:'Cooling',sensors:'Sensors',fuelTank:'Fuel tank'};
+    const coreValues={
+      engine:'Rating '+effectiveEngineRating()+'/'+ss.engineRating,
+      reactor:shipReactorOutput()+' power',
+      shields:ss.shields?Math.floor(sh.shieldCharge)+'/'+shipShieldCapacity()+' charge':'Not fitted',
+      cooling:shipCoolingRate()+'/turn',
+      sensors:effectiveSensorRange()?'Range '+effectiveSensorRange():'OFFLINE',
+      fuelTank:G.maxFuel+'/'+ss.maxFuel+' capacity',
+    };
+    const coreWidth=(cw-110)/6;
+    Object.keys(SHIP_SYSTEMS).forEach((id,index)=>{
+      const x=40+index*(coreWidth+6), y=230, component=sh.systems[id];
+      const failed=(id==='engine' && effectiveEngineRating()===0) || (id==='sensors' && effectiveSensorRange()===0);
+      ctx.fillStyle='#080b10';ctx.fillRect(x,y,coreWidth,35);
+      ctx.strokeStyle=component.condition<100?'#66513a':'#2a3541';ctx.lineWidth=1;ctx.strokeRect(x,y,coreWidth,35);
+      ctx.font='bold 11px Courier New';ctx.fillStyle='#9eb5c5';
+      ctx.fillText(coreNames[id]+' '+component.condition+'%',x+5,y+13,coreWidth-10);
+      ctx.font='11px Courier New';ctx.fillStyle=failed || component.condition<=50?'#edaa77':'#8193a1';
+      ctx.fillText(coreValues[id],x+5,y+28,coreWidth-10);
+      canvasMenuTarget(x,y,coreWidth,35,openShipSystems,{title:SHIP_SYSTEMS[id].name+' — inspect and repair [F3]'});
+    });
+    const loadoutY = 280;
     const midX = col1x + (col2x - col1x) / 2 + 20;
     const slotRowH = 26; // bigger row height for readability
 
@@ -478,7 +504,6 @@ function drawInventoryOverlay(){
     ctx.fillStyle='#2a2a3a'; ctx.fillRect(col1x, loadoutY, midX-col1x-10, 1);
     ctx.font='bold 13px Courier New'; ctx.fillStyle='#554433';
     ctx.fillText('WEAPON MOUNTS', col1x, loadoutY+16);
-    canvasMenuButton('Core systems [F3]',cw-215,67,openShipSystems);
     for(let slot=0; slot<ss.weaponSlots; slot++){
       const wy = loadoutY+34+slot*slotRowH;
       const wid = (G.installedWeapons||[])[slot];

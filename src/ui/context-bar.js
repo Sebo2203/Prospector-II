@@ -396,8 +396,9 @@ function renderContextBar(){
     if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','routine'));
     btns.push(btn('O','Options','routine'));
   }
-  if(!G.dead && !G.retired && !G.showOptions && !G.dialogue &&
-     (G.mode==='shipcombat' || (G.mode==='galaxy' && G.stranded))){
+  if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
+     !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt &&
+     (G.mode!=='inventory' || (G._viewTab==='ship' && !G._cargoExamine))){
     btns.push(btn('F3','Ship systems','routine','F3'));
   }
   bar.innerHTML = btns.join('');

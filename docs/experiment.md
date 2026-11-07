@@ -26,7 +26,7 @@ Fly to an edge and use **R** to disengage. Enemies with a clear shot and a ready
 
 ## Mounts, core systems and damage
 
-Open **I → SHIP → Core systems**, **Hangar → Core Systems**, or **F3** to inspect installed ratings, effective performance, integrity, usable tank capacity, heat, power and weapon status. Combat and stranding also provide a context button. Native buttons support mouse, Tab and Enter; Escape closes the board. Inspecting is free.
+Open **I → SHIP → Core systems**, **Hangar → Core Systems**, or **F3** to inspect installed ratings, effective performance, integrity, usable tank capacity, heat, power and weapon status. The context bar provides a **Ship systems [F3]** button during ordinary play, including outside combat and in the ship tab. The ship overview shows all six core conditions and effective values; click any core or **Inspect / repair [F3]** for the detailed board. Native buttons support mouse, Tab and Enter; Escape closes the board. Inspecting is free.
 
 | Hull | Mounts available / maximum | Mount sizes in order | Base reactor | Cooling / turn | Heat capacity |
 | --- | --- | --- | ---: | ---: | ---: |
