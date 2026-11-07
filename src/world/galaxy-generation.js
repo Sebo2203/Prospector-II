@@ -589,6 +589,7 @@ function generateGalaxy() {
 }
 
 function revealAround(cx,cy,r){
+  if(G.shipStats && effectiveSensorRange()===0 && !DEBUG.fullVision) return;
   function revealTile(x,y){
     const index=y*MAP_W+x;
     G.visited[index]=true;

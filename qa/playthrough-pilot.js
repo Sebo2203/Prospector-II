@@ -111,6 +111,10 @@ window.installPlaythroughPilot=function(profile){
   }
   if(G.ship.hp<G.ship.maxHp-8){for(let n=0;n<10&&G.ship.hp<G.ship.maxHp-5&&G.credits>=100;n++)baseAction('hangar','repair');}
   if(G.crew.some(c=>c.hp<c.maxHp*0.8||Object.keys(c.statuses||{}).some(s=>DISEASE_STATUS_IDS.includes(s)||INJURY_STATUS_IDS.includes(s))))baseAction('medbay','healcrew');
+  for(const [id,component] of Object.entries(G.ship.systems)){
+   if(component.condition<100 && G.credits>150+(100-component.condition)*2)
+    act('Station: restore '+id,()=>repairShipSystem(id,'station'));
+  }
   if(G.fuel<G.maxFuel-2)baseAction('hangar','refuel');
   const prices={};G.base.sel=STATION_BUILDINGS.findIndex(b=>b.id==='market');G.base.screen='sub';
   for(const c of Object.values(COMMODITIES))prices[c.id]=getBuyPrice(G.base.stationName,c.id);p.prices[G.base.stationName]=prices;
@@ -265,6 +269,12 @@ window.installPlaythroughPilot=function(profile){
   if(G.dead||G.retired||p.stop)return;
   if(G.forcedMove?.active)return;
   if(G.dialogue){dialogue();return;}p.dialogueTotal=0;
+  if(shipRepairAccess() && G.mode!=='base' && G.crew.some(crew=>crew.hp>0 && crew.role==='engineer')){
+   const id=['engine','sensors','reactor','fuelTank','cooling','shields'].find(id=>
+    G.ship.systems[id].condition<=50 || (id==='sensors' && effectiveSensorRange()===0) || (id==='engine' && effectiveEngineRating()===0));
+   if(id && G.inventory.some(item=>item.usable==='repair_kit') && G.ship.systems[id].condition<85){act('Engineer repair: '+id,()=>repairShipSystem(id,'kit'));return;}
+   if(id && shipSystemCanBypass(G.ship,id)){act('Engineer bypass: '+id,()=>repairShipSystem(id,'bypass'));return;}
+  }
   if(G.stranded){
    if(G.stranded.rescuePhase==='offer')act('Accept rescue offer',()=>doAcceptRescue());
    else if(!G.stranded.sos)act('Activate SOS beacon',()=>key('t'));
@@ -274,7 +284,7 @@ window.installPlaythroughPilot=function(profile){
    p.combatRounds++;
    const combat=G.shipCombat, own=combat.player, target=combat.enemies[combat.target];
    const weapons=shipCombatWeapons();
-   const enemyVolley=livingShipCombatEnemies(combat).reduce((sum,enemy)=>sum+(enemy.ship.atk+3)*(enemy.ship.guns??1),0);
+   const enemyVolley=livingShipCombatEnemies(combat).filter(enemy=>shipCombatContactVisible(combat,enemy)).reduce((sum,enemy)=>sum+Math.max(enemy.ship._homeCluster?enemy.ship.atk+2:0,...actorShipCombatWeapons(enemy.ship).filter(entry=>shipWeaponOnline(enemy.ship,entry.slot)).map(entry=>entry.weapon.maxDmg)),0);
    const bestDamage=Math.max(0,...weapons.map(entry=>entry.weapon.maxDmg));
    const retreat=!bestDamage||enemyVolley>bestDamage*1.4||G.ship.hp<Math.max(G.ship.maxHp*0.6,enemyVolley*2);
    const course=(point,allowTarget=false)=>route(own,point,COMBAT_MAP.width,COMBAT_MAP.height,(x,y)=>{

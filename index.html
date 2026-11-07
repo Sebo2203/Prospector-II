@@ -1577,6 +1577,30 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   line-height: 16px;
   color: #558877;
 }
+#ship-systems-dialog {
+  width: min(900px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  margin: auto;
+  padding: 18px;
+  background: #0a0a0f;
+  color: #b9c6ce;
+  border: 1px solid #56728b;
+  font: 14px 'Courier New', monospace;
+}
+#ship-systems-dialog::backdrop { background: #000b; }
+.ship-system-header, .ship-system-row { display:flex; justify-content:space-between; gap:14px; align-items:center; }
+.ship-system-header { margin-bottom:12px; }
+.ship-system-row { border-top:1px solid #293743; padding:10px 0; }
+.ship-system-row p { color:#98abb8; margin-top:5px; }
+.system-actions { display:flex; gap:6px; flex-shrink:0; }
+.system-damaged { color:#ffad72; }
+#ship-systems-dialog button { font:inherit; padding:5px 8px; color:#c8dbe7; background:#182530; border:1px solid #496173; cursor:pointer; }
+#ship-systems-dialog button:disabled { color:#59646b; border-color:#29343b; cursor:default; }
+#ship-systems-dialog button:focus-visible { outline:2px solid #ffe066; }
+#ship-systems-dialog h3, #ship-systems-dialog ul { margin:12px 0 6px; }
+#ship-systems-dialog li { margin-left:20px; padding:3px 0; }
+.ship-system-summary { color:#8bd5ec; margin-bottom:8px; }
 
 #debug-playground-button {
   position: relative;
@@ -1927,7 +1951,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.51</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.52</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2045,10 +2069,14 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   <button data-menu-control onclick="saveToFile()">Export save</button>
   <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
+<dialog id="ship-systems-dialog" aria-labelledby="ship-systems-title">
+  <div class="ship-system-header"><h2 id="ship-systems-title">Ship Systems</h2><button type="button" onclick="closeShipSystems()">Close [Esc]</button></div>
+  <div id="ship-systems-content"></div>
+</dialog>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.51';
-const GAME_VERSION_LABEL = 'v0.28 experimental.51';
+const GAME_VERSION = '0.28.0-experimental.52';
+const GAME_VERSION_LABEL = 'v0.28 experimental.52';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -2220,7 +2248,7 @@ function renderCriticalBanner(){
   if(!G || G.dead || G.retired){ hideMsg(); return; }
   if(G.stranded){
     if(G.stranded.rescuePhase==='offer') showMsg('⚡ RESCUE OFFERED — [Y] Accept  [N] Decline','#44ff88');
-    else showMsg('⚠ STRANDED — Crew suffocating. [T] SOS beacon.','#ff4400');
+    else showMsg(strandedLifeSupportFailing()?'⚠ STRANDED — Crew suffocating. [T] SOS beacon.':'⚠ DRIVE DISABLED — [F3] Engineer repair / bypass or [T] SOS.','#ff4400');
     return;
   }
 
@@ -9718,6 +9746,8 @@ function buildShipStats(classId, upgrades) {
     maxUpgradeSensor: cls.maxUpgradeSensor,
     shields:        u.shields || cls.shields,
     maxShields:     cls.maxShields,
+    reactorRating: 1+(u.reactor||0),
+    coolingRating: 1+(u.cooling||0),
     engineRating:   Math.min(cls.maxUpgradeEngine, cls.engineRating + (u.engine||0)),
     maxUpgradeEngine: cls.maxUpgradeEngine,
     weaponSlots:    Math.min(cls.maxWeaponSlots, cls.weaponSlots + (u.weapons||0)),
@@ -9730,6 +9760,301 @@ function buildShipStats(classId, upgrades) {
 }
 
 // Add an item to cargo hold — returns true if added, false if full
+const SHIP_SYSTEMS = {
+  engine:{name:'Engines',stat:'engineRating'},
+  reactor:{name:'Reactor',stat:'reactorRating'},
+  shields:{name:'Shield generator',stat:'shields'},
+  cooling:{name:'Cooling',stat:'coolingRating'},
+  sensors:{name:'Sensors',stat:'sensorRange'},
+  fuelTank:{name:'Fuel tank',stat:'maxFuel'},
+};
+const SHIP_HULL_SYSTEMS = {
+  LIGHT_SCOUT:{mounts:[1,2],reactor:6,cooling:6,heat:80},
+  BULK_FREIGHTER:{mounts:[1,2],reactor:8,cooling:5,heat:120},
+  ATTACK_CORVETTE:{mounts:[2,2,3],reactor:12,cooling:8,heat:100},
+};
+
+function shipSystemStats(ship=G.ship){
+  if(ship===G.ship) return G.shipStats;
+  if(!ship.systemStats){
+    const guns=ship.guns??1;
+    ship.systemStats={
+      engineRating:ship.engineRating??2,sensorRange:ship.sensorRange??2,
+      shields:ship.shields||0,reactorRating:1,coolingRating:1,
+      reactorOutput:6+guns*3+(ship.shields||0),coolingRate:6,heatCapacity:80+guns*15,
+      weaponSlots:guns,mountSizes:new Array(guns).fill(3),maxFuel:100,
+    };
+    ship.installedWeapons ??= Array.from({length:guns},(_,index)=>
+      ship.atk>=8 ? ['railgun','laser_cannon','mass_driver'][index%3] : 'mass_driver');
+  }
+  return ship.systemStats;
+}
+
+function ensureShipSystems(ship=G.ship){
+  if(!ship.systems){
+    ship.systems=Object.fromEntries(Object.keys(SHIP_SYSTEMS).map(id=>[id,{condition:100,bypassUntil:0}]));
+  }
+  ship.heat ??= 0;
+  ship.weaponReadyAt ??= [];
+  ship.systemTurn ??= G.turn;
+  const stats=shipSystemStats(ship);
+  ship.shieldCharge ??= (stats.shields||0)*20;
+  ship.shieldRechargeAt ??= G.turn;
+  return ship.systems;
+}
+
+function shipSystemCondition(ship,id){
+  const system=ensureShipSystems(ship)[id];
+  return system.bypassUntil>G.turn ? Math.max(75,system.condition) : system.condition;
+}
+
+function shipSystemRating(ship,id){
+  const stats=shipSystemStats(ship), systems=ensureShipSystems(ship);
+  const base=stats[SHIP_SYSTEMS[id].stat]??1;
+  if(id==='fuelTank') return Math.floor(base*(shipSystemCondition(ship,id)<=50?0.5:1));
+  const condition=shipSystemCondition(ship,id);
+  const value=condition<=0 ? 0 : Math.max(0,base-Math.floor((100-condition)/25));
+  return systems[id].bypassUntil>G.turn && base>0 ? Math.max(1,value) : value;
+}
+
+function shipReactorOutput(ship=G.ship){
+  const stats=shipSystemStats(ship);
+  const hull=SHIP_HULL_SYSTEMS[stats.classId];
+  const nominal=(stats.reactorOutput??hull?.reactor??6)+Math.max(0,(stats.reactorRating??1)-1)*3;
+  return Math.floor(nominal*shipSystemCondition(ship,'reactor')/100);
+}
+
+function effectiveSensorRange(ship=G.ship){
+  if(!ship) return 0;
+  return shipReactorOutput(ship)<2 ? 0 : shipSystemRating(ship,'sensors');
+}
+
+function effectiveEngineRating(ship=G.ship){
+  return shipReactorOutput(ship)<2 ? 0 : shipSystemRating(ship,'engine');
+}
+
+function shipHeatCapacity(ship=G.ship){
+  const stats=shipSystemStats(ship), hull=SHIP_HULL_SYSTEMS[stats.classId];
+  return (hull?.heat??stats.heatCapacity??80)+Math.max(0,(stats.coolingRating??1)-1)*10;
+}
+
+function shipCoolingRate(ship=G.ship){
+  const stats=shipSystemStats(ship), hull=SHIP_HULL_SYSTEMS[stats.classId];
+  const nominal=(hull?.cooling??stats.coolingRate??6)+Math.max(0,(stats.coolingRating??1)-1)*2;
+  return Math.max(1,Math.floor(nominal*shipSystemCondition(ship,'cooling')/100));
+}
+
+function shipShieldCapacity(ship=G.ship){
+  const stats=shipSystemStats(ship);
+  if(shipReactorOutput(ship)<2+(stats.shields||0)) return 0;
+  return Math.floor((stats.shields||0)*20*shipSystemCondition(ship,'shields')/100);
+}
+
+function syncPlayerShipSystems(){
+  ensureShipSystems();
+  const capacity=shipSystemRating(G.ship,'fuelTank');
+  G.maxFuel=capacity;
+  G.fuel=Math.min(G.fuel,capacity);
+  G.ship.shieldCharge=Math.min(G.ship.shieldCharge,shipShieldCapacity());
+}
+
+function tickShipSystems(ship=G.ship,extraCooling=0){
+  ensureShipSystems(ship);
+  const elapsed=Math.max(0,G.turn-ship.systemTurn);
+  if(!elapsed) return;
+  const capacity=shipShieldCapacity(ship), cooling=shipCoolingRate(ship);
+  ship.shieldCharge=Math.min(ship.shieldCharge,capacity);
+  for(let turn=ship.systemTurn+1;turn<=G.turn;turn++){
+    ship.heat=Math.max(0,ship.heat-cooling);
+    if(turn>=ship.shieldRechargeAt && ship.shieldCharge<capacity && ship.heat+1<=shipHeatCapacity(ship)){
+      ship.shieldCharge=Math.min(capacity,ship.shieldCharge+3);
+      ship.heat++;
+    }
+    if(ship.heat===0 && ship.shieldCharge===capacity) break;
+  }
+  ship.heat=Math.max(0,ship.heat-extraCooling);
+  ship.systemTurn=G.turn;
+  if(ship===G.ship) syncPlayerShipSystems();
+}
+
+function shipEngineerSkill(){
+  return Math.max(0,...(G.crew||[]).filter(crew=>crew.hp>0 && crew.role==='engineer')
+    .map(crew=>crewSkillValue(crew,'eng')));
+}
+
+function damageShipSystem(ship,id,amount,source='combat'){
+  const component=ensureShipSystems(ship)[id];
+  const before=component.condition;
+  component.condition=Math.max(0,before-Math.max(0,amount));
+  component.bypassUntil=0;
+  if(ship===G.ship){
+    const oldFuel=G.fuel;
+    syncPlayerShipSystems();
+    addLog(SHIP_SYSTEMS[id].name+' damaged by '+source+'. Integrity '+component.condition+'%.','lw');
+    if(id==='fuelTank' && before>50 && component.condition<=50){
+      addLog('FUEL TANK RUPTURE — usable capacity halved to '+G.maxFuel+'. '+Math.max(0,oldFuel-G.fuel)+' fuel lost.','lc');
+    }
+    if(id==='engine' && effectiveEngineRating()===0) addLog('ENGINES OFFLINE — field repair, engineer bypass or SOS rescue required.','lc');
+    if(id==='sensors' && effectiveSensorRange()===0){
+      addLog('SENSORS OFFLINE — charts retained. New terrain and live contacts cannot be detected.','lc');
+    }
+  }
+  const enemy=G.shipCombat?.enemies.find(enemy=>enemy.ship===ship);
+  if(ship!==G.ship && enemy && shipCombatContactVisible(G.shipCombat,enemy)){
+    addLog(ship.name+' — '+SHIP_SYSTEMS[id].name+' damaged. Integrity '+component.condition+'%.','lc');
+  }
+  ship.shieldCharge=Math.min(ship.shieldCharge,shipShieldCapacity(ship));
+}
+
+function rollShipSystemDamage(ship,hullDamage,source){
+  if(hullDamage<=0 || ship._homeCluster) return;
+  const engineer=ship===G.ship?shipEngineerSkill():ship.engineerSkill||0;
+  const chance=Math.min(0.4,0.14+hullDamage*0.005)/(1+engineer*0.12);
+  if(Math.random()>=chance) return;
+  const stats=shipSystemStats(ship);
+  const ids=Object.keys(SHIP_SYSTEMS).filter(id=>(stats[SHIP_SYSTEMS[id].stat]||0)>0);
+  damageShipSystem(ship,ids[rnd(ids.length)],Math.max(10,25-engineer*2),source);
+}
+
+function damagePlayerShipHull(damage,source='weapons fire'){
+  if(DEBUG.infiniteHull) return 0;
+  const dealt=Math.min(G.ship.hp,Math.max(0,damage));
+  G.ship.hp=Math.max(0,G.ship.hp-dealt);
+  if(G.ship.hp>0) rollShipSystemDamage(G.ship,dealt,source);
+  return dealt;
+}
+
+function shipMountSize(slot,ship=G.ship){
+  const stats=shipSystemStats(ship);
+  return (stats.mountSizes || SHIP_HULL_SYSTEMS[stats.classId]?.mounts || [3])[slot] || 1;
+}
+
+function shipWeaponPowerUsed(ship=G.ship,loadout=ship===G.ship?G.installedWeapons:ship.installedWeapons){
+  return (loadout||[]).slice(0,shipSystemStats(ship).weaponSlots)
+    .reduce((total,id)=>total+(SHIP_WEAPONS[id]?.power||0),0)+2+(shipSystemStats(ship).shields||0);
+}
+
+function shipWeaponFitReason(slot,weapon,ship=G.ship){
+  const stats=shipSystemStats(ship);
+  if(slot<0 || slot>=stats.weaponSlots) return 'Mount is locked';
+  if((weapon.mountSize||1)>shipMountSize(slot,ship)) return 'Requires a larger mount';
+  const loadout=[...(ship===G.ship?G.installedWeapons:ship.installedWeapons)||[]];
+  loadout[slot]=weapon.id;
+  if(shipWeaponPowerUsed(ship,loadout)>shipReactorOutput(ship)) return 'Reactor capacity exceeded';
+  return '';
+}
+
+function shipWeaponOnline(ship,slot){
+  const stats=shipSystemStats(ship);
+  const loadout=ship===G.ship?G.installedWeapons:ship.installedWeapons;
+  const weapon=SHIP_WEAPONS[loadout?.[slot]];
+  if(!weapon || slot>=stats.weaponSlots || (weapon.mountSize||1)>shipMountSize(slot,ship)) return false;
+  let budget=shipReactorOutput(ship)-2-(stats.shields||0);
+  for(let index=0;index<=slot;index++){
+    const fitted=SHIP_WEAPONS[loadout[index]];
+    if(!fitted || (fitted.mountSize||1)>shipMountSize(index,ship)) continue;
+    if(fitted.power>budget){
+      if(index===slot) return false;
+    } else budget-=fitted.power;
+  }
+  return true;
+}
+
+function shipSystemCanBypass(ship,id){
+  const component=ensureShipSystems(ship)[id];
+  return id!=='fuelTank' && component.bypassUntil<=G.turn &&
+    (component.condition<75 || (component.condition===75 && ['engine','sensors'].includes(id) && shipSystemRating(ship,id)===0));
+}
+
+function shipRepairAccess(){
+  const mode=G.mode==='inventory'?G._prevMode:G.mode;
+  return ['galaxy','system','shipcombat','base'].includes(mode) ||
+    (mode==='planet' && G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x]?.type==='SHIP');
+}
+
+function repairShipSystem(id,method){
+  const component=ensureShipSystems()[id];
+  if(!component || !shipRepairAccess() || G.dead || G.retired) return false;
+  const mode=G.mode==='inventory'?G._prevMode:G.mode;
+  if(method==='station'){
+    if(mode!=='base' || component.condition>=100) return false;
+    const cost=(100-component.condition)*2;
+    if(G.credits<cost){addLog('Core repair requires '+cost+' cr.','lw');return false;}
+    G.credits-=cost;component.condition=100;component.bypassUntil=0;
+  } else {
+    const engineer=(G.crew||[]).find(crew=>crew.hp>0 && crew.role==='engineer');
+    if(!engineer){addLog('A living engineer is required for field repairs.','lw');return false;}
+    if(method==='kit'){
+      const index=G.inventory.findIndex(item=>item.usable==='repair_kit');
+      if(index<0 || component.condition>=85){addLog('Field repairs need a repair kit and stop at 85% integrity.','lw');return false;}
+      G.inventory.splice(index,1);
+      component.condition=Math.min(85,component.condition+25+shipEngineerSkill()*3);
+      component.bypassUntil=0;
+    } else if(method==='bypass'){
+      if(!shipSystemCanBypass(G.ship,id)) return false;
+      component.bypassUntil=G.turn+15;
+    } else return false;
+    giveSkillXP(engineer,'eng',2);
+    addLog(crewDisplayName(engineer)+(method==='bypass'?' rigs a 15-turn bypass for ':' repairs ')+SHIP_SYSTEMS[id].name+'.','lg');
+    if(mode==='shipcombat') advanceShipCombat(G.shipCombat,false,'repair');
+    else{
+      const previous=G.mode;
+      G.mode=mode;
+      if(mode==='planet') completeSurfaceAction();
+      else if(mode==='galaxy'){
+        if(G.stranded && effectiveEngineRating()>0 && G.fuel>0){
+          G.stranded=null;
+          (G.neutralShips||[]).forEach(ship=>ship.rescuing=false);
+          addLog('Drive operational. Stranded alert cleared.','lg');
+        }
+        if(G.stranded){
+          // Performing work still costs a turn when a rescue offer is open.
+          if(G.stranded.rescuePhase==='offer') G.stranded.rescuePhase=null;
+          doStrandedWait();
+        } else doWaitGalaxy();
+      } else {beginCareerTurn();finishCareerTurn();}
+      if(G.mode===mode && previous==='inventory') G.mode=previous;
+    }
+  }
+  syncPlayerShipSystems();
+  if(mode==='galaxy' && effectiveSensorRange()>0) revealAround(G.ship.x,G.ship.y,effectiveSensorRange());
+  if(G.shipCombat) syncShipCombatSystems(G.shipCombat);
+  renderAll();
+  return true;
+}
+
+// Weapon heat, absolute reload deadlines and shield damage belong to the ship,
+// so retreating or serializing an encounter cannot reset them.
+function shipWeaponAvailability(ship,slot){
+  ensureShipSystems(ship);
+  const id=(ship===G.ship?G.installedWeapons:ship.installedWeapons)?.[slot];
+  const weapon=SHIP_WEAPONS[id];
+  if(!weapon || weapon.placeholder) return 'Empty mount';
+  if(!shipWeaponOnline(ship,slot)) return 'Mount offline';
+  const reload=(ship.weaponReadyAt[slot]||0)-G.turn;
+  if(reload>0) return 'Ready in '+reload;
+  if(ship.heat+weapon.heat>shipHeatCapacity(ship)) return 'Too hot';
+  return 'Ready';
+}
+
+function commitShipWeapon(ship,slot){
+  const weapon=SHIP_WEAPONS[(ship===G.ship?G.installedWeapons:ship.installedWeapons)[slot]];
+  ship.heat+=weapon.heat;
+  ship.weaponReadyAt[slot]=G.turn+weapon.cooldown+1;
+}
+
+function absorbShipHit(ship,damage,source='weapons fire'){
+  ensureShipSystems(ship);
+  ship.shieldCharge=Math.min(ship.shieldCharge,shipShieldCapacity(ship));
+  const blocked=Math.min(ship.shieldCharge,damage);
+  ship.shieldCharge-=blocked;
+  ship.shieldRechargeAt=G.turn+3;
+  const hull=damage-blocked;
+  if(ship===G.ship) return damagePlayerShipHull(hull,source);
+  ship.hp=Math.max(0,ship.hp-hull);
+  if(ship.hp>0) rollShipSystemDamage(ship,hull,source);
+  return hull;
+}
 function addCargo(item){
   const cap = G.shipStats?.cargoCapacity ?? 1;
   if(G.cargo.length >= cap){
@@ -9899,6 +10224,7 @@ function initGame(chosenClass, captainName, shipName) {
   G.ship.hp     = G.ship.maxHp;
   G.maxFuel     = G.shipStats.maxFuel;
   G.fuel        = G.maxFuel;
+  ensureShipSystems();
   G.weaponLevel = G.shipStats.weaponSlots > 0 ? 1 : 0; // legacy
   // Default loadout by hull type
   G.installedWeapons = [];
@@ -11322,6 +11648,7 @@ function generateGalaxy() {
 }
 
 function revealAround(cx,cy,r){
+  if(G.shipStats && effectiveSensorRange()===0 && !DEBUG.fullVision) return;
   function revealTile(x,y){
     const index=y*MAP_W+x;
     G.visited[index]=true;
@@ -13963,6 +14290,7 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderActiveMissions();
+  if(shipSystemsDialog.open) renderShipSystems();
   renderPointerKeys();
   renderGalaxyMinimap();
   renderCriticalBanner();
@@ -14792,8 +15120,9 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
   const drawPlain=chart?(key,x,y,color)=>drawSpriteGraphic(ctx,key,x,y,color):drawSprite;
   const drawTinted=chart?(key,x,y,tint,opacity)=>drawTintedSpriteGraphic(ctx,key,x,y,tint,opacity):drawSpriteTinted;
   // Draw pirates. Radio contacts beyond sensor range appear as unknown pings.
-  const SENSOR_RANGE = (G.shipStats?.sensorRange ?? 3);
+  const SENSOR_RANGE = effectiveSensorRange();
   G.pirates.forEach(p=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!p.alive) return;
     const vx = p.x - camX;
     const vy = p.y - camY;
@@ -14812,6 +15141,7 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
   });
   // Draw NPC stranded ships — visible within sensor range
   (G.npcStranded||[]).forEach(ss=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!DEBUG.fullVision && !G.visited[ss.y*MAP_W+ss.x]) return;
     const svx=ss.x-camX, svy=ss.y-camY;
     if(svx<0||svx>=viewWidth||svy<0||svy>=viewHeight) return;
@@ -14841,6 +15171,7 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
 
   // Draw neutral ships. Radio contacts beyond sensor range appear as unknown pings.
   (G.neutralShips||[]).forEach(ns=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(ns.alive===false) return;  // destroyed — don't render wreck
     const vx2 = ns.x - camX, vy2 = ns.y - camY;
     if(vx2<0||vx2>=viewWidth||vy2<0||vy2>=viewHeight) return;
@@ -14859,11 +15190,12 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
 
   // Draw gas entities — visible within sensor range when player is in/near a nebula
   (G.gasEntities||[]).forEach(ge=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!ge.alive) return;
     const gvx = ge.x - camX, gvy = ge.y - camY;
     if(gvx<0||gvx>=viewWidth||gvy<0||gvy>=viewHeight) return;
     const gdist = Math.abs(ge.x-G.ship.x)+Math.abs(ge.y-G.ship.y);
-    if(!DEBUG.fullVision && gdist > (G.shipStats?.sensorRange ?? 3) + 2) return;
+    if(!DEBUG.fullVision && gdist > SENSOR_RANGE + 2) return;
     if(!DEBUG.fullVision && !G.visited[ge.y*MAP_W+ge.x]) return;
     const gpx = gvx*TS, gpy = gvy*TS;
     DRAW.gas_entity(ctx, gpx, gpy, ge.variant);
@@ -14880,6 +15212,7 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
 
   // Draw floating nebula loot crystals — persistent loot left when cargo was full
   (G.nebulaLoot||[]).forEach(loot=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!G.visited[loot.y*MAP_W+loot.x] && !DEBUG.fullVision) return;
     const lvx = loot.x - camX, lvy = loot.y - camY;
     if(lvx<0||lvx>=viewWidth||lvy<0||lvy>=viewHeight) return;
@@ -16491,7 +16824,8 @@ const STATION_BUILDINGS = [
           { label: 'Maintenance',   detail: 'Refuel and repair your hull',          id:'hangar_sub_maintenance' },
           { label: 'Upgrades',      detail: 'Hull, fuel, engines, shields, sensors',  id:'hangar_sub_upgrades'    },
           { label: 'Armament',      detail: 'Install and upgrade weapons',          id:'hangar_sub_armament'    },
-          { label: 'Modules',       detail: 'Ship systems and special equipment',   id:'hangar_sub_modules'     },
+          { label: 'Modules',       detail: 'Utility equipment',   id:'hangar_sub_modules'     },
+          { label: 'Core Systems', detail:'Inspect and repair engines, reactor, shields, cooling, sensors and tank', id:'ship_systems' },
           { label: 'Change Hull',   detail: 'Switch to a different ship class',     id:'changehull'             },
         ];
       }
@@ -16514,7 +16848,7 @@ const STATION_BUILDINGS = [
 
       if(hangarSub === 'upgrades'){
         const hullAtMax   = G.ship.maxHp >= ss.maxUpgradeHp;
-        const fuelAtMax   = G.maxFuel    >= ss.maxUpgradeFuel;
+        const fuelAtMax   = ss.maxFuel    >= ss.maxUpgradeFuel;
         const sensorAtMax = ss.sensorRange >= (ss.maxUpgradeSensor ?? cls.sensorRange + 2);
         const shieldAtMax = ss.shields >= ss.maxShields;
         const cargoMax   = { LIGHT_SCOUT:1, BULK_FREIGHTER:15, ATTACK_CORVETTE:1 };
@@ -16522,12 +16856,14 @@ const STATION_BUILDINGS = [
         return [
           { label: '← Back',              detail: '',                                                                                                                                                   id:'hangar_sub_top' },
           { label: 'Upgrade hull plating', detail: hullAtMax   ? 'Max ('+ss.maxUpgradeHp+' HP)'         : hasEngineer ? '200 cr → max HP +20 ('+G.ship.maxHp+'/'+ss.maxUpgradeHp+')'      : 'Needs Engineer', id:'uphull',    disabled: hullAtMax   || !hasEngineer },
-          { label: 'Upgrade fuel tank',    detail: fuelAtMax   ? 'Max ('+ss.maxUpgradeFuel+')'           : hasEngineer ? '250 cr → max fuel +20 ('+G.maxFuel+'/'+ss.maxUpgradeFuel+')'     : 'Needs Engineer', id:'upfuel',    disabled: fuelAtMax   || !hasEngineer },
-          { label: 'Upgrade shields',      detail: shieldAtMax ? 'Max ('+ss.maxShields+')'               : ss.maxShields===0 ? 'Hull cannot mount shields'
-                                                               : hasEngineer ? '350 cr → +1 shield ('+ss.shields+'/'+ss.maxShields+')'                                                     : 'Needs Engineer', id:'upshield',  disabled: shieldAtMax || ss.maxShields===0 || !hasEngineer },
+          { label: 'Upgrade fuel tank',    detail: fuelAtMax   ? 'Max ('+ss.maxUpgradeFuel+')'           : hasEngineer ? '250 cr → max fuel +20 ('+ss.maxFuel+'/'+ss.maxUpgradeFuel+')'     : 'Needs Engineer', id:'upfuel',    disabled: fuelAtMax   || !hasEngineer },
+          { label: 'Upgrade shield generator', detail: shieldAtMax ? 'Max grade '+ss.maxShields
+                                                               : hasEngineer ? '350 cr → +20 capacity, +1 power (grade '+ss.shields+'/'+ss.maxShields+')' : 'Needs Engineer', id:'upshield', disabled:shieldAtMax || !hasEngineer },
           { label: 'Upgrade sensors',      detail: sensorAtMax ? 'Max'                                   : '400 cr → range +1 (currently '+ss.sensorRange+')',                                          id:'upsensor',  disabled: sensorAtMax },
           { label: 'Upgrade cargo hold',   detail: cargoAtMax  ? 'Max'                                   : hasEngineer ? '300 cr → +10 capacity ('+ss.cargoCapacity+')'                    : 'Needs Engineer', id:'upcargo',   disabled: cargoAtMax  || !hasEngineer },
           { label: 'Upgrade engines',   detail: (()=>{ const cap=ss.maxUpgradeEngine??ss.engineRating; return ss.engineRating>=cap ? 'Max (rating '+cap+')' : hasEngineer ? '450 cr → engine +1 ('+ss.engineRating+'/'+cap+')' : 'Needs Engineer'; })(),  id:'upengine',  disabled: (ss.engineRating>=(ss.maxUpgradeEngine??ss.engineRating)) || !hasEngineer },
+          {label:'Upgrade reactor',detail:'500 cr → +3 output (grade '+(ss.reactorRating||1)+'/3)',id:'upreactor',disabled:(ss.reactorRating||1)>=3 || !hasEngineer},
+          {label:'Upgrade cooling',detail:'400 cr → +2 cooling and +10 heat capacity (grade '+(ss.coolingRating||1)+'/3)',id:'upcooling',disabled:(ss.coolingRating||1)>=3 || !hasEngineer},
         ];
       }
 
@@ -16540,13 +16876,13 @@ const STATION_BUILDINGS = [
             const wdef = wid ? SHIP_WEAPONS[wid] : null;
             const locked = slot >= ss.weaponSlots;
             return {
-              label: 'Slot ['+(slot+1)+'] '+(wdef ? wdef.name : 'empty'),
-              detail: locked ? 'Locked — add weapon slot first' : wdef ? wdef.minDmg+'–'+wdef.maxDmg+' dmg — press Enter to replace' : 'No weapon installed',
+              label: 'Mount ['+(slot+1)+'] '+(wdef ? wdef.name : 'empty'),
+              detail: (['','Light','Medium','Heavy'][shipMountSize(slot)])+' mount · '+(locked ? 'Locked — unlock mount first' : wdef ? wdef.minDmg+'–'+wdef.maxDmg+' dmg — Enter to replace' : 'No weapon installed'),
               id: 'installweapon_'+slot,
               disabled: locked,
             };
           }),
-          { label: 'Add weapon slot',
+          { label: 'Unlock weapon mount',
             detail: weaponAtMax ? 'Max ('+ss.maxWeaponSlots+')' : hasEngineer ? '500 cr → unlock slot ('+ss.weaponSlots+'/'+ss.maxWeaponSlots+')' : 'Needs Engineer',
             id:'upwslot', disabled: weaponAtMax || !hasEngineer },
         ];
@@ -17502,7 +17838,8 @@ function seedResearchShipJobMap(mapKey){
 }
 
 function radioRange(){
-  return (G.shipStats?.sensorRange ?? 3) + 5;
+  const sensors=effectiveSensorRange();
+  return sensors>0?sensors+5:0;
 }
 
 function neutralShipDistance(ns){
@@ -17847,6 +18184,7 @@ function drawBaseOverlay(){
       } else {
         ctx.fillStyle='#ffe066'; ctx.fillText(wdef.cost+' cr', ax+aw-12, ay+20);
         ctx.fillStyle='#556644'; ctx.fillText(wdef.minDmg+'–'+wdef.maxDmg+' dmg', ax+aw-12, ay+36);
+        ctx.fillStyle='#8899aa';ctx.fillText('Mount '+wdef.mountSize+' · '+wdef.power+' power · '+wdef.heat+' heat · Reload '+wdef.cooldown,ax+28,ay+50);
       }
       if(isInstalled && !wdef.placeholder){
         ctx.fillStyle='#335533'; ctx.font='11px Courier New'; ctx.fillText('installed', ax+aw-12, ay+50);
@@ -17858,6 +18196,8 @@ function drawBaseOverlay(){
     ctx.textAlign='center'; ctx.font='13px Courier New';
     if(selW.placeholder){
       ctx.fillStyle='#554422'; ctx.fillText('This weapon is not yet available.', cx, listTop+weapons.length*rowH+16);
+    } else if(shipWeaponFitReason(slot,selW)){
+      ctx.fillStyle='#d6a36a';ctx.fillText(shipWeaponFitReason(slot,selW),cx,listTop+weapons.length*rowH+16);
     } else if(G.credits < selW.cost){
       ctx.fillStyle='#662222'; ctx.fillText('Insufficient credits (need '+selW.cost+' cr, have '+G.credits+').', cx, listTop+weapons.length*rowH+16);
     } else {
@@ -18469,7 +18809,7 @@ function drawInventoryOverlay(){
     // Hull type header
     ctx.font='bold 20px Courier New'; ctx.fillStyle='#aaddff';
     const shipLabel = ss.hullType.toUpperCase() + (G.shipName ? '  "' + G.shipName + '"' : '');
-    ctx.fillText(shipLabel, 40, 68);
+    ctx.fillText(shipLabel, 40, 68, cw-280);
     ctx.font='13px Courier New'; ctx.fillStyle='#445566';
     ctx.fillText(ss.desc, 40, 86);
     ctx.fillStyle='#1a1a2a'; ctx.fillRect(40, 96, cw-80, 1);
@@ -18501,14 +18841,14 @@ function drawInventoryOverlay(){
     upgradeBar(sh.maxHp, ss.maxUpgradeHp,     col1x+172,          startY+rowH*0,        '#3388ff');
     statRow('Max Fuel',       G.maxFuel,      ss.maxUpgradeFuel,  col1x, startY+rowH*1, '#ddaa33');
     upgradeBar(G.maxFuel, ss.maxUpgradeFuel,  col1x+172,          startY+rowH*1,        '#aa7700');
-    statRow('Shields',        ss.shields,     ss.maxShields||0,   col1x, startY+rowH*2, '#88ccff');
-    statRow('Engine Rating',  ss.engineRating, ss.maxUpgradeEngine,  col1x, startY+rowH*3, '#ffcc44');
+    statRow('Shield capacity',shipShieldCapacity(), undefined,   col1x, startY+rowH*2, '#88ccff');
+    statRow('Engine Rating',  effectiveEngineRating(), ss.maxUpgradeEngine,  col1x, startY+rowH*3, '#ffcc44');
     upgradeBar(ss.engineRating, ss.maxUpgradeEngine, col1x+172,        startY+rowH*3,        '#aa8800');
-    statRow('Sensor Range',   ss.sensorRange, ss.maxUpgradeSensor,  col1x, startY+rowH*4, '#70d8ff');
+    statRow('Sensor Range',   effectiveSensorRange(), ss.maxUpgradeSensor,  col1x, startY+rowH*4, '#70d8ff');
     upgradeBar(ss.sensorRange, ss.maxUpgradeSensor, col1x+172,         startY+rowH*4,        '#2288aa');
 
     // Right column
-    statRow('Weapon Slots',   ss.weaponSlots, ss.maxWeaponSlots,  col2x, startY+rowH*0, '#ff8866');
+    statRow('Weapon Mounts',  ss.weaponSlots, ss.maxWeaponSlots,  col2x, startY+rowH*0, '#ff8866');
     upgradeBar(ss.weaponSlots, ss.maxWeaponSlots, col2x+172,      startY+rowH*0,        '#aa4422');
     statRow('Module Slots',   ss.moduleSlots, ss.maxModuleSlots,  col2x, startY+rowH*1, '#cc88ff');
     upgradeBar(ss.moduleSlots, ss.maxModuleSlots, col2x+172,      startY+rowH*1,        '#664488');
@@ -18524,7 +18864,8 @@ function drawInventoryOverlay(){
     // ── Weapon loadout (left half) ────────────────────────────────
     ctx.fillStyle='#2a2a3a'; ctx.fillRect(col1x, loadoutY, midX-col1x-10, 1);
     ctx.font='bold 13px Courier New'; ctx.fillStyle='#554433';
-    ctx.fillText('WEAPON LOADOUT', col1x, loadoutY+16);
+    ctx.fillText('WEAPON MOUNTS', col1x, loadoutY+16);
+    canvasMenuButton('Core systems [F3]',cw-215,67,openShipSystems);
     for(let slot=0; slot<ss.weaponSlots; slot++){
       const wy = loadoutY+34+slot*slotRowH;
       const wid = (G.installedWeapons||[])[slot];
@@ -19687,6 +20028,7 @@ function moveNeutralShips(){
     ns.patrolIdx = 0;
     ns.alive = true;
     ns.hostile = (G.stationReputation||0) <= -40; // inherit current rep state
+    for(const key of ['systems','systemStats','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn','ramReadyAt']) delete ns[key];
     ns.hp = ns.maxHp;                             // maxHp was set by ensureNeutralCombatStats
     ns._wasHostileAtEngagement = false;
     ns.lastRespawn = G.turn;
@@ -19696,6 +20038,7 @@ function moveNeutralShips(){
 
   (G.neutralShips||[]).forEach(ns=>{
     if(ns.alive===false) return;
+    if(ns.systems && effectiveEngineRating(ns)===0) return;
     // Rescuing — always beeline to stranded player, overrides normal behaviour
     if(ns.rescuing){
       stepToward(ns, G.ship.x, G.ship.y);
@@ -19707,7 +20050,7 @@ function moveNeutralShips(){
       if(ns.hostile){
         const chaseDist = Math.abs(ns.x - G.ship.x) + Math.abs(ns.y - G.ship.y);
         const PATROL_GIVE_UP = 12;
-        if(DEBUG.shipInvisible || chaseDist > PATROL_GIVE_UP || shipDisengagementActive(ns)){
+        if(DEBUG.shipInvisible || (ns.systems && effectiveSensorRange(ns)===0) || chaseDist > PATROL_GIVE_UP || shipDisengagementActive(ns)){
           const route = ns.patrolRoute;
           if(route && route.length > 0){
             const wp = route[ns.patrolIdx % route.length];
@@ -19774,6 +20117,10 @@ function stepToward(ns, tx, ty){
 // ─────────────────────────────────────────────────────────────────
 //  STRANDED — wait a turn, drain crew, check rescue
 // ─────────────────────────────────────────────────────────────────
+function strandedLifeSupportFailing(){
+  return G.fuel<=0 || shipReactorOutput()<2;
+}
+
 function doStrandedWait(){
   if(!G.stranded) return;
   const st = G.stranded;
@@ -19791,19 +20138,19 @@ function doStrandedWait(){
   beginCareerTurn();
 
   // Crew oxygen drain — 3 HP per crew member per turn stranded
-  const dmgPerCrew = 3;
+  const dmgPerCrew = strandedLifeSupportFailing()?3:0;
   G.crew.filter(c=>c.hp>0).forEach(c=>{
     c.hp = Math.max(0, c.hp - dmgPerCrew);
     if(c.hp<=0) addLog(crewDisplayName(c)+' has succumbed to oxygen depletion!','lc');
   });
-  SFX.suffocate();
+  if(dmgPerCrew) SFX.suffocate();
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
 
   // Every 3 turns, log a status message
   if(st.turnsStranded % 3 === 0){
     const hpTotal = G.crew.filter(c=>c.hp>0).reduce((s,c)=>s+c.hp,0);
-    addLog('Turn '+st.turnsStranded+' stranded. Crew HP: '+hpTotal+'. Reserves failing.','lw');
+    addLog('Turn '+st.turnsStranded+' stranded. Crew HP: '+hpTotal+(dmgPerCrew?'. Reserves failing.':'. Life support stable; drive repair or rescue needed.'),'lw');
   }
 
   // Move neutral ships + pirates
@@ -19884,6 +20231,12 @@ function doAcceptRescue(){
   }
   if(ns.rescueCost > 0) G.credits -= ns.rescueCost;
   G.fuel = Math.min(G.maxFuel, G.fuel + ns.fuelGift);
+  if(effectiveEngineRating()===0){
+    const systems=ensureShipSystems();
+    systems.engine.condition=Math.max(80,systems.engine.condition);
+    systems.reactor.condition=Math.max(80,systems.reactor.condition);
+    addLog(ns.name+' makes an emergency drive repair. Engines operational.','lg');
+  }
   G._alarmFuelWarn = false;
   G._alarmFuelCrit = false;
   ns.rescuing = false;
@@ -19939,7 +20292,7 @@ function drawStrandedOverlay(){
   // Crew drain status
   const living = G.crew.filter(c=>c.hp>0);
   ctx.font='14px Courier New'; ctx.fillStyle='#cc6666';
-  ctx.fillText('Crew: '+living.length+' alive  —  -3 HP/crew/turn', px2+12, py2+64);
+  ctx.fillText('Crew: '+living.length+' alive  —  '+(strandedLifeSupportFailing()?'-3 HP/crew/turn':'life support stable'), px2+12, py2+64);
 
   // HP bars for crew
   living.forEach((c,i)=>{
@@ -20017,26 +20370,28 @@ function drawStrandedOverlay(){
 function getExamineName(x, y){
   if(G.mode==='galaxy' || G.mode==='examine_galaxy'){
     // Check ships first (they sit on top of tiles)
-    const SENSOR_RANGE = G.shipStats?.sensorRange ?? 3;
-    const pirate = G.pirates.find(p=>p.alive&&p.x===x&&p.y===y);
+    const SENSOR_RANGE = effectiveSensorRange();
+    const liveSensors=SENSOR_RANGE>0 || DEBUG.fullVision;
+    if(!liveSensors && !G.visited[y*MAP_W+x]) return 'Uncharted space — sensors offline';
+    const pirate = liveSensors && G.pirates.find(p=>p.alive&&p.x===x&&p.y===y);
     if(pirate){
       const pdist = Math.abs(pirate.x-G.ship.x)+Math.abs(pirate.y-G.ship.y);
       if(!DEBUG.fullVision && pdist > SENSOR_RANGE) return 'Unknown Contact';
       return pirate.name;
     }
-    const neutral = (G.neutralShips||[]).find(ns=>ns.x===x&&ns.y===y);
+    const neutral = liveSensors && (G.neutralShips||[]).find(ns=>ns.x===x&&ns.y===y);
     if(neutral){
       const ndist = Math.abs(neutral.x-G.ship.x)+Math.abs(neutral.y-G.ship.y);
       if(!DEBUG.fullVision && ndist > SENSOR_RANGE) return 'Unknown Contact';
       return { type:'galaxy_ship', ns: neutral, dist: ndist };
     }
-    const gasEnt = (G.gasEntities||[]).find(ge=>ge.alive&&ge.x===x&&ge.y===y);
+    const gasEnt = liveSensors && (G.gasEntities||[]).find(ge=>ge.alive&&ge.x===x&&ge.y===y);
     if(gasEnt){
       const gdist = Math.abs(gasEnt.x-G.ship.x)+Math.abs(gasEnt.y-G.ship.y);
       if(!DEBUG.fullVision && gdist > SENSOR_RANGE + 2) return 'Unknown Nebula Reading';
       return gasEnt.name + ', a predatory gas entity that hunts ships inside nebulae.';
     }
-    const lootThere = (G.nebulaLoot||[]).find(l=>l.x===x&&l.y===y);
+    const lootThere = liveSensors && (G.nebulaLoot||[]).find(l=>l.x===x&&l.y===y);
     if(lootThere) return '✦ Nebula Crystal drifting at combat site. Move here or press Enter to collect.';
     // Then the tile itself
     const cell = G.galaxy[y]?.[x];
@@ -28288,6 +28643,7 @@ function renderContextBar(){
     const entry = shipCombatWeapons()[combat.weapon];
     if(entry) btns.push(btn('F','Fire '+entry.weapon.name,'danger'));
     else btns.push(btn('!','Unarmed','warn'));
+    btns.push(btn('B','Boost forward','info'));
     if(livingShipCombatEnemies(combat).length>1) btns.push(btn('Tab','Next target','info','Tab'));
     if(shipCombatEdge(combat.player)){
       const safe = shipCombatEscapeReady(combat);
@@ -28309,7 +28665,7 @@ function renderContextBar(){
         btns.push(btn('Y / Enter','Accept rescue','good','y'));
         btns.push(btn('N','Decline','danger'));
       } else {
-        btns.push(btn('Compass','Wait one turn (crew drain)','danger'));
+        btns.push(btn('Compass',strandedLifeSupportFailing()?'Wait one turn (crew drain)':'Wait (drive disabled)',strandedLifeSupportFailing()?'danger':'warn'));
         btns.push(btn('T', st.sos ? 'Disable SOS beacon' : 'Activate SOS beacon', st.sos?'danger':'good'));
       }
     } else {
@@ -28344,7 +28700,7 @@ function renderContextBar(){
       }
       const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
       if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
-      const pirateNear = !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
+      const pirateNear = (effectiveSensorRange()>0 || DEBUG.fullVision) && !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
       if(pirateNear) btns.push(btn('!','Pirate nearby: '+pirateNear.name,'danger'));
       const neutralTarget = nearestNeutralTarget(1);
       if(neutralTarget && !pirateHere) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
@@ -28608,6 +28964,10 @@ function renderContextBar(){
     if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','routine'));
     btns.push(btn('O','Options','routine'));
   }
+  if(!G.dead && !G.retired && !G.showOptions && !G.dialogue &&
+     (G.mode==='shipcombat' || (G.mode==='galaxy' && G.stranded))){
+    btns.push(btn('F3','Ship systems','routine','F3'));
+  }
   bar.innerHTML = btns.join('');
 }
 function missionStationDestination(name){
@@ -28718,6 +29078,71 @@ document.getElementById('active-missions-panel').addEventListener('keydown',even
     event.currentTarget.blur();
   }
 });
+const shipSystemsDialog=document.getElementById('ship-systems-dialog');
+
+function openShipSystems(){
+  if(!G || AUTOSAVE_STATE.transition || G.dead || G.retired || G.showOptions || G.dialogue) return;
+  renderShipSystems();
+  if(!shipSystemsDialog.open) shipSystemsDialog.showModal();
+}
+
+function closeShipSystems(){
+  if(shipSystemsDialog.open) shipSystemsDialog.close();
+}
+
+function renderShipSystems(){
+  if(!G) return;
+  if(G.dead || G.retired){closeShipSystems();return;}
+  const focus=document.activeElement?.dataset.systemAction;
+  const stats=G.shipStats, systems=ensureShipSystems();
+  const atStation=(G.mode==='inventory'?G._prevMode:G.mode)==='base';
+  const engineer=G.crew.some(crew=>crew.hp>0 && crew.role==='engineer');
+  const kits=G.inventory.filter(item=>item.usable==='repair_kit').length;
+  const rows=Object.entries(SHIP_SYSTEMS).map(([id,definition])=>{
+    const component=systems[id], bypass=Math.max(0,component.bypassUntil-G.turn);
+    let effect='Installed '+(stats[definition.stat]??1)+' · Effective '+shipSystemRating(G.ship,id);
+    if(id==='reactor') effect='Output '+shipReactorOutput()+' · Fitted demand '+shipWeaponPowerUsed();
+    if(id==='cooling') effect='Cooling '+shipCoolingRate()+'/turn · Heat capacity '+shipHeatCapacity();
+    if(id==='shields') effect='Charge '+Math.floor(G.ship.shieldCharge)+' / '+shipShieldCapacity()+' · Recharge 3/turn after 3 turns without a hit';
+    if(id==='sensors') effect='Installed '+stats.sensorRange+' · Effective '+effectiveSensorRange();
+    if(id==='engine') effect='Installed '+stats.engineRating+' · Effective '+effectiveEngineRating();
+    if(id==='sensors' && effectiveSensorRange()===0) effect='OFFLINE · Existing charts retained; new terrain and live contacts hidden';
+    if(id==='fuelTank') effect='Usable '+G.maxFuel+' / '+stats.maxFuel+' · Fuel '+Math.floor(G.fuel)+(component.condition<=50?' · RUPTURED':'');
+    const button=(method,label,disabled)=>'<button type="button" data-system-action="'+id+':'+method+'" '+(disabled?'disabled':'')+'>'+label+'</button>';
+    return '<section class="ship-system-row"><div><strong>'+definition.name+'</strong>'+
+      '<span class="'+(component.condition<=50?'system-damaged':'')+'"> '+component.condition+'% integrity'+
+      (bypass?' · bypass '+bypass+' turns':'')+'</span><p>'+htmlEsc(effect)+'</p></div><div class="system-actions">'+
+      (atStation?button('station','Restore ('+((100-component.condition)*2)+' cr)',component.condition>=100 || G.credits<(100-component.condition)*2):
+        button('kit','Repair kit',!engineer || !kits || component.condition>=85 || !shipRepairAccess())+
+        button('bypass','Bypass 15 turns',!engineer || !shipSystemCanBypass(G.ship,id) || !shipRepairAccess()))+
+      '</div></section>';
+  }).join('');
+  const mounts=Array.from({length:stats.maxWeaponSlots||stats.weaponSlots},(_,slot)=>{
+    const weapon=SHIP_WEAPONS[G.installedWeapons?.[slot]];
+    const locked=slot>=stats.weaponSlots;
+    const reason=weapon && !shipWeaponOnline(G.ship,slot)?shipWeaponFitReason(slot,weapon):'';
+    return '<li>Mount '+(slot+1)+' · '+['','Light','Medium','Heavy'][shipMountSize(slot)]+
+      ' · '+htmlEsc(locked?'Locked':weapon?.name||'Empty')+
+      (weapon && !locked?' · '+(reason||((shipWeaponOnline(G.ship,slot)?'Online':'Offline')+' · '+weapon.power+' power · '+weapon.heat+' heat · reload '+weapon.cooldown+' · '+shipWeaponAvailability(G.ship,slot))):'')+'</li>';
+  }).join('');
+  document.getElementById('ship-systems-content').innerHTML=
+    '<p class="ship-system-summary">Heat '+Math.ceil(G.ship.heat)+' / '+shipHeatCapacity()+
+    ' · Reactor '+shipWeaponPowerUsed()+' / '+shipReactorOutput()+' · Repair kits '+kits+'</p>'+
+    '<p>Engineer field repairs consume a kit and one turn, restoring up to 85%. A bypass supports a damaged core for 15 turns. Tank ruptures require a kit or station repair. Station technicians restore full integrity.</p>'+
+    rows+'<h3>Weapon mounts</h3><p>Core services reserve 2 power; shields reserve their installed grade. Remaining power feeds mounts in order. Waiting doubles cooling.</p><ul>'+mounts+'</ul><p>Utility slots '+(G.installedModules||[]).length+' / '+stats.moduleSlots+
+    ' · '+htmlEsc((G.installedModules||[]).join(', ')||'No utility equipment')+'</p>';
+  if(focus) Array.from(shipSystemsDialog.querySelectorAll('[data-system-action]'))
+    .find(button=>button.dataset.systemAction===focus && !button.disabled)?.focus();
+}
+
+shipSystemsDialog.addEventListener('click',event=>{
+  const action=event.target.closest('[data-system-action]');
+  if(!action) return;
+  const [id,method]=action.dataset.systemAction.split(':');
+  repairShipSystem(id,method);
+  renderShipSystems();
+});
+shipSystemsDialog.addEventListener('cancel',event=>{event.preventDefault();closeShipSystems();});
 function crewAlive(){ return G.crew.some(c=>c.hp>0); }
 
 function atmosphereBiomeKey(key){
@@ -29551,12 +29976,12 @@ function tryMove(dx,dy,confirmed){
 
   // -- Galaxy --------------------------------------------------
   if(G.mode==='galaxy'){
-    if(G.fuel<=0){
+    if(G.fuel<=0 || effectiveEngineRating()===0){
       // Enter stranded state if not already in it
       if(!G.stranded){
         G.stranded = { sos:false, turnsStranded:0, rescueShip:null, rescuePhase:null };
         (G.neutralShips||[]).forEach(s=>{ s.rescuing = false; }); // fresh strand — reset all rescuers
-        addLog('OUT OF FUEL — engines dead. Crew oxygen reserves depleting.','lc');
+        addLog(G.fuel<=0?'OUT OF FUEL — engines dead. Crew oxygen reserves depleting.':'ENGINES OFFLINE — repair or bypass the drive, or signal for rescue.','lc');
         addLog('Press [T] to toggle SOS beacon. Press any move key to wait a turn.','lw');
       } else {
         doStrandedWait();
@@ -29587,7 +30012,7 @@ function tryMove(dx,dy,confirmed){
     }
     maybeCrewGalaxyTalk();
     const bestNavSkill = Math.max(0, ...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
-    const baseRange  = G.shipStats?.sensorRange ?? 3;
+    const baseRange  = effectiveSensorRange();
     const floodBonus = (G.inventory||[]).some(i=>i.usable==='floodlight') ? 2 : 0;
     revealAround(nx, ny, baseRange + (bestNavSkill >= 2 ? 1 : 0) + floodBonus);
     const cell=G.galaxy[ny][nx];
@@ -29617,9 +30042,9 @@ function tryMove(dx,dy,confirmed){
       } else {
         addLog('WARNING: '+cell.name+' — pirate stronghold. Weapons fire detected!','lc');
         const dmg = 15 + rnd(20);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'base defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
-        addLog('Defense turrets hit your hull for '+dmg+' damage!','lc');
+        addLog('Defense turrets hit for '+dmg+' damage ('+hull+' hull).','lc');
         if(G.ship.hp<=0){
           G.dead=true;
           G.deathCause='The ship was destroyed by defense turrets at '+cell.name+'.';
@@ -29643,7 +30068,7 @@ function tryMove(dx,dy,confirmed){
         if(navCrew) giveSkillXP(navCrew, 'nav', 1);
       } else if(roll < Math.max(0.05, 0.40 - navMitigation)){
         const dmg = Math.max(1, Math.round((2 + rnd(5)) * severityMult));
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'base defense turrets');
         const navNote = bestNav >= 5 ? ' (navigator reduced impact)' : '';
         addLog('Charged nebula gas damages hull! -'+dmg+' HP.'+navNote,'lc');
         if(navCrew) giveSkillXP(navCrew, 'nav', 1);
@@ -29692,7 +30117,7 @@ function tryMove(dx,dy,confirmed){
         addLog('PULSAR DIRECT EXPOSURE — LETHAL RADIATION DOSE!','lc');
         applyRadiationExposureToCrew(4, 'pulsar_direct');
         const dmg = 20 + rnd(15);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'base defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
         addLog('Electromagnetic pulse strips '+dmg+' hull integrity!','lc');
         if(G.ship.hp<=0){
@@ -31194,7 +31619,7 @@ function movePirates(){
     base.lastRespawn = G.turn;
   });
 
-  const playerEngine = G.shipStats?.engineRating ?? 2;
+  const playerEngine = Math.max(1,effectiveEngineRating());
 
   G.pirates.forEach(p=>{
     if(!p.alive) return;
@@ -31226,7 +31651,7 @@ function movePirates(){
       })();
 
       // Pursuit cap: roamers give up after 10 consecutive chase turns
-      if(!DEBUG.shipInvisible && distToPlayer<=10 && !nearBase){
+      if(!DEBUG.shipInvisible && effectiveSensorRange(p)>0 && distToPlayer<=10 && !nearBase){
         p._chaseTurns = (p._chaseTurns||0) + 1;
         if(p._chaseTurns <= 10){
           tx=G.ship.x; ty=G.ship.y;
@@ -31249,7 +31674,7 @@ function movePirates(){
     } else {
       // Guard: patrol near home base, chase if player gets close
       const distToHome = Math.abs(p.x-p.homeX)+Math.abs(p.y-p.homeY);
-      if(!DEBUG.shipInvisible && distToPlayer<=6 && distToHome<=10){
+      if(!DEBUG.shipInvisible && effectiveSensorRange(p)>0 && distToPlayer<=6 && distToHome<=10){
         tx=G.ship.x; ty=G.ship.y;
         isChasing = true;
       } else {
@@ -31262,7 +31687,8 @@ function movePirates(){
     // Engine-rated movement. While chasing, speed is relative to the player's
     // engine: equal engines trade one tile for one tile, faster pirates gain,
     // and slower pirates only move on some chase turns.
-    const pirateEngine = p.engineRating || 2;
+    const pirateEngine = effectiveEngineRating(p);
+    if(!pirateEngine) return;
     let steps;
     if(isChasing){
       p._chaseMoveBank = (p._chaseMoveBank || 0) + (pirateEngine / Math.max(1, playerEngine));
@@ -31295,10 +31721,10 @@ function movePirates(){
 //  SHIP WEAPON CATALOG
 // -----------------------------------------------------------------
 const SHIP_WEAPONS = {
-  mass_driver:   { id:'mass_driver',   name:'Mass Driver',       minDmg:6,  maxDmg:12, range:5, cooldown:1, cost:300, desc:'Basic kinetic slugs. Reliable and affordable.' },
-  railgun:       { id:'railgun',       name:'Railgun',           minDmg:8,  maxDmg:13, range:8, cooldown:2, cost:450, desc:'Long-range kinetic weapon. Takes two actions to reload.' },
-  laser_cannon:  { id:'laser_cannon',  name:'Laser Cannon',      minDmg:13, maxDmg:20, range:6, cooldown:2, cost:700, desc:'High-energy beam with a two-action recharge.' },
-  pulse_laser:   { id:'pulse_laser',   name:'Pulse Laser',       minDmg:14, maxDmg:24, range:4, cooldown:1, cost:800, desc:'Short-range pulse variant. Heavy damage and a quick recharge.' },
+  mass_driver:   { id:'mass_driver',   name:'Mass Driver',       minDmg:6,  maxDmg:12, range:5, cooldown:1, heat:12,power:2,mountSize:1,cost:300, desc:'Light mount. Kinetic slugs, low heat, one-action reload.' },
+  railgun:       { id:'railgun',       name:'Railgun',           minDmg:8,  maxDmg:13, range:8, cooldown:2, heat:22,power:4,mountSize:2,cost:450, desc:'Medium mount. Long range, two-action reload.' },
+  laser_cannon:  { id:'laser_cannon',  name:'Laser Cannon',      minDmg:13, maxDmg:20, range:6, cooldown:2, heat:28,power:5,mountSize:2,cost:700, desc:'Medium mount. Heavy heat, two-action recharge.' },
+  pulse_laser:   { id:'pulse_laser',   name:'Pulse Laser',       minDmg:14, maxDmg:24, range:4, cooldown:1, heat:20,power:3,mountSize:1,cost:800, desc:'Light mount. Short range, one-action recharge.' },
   artemis:       { id:'artemis',       name:'Artemis Launcher',  minDmg:18, maxDmg:30, cost:1200, desc:'Missile system. Requires ammo (not yet implemented).', placeholder:true },
 };
 
@@ -31365,17 +31791,14 @@ function doFireAtBase(base){
   if(ss.weaponSlots===0 || !hasInstalled){
     addLog('No weapons to fire at the base.','lw'); return;
   }
-  // Each weapon slot fires once — total volley
-  let totalDmg = 0;
-  const wids = (G.installedWeapons||[]).filter(id=>id && SHIP_WEAPONS[id] && !SHIP_WEAPONS[id].placeholder);
-  wids.forEach(wid=>{
-    const w = SHIP_WEAPONS[wid];
-    const dmg = w.minDmg + rnd(w.maxDmg - w.minDmg + 1);
-    totalDmg += dmg;
-  });
+  if(effectiveSensorRange()===0){addLog('No sensor lock. Restore sensors before firing.','lw');return;}
+  const entry=shipCombatWeapons().find(entry=>shipWeaponAvailability(G.ship,entry.slot)==='Ready');
+  if(!entry){addLog('No mount ready: check heat, reloads and core power.','lw');renderAll();return;}
+  commitShipWeapon(G.ship,entry.slot);
+  const totalDmg=entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1);
   base.hp = Math.max(0, base.hp - totalDmg);
   const pct = Math.round((base.hp/base.maxHp)*100);
-  addLog('Volley hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
+  addLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
   SFX.hullHit && SFX.hullHit();
 
   if(base.hp <= 0){
@@ -31391,8 +31814,8 @@ function doFireAtBase(base){
   } else {
     // Base returns fire — turret volley back at player
     const turretDmg = 8 + rnd(18);
-    if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - turretDmg);
-    addLog('Defense turrets return fire: '+turretDmg+' hull damage!','lc');
+    const hull=absorbShipHit(G.ship,turretDmg,'defense turrets');
+    addLog('Defense turrets return fire: '+turretDmg+' damage ('+hull+' hull).','lc');
     SFX.hullHit && SFX.hullHit();
     if(G.ship.hp<=0){
       G.dead=true;
@@ -31598,12 +32021,15 @@ function doShipRetreat(){
     renderAll();
     return;
   }
+  const returningFire=livingShipCombatEnemies(combat).filter(enemy=>shipCombatEnemyCanFire(combat,enemy));
+  const underFire=returningFire.length>0;
   beginCareerTurn();
   finishCareerTurn();
+  for(const {ship} of livingShipCombatEnemies(combat)) tickShipSystems(ship);
+  syncShipCombatSystems(combat);
   if(G.dead){ renderAll(); return; }
-  const underFire = !shipCombatEscapeReady(combat);
   if(underFire){
-    for(const enemy of livingShipCombatEnemies(combat)){
+    for(const enemy of returningFire){
       if(shipCombatEnemyCanFire(combat,enemy)) fireShipCombatEnemy(combat,enemy);
       if(G.dead){ renderAll(); return; }
     }
@@ -31640,19 +32066,25 @@ function createShipCombatArena(combat, ships){
   pointerShipCombatAim = null;
   const positions = [[19,8],[18,4],[18,12],[21,6]];
   combat.player = { x:13,y:8,dx:1,dy:0 };
+  tickShipSystems();
   combat.enemies = ships.map((ship,i)=>{
+    tickShipSystems(ship);
     const collection = shipCombatCollection(ship);
     const [x,y] = positions[i];
     return {ship,collection,x,y,dx:-1,dy:0,
-      shields:i===0 ? combat.pirateShields : ship.shields||0,ready:1};
+      shields:ship.shieldCharge};
   });
   combat.target = 0;
   combat.weapon = 0;
-  combat.weaponReady = [];
+  combat.weaponReady = G.ship.weaponReadyAt;
+  combat.playerShields = G.ship.shieldCharge;
+  combat.seenTiles = [];
   combat.round = 1;
   combat.trails = [];
   combat.asteroids = [];
   combat.logFontSize ??= 12;
+
+  updateShipCombatSensors(combat);
 
   // Encounter coordinates and world seed keep cover consistent across save/load.
   let seed = (G.seed||0) ^ Math.imul(G.ship.x+1,73856093) ^ Math.imul(G.ship.y+1,19349663);
@@ -31727,8 +32159,9 @@ function shipCombatShotClear(combat,from,to){
 
 function shipCombatWeaponStatus(combat,entry){
   const target = combat.enemies[combat.target];
-  const cooldown = (combat.weaponReady[entry.slot]||0)-combat.round;
-  if(cooldown>0) return 'Ready in '+cooldown;
+  const availability=shipWeaponAvailability(G.ship,entry.slot);
+  if(availability!=='Ready') return availability;
+  if(!target || !shipCombatContactVisible(combat,target)) return 'No sensor lock';
   if(!target || shipCombatDistance(combat.player,target)>entry.weapon.range) return 'Out of range';
   if(!shipCombatShotClear(combat,combat.player,target)) return 'Shot blocked';
   return 'Ready';
@@ -31738,18 +32171,53 @@ function shipCombatEdge(point){
   return point.x===0 || point.y===0 || point.x===COMBAT_MAP.width-1 || point.y===COMBAT_MAP.height-1;
 }
 
+function actorShipCombatWeapons(ship){
+  ensureShipSystems(ship);
+  return (ship.installedWeapons||[]).slice(0,shipSystemStats(ship).weaponSlots)
+    .map((id,slot)=>({slot,weapon:SHIP_WEAPONS[id]})).filter(entry=>entry.weapon && !entry.weapon.placeholder);
+}
+
 function shipCombatEnemyRange(enemy){
   if(enemy.ship._homeCluster) return 1;
-  return enemy.ship.guns===0 ? 0 : 5;
+  return Math.max(0,...actorShipCombatWeapons(enemy.ship).filter(entry=>shipWeaponOnline(enemy.ship,entry.slot)).map(entry=>entry.weapon.range));
+}
+
+function shipCombatContactVisible(combat,enemy){
+  return DEBUG.fullVision || (effectiveSensorRange()>0 &&
+    shipCombatDistance(combat.player,enemy)<=6+effectiveSensorRange()*3);
+}
+
+function updateShipCombatSensors(combat){
+  const range=effectiveSensorRange()>0?6+effectiveSensorRange()*3:0;
+  for(let y=0;y<COMBAT_MAP.height;y++) for(let x=0;x<COMBAT_MAP.width;x++){
+    if(DEBUG.fullVision || (range && shipCombatDistance(combat.player,{x,y})<=range)) combat.seenTiles[y*COMBAT_MAP.width+x]=true;
+  }
+}
+
+function syncShipCombatSystems(combat){
+  combat.playerShields=G.ship.shieldCharge;
+  combat.weaponReady=G.ship.weaponReadyAt;
+  for(const enemy of combat.enemies) enemy.shields=enemy.ship.shieldCharge;
+  updateShipCombatSensors(combat);
+  updateShipCombatTarget(combat);
 }
 
 function shipCombatEnemyThreat(combat,enemy){
-  return shipCombatDistance(enemy,combat.player)<=shipCombatEnemyRange(enemy) &&
+  return (enemy.ship._homeCluster || (effectiveSensorRange(enemy.ship)>0 && shipCombatDistance(enemy,combat.player)<=6+effectiveSensorRange(enemy.ship)*3)) &&
+    shipCombatDistance(enemy,combat.player)<=shipCombatEnemyRange(enemy) &&
     shipCombatShotClear(combat,enemy,combat.player);
 }
 
+function shipCombatEnemyWeapon(combat,enemy){
+  if(!shipCombatEnemyThreat(combat,enemy)) return null;
+  return actorShipCombatWeapons(enemy.ship).find(entry=>
+    shipWeaponAvailability(enemy.ship,entry.slot)==='Ready' &&
+    shipCombatDistance(enemy,combat.player)<=entry.weapon.range) || null;
+}
+
 function shipCombatEnemyCanFire(combat,enemy){
-  return combat.round>=enemy.ready && shipCombatEnemyThreat(combat,enemy);
+  if(enemy.ship._homeCluster) return G.turn>=(enemy.ship.ramReadyAt||0) && shipCombatEnemyThreat(combat,enemy);
+  return !!shipCombatEnemyWeapon(combat,enemy);
 }
 
 function shipCombatEscapeReady(combat){
@@ -31782,12 +32250,9 @@ function moveShipCombatActor(combat,actor,to,engine){
 }
 
 function damageShipCombatPlayer(combat,damage){
-  const blocked = Math.min(combat.playerShields,damage);
-  combat.playerShields -= blocked;
-  if(damage>blocked){
-    if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0,G.ship.hp-(damage-blocked));
-    SFX.hullHit();
-  }
+  const hull=absorbShipHit(G.ship,damage,'combat impact');
+  combat.playerShields=G.ship.shieldCharge;
+  if(hull) SFX.hullHit();
   if(G.ship.hp===0){
     G.deathCause = 'The ship was destroyed in combat with '+combat.pirate.name+'.';
     G.dead = true;
@@ -31795,25 +32260,24 @@ function damageShipCombatPlayer(combat,damage){
     G.mode = 'galaxy';
     addLog('SHIP DESTROYED — game over.','lc');
   }
-  return damage-blocked;
+  return hull;
 }
 
 function damageShipCombatEnemy(combat,enemy,damage){
-  const blocked = Math.min(enemy.shields,damage);
-  enemy.shields -= blocked;
-  const ship = enemy.ship;
-  ship.hp = Math.max(0,ship.hp-(damage-blocked));
+  const ship=enemy.ship;
+  const hull=absorbShipHit(ship,damage,'combat impact');
+  enemy.shields=ship.shieldCharge;
   if(ship.hp===0){
     ship.alive = false;
     resolveShipCombatKill(combat,enemy);
   }
-  return damage-blocked;
+  return hull;
 }
 
 function moveShipInCombat(dx,dy){
   const combat = G.shipCombat;
   if(!combat || G.dead) return;
-  if(G.fuel<=0 && !DEBUG.infiniteFuel){
+  if(effectiveEngineRating()===0 || (G.fuel<=0 && !DEBUG.infiniteFuel)){
     addLog('Engines offline. You can still fire or wait.','lw');
     renderAll();
     return;
@@ -31824,12 +32288,13 @@ function moveShipInCombat(dx,dy){
     renderAll();
     return;
   }
-  const damage = moveShipCombatActor(combat,combat.player,to,G.shipStats.engineRating||1);
+  const damage = moveShipCombatActor(combat,combat.player,to,effectiveEngineRating());
+  G.ship.heat+=2;
   if(damage){
     const hull = damageShipCombatPlayer(combat,damage);
     if(!G.dead) addLog('Crossed plasma exhaust. '+damage+' damage ('+hull+' hull).','lw');
   }
-  advanceShipCombat(combat,damage>0);
+  advanceShipCombat(combat,damage>0,'move');
 }
 
 function shipCombatHitChance(attackerEngine,defenderEngine,distance){
@@ -31848,9 +32313,9 @@ function doShipFire(){
     return;
   }
   const {weapon,slot} = entry, enemy = combat.enemies[combat.target];
-  const chance = shipCombatHitChance(G.shipStats.engineRating||1,enemy.ship.engineRating||1,
+  const chance = shipCombatHitChance(effectiveEngineRating(),effectiveEngineRating(enemy.ship),
     shipCombatDistance(combat.player,enemy));
-  combat.weaponReady[slot] = combat.round+weapon.cooldown+1;
+  commitShipWeapon(G.ship,slot);
   if(Math.random()<chance){
     const damage = weapon.minDmg+rnd(weapon.maxDmg-weapon.minDmg+1);
     const hull = damageShipCombatEnemy(combat,enemy,damage);
@@ -31858,20 +32323,27 @@ function doShipFire(){
   } else {
     addLog(weapon.name+' misses '+enemy.ship.name+'.','li');
   }
-  advanceShipCombat(combat);
+  advanceShipCombat(combat,false,'fire');
 }
 
 function moveShipCombatEnemy(combat,enemy){
-  const fleeing = shipCombatEnemyRange(enemy)===0;
+  if(!enemy.ship._homeCluster && (effectiveEngineRating(enemy.ship)===0 || effectiveSensorRange(enemy.ship)===0)) return;
+  const sight=6+effectiveSensorRange(enemy.ship)*3;
+  if(shipCombatDistance(enemy,combat.player)<=sight) enemy.lastSeenPlayer={x:combat.player.x,y:combat.player.y};
+  const destination=enemy.lastSeenPlayer;
+  if(!destination) return;
+  const fleeing = !enemy.ship._homeCluster && (shipSystemStats(enemy.ship).weaponSlots||0)===0;
+  if(!fleeing && shipCombatDistance(enemy,destination)===0) return;
   const score = point=>{
     const goal = fleeing ? Math.min(point.x,point.y,COMBAT_MAP.width-1-point.x,COMBAT_MAP.height-1-point.y) :
-      shipCombatDistance(point,combat.player)*2 + 0.1*(Math.abs(point.x-combat.player.x)+Math.abs(point.y-combat.player.y));
+      shipCombatDistance(point,destination)*2 + 0.1*(Math.abs(point.x-destination.x)+Math.abs(point.y-destination.y));
     return goal + (shipCombatPlasma(combat,point)?.damage||0)*0.65;
   };
   const next = COMBAT_STEPS.map(([dx,dy])=>({x:enemy.x+dx,y:enemy.y+dy}))
     .filter(point=>shipCombatOpen(combat,point)).sort((a,b)=>score(a)-score(b))[0];
   if(next){
-    const damage = moveShipCombatActor(combat,enemy,next,enemy.ship._homeCluster ? 0 : enemy.ship.engineRating||1);
+    const damage = moveShipCombatActor(combat,enemy,next,enemy.ship._homeCluster ? 0 : effectiveEngineRating(enemy.ship));
+    if(!enemy.ship._homeCluster) enemy.ship.heat+=2;
     if(damage){
       addLog(enemy.ship.name+' crosses plasma exhaust ('+damage+' damage).','lc');
       damageShipCombatEnemy(combat,enemy,damage);
@@ -31884,46 +32356,61 @@ function moveShipCombatEnemy(combat,enemy){
 }
 
 function fireShipCombatEnemy(combat,enemy){
-  enemy.ready = combat.round+2;
-  const ship = enemy.ship;
-  const chance = shipCombatHitChance(ship.engineRating||1,G.shipStats.engineRating||1,
-    shipCombatDistance(enemy,combat.player));
-  let damage = 0;
-  for(let gun=0;gun<(ship.guns||1);gun++){
-    if(Math.random()<chance) damage += Math.max(1,ship.atk+rnd(4)-2);
-  }
-  const hull = damage ? damageShipCombatPlayer(combat,damage) : 0;
-  if(!G.dead){
-    const attack = ship._homeCluster ? ' rams' : ' fires';
-    addLog(ship.name+attack+' — '+(damage ? damage+' damage ('+hull+' hull).' : 'miss.'),'lc');
-  }
+  const ship=enemy.ship;
+  const entry=ship._homeCluster?null:shipCombatEnemyWeapon(combat,enemy);
+  if(!ship._homeCluster && !entry) return false;
+  if(ship._homeCluster) ship.ramReadyAt=G.turn+2;
+  else commitShipWeapon(ship,entry.slot);
+  const chance=shipCombatHitChance(effectiveEngineRating(ship),effectiveEngineRating(),shipCombatDistance(enemy,combat.player));
+  const damage=Math.random()<chance ? (entry ? entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1) : Math.max(1,ship.atk+rnd(4)-2)) : 0;
+  const hull=damage?damageShipCombatPlayer(combat,damage):0;
+  if(!G.dead) addLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),'lc');
   return damage>0;
 }
 
-function advanceShipCombat(combat=G.shipCombat,hitPlayer=false){
+function boostShipInCombat(){
+  const combat=G.shipCombat;
+  if(!combat || G.dead) return;
+  const heat=18+effectiveEngineRating()*2;
+  if(effectiveEngineRating()===0 || (!DEBUG.infiniteFuel && G.fuel<2) || G.ship.heat+heat>shipHeatCapacity()){
+    addLog('Boost requires working engines, 2 fuel and heat headroom.','lw');renderAll();return;
+  }
+  const {x,y,dx,dy}=combat.player;
+  const path=[{x:x+dx,y:y+dy},{x:x+dx*2,y:y+dy*2}];
+  if(!path.every(point=>shipCombatOpen(combat,point))){addLog('Boost path is blocked.','lw');renderAll();return;}
+  if(!DEBUG.infiniteFuel){G.fuel-=2;G.fuelSpent=(G.fuelSpent||0)+2;}
+  G.ship.heat+=heat;
+  for(const point of path){
+    const damage=moveShipCombatActor(combat,combat.player,point,effectiveEngineRating());
+    if(damage) damageShipCombatPlayer(combat,damage);
+    if(G.dead) break;
+  }
+  advanceShipCombat(combat,false,'boost');
+}
+
+function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   pointerShipCombatAim = null;
   if(!combat || combat!==G.shipCombat){ renderAll(); return; }
+  if(action==='wait') G.ship.extraCooling=shipCoolingRate();
   beginCareerTurn();
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
   for(const enemy of livingShipCombatEnemies(combat)){
-    if(shipCombatEnemyThreat(combat,enemy)){
-      if(combat.round<enemy.ready) continue;
-      hitPlayer = fireShipCombatEnemy(combat,enemy) || hitPlayer;
+    tickShipSystems(enemy.ship);
+    if(shipCombatEnemyCanFire(combat,enemy)){
+      hitPlayer=fireShipCombatEnemy(combat,enemy)||hitPlayer;
       if(G.dead){ renderAll(); return; }
-    } else {
-      moveShipCombatEnemy(combat,enemy);
-    }
+    } else if(shipCombatEnemyThreat(combat,enemy)){
+      enemy.ship.heat=Math.max(0,enemy.ship.heat-shipCoolingRate(enemy.ship));
+    } else moveShipCombatEnemy(combat,enemy);
   }
   if(!livingShipCombatEnemies(combat).length){
-    G.shipCombat = null;
-    G.mode = 'galaxy';
+    G.shipCombat=null;G.mode='galaxy';
     addLog(combat.result?.message||'Combat ended.',combat.result?.cls||'li');
   } else {
-    updateShipCombatTarget(combat);
-    if(!hitPlayer && combat.round%3===0 && combat.playerShields<G.shipStats.shields) combat.playerShields++;
     combat.round++;
-    combat.trails = combat.trails.filter(trail=>trail.expires>combat.round);
+    combat.trails=combat.trails.filter(trail=>trail.expires>combat.round);
+    syncShipCombatSystems(combat);
   }
   renderAll();
 }
@@ -31949,7 +32436,7 @@ function drawShipCombatOverlay(){
   ctx.beginPath();
   ctx.rect(map.x,map.y,w,h);
   ctx.clip();
-  if(activeWeapon){
+  if(activeWeapon && effectiveSensorRange()>0){
     const range=activeWeapon.range;
     ctx.fillStyle='#101c2a';
     ctx.fillRect(px(player)-range*TS,py(player)-range*TS,(range*2+1)*TS,(range*2+1)*TS);
@@ -31966,6 +32453,7 @@ function drawShipCombatOverlay(){
   ctx.restore();
 
   for(const trail of combat.trails){
+    if(!DEBUG.fullVision && (effectiveSensorRange()===0 || shipCombatDistance(player,trail)>6+effectiveSensorRange()*3)) continue;
     const x=px(trail), y=py(trail);
     ctx.fillStyle='#563322'; ctx.fillRect(x+2,y+2,TS-4,TS-4);
     ctx.fillStyle='#e09a52'; ctx.font='bold 14px Courier New';
@@ -31975,6 +32463,7 @@ function drawShipCombatOverlay(){
     }
   }
   for(const rock of combat.asteroids){
+    if(!DEBUG.fullVision && !combat.seenTiles[rock.y*map.width+rock.x]) continue;
     const x=px(rock), y=py(rock);
     ctx.fillStyle='#38414f'; ctx.fillRect(x+3,y+5,18,14);
     ctx.fillStyle='#788797'; ctx.fillRect(x+6,y+4,10,4);
@@ -31983,10 +32472,15 @@ function drawShipCombatOverlay(){
       ctx.fillStyle='#c5ceda'; ctx.fillText('#',x+8,y+16);
     }
   }
+  for(let y=0;y<map.height;y++) for(let x=0;x<map.width;x++){
+    if(!DEBUG.fullVision && !combat.seenTiles[y*map.width+x]){
+      ctx.fillStyle='#020409';ctx.fillRect(px({x}),py({y}),TS,TS);
+    }
+  }
   ctx.strokeStyle=shipCombatEscapeReady(combat)?'#87d8a6':shipCombatEdge(player)?'#995c60':'#457661';
   ctx.strokeRect(map.x+0.5,map.y+0.5,w-1,h-1);
 
-  if(selected){
+  if(selected && shipCombatContactVisible(combat,selected)){
     ctx.strokeStyle=activeWeapon && shipCombatDistance(player,selected)<=activeWeapon.range &&
       shipCombatShotClear(combat,player,selected) ? '#7fb6ca' : '#595d69';
     ctx.setLineDash([3,5]);
@@ -31999,6 +32493,7 @@ function drawShipCombatOverlay(){
   ctx.fillStyle='#20495d'; ctx.fillRect(px(player)+2,py(player)+2,TS-4,TS-4);
   drawDirectionalShip(G.shipStats.sprite||'player_ship',px(player),py(player),player.dx,player.dy);
   for(const enemy of living){
+    if(!shipCombatContactVisible(combat,enemy)) continue;
     const x=px(enemy), y=py(enemy), ship=enemy.ship;
     ctx.fillStyle='#501d27'; ctx.fillRect(x+2,y+2,TS-4,TS-4);
     if(ship._homeCluster){
@@ -32032,30 +32527,40 @@ function drawShipCombatReadout(combat,weapons){
     ctx.fillText(value,textX,y,textWidth);
   };
   ctx.fillStyle='#101924'; ctx.fillRect(x,42,width,408);
-  text('YOUR SHIP',60,'#a8d8f8','bold 13px Courier New');
-  text('Hull '+G.ship.hp+'/'+G.ship.maxHp+'   Shields '+combat.playerShields+'/'+G.shipStats.shields,78);
-  if(G.fuel<=0 && !DEBUG.infiniteFuel) text('Engines offline',96,'#f09878');
+  text('YOUR SHIP',58,'#a8d8f8','bold 13px Courier New');
+  text('Hull '+G.ship.hp+'/'+G.ship.maxHp+' · Shields '+Math.floor(G.ship.shieldCharge)+'/'+shipShieldCapacity(),75);
+  const delay=Math.max(0,G.ship.shieldRechargeAt-G.turn);
+  text('Shield recharge '+(delay?delay+' turns':'active')+' · 3/turn',90);
+  text('Heat '+G.ship.heat+'/'+shipHeatCapacity()+' · Cooling '+shipCoolingRate()+'/turn',105,G.ship.heat>=shipHeatCapacity()*0.8?'#f09878':'#aebdd0');
+  text('Power '+shipWeaponPowerUsed()+'/'+shipReactorOutput()+' · Sensors '+effectiveSensorRange(),120);
+  if(effectiveEngineRating()===0 || (G.fuel<=0 && !DEBUG.infiniteFuel)) text('Engines offline · F3 to repair',135,'#f09878');
 
-  if(target){
-    text('TARGET · '+livingShipCombatEnemies(combat).length+' CONTACTS',116,'#f0a9a6','bold 13px Courier New');
-    text(target.ship.name,134,'#f3dfaa');
-    text('Hull '+target.ship.hp+'/'+target.ship.maxHp+'   Shields '+target.shields,151);
-    text('Distance '+shipCombatDistance(combat.player,target)+'  ·  Enemy range '+shipCombatEnemyRange(target),168);
-  }
-  text('WEAPONS',195,'#a8d8f8','bold 13px Courier New');
-  if(!weapons.length) text('No weapons installed',217,'#b8a487');
+  text('TARGET',154,'#f0a9a6','bold 13px Courier New');
+  if(target && shipCombatContactVisible(combat,target)){
+    text(target.ship.name,171,'#f3dfaa');
+    text('Hull '+target.ship.hp+'/'+target.ship.maxHp+' · Shields '+target.shields,187);
+    text('Distance '+shipCombatDistance(combat.player,target)+' · Range '+shipCombatEnemyRange(target),203);
+    const ship=target.ship;
+    const powered=actorShipCombatWeapons(ship).filter(entry=>shipWeaponOnline(ship,entry.slot));
+    const remaining=Math.min(...powered.map(entry=>Math.max(0,(ship.weaponReadyAt[entry.slot]||0)-G.turn)));
+    const next=ship._homeCluster?'Ram '+Math.max(0,(ship.ramReadyAt||0)-G.turn):
+      !powered.length?'Mounts offline':powered.some(entry=>shipWeaponAvailability(ship,entry.slot)==='Ready')?'Weapon ready':remaining?'Reload '+remaining:'Too hot';
+    text('Heat '+ship.heat+'/'+shipHeatCapacity(ship)+' · '+next,218,'#b8a487','10px Courier New');
+  } else text('No live sensor contact',171,'#b8a487');
+  text('WEAPON MOUNTS',238,'#a8d8f8','bold 13px Courier New');
+  if(!weapons.length) text('No weapons installed',259,'#b8a487');
   weapons.forEach((entry,index)=>{
-    const y=204+index*29;
+    const y=246+index*29;
     const selected=index===combat.weapon;
     ctx.fillStyle=selected?'#263d4c':'#17242f'; ctx.fillRect(textX,y,textWidth,26);
     const status=shipCombatWeaponStatus(combat,entry);
     ctx.fillStyle=selected?'#e2f2ff':'#9fafbf'; ctx.font='bold 12px Courier New';
     ctx.fillText((index+1)+'  '+entry.weapon.name,textX+6,y+11,textWidth-12);
     ctx.font='10px Courier New'; ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';
-    ctx.fillText('Range '+entry.weapon.range+' · '+status,textX+6,y+22,textWidth-12);
+    ctx.fillText('H'+entry.weapon.heat+' · R'+entry.weapon.range+' · '+status,textX+6,y+22,textWidth-12);
     canvasMenuTarget(textX,y,textWidth,26,()=>selectShipCombatWeapon(index));
   });
-  const y=306;
+  const y=348;
   text('COMMS LOG',y,'#a8d8f8','bold 13px Courier New');
   if(combat.logFontSize>9) canvasMenuButton('−',x+width-60,y-16,()=>adjustCombatLogFont(-1));
   if(combat.logFontSize<16) canvasMenuButton('+',x+width-32,y-16,()=>adjustCombatLogFont(1));
@@ -32067,7 +32572,7 @@ function drawShipCombatReadout(combat,weapons){
     if(logY>443) break;
   }
   ctx.fillStyle='#7e90a3'; ctx.font='12px Courier New';
-  ctx.fillText('Move with compass or keys  ·  Wait to reload  ·  Select a ship or press Tab',12,472);
+  ctx.fillText('Move: compass/keys · Wait: reload + extra cooling · Boost: B · Core repairs: F3',12,472);
 }
 function doRadioHailLegacy(ns){
   // Fallback for unknown ship types
@@ -32190,6 +32695,12 @@ function doInteract(){
       if(sciCrew.length) sciCrew.forEach(c=>giveSkillXP(c,'sci',2));
       renderAll(); return;
     }
+    if(['SYSTEM','ROGUE_PLANET'].includes(cell.type)){
+      if(effectiveSensorRange()===0 && !cell.orbitalCharted && !DEBUG.fullVision){
+        addLog('Sensors offline. Restore sensors to chart unfamiliar orbits.','lw');renderAll();return;
+      }
+      cell.orbitalCharted=true;
+    }
     if(cell.type==='ROGUE_PLANET'){
       // Enter orbit — behaves exactly like a 1-planet system but no star, no orrery
       G.mode = 'system';
@@ -32204,9 +32715,9 @@ function doInteract(){
       if((G.stationReputation||0) <= -40){
         addLog(cell.name+': "Hostile transponder detected. You are banned from this station!"','lc');
         const dmg = 10 + rnd(15);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'station defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
-        addLog('Station defense turrets open fire! Hull takes '+dmg+' damage!','lc');
+        addLog('Station defense turrets open fire! '+dmg+' damage ('+hull+' hull).','lc');
         if(G.ship.hp<=0){
           G.dead=true;
           G.deathCause='The ship was destroyed by defense turrets at '+cell.name+'.';
@@ -32450,7 +32961,7 @@ function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
       const roughChance = Math.max(0, 0.25 - bestNav * 0.03);
       if(Math.random() < roughChance){
         const dmg = 3 + rnd(8);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'station defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
         addLog('Rough landing! Hull takes '+dmg+' damage.','lc');
         // Rough landing is a hard lesson — best navigator learns more
@@ -32743,6 +33254,10 @@ function doScan(){
   const body = getSelectedSystemBody();
   if(!body) return;
   const { pDesc, targetDesc, pKey } = body;
+  if(effectiveSensorRange()===0){
+    addLog('Sensors offline. Repair or bypass the sensor core before scanning.','lw');
+    renderAll();return;
+  }
 
   if(targetDesc.scanState==='full' || DEBUG.preScan === 1){
     if(DEBUG.preScan === 1) targetDesc.scanState = 'full';
@@ -32757,7 +33272,7 @@ function doScan(){
   const difficulty = B.scanDifficulty ?? 0.6;
   const bestNavScan  = Math.max(0, ...(G.crew.filter(c=>c.hp>0).map(c=>c.skills?.nav||0)));
   const scoutBonus   = bestNavScan >= 2 ? 0.15 : 0;
-  const sensorBonus  = ((G.shipStats?.sensorRange ?? 3) - 3) * 0.08;
+  const sensorBonus  = (effectiveSensorRange() - 3) * 0.08;
   // NAV skill: best navigator's skill adds up to +0.20 scan success
   const navScanBonus = bestNavScan * 0.02;
   const roll = Math.random();
@@ -33067,6 +33582,18 @@ function applyCorpItem(item){
 function executeBaseAction(actionId){
   const fuelCost = Math.round((G.maxFuel-G.fuel)*0.8);
   switch(actionId){
+    case 'ship_systems': openShipSystems(); return;
+    case 'upreactor':
+    case 'upcooling':{
+      const field=actionId==='upreactor'?'reactorRating':'coolingRating';
+      const price=actionId==='upreactor'?500:400;
+      if((G.shipStats[field]||1)>=3){addLog('Core grade is already at maximum.','li');break;}
+      if(!G.crew.some(crew=>crew.hp>0 && crew.role==='engineer')){addLog('An engineer is required for this upgrade.','lw');break;}
+      if(G.credits<price){addLog('Need '+price+' cr for this core upgrade.','lw');break;}
+      G.credits-=price;G.shipStats[field]=(G.shipStats[field]||1)+1;
+      addLog('Core upgraded to grade '+G.shipStats[field]+'.','lg');
+      break;
+    }
     case 'refuel':
       if(G.fuel>=G.maxFuel){ addLog('Fuel already full.','li'); }
       else if(fuelCost===0){ G.fuel=G.maxFuel; SFX.refuel(); addLog('Tank topped off (free).','lg'); }
@@ -33097,9 +33624,10 @@ function executeBaseAction(actionId){
       break;}
     case 'upfuel':{
       const ssF=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      if(G.maxFuel>=ssF.maxUpgradeFuel){ addLog('Fuel tank already at maximum ('+ssF.maxUpgradeFuel+').','li'); }
+      if(ssF.maxFuel>=ssF.maxUpgradeFuel){ addLog('Fuel tank already at maximum ('+ssF.maxUpgradeFuel+').','li'); }
       else if(G.credits>=250){
-        G.credits-=250; G.maxFuel+=20; G.fuel=Math.min(G.fuel+20,G.maxFuel);
+        G.credits-=250; ssF.maxFuel=Math.min(ssF.maxUpgradeFuel,ssF.maxFuel+20);
+        syncPlayerShipSystems();G.fuel=Math.min(G.fuel+20,G.maxFuel);
         addLog('Fuel tank upgraded! Max fuel +20.','lg');
         const _engF = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
         if(_engF) giveSkillXP(_engF, 'eng', 4);
@@ -33116,7 +33644,7 @@ function executeBaseAction(actionId){
     case 'upwslot':{
       const ss3=G.shipStats||buildShipStats('LIGHT_SCOUT');
       if(ss3.weaponSlots>=ss3.maxWeaponSlots){ addLog('Weapon slots at maximum.','li'); }
-      else if(G.credits>=500){ G.credits-=500; G.shipStats.weaponSlots++; addLog('Weapon slot unlocked! Slots: '+G.shipStats.weaponSlots+'/'+ss3.maxWeaponSlots+'.','lg'); }
+      else if(G.credits>=500){ G.credits-=500; G.shipStats.weaponSlots++; addLog('Weapon mount unlocked! Mounts: '+G.shipStats.weaponSlots+'/'+ss3.maxWeaponSlots+'.','lg'); }
       else addLog('Need 500 cr for weapon slot upgrade.','lw');
       break;}
     case 'upmodslot':{
@@ -33152,6 +33680,8 @@ function executeBaseAction(actionId){
       G.credits -= hullCost;
       const oldHp = G.ship.hp / G.ship.maxHp; // preserve HP ratio
       G.shipStats = buildShipStats(targetId);
+      for(const key of ['systems','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn']) delete G.ship[key];
+      ensureShipSystems();
       G.ship.maxHp = G.shipStats.maxHp;
       G.ship.hp = Math.max(1, Math.round(G.ship.maxHp * oldHp));
       G.maxFuel = G.shipStats.maxFuel;
@@ -33166,7 +33696,8 @@ function executeBaseAction(actionId){
       if(ss5.shields>=ss5.maxShields){ addLog('Shields already at maximum.','li'); }
       else if(G.credits>=350){
         G.credits-=350; G.shipStats.shields++;
-        addLog('Shield upgraded! Shields: '+G.shipStats.shields+'/'+ss5.maxShields+'.','lg');
+        addLog('Shield generator upgraded. Capacity '+shipShieldCapacity()+'; reserved power '+G.shipStats.shields+'.','lg');
+        if(shipWeaponPowerUsed()>shipReactorOutput()) addLog('Reactor overloaded: later mounts are offline. Upgrade the reactor or refit.','lw');
         const _engS = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
         if(_engS) giveSkillXP(_engS, 'eng', 4);
       }
@@ -33194,11 +33725,14 @@ function executeBaseAction(actionId){
       const weapons2 = Object.values(SHIP_WEAPONS);
       const selW2 = weapons2[G.base.weaponSel || 0];
       if(!selW2 || selW2.placeholder){ addLog('That weapon is not available yet.','lw'); break; }
+      const fit=shipWeaponFitReason(slot2,selW2);
+      if(fit){addLog(fit+'.','lw');break;}
       if(G.credits < selW2.cost){ addLog('Need '+selW2.cost+' cr to install '+selW2.name+'.','lw'); break; }
       G.credits -= selW2.cost;
       if(!G.installedWeapons) G.installedWeapons = [];
       G.installedWeapons[slot2] = selW2.id;
-      addLog(selW2.name+' installed in slot ['+(slot2+1)+']. Cost: '+selW2.cost+' cr.','lg');
+      G.ship.weaponReadyAt[slot2]=G.turn;
+      addLog(selW2.name+' installed in mount ['+(slot2+1)+']. Cost: '+selW2.cost+' cr.','lg');
       G.base.screen = 'sub';
       break;}
     case 'sell':{
@@ -33599,6 +34133,8 @@ function beginCareerTurn(){
 
 function finishCareerTurn(){
   if(G.dead) return;
+  tickShipSystems(G.ship,G.ship.extraCooling||0);
+  G.ship.extraCooling=0;
   tickCrewStatuses();
   checkDeath();
   if(G.dialogue?.context?.crew?.hp<=0) G.dialogue=null;
@@ -33688,7 +34224,7 @@ function doFuelScoop(context){
   function applyScoopRisk(label, chance, minDmg, maxDmg){
     if(Math.random() >= chance) return false;
     const dmg = minDmg + rnd(maxDmg - minDmg + 1);
-    if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+    damagePlayerShipHull(dmg,'environmental impact');
     SFX.hullHit && SFX.hullHit();
     addLog(label+' turbulence stresses the hull! -'+dmg+' HP.','lc');
     if(G.ship.hp<=0){
@@ -33851,6 +34387,7 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
+  if(shipSystemsDialog.open) return;
   if(debugDialog.open){
     if(e.shiftKey && e.key.toLowerCase()==='b'){
       e.preventDefault();
@@ -33885,6 +34422,7 @@ document.addEventListener('keydown', e=>{
 
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
+  if(e.key==='F3' && !e.repeat){e.preventDefault();openShipSystems();return;}
   if(e.key==='B' && e.shiftKey && !e.repeat){
     e.preventDefault();
     openDebugMenu();
@@ -33937,6 +34475,7 @@ document.addEventListener('keydown', e=>{
     if(G.mode==='shipcombat' && !G.showOptions && !G.dialogue){
       const key=e.key.toLowerCase();
       if(key==='f'){ doShipFire(); return; }
+      if(key==='b'){ boostShipInCombat(); return; }
       if(key==='r'){ doShipRetreat(); return; }
       if(key==='h'){ if(!e.repeat) doShipSurrender(); return; }
       if(e.key==='Tab'){ e.preventDefault(); cycleShipCombatTarget(e.shiftKey?-1:1); return; }
@@ -34619,6 +35158,7 @@ function debugEnterPalette(area='galaxy',rebuild=false){
       debugPalette:{simulate:false,entries:[],surfaceKey:'debug:surface'}});
     G.crew=Object.keys(CREW_ROLES).map(role=>randomCrewMember(role));
     G.shipStats=buildShipStats('BULK_FREIGHTER',{weapons:1});G.shipStats.cargoCapacity=100;G.shipStats.maxCrew=100;
+    G.shipStats.mountSizes=[3,3,3];G.shipStats.reactorOutput=100;G.shipStats.maxFuel=1000;
     G.maxFuel=1000;G.fuel=1000;G.ship={x:3,y:3,hp:1000,maxHp:1000};G.oxygen=100;G.credits=100000;
     G.installedModules=['tractor_beam','fuel_scoop','mining_drill'];G.installedWeapons=['railgun'];
     Object.assign(DEBUG,{infiniteFuel:true,infiniteHull:true,infiniteOxy:true,infiniteCrewHp:true,fullVision:true,shipInvisible:true,preScan:1});
@@ -34631,6 +35171,9 @@ function debugEnterPalette(area='galaxy',rebuild=false){
 function debugPaletteNavigateHome(area){
   G.dead=false;G.retired=false;G.dialogue=null;G.showOptions=false;G.forcedMove=null;G.shipCombat=null;
   G.examine=null;G.rangeTarget=null;G.stranded=null;G._voidPrompt=null;G._itemAimMode=null;G.underwater=false;
+  for(const component of Object.values(ensureShipSystems())){component.condition=100;component.bypassUntil=0;}
+  G.ship.heat=0;G.ship.shieldCharge=shipShieldCapacity();G.ship.shieldRechargeAt=G.turn;
+  G.ship.weaponReadyAt=[];G.ship.systemTurn=G.turn;syncPlayerShipSystems();
   G.curSystem='';G.ship.x=3;G.ship.y=3;G.fuel=G.maxFuel;G.oxygen=100;
   G.ship.hp=G.ship.maxHp;
   if(!G.crew.length)G.crew=Object.keys(CREW_ROLES).map(role=>randomCrewMember(role));
@@ -34991,6 +35534,19 @@ function drawDebugTools(){
   debugButton(spawn, 'Galaxy Spawn Report', ()=>showDebugMenu('report'));
 
   const career = debugSection(grid, 'Items, Crew, and Surface');
+  const systems=debugSection(grid,'Ship Core Damage');
+  for(const [id,definition] of Object.entries(SHIP_SYSTEMS)){
+    debugButton(systems,'Damage '+definition.name+' (25%)',()=>debugLogAction(()=>{
+      damageShipSystem(G.ship,id,25,'debug test');renderAll();
+    }));
+  }
+  debugButton(systems,'Rupture fuel tank',()=>debugLogAction(()=>{
+    damageShipSystem(G.ship,'fuelTank',50,'debug test');renderAll();
+  }));
+  debugButton(systems,'Restore all cores',()=>debugLogAction(()=>{
+    for(const component of Object.values(ensureShipSystems())){component.condition=100;component.bypassUntil=0;}
+    G.ship.heat=0;syncPlayerShipSystems();renderAll();
+  }));
   debugButton(career, 'Spawn Gear or Cargo', ()=>showDebugMenu('items'));
   debugButton(career, 'Add 1,000 Credits', ()=>debugLogAction(()=>{
     G.credits += 1000;
@@ -35402,7 +35958,19 @@ const SFX = (() => {
   };
 })();
 
-const CAREER_SAVE_VERSION = 1;
+const CAREER_SAVE_VERSION = 2;
+const SAVE_SHIP_SYSTEMS = ['engine','reactor','shields','cooling','sensors','fuelTank'];
+
+function validateSavedShipSystems(ship,turn){
+  if(!ship.systems || !SAVE_SHIP_SYSTEMS.every(id=>{
+    const component=ship.systems[id];
+    return component && Number.isFinite(component.condition) && component.condition>=0 && component.condition<=100 &&
+      Number.isSafeInteger(component.bypassUntil) && component.bypassUntil>=0;
+  }) || !['heat','shieldCharge','shieldRechargeAt','systemTurn'].every(key=>Number.isFinite(ship[key]) && ship[key]>=0) ||
+     ship.systemTurn>turn || !Array.isArray(ship.weaponReadyAt) ||
+     !ship.weaponReadyAt.every(value=>value===null || (Number.isSafeInteger(value) && value>=0))) throw invalidCareerSave();
+}
+
 const CAREER_MODES = new Set(['galaxy','system','planet','base','inventory','scanview','shipcombat','casino','radio']);
 const CAREER_ROSTERS = ['crew','neutralShips','pirates','gasEntities'];
 const COMBAT_ROSTERS = ['neutralShips','pirates','gasEntities'];
@@ -35473,6 +36041,9 @@ function parseSaveSnapshot(raw){
      (view==='base' && !game.base)){
     throw invalidCareerSave();
   }
+  validateSavedShipSystems(game.ship,game.turn);
+  if(!Number.isFinite(game.shipStats.maxFuel) || game.shipStats.maxFuel<=0 ||
+     !Number.isFinite(game.maxFuel) || game.maxFuel<0 || !Number.isFinite(game.fuel) || game.fuel<0 || game.fuel>game.maxFuel) throw invalidCareerSave();
   resolveCareerReferences(game);
   return game;
 }
@@ -35493,6 +36064,7 @@ function resolveCareerReferences(game){
     if(!Array.isArray(game[roster])) throw invalidCareerSave();
     rosters[roster] = new Map();
     for(const actor of game[roster]){
+      if(actor?.systems) validateSavedShipSystems(actor,game.turn);
       const id = actor?._careerId;
       if(!Number.isSafeInteger(id) || id<1 || id>game.entitySerial || ids.has(id)) throw invalidCareerSave();
       ids.add(id);
@@ -35521,15 +36093,19 @@ function resolveCareerReferences(game){
   const combat = game.shipCombat;
   if(combat){
     if(!Array.isArray(combat.enemies) || !combat.enemies[combat.target] || !combat.player ||
-       !['log','weaponReady','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
+       !['log','weaponReady','seenTiles','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
        !Number.isSafeInteger(combat.round) || combat.round<1) throw invalidCareerSave();
     const participants = new Set();
     for(const enemy of combat.enemies){
       if(!enemy || !COMBAT_ROSTERS.includes(enemy.collection) || participants.has(enemy.ship)) throw invalidCareerSave();
       participants.add(enemy.ship);
       enemy.ship = actorAt(enemy.collection,enemy.ship);
+      validateSavedShipSystems(enemy.ship,game.turn);
     }
     combat.pirate = combat.enemies[combat.target].ship;
+    combat.weaponReady=game.ship.weaponReadyAt;
+    combat.playerShields=game.ship.shieldCharge;
+    for(const enemy of combat.enemies) enemy.shields=enemy.ship.shieldCharge;
   }
 }
 // Autosave records are committed as a current/previous pair in one transaction.
@@ -35808,6 +36384,8 @@ function installSaveSnapshot(loaded){
     restoreStrandedShipMarkers();
     removeInteriorOreDeposits(G.planets);
     ensureCrewStatusState();
+    syncPlayerShipSystems();
+    if(G.shipCombat) syncShipCombatSystems(G.shipCombat);
     return G;
   }catch(error){G=before;throw error;}
 }

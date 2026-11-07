@@ -163,6 +163,19 @@ function drawDebugTools(){
   debugButton(spawn, 'Galaxy Spawn Report', ()=>showDebugMenu('report'));
 
   const career = debugSection(grid, 'Items, Crew, and Surface');
+  const systems=debugSection(grid,'Ship Core Damage');
+  for(const [id,definition] of Object.entries(SHIP_SYSTEMS)){
+    debugButton(systems,'Damage '+definition.name+' (25%)',()=>debugLogAction(()=>{
+      damageShipSystem(G.ship,id,25,'debug test');renderAll();
+    }));
+  }
+  debugButton(systems,'Rupture fuel tank',()=>debugLogAction(()=>{
+    damageShipSystem(G.ship,'fuelTank',50,'debug test');renderAll();
+  }));
+  debugButton(systems,'Restore all cores',()=>debugLogAction(()=>{
+    for(const component of Object.values(ensureShipSystems())){component.condition=100;component.bypassUntil=0;}
+    G.ship.heat=0;syncPlayerShipSystems();renderAll();
+  }));
   debugButton(career, 'Spawn Gear or Cargo', ()=>showDebugMenu('items'));
   debugButton(career, 'Add 1,000 Credits', ()=>debugLogAction(()=>{
     G.credits += 1000;

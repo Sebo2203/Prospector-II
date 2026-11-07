@@ -211,4 +211,8 @@
   <button data-menu-control onclick="saveToFile()">Export save</button>
   <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
+<dialog id="ship-systems-dialog" aria-labelledby="ship-systems-title">
+  <div class="ship-system-header"><h2 id="ship-systems-title">Ship Systems</h2><button type="button" onclick="closeShipSystems()">Close [Esc]</button></div>
+  <div id="ship-systems-content"></div>
+</dialog>
 

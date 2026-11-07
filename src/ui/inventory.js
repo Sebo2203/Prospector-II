@@ -422,7 +422,7 @@ function drawInventoryOverlay(){
     // Hull type header
     ctx.font='bold 20px Courier New'; ctx.fillStyle='#aaddff';
     const shipLabel = ss.hullType.toUpperCase() + (G.shipName ? '  "' + G.shipName + '"' : '');
-    ctx.fillText(shipLabel, 40, 68);
+    ctx.fillText(shipLabel, 40, 68, cw-280);
     ctx.font='13px Courier New'; ctx.fillStyle='#445566';
     ctx.fillText(ss.desc, 40, 86);
     ctx.fillStyle='#1a1a2a'; ctx.fillRect(40, 96, cw-80, 1);
@@ -454,14 +454,14 @@ function drawInventoryOverlay(){
     upgradeBar(sh.maxHp, ss.maxUpgradeHp,     col1x+172,          startY+rowH*0,        '#3388ff');
     statRow('Max Fuel',       G.maxFuel,      ss.maxUpgradeFuel,  col1x, startY+rowH*1, '#ddaa33');
     upgradeBar(G.maxFuel, ss.maxUpgradeFuel,  col1x+172,          startY+rowH*1,        '#aa7700');
-    statRow('Shields',        ss.shields,     ss.maxShields||0,   col1x, startY+rowH*2, '#88ccff');
-    statRow('Engine Rating',  ss.engineRating, ss.maxUpgradeEngine,  col1x, startY+rowH*3, '#ffcc44');
+    statRow('Shield capacity',shipShieldCapacity(), undefined,   col1x, startY+rowH*2, '#88ccff');
+    statRow('Engine Rating',  effectiveEngineRating(), ss.maxUpgradeEngine,  col1x, startY+rowH*3, '#ffcc44');
     upgradeBar(ss.engineRating, ss.maxUpgradeEngine, col1x+172,        startY+rowH*3,        '#aa8800');
-    statRow('Sensor Range',   ss.sensorRange, ss.maxUpgradeSensor,  col1x, startY+rowH*4, '#70d8ff');
+    statRow('Sensor Range',   effectiveSensorRange(), ss.maxUpgradeSensor,  col1x, startY+rowH*4, '#70d8ff');
     upgradeBar(ss.sensorRange, ss.maxUpgradeSensor, col1x+172,         startY+rowH*4,        '#2288aa');
 
     // Right column
-    statRow('Weapon Slots',   ss.weaponSlots, ss.maxWeaponSlots,  col2x, startY+rowH*0, '#ff8866');
+    statRow('Weapon Mounts',  ss.weaponSlots, ss.maxWeaponSlots,  col2x, startY+rowH*0, '#ff8866');
     upgradeBar(ss.weaponSlots, ss.maxWeaponSlots, col2x+172,      startY+rowH*0,        '#aa4422');
     statRow('Module Slots',   ss.moduleSlots, ss.maxModuleSlots,  col2x, startY+rowH*1, '#cc88ff');
     upgradeBar(ss.moduleSlots, ss.maxModuleSlots, col2x+172,      startY+rowH*1,        '#664488');
@@ -477,7 +477,8 @@ function drawInventoryOverlay(){
     // ── Weapon loadout (left half) ────────────────────────────────
     ctx.fillStyle='#2a2a3a'; ctx.fillRect(col1x, loadoutY, midX-col1x-10, 1);
     ctx.font='bold 13px Courier New'; ctx.fillStyle='#554433';
-    ctx.fillText('WEAPON LOADOUT', col1x, loadoutY+16);
+    ctx.fillText('WEAPON MOUNTS', col1x, loadoutY+16);
+    canvasMenuButton('Core systems [F3]',cw-215,67,openShipSystems);
     for(let slot=0; slot<ss.weaponSlots; slot++){
       const wy = loadoutY+34+slot*slotRowH;
       const wid = (G.installedWeapons||[])[slot];

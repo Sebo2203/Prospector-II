@@ -1,8 +1,8 @@
 const SHIP_WEAPONS = {
-  mass_driver:   { id:'mass_driver',   name:'Mass Driver',       minDmg:6,  maxDmg:12, range:5, cooldown:1, cost:300, desc:'Basic kinetic slugs. Reliable and affordable.' },
-  railgun:       { id:'railgun',       name:'Railgun',           minDmg:8,  maxDmg:13, range:8, cooldown:2, cost:450, desc:'Long-range kinetic weapon. Takes two actions to reload.' },
-  laser_cannon:  { id:'laser_cannon',  name:'Laser Cannon',      minDmg:13, maxDmg:20, range:6, cooldown:2, cost:700, desc:'High-energy beam with a two-action recharge.' },
-  pulse_laser:   { id:'pulse_laser',   name:'Pulse Laser',       minDmg:14, maxDmg:24, range:4, cooldown:1, cost:800, desc:'Short-range pulse variant. Heavy damage and a quick recharge.' },
+  mass_driver:   { id:'mass_driver',   name:'Mass Driver',       minDmg:6,  maxDmg:12, range:5, cooldown:1, heat:12,power:2,mountSize:1,cost:300, desc:'Light mount. Kinetic slugs, low heat, one-action reload.' },
+  railgun:       { id:'railgun',       name:'Railgun',           minDmg:8,  maxDmg:13, range:8, cooldown:2, heat:22,power:4,mountSize:2,cost:450, desc:'Medium mount. Long range, two-action reload.' },
+  laser_cannon:  { id:'laser_cannon',  name:'Laser Cannon',      minDmg:13, maxDmg:20, range:6, cooldown:2, heat:28,power:5,mountSize:2,cost:700, desc:'Medium mount. Heavy heat, two-action recharge.' },
+  pulse_laser:   { id:'pulse_laser',   name:'Pulse Laser',       minDmg:14, maxDmg:24, range:4, cooldown:1, heat:20,power:3,mountSize:1,cost:800, desc:'Light mount. Short range, one-action recharge.' },
   artemis:       { id:'artemis',       name:'Artemis Launcher',  minDmg:18, maxDmg:30, cost:1200, desc:'Missile system. Requires ammo (not yet implemented).', placeholder:true },
 };
 
@@ -69,17 +69,14 @@ function doFireAtBase(base){
   if(ss.weaponSlots===0 || !hasInstalled){
     addLog('No weapons to fire at the base.','lw'); return;
   }
-  // Each weapon slot fires once — total volley
-  let totalDmg = 0;
-  const wids = (G.installedWeapons||[]).filter(id=>id && SHIP_WEAPONS[id] && !SHIP_WEAPONS[id].placeholder);
-  wids.forEach(wid=>{
-    const w = SHIP_WEAPONS[wid];
-    const dmg = w.minDmg + rnd(w.maxDmg - w.minDmg + 1);
-    totalDmg += dmg;
-  });
+  if(effectiveSensorRange()===0){addLog('No sensor lock. Restore sensors before firing.','lw');return;}
+  const entry=shipCombatWeapons().find(entry=>shipWeaponAvailability(G.ship,entry.slot)==='Ready');
+  if(!entry){addLog('No mount ready: check heat, reloads and core power.','lw');renderAll();return;}
+  commitShipWeapon(G.ship,entry.slot);
+  const totalDmg=entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1);
   base.hp = Math.max(0, base.hp - totalDmg);
   const pct = Math.round((base.hp/base.maxHp)*100);
-  addLog('Volley hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
+  addLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
   SFX.hullHit && SFX.hullHit();
 
   if(base.hp <= 0){
@@ -95,8 +92,8 @@ function doFireAtBase(base){
   } else {
     // Base returns fire — turret volley back at player
     const turretDmg = 8 + rnd(18);
-    if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - turretDmg);
-    addLog('Defense turrets return fire: '+turretDmg+' hull damage!','lc');
+    const hull=absorbShipHit(G.ship,turretDmg,'defense turrets');
+    addLog('Defense turrets return fire: '+turretDmg+' damage ('+hull+' hull).','lc');
     SFX.hullHit && SFX.hullHit();
     if(G.ship.hp<=0){
       G.dead=true;
@@ -302,12 +299,15 @@ function doShipRetreat(){
     renderAll();
     return;
   }
+  const returningFire=livingShipCombatEnemies(combat).filter(enemy=>shipCombatEnemyCanFire(combat,enemy));
+  const underFire=returningFire.length>0;
   beginCareerTurn();
   finishCareerTurn();
+  for(const {ship} of livingShipCombatEnemies(combat)) tickShipSystems(ship);
+  syncShipCombatSystems(combat);
   if(G.dead){ renderAll(); return; }
-  const underFire = !shipCombatEscapeReady(combat);
   if(underFire){
-    for(const enemy of livingShipCombatEnemies(combat)){
+    for(const enemy of returningFire){
       if(shipCombatEnemyCanFire(combat,enemy)) fireShipCombatEnemy(combat,enemy);
       if(G.dead){ renderAll(); return; }
     }

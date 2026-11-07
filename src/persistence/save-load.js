@@ -149,6 +149,8 @@ function installSaveSnapshot(loaded){
     restoreStrandedShipMarkers();
     removeInteriorOreDeposits(G.planets);
     ensureCrewStatusState();
+    syncPlayerShipSystems();
+    if(G.shipCombat) syncShipCombatSystems(G.shipCombat);
     return G;
   }catch(error){G=before;throw error;}
 }

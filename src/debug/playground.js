@@ -63,6 +63,7 @@ function debugEnterPalette(area='galaxy',rebuild=false){
       debugPalette:{simulate:false,entries:[],surfaceKey:'debug:surface'}});
     G.crew=Object.keys(CREW_ROLES).map(role=>randomCrewMember(role));
     G.shipStats=buildShipStats('BULK_FREIGHTER',{weapons:1});G.shipStats.cargoCapacity=100;G.shipStats.maxCrew=100;
+    G.shipStats.mountSizes=[3,3,3];G.shipStats.reactorOutput=100;G.shipStats.maxFuel=1000;
     G.maxFuel=1000;G.fuel=1000;G.ship={x:3,y:3,hp:1000,maxHp:1000};G.oxygen=100;G.credits=100000;
     G.installedModules=['tractor_beam','fuel_scoop','mining_drill'];G.installedWeapons=['railgun'];
     Object.assign(DEBUG,{infiniteFuel:true,infiniteHull:true,infiniteOxy:true,infiniteCrewHp:true,fullVision:true,shipInvisible:true,preScan:1});
@@ -75,6 +76,9 @@ function debugEnterPalette(area='galaxy',rebuild=false){
 function debugPaletteNavigateHome(area){
   G.dead=false;G.retired=false;G.dialogue=null;G.showOptions=false;G.forcedMove=null;G.shipCombat=null;
   G.examine=null;G.rangeTarget=null;G.stranded=null;G._voidPrompt=null;G._itemAimMode=null;G.underwater=false;
+  for(const component of Object.values(ensureShipSystems())){component.condition=100;component.bypassUntil=0;}
+  G.ship.heat=0;G.ship.shieldCharge=shipShieldCapacity();G.ship.shieldRechargeAt=G.turn;
+  G.ship.weaponReadyAt=[];G.ship.systemTurn=G.turn;syncPlayerShipSystems();
   G.curSystem='';G.ship.x=3;G.ship.y=3;G.fuel=G.maxFuel;G.oxygen=100;
   G.ship.hp=G.ship.maxHp;
   if(!G.crew.length)G.crew=Object.keys(CREW_ROLES).map(role=>randomCrewMember(role));

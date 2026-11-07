@@ -30,7 +30,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.evaluate(()=>{
       const combat=G.shipCombat;
       combat.asteroids=[{x:14,y:8}];
-      combat.enemies.forEach(enemy=>enemy.ready=100);
+      combat.enemies.forEach(enemy=>enemy.ship.weaponReadyAt=[G.turn+100]);
     });
     await page.keyboard.press('f');
     await page.keyboard.press('ArrowRight');
@@ -41,7 +41,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     const canvasBox=await page.locator('#gc').boundingBox();
     const lead=await page.evaluate(()=>{
       G.shipCombat.asteroids=[];
-      Math.random=()=>0;
+      Math.random=()=>0.25;
       const target=G.shipCombat.enemies[0];
       return [(COMBAT_MAP.x+target.x*TS+TS/2)/canvasWidth,(COMBAT_MAP.y+target.y*TS+TS/2)/canvasHeight];
     });
@@ -49,14 +49,15 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await clickLead();
     assert.deepEqual(await page.evaluate(()=>[G.shipCombat.pirate.name,G.shipCombat.round]),['Lead',1]);
     await clickLead();
-    assert.deepEqual(await page.evaluate(()=>[G.pirates[0].hp,G.pirates[1].hp,G.shipCombat.round]),[42,50,2]);
+    assert.deepEqual(await page.evaluate(()=>[G.pirates[0].hp,G.pirates[1].hp,G.shipCombat.round]),[41,50,2]);
     await page.keyboard.press('f');
     assert.equal(await page.evaluate(()=>G.shipCombat.round),2,'a reloading weapon is free to inspect');
     const hp=await page.evaluate(()=>G.ship.hp);
     await page.locator('.cmp-btn[data-dx="-1"][data-dy="0"]').click();
     assert.deepEqual(await page.evaluate(()=>[G.shipCombat.player.x,G.shipCombat.trails.find(t=>t.x===13 && t.y===8)?.damage]),[12,6]);
     await page.keyboard.press('ArrowRight');
-    assert.equal(await page.evaluate(()=>G.ship.hp),hp-5,'crossing the corvette exhaust takes six damage, minus one shield');
+    assert.equal(await page.evaluate(()=>G.ship.hp),hp,'the shield pool absorbs the six-damage exhaust crossing');
+    assert.equal(await page.evaluate(()=>G.ship.shieldCharge),14);
     assert.ok(await page.evaluate(()=>G.shipCombat.trails.some(t=>t.damage===4)),'enemy engine leaves a weaker trail');
     assert.deepEqual(await page.evaluate(()=>[G.ship.x,G.ship.y,G.turn,getCrewStatus(G.crew[0],'hangover').duration]),
       [setup.x,setup.y,setup.turn+3,17],'each committed tactical action ticks the career and crew once');
@@ -80,7 +81,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.evaluate(()=>{
       const combat=G.shipCombat;
       G.pirates.reverse();
-      combat.enemies.forEach(enemy=>enemy.ship.hp=8);
+      combat.enemies.forEach(enemy=>enemy.ship.hp=9);
       combat.trails=[];
     });
     await page.keyboard.press('f');
@@ -88,7 +89,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.keyboard.press('2');
     await page.evaluate(()=>{G.shipCombat.enemies[1].x=G.shipCombat.player.x+2;G.shipCombat.enemies[1].y=G.shipCombat.player.y;});
     await page.keyboard.press('f');
-    assert.deepEqual(await page.evaluate(()=>[G.mode,G.pirates[1].alive,G.pirates[2].alive,G.credits]),['galaxy',false,true,600]);
+    assert.deepEqual(await page.evaluate(()=>[G.mode,G.pirates[1].alive,G.pirates[2].alive,G.credits]),['galaxy',false,true,650]);
 
     await page.evaluate(()=>{
       const ship=G.pirates[2];
@@ -104,22 +105,22 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.keyboard.press('ArrowLeft');
     await page.evaluate(()=>{
       const combat=G.shipCombat, enemy=combat.enemies[0];
-      enemy.x=2;enemy.y=combat.player.y;enemy.ready=combat.round;
+      enemy.x=2;enemy.y=combat.player.y;enemy.ship.weaponReadyAt=[G.turn];
       renderAll();
     });
     assert.ok(await page.getByRole('button',{name:/Disengage under fire/}).isVisible());
     assert.ok(await page.evaluate(()=>{
       const combat=G.shipCombat, enemy=combat.enemies[0];
-      enemy.ready=combat.round+1;
+      enemy.ship.weaponReadyAt=[G.turn+1];
       const canEscape=shipCombatEscapeReady(combat);
-      enemy.ready=combat.round;
+      enemy.ship.weaponReadyAt=[G.turn];
       return canEscape;
     }),'enemy reloads open an escape window at the edge');
     await page.evaluate(()=>{G.shipCombat.asteroids=[{x:1,y:G.shipCombat.player.y}];});
     assert.ok(await page.evaluate(()=>shipCombatEscapeReady(G.shipCombat)),'cover allows a clear withdrawal');
-    const retreatHp=await page.evaluate(()=>{G.shipCombat.asteroids=[];G.shipCombat.playerShields=0;return G.ship.hp;});
+    const retreatHp=await page.evaluate(()=>{G.shipCombat.asteroids=[];G.ship.shieldCharge=0;G.ship.shieldRechargeAt=G.turn+3;syncShipCombatSystems(G.shipCombat);return G.ship.hp;});
     await page.keyboard.press('r');
-    assert.deepEqual(await page.evaluate(()=>[G.mode,G.ship.hp]),['galaxy',retreatHp-4]);
+    assert.deepEqual(await page.evaluate(()=>[G.mode,G.ship.hp]),['galaxy',retreatHp-7]);
 
     assert.ok(await page.evaluate(()=>autoSave()));
     assert.ok(await page.evaluate(()=>loadFromStorage()));
@@ -131,7 +132,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.evaluate(()=>{
       G.pirates[2].hp=31;
       startShipCombat(G.pirates[2],true);
-      G.shipCombat.playerShields=0;
+      G.ship.shieldCharge=0;syncShipCombatSystems(G.shipCombat);
       installSaveSnapshot(parseSaveSnapshot(serializeCareer(G)));
       renderAll();
     });

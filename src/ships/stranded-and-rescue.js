@@ -1,6 +1,10 @@
 // ─────────────────────────────────────────────────────────────────
 //  STRANDED — wait a turn, drain crew, check rescue
 // ─────────────────────────────────────────────────────────────────
+function strandedLifeSupportFailing(){
+  return G.fuel<=0 || shipReactorOutput()<2;
+}
+
 function doStrandedWait(){
   if(!G.stranded) return;
   const st = G.stranded;
@@ -18,19 +22,19 @@ function doStrandedWait(){
   beginCareerTurn();
 
   // Crew oxygen drain — 3 HP per crew member per turn stranded
-  const dmgPerCrew = 3;
+  const dmgPerCrew = strandedLifeSupportFailing()?3:0;
   G.crew.filter(c=>c.hp>0).forEach(c=>{
     c.hp = Math.max(0, c.hp - dmgPerCrew);
     if(c.hp<=0) addLog(crewDisplayName(c)+' has succumbed to oxygen depletion!','lc');
   });
-  SFX.suffocate();
+  if(dmgPerCrew) SFX.suffocate();
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
 
   // Every 3 turns, log a status message
   if(st.turnsStranded % 3 === 0){
     const hpTotal = G.crew.filter(c=>c.hp>0).reduce((s,c)=>s+c.hp,0);
-    addLog('Turn '+st.turnsStranded+' stranded. Crew HP: '+hpTotal+'. Reserves failing.','lw');
+    addLog('Turn '+st.turnsStranded+' stranded. Crew HP: '+hpTotal+(dmgPerCrew?'. Reserves failing.':'. Life support stable; drive repair or rescue needed.'),'lw');
   }
 
   // Move neutral ships + pirates
@@ -111,6 +115,12 @@ function doAcceptRescue(){
   }
   if(ns.rescueCost > 0) G.credits -= ns.rescueCost;
   G.fuel = Math.min(G.maxFuel, G.fuel + ns.fuelGift);
+  if(effectiveEngineRating()===0){
+    const systems=ensureShipSystems();
+    systems.engine.condition=Math.max(80,systems.engine.condition);
+    systems.reactor.condition=Math.max(80,systems.reactor.condition);
+    addLog(ns.name+' makes an emergency drive repair. Engines operational.','lg');
+  }
   G._alarmFuelWarn = false;
   G._alarmFuelCrit = false;
   ns.rescuing = false;
@@ -166,7 +176,7 @@ function drawStrandedOverlay(){
   // Crew drain status
   const living = G.crew.filter(c=>c.hp>0);
   ctx.font='14px Courier New'; ctx.fillStyle='#cc6666';
-  ctx.fillText('Crew: '+living.length+' alive  —  -3 HP/crew/turn', px2+12, py2+64);
+  ctx.fillText('Crew: '+living.length+' alive  —  '+(strandedLifeSupportFailing()?'-3 HP/crew/turn':'life support stable'), px2+12, py2+64);
 
   // HP bars for crew
   living.forEach((c,i)=>{

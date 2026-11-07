@@ -24,6 +24,7 @@ function moveNeutralShips(){
     ns.patrolIdx = 0;
     ns.alive = true;
     ns.hostile = (G.stationReputation||0) <= -40; // inherit current rep state
+    for(const key of ['systems','systemStats','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn','ramReadyAt']) delete ns[key];
     ns.hp = ns.maxHp;                             // maxHp was set by ensureNeutralCombatStats
     ns._wasHostileAtEngagement = false;
     ns.lastRespawn = G.turn;
@@ -33,6 +34,7 @@ function moveNeutralShips(){
 
   (G.neutralShips||[]).forEach(ns=>{
     if(ns.alive===false) return;
+    if(ns.systems && effectiveEngineRating(ns)===0) return;
     // Rescuing — always beeline to stranded player, overrides normal behaviour
     if(ns.rescuing){
       stepToward(ns, G.ship.x, G.ship.y);
@@ -44,7 +46,7 @@ function moveNeutralShips(){
       if(ns.hostile){
         const chaseDist = Math.abs(ns.x - G.ship.x) + Math.abs(ns.y - G.ship.y);
         const PATROL_GIVE_UP = 12;
-        if(DEBUG.shipInvisible || chaseDist > PATROL_GIVE_UP || shipDisengagementActive(ns)){
+        if(DEBUG.shipInvisible || (ns.systems && effectiveSensorRange(ns)===0) || chaseDist > PATROL_GIVE_UP || shipDisengagementActive(ns)){
           const route = ns.patrolRoute;
           if(route && route.length > 0){
             const wp = route[ns.patrolIdx % route.length];

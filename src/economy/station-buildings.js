@@ -16,7 +16,8 @@ const STATION_BUILDINGS = [
           { label: 'Maintenance',   detail: 'Refuel and repair your hull',          id:'hangar_sub_maintenance' },
           { label: 'Upgrades',      detail: 'Hull, fuel, engines, shields, sensors',  id:'hangar_sub_upgrades'    },
           { label: 'Armament',      detail: 'Install and upgrade weapons',          id:'hangar_sub_armament'    },
-          { label: 'Modules',       detail: 'Ship systems and special equipment',   id:'hangar_sub_modules'     },
+          { label: 'Modules',       detail: 'Utility equipment',   id:'hangar_sub_modules'     },
+          { label: 'Core Systems', detail:'Inspect and repair engines, reactor, shields, cooling, sensors and tank', id:'ship_systems' },
           { label: 'Change Hull',   detail: 'Switch to a different ship class',     id:'changehull'             },
         ];
       }
@@ -39,7 +40,7 @@ const STATION_BUILDINGS = [
 
       if(hangarSub === 'upgrades'){
         const hullAtMax   = G.ship.maxHp >= ss.maxUpgradeHp;
-        const fuelAtMax   = G.maxFuel    >= ss.maxUpgradeFuel;
+        const fuelAtMax   = ss.maxFuel    >= ss.maxUpgradeFuel;
         const sensorAtMax = ss.sensorRange >= (ss.maxUpgradeSensor ?? cls.sensorRange + 2);
         const shieldAtMax = ss.shields >= ss.maxShields;
         const cargoMax   = { LIGHT_SCOUT:1, BULK_FREIGHTER:15, ATTACK_CORVETTE:1 };
@@ -47,12 +48,14 @@ const STATION_BUILDINGS = [
         return [
           { label: '← Back',              detail: '',                                                                                                                                                   id:'hangar_sub_top' },
           { label: 'Upgrade hull plating', detail: hullAtMax   ? 'Max ('+ss.maxUpgradeHp+' HP)'         : hasEngineer ? '200 cr → max HP +20 ('+G.ship.maxHp+'/'+ss.maxUpgradeHp+')'      : 'Needs Engineer', id:'uphull',    disabled: hullAtMax   || !hasEngineer },
-          { label: 'Upgrade fuel tank',    detail: fuelAtMax   ? 'Max ('+ss.maxUpgradeFuel+')'           : hasEngineer ? '250 cr → max fuel +20 ('+G.maxFuel+'/'+ss.maxUpgradeFuel+')'     : 'Needs Engineer', id:'upfuel',    disabled: fuelAtMax   || !hasEngineer },
-          { label: 'Upgrade shields',      detail: shieldAtMax ? 'Max ('+ss.maxShields+')'               : ss.maxShields===0 ? 'Hull cannot mount shields'
-                                                               : hasEngineer ? '350 cr → +1 shield ('+ss.shields+'/'+ss.maxShields+')'                                                     : 'Needs Engineer', id:'upshield',  disabled: shieldAtMax || ss.maxShields===0 || !hasEngineer },
+          { label: 'Upgrade fuel tank',    detail: fuelAtMax   ? 'Max ('+ss.maxUpgradeFuel+')'           : hasEngineer ? '250 cr → max fuel +20 ('+ss.maxFuel+'/'+ss.maxUpgradeFuel+')'     : 'Needs Engineer', id:'upfuel',    disabled: fuelAtMax   || !hasEngineer },
+          { label: 'Upgrade shield generator', detail: shieldAtMax ? 'Max grade '+ss.maxShields
+                                                               : hasEngineer ? '350 cr → +20 capacity, +1 power (grade '+ss.shields+'/'+ss.maxShields+')' : 'Needs Engineer', id:'upshield', disabled:shieldAtMax || !hasEngineer },
           { label: 'Upgrade sensors',      detail: sensorAtMax ? 'Max'                                   : '400 cr → range +1 (currently '+ss.sensorRange+')',                                          id:'upsensor',  disabled: sensorAtMax },
           { label: 'Upgrade cargo hold',   detail: cargoAtMax  ? 'Max'                                   : hasEngineer ? '300 cr → +10 capacity ('+ss.cargoCapacity+')'                    : 'Needs Engineer', id:'upcargo',   disabled: cargoAtMax  || !hasEngineer },
           { label: 'Upgrade engines',   detail: (()=>{ const cap=ss.maxUpgradeEngine??ss.engineRating; return ss.engineRating>=cap ? 'Max (rating '+cap+')' : hasEngineer ? '450 cr → engine +1 ('+ss.engineRating+'/'+cap+')' : 'Needs Engineer'; })(),  id:'upengine',  disabled: (ss.engineRating>=(ss.maxUpgradeEngine??ss.engineRating)) || !hasEngineer },
+          {label:'Upgrade reactor',detail:'500 cr → +3 output (grade '+(ss.reactorRating||1)+'/3)',id:'upreactor',disabled:(ss.reactorRating||1)>=3 || !hasEngineer},
+          {label:'Upgrade cooling',detail:'400 cr → +2 cooling and +10 heat capacity (grade '+(ss.coolingRating||1)+'/3)',id:'upcooling',disabled:(ss.coolingRating||1)>=3 || !hasEngineer},
         ];
       }
 
@@ -65,13 +68,13 @@ const STATION_BUILDINGS = [
             const wdef = wid ? SHIP_WEAPONS[wid] : null;
             const locked = slot >= ss.weaponSlots;
             return {
-              label: 'Slot ['+(slot+1)+'] '+(wdef ? wdef.name : 'empty'),
-              detail: locked ? 'Locked — add weapon slot first' : wdef ? wdef.minDmg+'–'+wdef.maxDmg+' dmg — press Enter to replace' : 'No weapon installed',
+              label: 'Mount ['+(slot+1)+'] '+(wdef ? wdef.name : 'empty'),
+              detail: (['','Light','Medium','Heavy'][shipMountSize(slot)])+' mount · '+(locked ? 'Locked — unlock mount first' : wdef ? wdef.minDmg+'–'+wdef.maxDmg+' dmg — Enter to replace' : 'No weapon installed'),
               id: 'installweapon_'+slot,
               disabled: locked,
             };
           }),
-          { label: 'Add weapon slot',
+          { label: 'Unlock weapon mount',
             detail: weaponAtMax ? 'Max ('+ss.maxWeaponSlots+')' : hasEngineer ? '500 cr → unlock slot ('+ss.weaponSlots+'/'+ss.maxWeaponSlots+')' : 'Needs Engineer',
             id:'upwslot', disabled: weaponAtMax || !hasEngineer },
         ];

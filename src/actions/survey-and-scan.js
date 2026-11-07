@@ -250,6 +250,10 @@ function doScan(){
   const body = getSelectedSystemBody();
   if(!body) return;
   const { pDesc, targetDesc, pKey } = body;
+  if(effectiveSensorRange()===0){
+    addLog('Sensors offline. Repair or bypass the sensor core before scanning.','lw');
+    renderAll();return;
+  }
 
   if(targetDesc.scanState==='full' || DEBUG.preScan === 1){
     if(DEBUG.preScan === 1) targetDesc.scanState = 'full';
@@ -264,7 +268,7 @@ function doScan(){
   const difficulty = B.scanDifficulty ?? 0.6;
   const bestNavScan  = Math.max(0, ...(G.crew.filter(c=>c.hp>0).map(c=>c.skills?.nav||0)));
   const scoutBonus   = bestNavScan >= 2 ? 0.15 : 0;
-  const sensorBonus  = ((G.shipStats?.sensorRange ?? 3) - 3) * 0.08;
+  const sensorBonus  = (effectiveSensorRange() - 3) * 0.08;
   // NAV skill: best navigator's skill adds up to +0.20 scan success
   const navScanBonus = bestNavScan * 0.02;
   const roll = Math.random();

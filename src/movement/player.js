@@ -7,12 +7,12 @@ function tryMove(dx,dy,confirmed){
 
   // -- Galaxy --------------------------------------------------
   if(G.mode==='galaxy'){
-    if(G.fuel<=0){
+    if(G.fuel<=0 || effectiveEngineRating()===0){
       // Enter stranded state if not already in it
       if(!G.stranded){
         G.stranded = { sos:false, turnsStranded:0, rescueShip:null, rescuePhase:null };
         (G.neutralShips||[]).forEach(s=>{ s.rescuing = false; }); // fresh strand — reset all rescuers
-        addLog('OUT OF FUEL — engines dead. Crew oxygen reserves depleting.','lc');
+        addLog(G.fuel<=0?'OUT OF FUEL — engines dead. Crew oxygen reserves depleting.':'ENGINES OFFLINE — repair or bypass the drive, or signal for rescue.','lc');
         addLog('Press [T] to toggle SOS beacon. Press any move key to wait a turn.','lw');
       } else {
         doStrandedWait();
@@ -43,7 +43,7 @@ function tryMove(dx,dy,confirmed){
     }
     maybeCrewGalaxyTalk();
     const bestNavSkill = Math.max(0, ...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.nav||0));
-    const baseRange  = G.shipStats?.sensorRange ?? 3;
+    const baseRange  = effectiveSensorRange();
     const floodBonus = (G.inventory||[]).some(i=>i.usable==='floodlight') ? 2 : 0;
     revealAround(nx, ny, baseRange + (bestNavSkill >= 2 ? 1 : 0) + floodBonus);
     const cell=G.galaxy[ny][nx];
@@ -73,9 +73,9 @@ function tryMove(dx,dy,confirmed){
       } else {
         addLog('WARNING: '+cell.name+' — pirate stronghold. Weapons fire detected!','lc');
         const dmg = 15 + rnd(20);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'base defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
-        addLog('Defense turrets hit your hull for '+dmg+' damage!','lc');
+        addLog('Defense turrets hit for '+dmg+' damage ('+hull+' hull).','lc');
         if(G.ship.hp<=0){
           G.dead=true;
           G.deathCause='The ship was destroyed by defense turrets at '+cell.name+'.';
@@ -99,7 +99,7 @@ function tryMove(dx,dy,confirmed){
         if(navCrew) giveSkillXP(navCrew, 'nav', 1);
       } else if(roll < Math.max(0.05, 0.40 - navMitigation)){
         const dmg = Math.max(1, Math.round((2 + rnd(5)) * severityMult));
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'base defense turrets');
         const navNote = bestNav >= 5 ? ' (navigator reduced impact)' : '';
         addLog('Charged nebula gas damages hull! -'+dmg+' HP.'+navNote,'lc');
         if(navCrew) giveSkillXP(navCrew, 'nav', 1);
@@ -148,7 +148,7 @@ function tryMove(dx,dy,confirmed){
         addLog('PULSAR DIRECT EXPOSURE — LETHAL RADIATION DOSE!','lc');
         applyRadiationExposureToCrew(4, 'pulsar_direct');
         const dmg = 20 + rnd(15);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'base defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
         addLog('Electromagnetic pulse strips '+dmg+' hull integrity!','lc');
         if(G.ship.hp<=0){

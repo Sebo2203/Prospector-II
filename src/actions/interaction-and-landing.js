@@ -29,6 +29,12 @@ function doInteract(){
       if(sciCrew.length) sciCrew.forEach(c=>giveSkillXP(c,'sci',2));
       renderAll(); return;
     }
+    if(['SYSTEM','ROGUE_PLANET'].includes(cell.type)){
+      if(effectiveSensorRange()===0 && !cell.orbitalCharted && !DEBUG.fullVision){
+        addLog('Sensors offline. Restore sensors to chart unfamiliar orbits.','lw');renderAll();return;
+      }
+      cell.orbitalCharted=true;
+    }
     if(cell.type==='ROGUE_PLANET'){
       // Enter orbit — behaves exactly like a 1-planet system but no star, no orrery
       G.mode = 'system';
@@ -43,9 +49,9 @@ function doInteract(){
       if((G.stationReputation||0) <= -40){
         addLog(cell.name+': "Hostile transponder detected. You are banned from this station!"','lc');
         const dmg = 10 + rnd(15);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'station defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
-        addLog('Station defense turrets open fire! Hull takes '+dmg+' damage!','lc');
+        addLog('Station defense turrets open fire! '+dmg+' damage ('+hull+' hull).','lc');
         if(G.ship.hp<=0){
           G.dead=true;
           G.deathCause='The ship was destroyed by defense turrets at '+cell.name+'.';
@@ -289,7 +295,7 @@ function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
       const roughChance = Math.max(0, 0.25 - bestNav * 0.03);
       if(Math.random() < roughChance){
         const dmg = 3 + rnd(8);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'station defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
         addLog('Rough landing! Hull takes '+dmg+' damage.','lc');
         // Rough landing is a hard lesson — best navigator learns more

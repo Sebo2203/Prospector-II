@@ -194,7 +194,7 @@ function movePirates(){
     base.lastRespawn = G.turn;
   });
 
-  const playerEngine = G.shipStats?.engineRating ?? 2;
+  const playerEngine = Math.max(1,effectiveEngineRating());
 
   G.pirates.forEach(p=>{
     if(!p.alive) return;
@@ -226,7 +226,7 @@ function movePirates(){
       })();
 
       // Pursuit cap: roamers give up after 10 consecutive chase turns
-      if(!DEBUG.shipInvisible && distToPlayer<=10 && !nearBase){
+      if(!DEBUG.shipInvisible && effectiveSensorRange(p)>0 && distToPlayer<=10 && !nearBase){
         p._chaseTurns = (p._chaseTurns||0) + 1;
         if(p._chaseTurns <= 10){
           tx=G.ship.x; ty=G.ship.y;
@@ -249,7 +249,7 @@ function movePirates(){
     } else {
       // Guard: patrol near home base, chase if player gets close
       const distToHome = Math.abs(p.x-p.homeX)+Math.abs(p.y-p.homeY);
-      if(!DEBUG.shipInvisible && distToPlayer<=6 && distToHome<=10){
+      if(!DEBUG.shipInvisible && effectiveSensorRange(p)>0 && distToPlayer<=6 && distToHome<=10){
         tx=G.ship.x; ty=G.ship.y;
         isChasing = true;
       } else {
@@ -262,7 +262,8 @@ function movePirates(){
     // Engine-rated movement. While chasing, speed is relative to the player's
     // engine: equal engines trade one tile for one tile, faster pirates gain,
     // and slower pirates only move on some chase turns.
-    const pirateEngine = p.engineRating || 2;
+    const pirateEngine = effectiveEngineRating(p);
+    if(!pirateEngine) return;
     let steps;
     if(isChasing){
       p._chaseMoveBank = (p._chaseMoveBank || 0) + (pirateEngine / Math.max(1, playerEngine));

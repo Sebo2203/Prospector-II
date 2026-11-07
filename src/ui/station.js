@@ -298,6 +298,7 @@ function drawBaseOverlay(){
       } else {
         ctx.fillStyle='#ffe066'; ctx.fillText(wdef.cost+' cr', ax+aw-12, ay+20);
         ctx.fillStyle='#556644'; ctx.fillText(wdef.minDmg+'–'+wdef.maxDmg+' dmg', ax+aw-12, ay+36);
+        ctx.fillStyle='#8899aa';ctx.fillText('Mount '+wdef.mountSize+' · '+wdef.power+' power · '+wdef.heat+' heat · Reload '+wdef.cooldown,ax+28,ay+50);
       }
       if(isInstalled && !wdef.placeholder){
         ctx.fillStyle='#335533'; ctx.font='11px Courier New'; ctx.fillText('installed', ax+aw-12, ay+50);
@@ -309,6 +310,8 @@ function drawBaseOverlay(){
     ctx.textAlign='center'; ctx.font='13px Courier New';
     if(selW.placeholder){
       ctx.fillStyle='#554422'; ctx.fillText('This weapon is not yet available.', cx, listTop+weapons.length*rowH+16);
+    } else if(shipWeaponFitReason(slot,selW)){
+      ctx.fillStyle='#d6a36a';ctx.fillText(shipWeaponFitReason(slot,selW),cx,listTop+weapons.length*rowH+16);
     } else if(G.credits < selW.cost){
       ctx.fillStyle='#662222'; ctx.fillText('Insufficient credits (need '+selW.cost+' cr, have '+G.credits+').', cx, listTop+weapons.length*rowH+16);
     } else {

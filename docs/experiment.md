@@ -20,7 +20,45 @@ Ship encounters open a turn-based combat map. Nearby pirates or hostile patrols 
 
 Click a target or press **Tab** to cycle contacts. Click a weapon or use its displayed number to select it, then press **F** or click **Fire**. A second click on the mouse-selected target also fires. The weapon panel shows its range, whether cover blocks the shot, and the remaining cooldown. Moving and waiting both give weapons time to reload and let opponents act.
 
-Fly to an edge and use **R** to disengage. Enemies with a clear shot and a ready weapon can fire once as you leave. Use **H** to offer surrender. Pirates may take cargo and credits, and patrols warn you before a second press confirms arrest. The encounter uses local rounds and resumes galaxy travel when it ends.
+Normal thrust adds 2 heat and uses no extra fuel inside the arena. **B / Boost forward** moves two clear tiles along your current heading, costs 2 fuel and adds 18 + twice the effective engine rating in heat. Both tiles leave exhaust. Blocked boosts and unavailable shots consume no turn. Waiting provides an extra turn's cooling while opponents still act.
+
+Fly to an edge and use **R** to disengage. Enemies with a clear shot and a ready weapon can fire once as you leave. Use **H** to offer surrender. Pirates may take cargo and credits, and patrols warn you before a second press confirms arrest. Each committed action also advances the career clock. Reload deadlines, heat, shields and component damage stay on the actual ship through retreat, re-engagement, saving and loading. Local rounds govern exhaust expiry; a new engagement creates a new arena. Armed NPC ships use the same mounts, heat, reloads, shields and core effects, firing one available mount per action. Gas entities retain their natural ram attack.
+
+## Mounts, core systems and damage
+
+Open **I → SHIP → Core systems**, **Hangar → Core Systems**, or **F3** to inspect installed ratings, effective performance, integrity, usable tank capacity, heat, power and weapon status. Combat and stranding also provide a context button. Native buttons support mouse, Tab and Enter; Escape closes the board. Inspecting is free.
+
+| Hull | Mounts available / maximum | Mount sizes in order | Base reactor | Cooling / turn | Heat capacity |
+| --- | --- | --- | ---: | ---: | ---: |
+| Light Scout | 1 / 2 | Light, Medium | 6 | 6 | 80 |
+| Bulk Freighter | 0 / 2 | Light, Medium | 8 | 5 | 120 |
+| Attack Corvette | 2 / 3 | Medium, Medium, Heavy | 12 | 8 | 100 |
+
+A weapon must fit its mount size and the available reactor output. Core services reserve 2 power and shields reserve their installed grade. Installation checks the whole fitted loadout. If reactor damage reduces output, earlier mounts receive power first; later mounts can go offline while staying installed. Each reactor upgrade adds 3 output. Each cooling upgrade adds 2 cooling per turn and 10 heat capacity. Both upgrades cost credits, require an engineer and stop at grade three. Existing utility equipment continues to use its separate module slots.
+
+| Weapon | Mount | Power | Heat per shot | Range | Other actions to reload |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Mass Driver | Light | 2 | 12 | 5 | 1 |
+| Railgun | Medium | 4 | 22 | 8 | 2 |
+| Laser Cannon | Medium | 5 | 28 | 6 | 2 |
+| Pulse Laser | Light | 3 | 20 | 4 | 1 |
+
+Each mount reloads separately. Every career turn cools the ship; a tactical wait doubles cooling. Firing and boosting require enough heat headroom before the action is committed. Shield generators hold 20 damage points per installed grade, scaled by integrity. A hit delays recharge for three career turns. Recharge restores 3 per turn and adds 1 heat, subject to capacity. Upgrading a shield also reserves another reactor power point.
+
+Hull damage can cause a component critical; hits fully absorbed by shields cannot. A living engineer reduces both the chance and severity. Damage preserves the installed equipment and changes its effective performance:
+
+| Core | Damage effect |
+| --- | --- |
+| Engines | Lose one effective rating per 25 integrity points lost. At zero, normal thrust and boosts fail; galaxy travel offers the existing stranded/SOS recovery. |
+| Reactor | Output scales with integrity. Too little output also shuts down sensors, propulsion and shields. |
+| Shield generator | Reduces shield capacity; charge above the reduced limit is lost. |
+| Cooling | Reduces cooling rate, leaving a minimum of 1 radiative cooling per turn. |
+| Sensors | Lose one effective rating per 25 integrity points lost. A rating-one sensor at 75% integrity is offline. Existing charts remain; new chart reveals, live ship markers, tactical target locks and paid scans stop. Unfamiliar orbital layouts require functioning sensors. |
+| Fuel tank | At 50% integrity or below, usable capacity becomes half the installed capacity. Excess fuel leaks out. Repeated damage does not repeatedly halve capacity. |
+
+A living engineer can spend a repair kit and one turn to restore **25 + 3 × engineering skill** integrity, up to 85%. A temporary bypass costs one turn and provides at least 75% effective integrity and basic engine/sensor operation for 15 career turns; the physical damage remains. A tank rupture needs a kit or station repair. Field work is available aboard the ship in space/combat or while standing at its surface landing tile. Combat repair gives opponents their normal response. Station technicians restore full integrity for 2 credits per missing percentage point without requiring an engineer. Repairing a tank restores space but does not replace leaked fuel. Emergency rescuers can restore a disabled drive to working order. A failed engine alone does not suffocate the crew while fuel and reactor power can run life support; the existing exposure drain applies to an empty tank or failed reactor.
+
+Start a new career for this equipment model. Earlier saves use a different schema.
 
 ## Crew at a glance
 

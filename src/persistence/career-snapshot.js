@@ -1,4 +1,16 @@
-const CAREER_SAVE_VERSION = 1;
+const CAREER_SAVE_VERSION = 2;
+const SAVE_SHIP_SYSTEMS = ['engine','reactor','shields','cooling','sensors','fuelTank'];
+
+function validateSavedShipSystems(ship,turn){
+  if(!ship.systems || !SAVE_SHIP_SYSTEMS.every(id=>{
+    const component=ship.systems[id];
+    return component && Number.isFinite(component.condition) && component.condition>=0 && component.condition<=100 &&
+      Number.isSafeInteger(component.bypassUntil) && component.bypassUntil>=0;
+  }) || !['heat','shieldCharge','shieldRechargeAt','systemTurn'].every(key=>Number.isFinite(ship[key]) && ship[key]>=0) ||
+     ship.systemTurn>turn || !Array.isArray(ship.weaponReadyAt) ||
+     !ship.weaponReadyAt.every(value=>value===null || (Number.isSafeInteger(value) && value>=0))) throw invalidCareerSave();
+}
+
 const CAREER_MODES = new Set(['galaxy','system','planet','base','inventory','scanview','shipcombat','casino','radio']);
 const CAREER_ROSTERS = ['crew','neutralShips','pirates','gasEntities'];
 const COMBAT_ROSTERS = ['neutralShips','pirates','gasEntities'];
@@ -69,6 +81,9 @@ function parseSaveSnapshot(raw){
      (view==='base' && !game.base)){
     throw invalidCareerSave();
   }
+  validateSavedShipSystems(game.ship,game.turn);
+  if(!Number.isFinite(game.shipStats.maxFuel) || game.shipStats.maxFuel<=0 ||
+     !Number.isFinite(game.maxFuel) || game.maxFuel<0 || !Number.isFinite(game.fuel) || game.fuel<0 || game.fuel>game.maxFuel) throw invalidCareerSave();
   resolveCareerReferences(game);
   return game;
 }
@@ -89,6 +104,7 @@ function resolveCareerReferences(game){
     if(!Array.isArray(game[roster])) throw invalidCareerSave();
     rosters[roster] = new Map();
     for(const actor of game[roster]){
+      if(actor?.systems) validateSavedShipSystems(actor,game.turn);
       const id = actor?._careerId;
       if(!Number.isSafeInteger(id) || id<1 || id>game.entitySerial || ids.has(id)) throw invalidCareerSave();
       ids.add(id);
@@ -117,14 +133,18 @@ function resolveCareerReferences(game){
   const combat = game.shipCombat;
   if(combat){
     if(!Array.isArray(combat.enemies) || !combat.enemies[combat.target] || !combat.player ||
-       !['log','weaponReady','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
+       !['log','weaponReady','seenTiles','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
        !Number.isSafeInteger(combat.round) || combat.round<1) throw invalidCareerSave();
     const participants = new Set();
     for(const enemy of combat.enemies){
       if(!enemy || !COMBAT_ROSTERS.includes(enemy.collection) || participants.has(enemy.ship)) throw invalidCareerSave();
       participants.add(enemy.ship);
       enemy.ship = actorAt(enemy.collection,enemy.ship);
+      validateSavedShipSystems(enemy.ship,game.turn);
     }
     combat.pirate = combat.enemies[combat.target].ship;
+    combat.weaponReady=game.ship.weaponReadyAt;
+    combat.playerShields=game.ship.shieldCharge;
+    for(const enemy of combat.enemies) enemy.shields=enemy.ship.shieldCharge;
   }
 }

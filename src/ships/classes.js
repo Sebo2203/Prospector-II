@@ -98,6 +98,8 @@ function buildShipStats(classId, upgrades) {
     maxUpgradeSensor: cls.maxUpgradeSensor,
     shields:        u.shields || cls.shields,
     maxShields:     cls.maxShields,
+    reactorRating: 1+(u.reactor||0),
+    coolingRating: 1+(u.cooling||0),
     engineRating:   Math.min(cls.maxUpgradeEngine, cls.engineRating + (u.engine||0)),
     maxUpgradeEngine: cls.maxUpgradeEngine,
     weaponSlots:    Math.min(cls.maxWeaponSlots, cls.weaponSlots + (u.weapons||0)),

@@ -35,7 +35,7 @@ The modular `src/` tree already contains a generated galaxy, planets and civiliz
 | Artemis launcher and ship equipment | The launcher lacks ammunition, and damage/repair is not yet a meaningful ship-management loop. |
 | Six authored humanity outcomes | Retirement skips the sector-outcome screen; outcomes need to follow run history instead of a random selection. |
 
-The experimental.46 career runs reached short retirement on all three starting hulls. The longer scout run was destroyed by a Dreadnought with 1,856 credits of its 10,000-credit target. Prioritize threat readability and the cost of engaging or withdrawing before adding another resource to manage. The arena already tracks weapon reloads per slot. A future heat system could use a shared ship budget for thrust and weapons while leaving slot reloads tied to rounds. [Playtest results](../CHANGELOG.md#career-playtests)
+The experimental.46 career runs reached short retirement on all three starting hulls. The longer scout run was destroyed by a Dreadnought with 1,856 credits of its 10,000-credit target. Prioritize threat readability and the cost of engaging or withdrawing before adding another resource to manage. The arena already tracks weapon reloads per slot. Experimental.52 implements shared heat for weapons/boosts, per-mount reload deadlines on the career clock, shield capacity/recharge, reactor fitting and persistent core damage with engineer recovery. The new foundation is tested; full combat careers, loadout balance and opponent variety remain playtesting work. [Playtest results](../CHANGELOG.md#career-playtests)
 
 ## Implemented foundation — the expedition remembers
 

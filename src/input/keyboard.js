@@ -19,6 +19,7 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
+  if(shipSystemsDialog.open) return;
   if(debugDialog.open){
     if(e.shiftKey && e.key.toLowerCase()==='b'){
       e.preventDefault();
@@ -53,6 +54,7 @@ document.addEventListener('keydown', e=>{
 
   // Menu mode — G is null, route to menu handler
   if(G===null){ handleMenuKey(e); return; }
+  if(e.key==='F3' && !e.repeat){e.preventDefault();openShipSystems();return;}
   if(e.key==='B' && e.shiftKey && !e.repeat){
     e.preventDefault();
     openDebugMenu();
@@ -105,6 +107,7 @@ document.addEventListener('keydown', e=>{
     if(G.mode==='shipcombat' && !G.showOptions && !G.dialogue){
       const key=e.key.toLowerCase();
       if(key==='f'){ doShipFire(); return; }
+      if(key==='b'){ boostShipInCombat(); return; }
       if(key==='r'){ doShipRetreat(); return; }
       if(key==='h'){ if(!e.repeat) doShipSurrender(); return; }
       if(e.key==='Tab'){ e.preventDefault(); cycleShipCombatTarget(e.shiftKey?-1:1); return; }

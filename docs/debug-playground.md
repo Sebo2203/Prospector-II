@@ -1,6 +1,6 @@
 # Debug Palette
 
-Open **Debug Tools** with **Shift+B** during a run. **Spawn System** and **Spawn Galaxy Object** both use an empty sector adjacent to your ship. Open **Spawn Gear or Cargo** to browse or search by category and add items. Civilization tools are available on the surface.
+Open **Debug Tools** with **Shift+B** during a run. **Spawn System** and **Spawn Galaxy Object** both use an empty sector adjacent to your ship. Open **Spawn Gear or Cargo** to browse or search by category and add items. Civilization tools are available on the surface. **Ship Core Damage** supplies six 25% damage controls, **Rupture fuel tank**, and **Restore all cores**. These exercise the same component rules as combat. The palette has an explicit 1,000-unit tank; rupture reduces it to 500. Disable Full Vision to test sensor concealment. Returning to a gallery restores the test cores, heat, shields and weapon readiness.
 
 | Debug Palette control | Action |
 | --- | --- |

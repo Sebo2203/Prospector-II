@@ -129,8 +129,9 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
   const drawPlain=chart?(key,x,y,color)=>drawSpriteGraphic(ctx,key,x,y,color):drawSprite;
   const drawTinted=chart?(key,x,y,tint,opacity)=>drawTintedSpriteGraphic(ctx,key,x,y,tint,opacity):drawSpriteTinted;
   // Draw pirates. Radio contacts beyond sensor range appear as unknown pings.
-  const SENSOR_RANGE = (G.shipStats?.sensorRange ?? 3);
+  const SENSOR_RANGE = effectiveSensorRange();
   G.pirates.forEach(p=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!p.alive) return;
     const vx = p.x - camX;
     const vy = p.y - camY;
@@ -149,6 +150,7 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
   });
   // Draw NPC stranded ships — visible within sensor range
   (G.npcStranded||[]).forEach(ss=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!DEBUG.fullVision && !G.visited[ss.y*MAP_W+ss.x]) return;
     const svx=ss.x-camX, svy=ss.y-camY;
     if(svx<0||svx>=viewWidth||svy<0||svy>=viewHeight) return;
@@ -178,6 +180,7 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
 
   // Draw neutral ships. Radio contacts beyond sensor range appear as unknown pings.
   (G.neutralShips||[]).forEach(ns=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(ns.alive===false) return;  // destroyed — don't render wreck
     const vx2 = ns.x - camX, vy2 = ns.y - camY;
     if(vx2<0||vx2>=viewWidth||vy2<0||vy2>=viewHeight) return;
@@ -196,11 +199,12 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
 
   // Draw gas entities — visible within sensor range when player is in/near a nebula
   (G.gasEntities||[]).forEach(ge=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!ge.alive) return;
     const gvx = ge.x - camX, gvy = ge.y - camY;
     if(gvx<0||gvx>=viewWidth||gvy<0||gvy>=viewHeight) return;
     const gdist = Math.abs(ge.x-G.ship.x)+Math.abs(ge.y-G.ship.y);
-    if(!DEBUG.fullVision && gdist > (G.shipStats?.sensorRange ?? 3) + 2) return;
+    if(!DEBUG.fullVision && gdist > SENSOR_RANGE + 2) return;
     if(!DEBUG.fullVision && !G.visited[ge.y*MAP_W+ge.x]) return;
     const gpx = gvx*TS, gpy = gvy*TS;
     DRAW.gas_entity(ctx, gpx, gpy, ge.variant);
@@ -217,6 +221,7 @@ function drawGalaxyActors(ctx,camX,camY,viewWidth,viewHeight,chart=false){
 
   // Draw floating nebula loot crystals — persistent loot left when cargo was full
   (G.nebulaLoot||[]).forEach(loot=>{
+    if(SENSOR_RANGE===0 && !DEBUG.fullVision) return;
     if(!G.visited[loot.y*MAP_W+loot.x] && !DEBUG.fullVision) return;
     const lvx = loot.x - camX, lvy = loot.y - camY;
     if(lvx<0||lvx>=viewWidth||lvy<0||lvy>=viewHeight) return;

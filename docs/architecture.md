@@ -36,7 +36,15 @@ The root keeps a 1400×720 logical layout. `src/ui/scaling-and-compass.js` fits 
 
 `src/actions/turns.js` coordinates the career clock. A committed action advances the global turn once, and a completed turn ticks crew conditions and timed incidents. Physical surface actions also advance local daylight, refresh sight, and apply oxygen and local hazards. Movement and waiting keep their own effects such as injury costs and medic aid. Paid orbital scans consume one fuel and one turn, and a casino event consumes one turn at buy-in. Menu navigation, inventory management and failed checks that consume no resources remain free.
 
-The tactical arena uses its own rounds for cooldowns, enemy actions and exhaust. Committed actions also advance the career clock while the encounter resolves locally. Galaxy ship movement keeps its existing travel and wait rules.
+The tactical arena uses local rounds for exhaust. Committed actions also advance the career clock while the encounter resolves locally. Ship reloads use absolute career-turn deadlines, while heat and shields tick through `finishCareerTurn`. Galaxy movement keeps its existing travel and wait rules.
+
+### Ship equipment
+
+`src/ships/systems.js` owns hull mount profiles, installed-versus-effective core ratings, power allocation, heat, shields, critical damage and engineer repairs. Nominal player equipment stays in `G.shipStats`; the physical six-core integrity/bypass map, heat, shield charge/recharge deadline, system clock and per-mount `weaponReadyAt` deadlines live on `G.ship`. NPCs use the same persistent fields and a generated `systemStats`/weapon loadout on their authoritative roster actor. Encounters retain display aliases, synchronized from that actor; loading rebinds reload-array aliases and actor IDs.
+
+`G.shipStats.maxFuel` is installed capacity, while `G.maxFuel` is the usable limit after tank damage. `syncPlayerShipSystems` clamps actual fuel and shields without creating either resource. Temporary bypasses derive effective values from the current career turn and never heal integrity. NPCs catch up cooling and shield recharge on entering an encounter. Replacing a destroyed patrol creates healthy core state; retreating preserves the same damaged ship. The debug palette uses an explicit 1,000-unit tank and resets core/readiness state when returning to a gallery.
+
+`src/ui/ship-systems.js` is a native modal using the same `repairShipSystem` action as scripts and keyboard/pointer access. Field repair invokes the relevant location turn process; browsing remains free. See the [equipment guide](experiment.md#mounts-core-systems-and-damage) for the rules and `qa/ship-systems-scenarios.cjs` for native integration coverage.
 
 | Source area | Responsibility |
 | --- | --- |

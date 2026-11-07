@@ -8,7 +8,7 @@ function doFuelScoop(context){
   function applyScoopRisk(label, chance, minDmg, maxDmg){
     if(Math.random() >= chance) return false;
     const dmg = minDmg + rnd(maxDmg - minDmg + 1);
-    if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+    damagePlayerShipHull(dmg,'environmental impact');
     SFX.hullHit && SFX.hullHit();
     addLog(label+' turbulence stresses the hull! -'+dmg+' HP.','lc');
     if(G.ship.hp<=0){

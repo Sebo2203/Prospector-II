@@ -10,7 +10,7 @@ function context(seed=1){
     crew:[{hp:10,skills:{eng:3}},{hp:10,skills:{}}],shipStats:{maxCrew:3,cargoCapacity:2},
     cargo:[],inventory:[],planets:{},enemies:{},credits:0,
     galaxy:Array.from({length:20},()=>Array.from({length:32},()=>({type:'VOID'}))),visited:[]},
-    MAP_W:32,MAP_H:20,DEBUG:{on:false},TILE:{station_wall:{pass:false},station_floor:{pass:true},SHIP:{pass:true},
+    MAP_W:32,MAP_H:20,DEBUG:{on:false},effectiveSensorRange:()=>3,TILE:{station_wall:{pass:false},station_floor:{pass:true},SHIP:{pass:true},
       q_door:{pass:false},q_sealed_door:{pass:false},q_open_door:{pass:true},q_contamination:{pass:true}},
     rnd:n=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return Math.floor(state/4294967296*n);},
     PW:p=>p.width,PH:p=>p.height,addLog:()=>{},renderAll:()=>{},

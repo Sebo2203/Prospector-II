@@ -75,6 +75,7 @@ function renderContextBar(){
     const entry = shipCombatWeapons()[combat.weapon];
     if(entry) btns.push(btn('F','Fire '+entry.weapon.name,'danger'));
     else btns.push(btn('!','Unarmed','warn'));
+    btns.push(btn('B','Boost forward','info'));
     if(livingShipCombatEnemies(combat).length>1) btns.push(btn('Tab','Next target','info','Tab'));
     if(shipCombatEdge(combat.player)){
       const safe = shipCombatEscapeReady(combat);
@@ -96,7 +97,7 @@ function renderContextBar(){
         btns.push(btn('Y / Enter','Accept rescue','good','y'));
         btns.push(btn('N','Decline','danger'));
       } else {
-        btns.push(btn('Compass','Wait one turn (crew drain)','danger'));
+        btns.push(btn('Compass',strandedLifeSupportFailing()?'Wait one turn (crew drain)':'Wait (drive disabled)',strandedLifeSupportFailing()?'danger':'warn'));
         btns.push(btn('T', st.sos ? 'Disable SOS beacon' : 'Activate SOS beacon', st.sos?'danger':'good'));
       }
     } else {
@@ -131,7 +132,7 @@ function renderContextBar(){
       }
       const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
       if(pirateHere) btns.push(btn('F','Engage '+pirateHere.name,'danger'));
-      const pirateNear = !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
+      const pirateNear = (effectiveSensorRange()>0 || DEBUG.fullVision) && !pirateHere && G.pirates.find(p=>p.alive&&Math.abs(p.x-G.ship.x)<=1&&Math.abs(p.y-G.ship.y)<=1);
       if(pirateNear) btns.push(btn('!','Pirate nearby: '+pirateNear.name,'danger'));
       const neutralTarget = nearestNeutralTarget(1);
       if(neutralTarget && !pirateHere) btns.push(btn('F','Fire on '+neutralTarget.name,'danger'));
@@ -394,6 +395,10 @@ function renderContextBar(){
     if(G.mode==='galaxy'||G.mode==='planet') btns.push(btn('X','Examine','routine'));
     if(canToggleInventoryMenu() && G.mode!=='inventory') btns.push(btn('I','Inventory','routine'));
     btns.push(btn('O','Options','routine'));
+  }
+  if(!G.dead && !G.retired && !G.showOptions && !G.dialogue &&
+     (G.mode==='shipcombat' || (G.mode==='galaxy' && G.stranded))){
+    btns.push(btn('F3','Ship systems','routine','F3'));
   }
   bar.innerHTML = btns.join('');
 }

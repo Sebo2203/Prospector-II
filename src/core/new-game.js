@@ -93,6 +93,7 @@ function initGame(chosenClass, captainName, shipName) {
   G.ship.hp     = G.ship.maxHp;
   G.maxFuel     = G.shipStats.maxFuel;
   G.fuel        = G.maxFuel;
+  ensureShipSystems();
   G.weaponLevel = G.shipStats.weaponSlots > 0 ? 1 : 0; // legacy
   // Default loadout by hull type
   G.installedWeapons = [];

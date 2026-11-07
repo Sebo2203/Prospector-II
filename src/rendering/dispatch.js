@@ -8,6 +8,7 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderActiveMissions();
+  if(shipSystemsDialog.open) renderShipSystems();
   renderPointerKeys();
   renderGalaxyMinimap();
   renderCriticalBanner();

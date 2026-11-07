@@ -111,6 +111,18 @@ function applyCorpItem(item){
 function executeBaseAction(actionId){
   const fuelCost = Math.round((G.maxFuel-G.fuel)*0.8);
   switch(actionId){
+    case 'ship_systems': openShipSystems(); return;
+    case 'upreactor':
+    case 'upcooling':{
+      const field=actionId==='upreactor'?'reactorRating':'coolingRating';
+      const price=actionId==='upreactor'?500:400;
+      if((G.shipStats[field]||1)>=3){addLog('Core grade is already at maximum.','li');break;}
+      if(!G.crew.some(crew=>crew.hp>0 && crew.role==='engineer')){addLog('An engineer is required for this upgrade.','lw');break;}
+      if(G.credits<price){addLog('Need '+price+' cr for this core upgrade.','lw');break;}
+      G.credits-=price;G.shipStats[field]=(G.shipStats[field]||1)+1;
+      addLog('Core upgraded to grade '+G.shipStats[field]+'.','lg');
+      break;
+    }
     case 'refuel':
       if(G.fuel>=G.maxFuel){ addLog('Fuel already full.','li'); }
       else if(fuelCost===0){ G.fuel=G.maxFuel; SFX.refuel(); addLog('Tank topped off (free).','lg'); }
@@ -141,9 +153,10 @@ function executeBaseAction(actionId){
       break;}
     case 'upfuel':{
       const ssF=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      if(G.maxFuel>=ssF.maxUpgradeFuel){ addLog('Fuel tank already at maximum ('+ssF.maxUpgradeFuel+').','li'); }
+      if(ssF.maxFuel>=ssF.maxUpgradeFuel){ addLog('Fuel tank already at maximum ('+ssF.maxUpgradeFuel+').','li'); }
       else if(G.credits>=250){
-        G.credits-=250; G.maxFuel+=20; G.fuel=Math.min(G.fuel+20,G.maxFuel);
+        G.credits-=250; ssF.maxFuel=Math.min(ssF.maxUpgradeFuel,ssF.maxFuel+20);
+        syncPlayerShipSystems();G.fuel=Math.min(G.fuel+20,G.maxFuel);
         addLog('Fuel tank upgraded! Max fuel +20.','lg');
         const _engF = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
         if(_engF) giveSkillXP(_engF, 'eng', 4);
@@ -160,7 +173,7 @@ function executeBaseAction(actionId){
     case 'upwslot':{
       const ss3=G.shipStats||buildShipStats('LIGHT_SCOUT');
       if(ss3.weaponSlots>=ss3.maxWeaponSlots){ addLog('Weapon slots at maximum.','li'); }
-      else if(G.credits>=500){ G.credits-=500; G.shipStats.weaponSlots++; addLog('Weapon slot unlocked! Slots: '+G.shipStats.weaponSlots+'/'+ss3.maxWeaponSlots+'.','lg'); }
+      else if(G.credits>=500){ G.credits-=500; G.shipStats.weaponSlots++; addLog('Weapon mount unlocked! Mounts: '+G.shipStats.weaponSlots+'/'+ss3.maxWeaponSlots+'.','lg'); }
       else addLog('Need 500 cr for weapon slot upgrade.','lw');
       break;}
     case 'upmodslot':{
@@ -196,6 +209,8 @@ function executeBaseAction(actionId){
       G.credits -= hullCost;
       const oldHp = G.ship.hp / G.ship.maxHp; // preserve HP ratio
       G.shipStats = buildShipStats(targetId);
+      for(const key of ['systems','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn']) delete G.ship[key];
+      ensureShipSystems();
       G.ship.maxHp = G.shipStats.maxHp;
       G.ship.hp = Math.max(1, Math.round(G.ship.maxHp * oldHp));
       G.maxFuel = G.shipStats.maxFuel;
@@ -210,7 +225,8 @@ function executeBaseAction(actionId){
       if(ss5.shields>=ss5.maxShields){ addLog('Shields already at maximum.','li'); }
       else if(G.credits>=350){
         G.credits-=350; G.shipStats.shields++;
-        addLog('Shield upgraded! Shields: '+G.shipStats.shields+'/'+ss5.maxShields+'.','lg');
+        addLog('Shield generator upgraded. Capacity '+shipShieldCapacity()+'; reserved power '+G.shipStats.shields+'.','lg');
+        if(shipWeaponPowerUsed()>shipReactorOutput()) addLog('Reactor overloaded: later mounts are offline. Upgrade the reactor or refit.','lw');
         const _engS = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
         if(_engS) giveSkillXP(_engS, 'eng', 4);
       }
@@ -238,11 +254,14 @@ function executeBaseAction(actionId){
       const weapons2 = Object.values(SHIP_WEAPONS);
       const selW2 = weapons2[G.base.weaponSel || 0];
       if(!selW2 || selW2.placeholder){ addLog('That weapon is not available yet.','lw'); break; }
+      const fit=shipWeaponFitReason(slot2,selW2);
+      if(fit){addLog(fit+'.','lw');break;}
       if(G.credits < selW2.cost){ addLog('Need '+selW2.cost+' cr to install '+selW2.name+'.','lw'); break; }
       G.credits -= selW2.cost;
       if(!G.installedWeapons) G.installedWeapons = [];
       G.installedWeapons[slot2] = selW2.id;
-      addLog(selW2.name+' installed in slot ['+(slot2+1)+']. Cost: '+selW2.cost+' cr.','lg');
+      G.ship.weaponReadyAt[slot2]=G.turn;
+      addLog(selW2.name+' installed in mount ['+(slot2+1)+']. Cost: '+selW2.cost+' cr.','lg');
       G.base.screen = 'sub';
       break;}
     case 'sell':{
