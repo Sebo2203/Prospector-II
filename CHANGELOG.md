@@ -27,6 +27,12 @@ Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 
 Development on `experiment/expedition-legacy`.
 
+### Career playtests
+
+- All 47 repository tests and all 16 headless Edge suites passed on the final build.
+- Three seeded, unassisted short careers reached retirement with no JavaScript errors. The scout retired at turn 313 with 568 credits, the freighter at turn 361 with 476, and the corvette at turn 419 with 896. The same freighter seed had previously ended in destruction.
+- A longer scout run targeting 10,000 credits ended in a Dreadnought encounter at turn 3,153 with 1,856 credits. The short retirements establish that all three paths can reach an ending. Profitability, threat pacing and human combat balance remain open.
+
 ### Tactical withdrawal
 
 - A successful retreat stops surviving opponents from pursuing or automatically restarting combat for the next five career turns. They keep their hostility and damage, and the player can choose to attack again. This addresses a freighter playtest where a Raider Frigate re-engaged after 13 withdrawals.

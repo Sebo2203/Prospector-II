@@ -35,6 +35,8 @@ The modular `src/` tree already contains a generated galaxy, planets and civiliz
 | Artemis launcher and ship equipment | The launcher lacks ammunition, and damage/repair is not yet a meaningful ship-management loop. |
 | Six authored humanity outcomes | Retirement skips the sector-outcome screen; outcomes need to follow run history instead of a random selection. |
 
+The experimental.46 career runs reached short retirement on all three starting hulls. The longer scout run was destroyed by a Dreadnought with 1,856 credits of its 10,000-credit target. Prioritize threat readability and the cost of engaging or withdrawing before adding another resource to manage. The arena already tracks weapon reloads per slot. A future heat system could use a shared ship budget for thrust and weapons while leaving slot reloads tied to rounds. [Playtest results](../CHANGELOG.md#career-playtests)
+
 ## Implemented foundation — the expedition remembers
 
 The integrated log records known discoveries, survey work, science leads, and survivor outcomes. Mercy of Dawn connects a distress lead to boarding, treatment, transport, and station delivery. Its location is set during galaxy generation and revealed by sensors. This incident is the pattern for later stories with choices, costs, and persistent aftermath. [Expedition guide](experiment.md)
