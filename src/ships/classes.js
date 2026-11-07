@@ -1,6 +1,8 @@
 // ─────────────────────────────────────────────────────────────────
 //  SHIP CLASS DEFINITIONS
 // ─────────────────────────────────────────────────────────────────
+const NEUTRAL_ENGINE_RATINGS={trader:2,cargo:1,science:2,patrol:3};
+
 const SHIP_CLASSES = {
   LIGHT_SCOUT: {
     id:             'LIGHT_SCOUT',

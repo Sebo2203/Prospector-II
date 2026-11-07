@@ -24,7 +24,7 @@ function ensureNeutralCombatStats(ns){
   }
   if(ns.hp === undefined) ns.hp = ns.maxHp;
   if(ns.atk === undefined) ns.atk = ns.type==='patrol' ? 6 : 2;
-  if(ns.engineRating === undefined) ns.engineRating = ns.type==='patrol' ? 3 : (ns.speed??1);
+  if(ns.engineRating === undefined) ns.engineRating = NEUTRAL_ENGINE_RATINGS[ns.type]??ns.speed??1;
   if(ns.shields === undefined) ns.shields = ns.type==='patrol' ? 1 : 0;
   if(ns.maxShields === undefined) ns.maxShields = ns.shields;
   if(ns.guns === undefined) ns.guns = ns.type==='patrol' ? 1 : 0;

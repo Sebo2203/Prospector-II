@@ -125,3 +125,5 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 `src/combat/ship-feedback.js` provides disposable shot animation and ordered impact audio; it does not own game rules or save data.
 
 `src/ships/neutral-movement.js` also owns the shared galaxy engine-ratio budget and safe escape-sector candidates used by pirates, civilian flight and tactical exits.
+
+`shipRelativeMoveBudget` in `src/ships/neutral-movement.js` supplies the shared relative-speed kernel; tactical actor banks are owned by `src/combat/ship-tactics.js` and validated by `src/persistence/career-snapshot.js`. NPC engine defaults are centralized in `src/ships/classes.js`.

@@ -15,7 +15,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     const enemy=G.shipCombat.enemies[0];enemy.x=25;enemy.y=8;
     G.shipCombat.asteroids=[];renderAll();
   });
-  await page.keyboard.press('Space');
+  await page.keyboard.press('Space');await page.keyboard.press('Space');
   assert.deepEqual(await page.evaluate(()=>[G.mode,G.ship.x,G.ship.y,G.neutralShips[0].x,G.neutralShips[0].y,G.neutralShips[0].fleeingPlayer]),['galaxy',10,10,11,10,true]);
   assert.ok(await page.evaluate(()=>autoSave()));assert.ok(await page.evaluate(()=>loadFromStorage()));
   assert.deepEqual(await page.evaluate(()=>[G.mode,G.neutralShips[0].x,G.neutralShips[0].y,G.neutralShips[0].hp]),['galaxy',11,10,45]);

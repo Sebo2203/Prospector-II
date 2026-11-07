@@ -20,7 +20,7 @@ function createShipCombatArena(combat, ships){
     tickShipSystems(ship);
     const collection = shipCombatCollection(ship);
     const [x,y] = positions[i];
-    return {ship,collection,x,y,dx:-1,dy:0,
+    return {ship,collection,x,y,dx:-1,dy:0,moveBank:0,
       shields:ship.shieldCharge};
   });
   combat.target = 0;
@@ -317,7 +317,28 @@ function doShipFire(){
   advanceShipCombat(combat,false,'fire');
 }
 
-function moveShipCombatEnemy(combat,enemy){
+function shipCombatMoveRating(enemy){
+  return enemy.ship._homeCluster?(enemy.ship.engineRating??3):effectiveEngineRating(enemy.ship);
+}
+
+function moveShipCombatEnemy(combat,enemy,referenceEngine=Math.max(1,effectiveEngineRating())){
+  const rating=shipCombatMoveRating(enemy);
+  if(!rating || (!enemy.ship._homeCluster && effectiveSensorRange(enemy.ship)===0)){
+    enemy.moveBank=0;return;
+  }
+  const steps=shipRelativeMoveBudget(enemy,rating,referenceEngine,'moveBank');
+  for(let step=0;step<steps;step++){
+    // Closing into firing/ram range uses movement, never an extra attack.
+    if(step>0 && shipCombatEnemyThreat(combat,enemy))break;
+    if(!moveShipCombatEnemyStep(combat,enemy))break;
+    if(enemy.escaped || enemy.ship.alive===false || enemy.ship.hp<=0 || combat!==G.shipCombat)break;
+    if(shipCombatMoveRating(enemy)<rating || (!enemy.ship._homeCluster && effectiveSensorRange(enemy.ship)===0)){
+      enemy.moveBank=0;break;
+    }
+  }
+}
+
+function moveShipCombatEnemyStep(combat,enemy){
   if(!enemy.ship._homeCluster && (effectiveEngineRating(enemy.ship)===0 || effectiveSensorRange(enemy.ship)===0)) return;
   const sight=shipCombatSensorRange(enemy.ship);
   if(shipCombatDistance(enemy,combat.player)<=sight) enemy.lastSeenPlayer={x:combat.player.x,y:combat.player.y};
@@ -343,6 +364,7 @@ function moveShipCombatEnemy(combat,enemy){
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
     escapeShipCombatEnemy(combat,enemy);
   }
+  return !!next || enemy.escaped;
 }
 
 function escapeShipCombatEnemy(combat,enemy){
@@ -446,14 +468,18 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   beginCareerTurn();
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
+  // One player pace for this committed turn, even if an early hit damages the drive.
+  const referenceEngine=Math.max(1,effectiveEngineRating());
   for(const enemy of livingShipCombatEnemies(combat)){
     tickShipSystems(enemy.ship);
     if(shipCombatEnemyCanFire(combat,enemy)){
+      enemy.moveBank=0;
       hitPlayer=fireShipCombatEnemy(combat,enemy)||hitPlayer;
       if(G.dead){ renderAll(); return; }
     } else if(shipCombatEnemyThreat(combat,enemy)){
+      enemy.moveBank=0;
       enemy.ship.heat=Math.max(0,enemy.ship.heat-shipCoolingRate(enemy.ship));
-    } else moveShipCombatEnemy(combat,enemy);
+    } else moveShipCombatEnemy(combat,enemy,referenceEngine);
   }
   if(!livingShipCombatEnemies(combat).length){
     G.shipCombat=null;G.mode='galaxy';

@@ -13,6 +13,7 @@ const suites = {
   'combat-ui': 'combat-ui-scenarios.cjs',
   'combat-space': 'combat-space-scenarios.cjs',
   'combat-feedback': 'combat-feedback-scenarios.cjs',
+  'combat-speed': 'combat-speed-scenarios.cjs',
   'ship-systems': 'ship-systems-scenarios.cjs',
   'hangar-systems': 'hangar-systems-scenarios.cjs',
   turns: 'turn-scenarios.cjs',

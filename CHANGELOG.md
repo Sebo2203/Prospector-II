@@ -23,6 +23,18 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.62 applies engine pace to tactical movement
+
+Released on `experiment/expedition-legacy`.
+
+- Merchant Vessel / Free Trader and Survey Vessel / Research Ship default engines are now rating 2. Cargo remains 1 and Station Patrol 3. Centralized these defaults so fresh generation and neutral initialization agree; explicit individual fittings remain authoritative.
+- Applied the galaxy pursuit engine ratio to tactical NPC movement through one shared budget kernel and separate arena fractions. Equal engines move one tile per player action; faster opponents can move several tiles and slower ones bank fractional movement. Normal player movement remains one tile and Boost two. The readout exposes player engine and target engine/mobility plus its movement ratio. Natural entities use authored mobility and retain their ram cadence and lack of exhaust.
+- Each NPC substep checks collision, cover, plasma, core damage and escape, adds movement heat and lays exhaust. Actors stop on reaching clear firing range and do not receive a free attack. Drive/sensor damage can interrupt remaining steps. Firing or holding range clears movement credit, preventing stockpiled bursts. The player's engine reference is captured once per NPC phase; an early enemy critical changes the next phase's pace rather than giving later actors inconsistent allowances.
+- Kept one global turn, reload/cooling/shield/status tick and at most one NPC attack per committed action. Fractional movement survives save/load and invalid saved banks are rejected transactionally. Fixed near-integer floating-point loss in the shared ratio, including the 3/5 cycle.
+- Consequences: engine investment now affects interception, disengagement and range control alongside existing evasion and exhaust effects. Slow hulls are under more pressure from fast ships; Boost, weapon reach and cover become more valuable. More movement creates more exhaust and movement heat. These are intended tradeoffs, not a claim of completed balance.
+- Validation: all 62 repository tests and 25 headless Edge suites passed. New deterministic/native coverage checks role defaults, 1:3/3:1/equal/3:5 movement, separate banks, exact fractions, save continuity/rejection, per-step cover/exhaust/heat/criticals, no extra shots or clock ticks, no reload stockpile and consistent player pace across a multi-enemy phase. A waiting-player test measured a rating-2 trader escaping seven tiles in 4, 7, 11 and 18 turns against player engines 1, 2, 3 and 5. Existing combat, repairs, pursuit, save, rescue and career checks passed; crowded readouts were inspected. Whole-career balance and human tactical playtesting remain necessary.
+- Saves: schema 2 unchanged; no migration added. New arena actors record a movement fraction. Existing instantiated ships retain their fitted engine ratings; new/default traders and scientists receive rating 2. Damage, reload duration, weapon rate of fire, ordinary action costs and galaxy patrol/rescue step rates are unchanged. [Tactical movement and tradeoffs](docs/experiment.md#tactical-ship-combat), [shared movement boundary](docs/architecture.md#galaxy-ship-movement-and-tactical-exits)
+
 ## 2026-11-07 — 0.28 experimental.61 connects civilian escape and weapon readiness
 
 Released on `experiment/expedition-legacy`.

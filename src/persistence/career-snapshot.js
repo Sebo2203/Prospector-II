@@ -137,7 +137,8 @@ function resolveCareerReferences(game){
        !Number.isSafeInteger(combat.round) || combat.round<1) throw invalidCareerSave();
     const participants = new Set();
     for(const enemy of combat.enemies){
-      if(!enemy || !COMBAT_ROSTERS.includes(enemy.collection) || participants.has(enemy.ship)) throw invalidCareerSave();
+      if(!enemy || !COMBAT_ROSTERS.includes(enemy.collection) || participants.has(enemy.ship) ||
+         (enemy.moveBank!==undefined && (!Number.isFinite(enemy.moveBank) || enemy.moveBank<0 || enemy.moveBank>=1))) throw invalidCareerSave();
       participants.add(enemy.ship);
       enemy.ship = actorAt(enemy.collection,enemy.ship);
       validateSavedShipSystems(enemy.ship,game.turn);

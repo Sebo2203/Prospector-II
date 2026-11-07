@@ -1944,7 +1944,7 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.61</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.62</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2073,8 +2073,8 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.61';
-const GAME_VERSION_LABEL = 'v0.28 experimental.61';
+const GAME_VERSION = '0.28.0-experimental.62';
+const GAME_VERSION_LABEL = 'v0.28 experimental.62';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -9662,6 +9662,8 @@ function randomCrewMember(roleKey){
 // ─────────────────────────────────────────────────────────────────
 //  SHIP CLASS DEFINITIONS
 // ─────────────────────────────────────────────────────────────────
+const NEUTRAL_ENGINE_RATINGS={trader:2,cargo:1,science:2,patrol:3};
+
 const SHIP_CLASSES = {
   LIGHT_SCOUT: {
     id:             'LIGHT_SCOUT',
@@ -11644,6 +11646,7 @@ function generateGalaxy() {
     const ns = {
       x:nx2, y:ny2,
       type:tmpl.type, name:tmpl.name,
+      engineRating:NEUTRAL_ENGINE_RATINGS[tmpl.type],
       speed:1, rescueCost:tmpl.rescueCost, fuelGift:tmpl.fuelGift,
       rescuing:false,
       // cargo/trader: shuttle between bases; 0=heading to base1, 1=heading to base2
@@ -20076,15 +20079,20 @@ function handleCasinoKey(key){
 }
 
 //  NEUTRAL SHIP MOVEMENT
-// One movement budget for galaxy pursuit and escape. Banks persist on the actual ship.
+// Shared ratio, separate persistent banks for world ships and tactical actors.
+function shipRelativeMoveBudget(actor,engine,referenceEngine,bankKey){
+  if(engine<=0){actor[bankKey]=0;return 0;}
+  const bank=(actor[bankKey]||0)+engine/Math.max(1,referenceEngine);
+  const steps=Math.floor(bank+1e-9);
+  actor[bankKey]=Math.max(0,bank-steps);
+  return steps;
+}
+
 function galaxyShipMoveBudget(ship,relative=false){
   const engine=effectiveEngineRating(ship);
   if(!engine)return 0;
   if(!relative){ship._chaseMoveBank=0;return Math.max(1,Math.min(engine,2));}
-  ship._chaseMoveBank=(ship._chaseMoveBank||0)+engine/Math.max(1,effectiveEngineRating());
-  const steps=Math.floor(ship._chaseMoveBank);
-  ship._chaseMoveBank-=steps;
-  return steps;
+  return shipRelativeMoveBudget(ship,engine,effectiveEngineRating(),'_chaseMoveBank');
 }
 
 function galaxyShipEscapeChoices(ship,diagonal=false){
@@ -31967,7 +31975,7 @@ function ensureNeutralCombatStats(ns){
   }
   if(ns.hp === undefined) ns.hp = ns.maxHp;
   if(ns.atk === undefined) ns.atk = ns.type==='patrol' ? 6 : 2;
-  if(ns.engineRating === undefined) ns.engineRating = ns.type==='patrol' ? 3 : (ns.speed??1);
+  if(ns.engineRating === undefined) ns.engineRating = NEUTRAL_ENGINE_RATINGS[ns.type]??ns.speed??1;
   if(ns.shields === undefined) ns.shields = ns.type==='patrol' ? 1 : 0;
   if(ns.maxShields === undefined) ns.maxShields = ns.shields;
   if(ns.guns === undefined) ns.guns = ns.type==='patrol' ? 1 : 0;
@@ -32289,7 +32297,7 @@ function createShipCombatArena(combat, ships){
     tickShipSystems(ship);
     const collection = shipCombatCollection(ship);
     const [x,y] = positions[i];
-    return {ship,collection,x,y,dx:-1,dy:0,
+    return {ship,collection,x,y,dx:-1,dy:0,moveBank:0,
       shields:ship.shieldCharge};
   });
   combat.target = 0;
@@ -32586,7 +32594,28 @@ function doShipFire(){
   advanceShipCombat(combat,false,'fire');
 }
 
-function moveShipCombatEnemy(combat,enemy){
+function shipCombatMoveRating(enemy){
+  return enemy.ship._homeCluster?(enemy.ship.engineRating??3):effectiveEngineRating(enemy.ship);
+}
+
+function moveShipCombatEnemy(combat,enemy,referenceEngine=Math.max(1,effectiveEngineRating())){
+  const rating=shipCombatMoveRating(enemy);
+  if(!rating || (!enemy.ship._homeCluster && effectiveSensorRange(enemy.ship)===0)){
+    enemy.moveBank=0;return;
+  }
+  const steps=shipRelativeMoveBudget(enemy,rating,referenceEngine,'moveBank');
+  for(let step=0;step<steps;step++){
+    // Closing into firing/ram range uses movement, never an extra attack.
+    if(step>0 && shipCombatEnemyThreat(combat,enemy))break;
+    if(!moveShipCombatEnemyStep(combat,enemy))break;
+    if(enemy.escaped || enemy.ship.alive===false || enemy.ship.hp<=0 || combat!==G.shipCombat)break;
+    if(shipCombatMoveRating(enemy)<rating || (!enemy.ship._homeCluster && effectiveSensorRange(enemy.ship)===0)){
+      enemy.moveBank=0;break;
+    }
+  }
+}
+
+function moveShipCombatEnemyStep(combat,enemy){
   if(!enemy.ship._homeCluster && (effectiveEngineRating(enemy.ship)===0 || effectiveSensorRange(enemy.ship)===0)) return;
   const sight=shipCombatSensorRange(enemy.ship);
   if(shipCombatDistance(enemy,combat.player)<=sight) enemy.lastSeenPlayer={x:combat.player.x,y:combat.player.y};
@@ -32612,6 +32641,7 @@ function moveShipCombatEnemy(combat,enemy){
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
     escapeShipCombatEnemy(combat,enemy);
   }
+  return !!next || enemy.escaped;
 }
 
 function escapeShipCombatEnemy(combat,enemy){
@@ -32715,14 +32745,18 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   beginCareerTurn();
   finishCareerTurn();
   if(G.dead){ renderAll(); return; }
+  // One player pace for this committed turn, even if an early hit damages the drive.
+  const referenceEngine=Math.max(1,effectiveEngineRating());
   for(const enemy of livingShipCombatEnemies(combat)){
     tickShipSystems(enemy.ship);
     if(shipCombatEnemyCanFire(combat,enemy)){
+      enemy.moveBank=0;
       hitPlayer=fireShipCombatEnemy(combat,enemy)||hitPlayer;
       if(G.dead){ renderAll(); return; }
     } else if(shipCombatEnemyThreat(combat,enemy)){
+      enemy.moveBank=0;
       enemy.ship.heat=Math.max(0,enemy.ship.heat-shipCoolingRate(enemy.ship));
-    } else moveShipCombatEnemy(combat,enemy);
+    } else moveShipCombatEnemy(combat,enemy,referenceEngine);
   }
   if(!livingShipCombatEnemies(combat).length){
     G.shipCombat=null;G.mode='galaxy';
@@ -32890,7 +32924,7 @@ function drawShipCombatReadout(combat,weapons){
     text(shields.state+(shields.damaged?' · damaged':''),y-8,'#8eaabb','11px Courier New');
     y+=13;
   }
-  y=meter('Heat',G.ship.heat,shipHeatCapacity(),y,G.ship.heat>=shipHeatCapacity()*0.8?'#f0ad76':'#aebdd0','Cooling '+shipCoolingRate()+'/turn');
+  y=meter('Heat',G.ship.heat,shipHeatCapacity(),y,G.ship.heat>=shipHeatCapacity()*0.8?'#f0ad76':'#aebdd0','Engine '+effectiveEngineRating()+' · Cool '+shipCoolingRate()+'/t');
   const faults=[];
   if(effectiveEngineRating()===0) faults.push('Engines offline');
   else if(G.fuel<=0 && !DEBUG.infiniteFuel) faults.push('No fuel for thrust');
@@ -32910,6 +32944,9 @@ function drawShipCombatReadout(combat,weapons){
     const targetShields=shipShieldReadout(ship);
     if(targetShields)y=meter('Shields',targetShields.charge,targetShields.capacity,y,'#81c5df',targetShields.state);
     text('Distance '+shipCombatDistance(combat.player,target)+' · '+(natural?'Ram range 1':'Weapon range '+shipCombatEnemyRange(target)),y);y+=16;
+    const mobility=shipCombatMoveRating(target);
+    const pace=natural || effectiveSensorRange(ship)>0?mobility:0;
+    text((natural?'Mobility ':'Engine ')+mobility+' · Move '+pace+'/'+Math.max(1,effectiveEngineRating())+' per turn',y,'#8e9daa','11px Courier New');y+=16;
     const status=shipCombatEnemyActionStatus(combat,target);
     text(status,y,status==='Can fire'||status==='Can ram'?'#f0a9a6':'#aebdd0');y+=16;
     if(!natural && actorShipCombatWeapons(ship).length){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
@@ -36520,7 +36557,8 @@ function resolveCareerReferences(game){
        !Number.isSafeInteger(combat.round) || combat.round<1) throw invalidCareerSave();
     const participants = new Set();
     for(const enemy of combat.enemies){
-      if(!enemy || !COMBAT_ROSTERS.includes(enemy.collection) || participants.has(enemy.ship)) throw invalidCareerSave();
+      if(!enemy || !COMBAT_ROSTERS.includes(enemy.collection) || participants.has(enemy.ship) ||
+         (enemy.moveBank!==undefined && (!Number.isFinite(enemy.moveBank) || enemy.moveBank<0 || enemy.moveBank>=1))) throw invalidCareerSave();
       participants.add(enemy.ship);
       enemy.ship = actorAt(enemy.collection,enemy.ship);
       validateSavedShipSystems(enemy.ship,game.turn);

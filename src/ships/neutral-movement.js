@@ -1,12 +1,17 @@
-// One movement budget for galaxy pursuit and escape. Banks persist on the actual ship.
+// Shared ratio, separate persistent banks for world ships and tactical actors.
+function shipRelativeMoveBudget(actor,engine,referenceEngine,bankKey){
+  if(engine<=0){actor[bankKey]=0;return 0;}
+  const bank=(actor[bankKey]||0)+engine/Math.max(1,referenceEngine);
+  const steps=Math.floor(bank+1e-9);
+  actor[bankKey]=Math.max(0,bank-steps);
+  return steps;
+}
+
 function galaxyShipMoveBudget(ship,relative=false){
   const engine=effectiveEngineRating(ship);
   if(!engine)return 0;
   if(!relative){ship._chaseMoveBank=0;return Math.max(1,Math.min(engine,2));}
-  ship._chaseMoveBank=(ship._chaseMoveBank||0)+engine/Math.max(1,effectiveEngineRating());
-  const steps=Math.floor(ship._chaseMoveBank);
-  ship._chaseMoveBank-=steps;
-  return steps;
+  return shipRelativeMoveBudget(ship,engine,effectiveEngineRating(),'_chaseMoveBank');
 }
 
 function galaxyShipEscapeChoices(ship,diagonal=false){

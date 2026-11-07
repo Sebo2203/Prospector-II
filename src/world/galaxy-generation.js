@@ -555,6 +555,7 @@ function generateGalaxy() {
     const ns = {
       x:nx2, y:ny2,
       type:tmpl.type, name:tmpl.name,
+      engineRating:NEUTRAL_ENGINE_RATINGS[tmpl.type],
       speed:1, rescueCost:tmpl.rescueCost, fuelGift:tmpl.fuelGift,
       rescuing:false,
       // cargo/trader: shuttle between bases; 0=heading to base1, 1=heading to base2

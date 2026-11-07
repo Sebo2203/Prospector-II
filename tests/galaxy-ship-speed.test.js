@@ -30,3 +30,17 @@ test('escape choices exclude the player, hazards, map boundaries and occupied se
  assert.ok(choices.every(p=>p.x===5 && Math.abs(p.y-10)===1));
  ship.x=0;ship.y=0;assert.equal(c.galaxyShipEscapeChoices(ship).length,2);
 });
+
+test('relative speed banks stay exact across five-turn cycles and separate combat from galaxy credit',()=>{
+ const c=world(),actor={_chaseMoveBank:0.75,moveBank:0};
+ assert.deepEqual(Array.from({length:5},()=>c.shipRelativeMoveBudget(actor,3,5,'moveBank')),[0,1,0,1,1]);
+ assert.equal(actor.moveBank,0);assert.equal(actor._chaseMoveBank,0.75);
+ assert.equal(c.shipRelativeMoveBudget(actor,1,2,'moveBank'),0);assert.equal(actor.moveBank,0.5);
+ assert.equal(c.shipRelativeMoveBudget(actor,0,2,'moveBank'),0);assert.equal(actor.moveBank,0);
+});
+test('civilian engine defaults distinguish traders and scientists from cargo',()=>{
+ const c=vm.createContext({});
+ for(const file of ['ships/classes.js','combat/ship.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),c);
+ for(const [type,rating] of [['trader',2],['science',2],['cargo',1],['patrol',3]])assert.equal(c.ensureNeutralCombatStats({type}).engineRating,rating);
+ assert.equal(c.ensureNeutralCombatStats({type:'trader',engineRating:1}).engineRating,1,'explicit individual fittings remain authoritative');
+});

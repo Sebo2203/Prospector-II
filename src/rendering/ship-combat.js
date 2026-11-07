@@ -82,7 +82,7 @@ function drawShipCombatReadout(combat,weapons){
     text(shields.state+(shields.damaged?' · damaged':''),y-8,'#8eaabb','11px Courier New');
     y+=13;
   }
-  y=meter('Heat',G.ship.heat,shipHeatCapacity(),y,G.ship.heat>=shipHeatCapacity()*0.8?'#f0ad76':'#aebdd0','Cooling '+shipCoolingRate()+'/turn');
+  y=meter('Heat',G.ship.heat,shipHeatCapacity(),y,G.ship.heat>=shipHeatCapacity()*0.8?'#f0ad76':'#aebdd0','Engine '+effectiveEngineRating()+' · Cool '+shipCoolingRate()+'/t');
   const faults=[];
   if(effectiveEngineRating()===0) faults.push('Engines offline');
   else if(G.fuel<=0 && !DEBUG.infiniteFuel) faults.push('No fuel for thrust');
@@ -102,6 +102,9 @@ function drawShipCombatReadout(combat,weapons){
     const targetShields=shipShieldReadout(ship);
     if(targetShields)y=meter('Shields',targetShields.charge,targetShields.capacity,y,'#81c5df',targetShields.state);
     text('Distance '+shipCombatDistance(combat.player,target)+' · '+(natural?'Ram range 1':'Weapon range '+shipCombatEnemyRange(target)),y);y+=16;
+    const mobility=shipCombatMoveRating(target);
+    const pace=natural || effectiveSensorRange(ship)>0?mobility:0;
+    text((natural?'Mobility ':'Engine ')+mobility+' · Move '+pace+'/'+Math.max(1,effectiveEngineRating())+' per turn',y,'#8e9daa','11px Courier New');y+=16;
     const status=shipCombatEnemyActionStatus(combat,target);
     text(status,y,status==='Can fire'||status==='Can ram'?'#f0a9a6':'#aebdd0');y+=16;
     if(!natural && actorShipCombatWeapons(ship).length){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
