@@ -19,11 +19,6 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(shipSystemsDialog.open){
-    // Held activation keys must not repeatedly activate native modal buttons.
-    if(e.repeat && (e.key==='Enter'||e.key===' ')) e.preventDefault();
-    return;
-  }
   if(debugDialog.open){
     if(e.shiftKey && e.key.toLowerCase()==='b'){
       e.preventDefault();
@@ -53,6 +48,12 @@ document.addEventListener('keydown', e=>{
   if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey || menuControl.id==='shortcut-toggle') && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
     if(!e.repeat) menuControl.click();
+    return;
+  }
+
+  if(shipSystemsActive()){
+    e.preventDefault();
+    if(!e.repeat || !['Enter',' '].includes(e.key)) handleShipSystemsKey(e.key);
     return;
   }
 

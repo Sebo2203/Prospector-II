@@ -41,7 +41,7 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/crew/morale.js](../src/crew/morale.js) | 270 |
 | [src/crew/recruitment-and-survey-rewards.js](../src/crew/recruitment-and-survey-rewards.js) | 51 |
 | [src/ships/systems.js](../src/ships/systems.js) | Mounts, persistent core integrity, heat, shields, fitting and repairs |
-| [src/ui/ship-systems.js](../src/ui/ship-systems.js) | Native component inspection and repair controls |
+| [src/ui/ship-systems.js](../src/ui/ship-systems.js) | Hangar/ship canvas inspection pages and shared keyboard/pointer repair controls |
 | [src/ships/classes.js](../src/ships/classes.js) | 112 |
 | [src/core/cargo-and-analytics.js](../src/core/cargo-and-analytics.js) | 73 |
 | [src/core/new-game.js](../src/core/new-game.js) | 134 |

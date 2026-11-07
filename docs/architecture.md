@@ -54,7 +54,7 @@ Combat events use ordinary `addLog` entries with category `combat`, and appear i
 
 `G.shipStats.maxFuel` is installed capacity, while `G.maxFuel` is the usable limit after tank damage. `syncPlayerShipSystems` clamps actual fuel and shields without creating either resource. Temporary bypasses derive effective values from the current career turn and never heal integrity. NPCs catch up cooling and shield recharge on entering an encounter. Replacing a destroyed patrol creates healthy core state; retreating preserves the same damaged ship. The debug palette uses an explicit 1,000-unit tank and resets core/readiness state when returning to a gallery.
 
-`src/ui/ship-systems.js` is a native modal using the same `repairShipSystem` action as scripts and keyboard/pointer access. Field repair invokes the relevant location turn process; browsing remains free. See the [equipment guide](experiment.md#mounts-core-systems-and-damage) for the rules and `qa/ship-systems-scenarios.cjs` for native integration coverage.
+`src/ui/ship-systems.js` draws an in-canvas detail page, with the Hangar frame or shared inventory tabs according to its entry point. Its cursor is ephemeral, outside the saved career; it leaves the underlying gameplay mode intact so `repairShipSystem` still invokes the correct location turn process. Temporary mode restoration inside a field repair keeps the page open; a real career/location change discards it. Mouse and keyboard share component selection and repair actions, movement is blocked while inspecting, and browsing remains free. See the [equipment guide](experiment.md#mounts-core-systems-and-damage) for the rules and `qa/ship-systems-scenarios.cjs` for native integration coverage.
 
 | Source area | Responsibility |
 | --- | --- |

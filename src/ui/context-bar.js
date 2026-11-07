@@ -24,6 +24,14 @@ function renderContextBar(){
     btns.push(btn(keys[0],label,'info',keys[2]),btn(keys[1],label,'info',keys[3]));
   };
 
+  if(shipSystemsActive()){
+    arrows('Select system');
+    if(shipSystemsActions().length>1) arrows('Select repair',true);
+    btns.push(btn('ESC','Back','info'));
+    bar.innerHTML=btns.join('');
+    return;
+  }
+
   if(G.showOptions && !G.dead && !G.retired){
     btns.push(btn('ESC',G._kbScreen?'Back':'Close options','info'));
   } else if(G.dead || G.retired){

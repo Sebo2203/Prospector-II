@@ -1577,31 +1577,6 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   line-height: 16px;
   color: #558877;
 }
-#ship-systems-dialog {
-  width: min(900px, calc(100vw - 24px));
-  max-height: calc(100vh - 24px);
-  overflow: auto;
-  margin: auto;
-  padding: 18px;
-  background: #0a0a0f;
-  color: #b9c6ce;
-  border: 1px solid #56728b;
-  font: 14px 'Courier New', monospace;
-}
-#ship-systems-dialog::backdrop { background: #000b; }
-.ship-system-header, .ship-system-row { display:flex; justify-content:space-between; gap:14px; align-items:center; }
-.ship-system-header { margin-bottom:12px; }
-.ship-system-row { border-top:1px solid #293743; padding:10px 0; }
-.ship-system-row p { color:#98abb8; margin-top:5px; }
-.system-actions { display:flex; gap:6px; flex-shrink:0; }
-.system-damaged { color:#ffad72; }
-#ship-systems-dialog button { font:inherit; padding:5px 8px; color:#c8dbe7; background:#182530; border:1px solid #496173; cursor:pointer; }
-#ship-systems-dialog button:disabled { color:#59646b; border-color:#29343b; cursor:default; }
-#ship-systems-dialog button:focus-visible { outline:2px solid #ffe066; }
-#ship-systems-dialog h3, #ship-systems-dialog ul { margin:12px 0 6px; }
-#ship-systems-dialog li { margin-left:20px; padding:3px 0; }
-.ship-system-summary { color:#8bd5ec; margin-bottom:8px; }
-
 #debug-playground-button {
   position: relative;
   z-index: 1100;
@@ -1968,7 +1943,7 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.56</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.57</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2096,14 +2071,9 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <button data-menu-control onclick="saveToFile()">Export save</button>
   <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
 </div>
-<dialog id="ship-systems-dialog" aria-labelledby="ship-systems-title">
-  <div class="ship-system-header"><h2 id="ship-systems-title">Ship Systems</h2><button type="button" onclick="closeShipSystems()">Close [Esc]</button></div>
-  <div id="ship-systems-content"></div>
-</dialog>
-
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.56';
-const GAME_VERSION_LABEL = 'v0.28 experimental.56';
+const GAME_VERSION = '0.28.0-experimental.57';
+const GAME_VERSION_LABEL = 'v0.28 experimental.57';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -14331,7 +14301,6 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderActiveMissions();
-  if(shipSystemsDialog.open) renderShipSystems();
   renderPointerKeys();
   renderGalaxyMinimap();
   renderCriticalBanner();
@@ -14345,6 +14314,13 @@ function drawCanvas(){
   resetCanvasMenu();
   canvasMapView=null;
   ctx.clearRect(0,0,canvasWidth,canvasHeight);
+
+  if(shipSystemsActive()){
+    canvas.classList.remove('map-targeting');
+    pointerFireAim=null;
+    drawShipSystems();
+    return;
+  }
 
   if(G.mode==='planet'){
     drawPlanet();
@@ -18430,7 +18406,8 @@ function handleStationKey(key){
 const INVENTORY_TABS = ['inventory','crew','ship','log'];
 
 function selectInventoryTab(tab){
-  if(G._viewTab===tab) return;
+  if(G._viewTab===tab && !shipSystemsView) return;
+  shipSystemsView=null;
   G._viewTab = tab;
   G._viewCrewSel = 0;
   G._inventoryExamine = false;
@@ -18485,11 +18462,9 @@ function inventoryItemCanBeUsed(item){
     'grapple','jetpack','capture_net','contain_crate','field_rations','rad_flush','sensor_drone','repair_kit'].includes(item?.usable);
 }
 
-function drawInventoryOverlay(){
+function drawInventoryFrame(close=closeInventoryMenu,closeLabel='Close [Esc]'){
   const cw = canvasWidth, ch = canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
-  ensureCrewMoraleState();
-  updateCrewLowMoraleFlags();
 
   const tab = G._viewTab || 'inventory';
 
@@ -18513,7 +18488,14 @@ function drawInventoryOverlay(){
   });
   ctx.fillStyle='#1a1a2a'; ctx.fillRect(40,40,cw-80,1);
   canvasMenuScroll = step=>handleInventoryKey(step<0?'ArrowUp':'ArrowDown');
-  canvasMenuButton('Close [Esc]',cw-125,12,closeInventoryMenu);
+  canvasMenuButton(closeLabel,cw-125,12,close);
+  return {cw,ch,tab};
+}
+
+function drawInventoryOverlay(){
+  ensureCrewMoraleState();
+  updateCrewLowMoraleFlags();
+  const {cw,ch,tab}=drawInventoryFrame();
 
   if(tab==='inventory'){
     // ── INVENTORY tab — usable/personal items ────────────────────
@@ -28661,6 +28643,14 @@ function renderContextBar(){
     btns.push(btn(keys[0],label,'info',keys[2]),btn(keys[1],label,'info',keys[3]));
   };
 
+  if(shipSystemsActive()){
+    arrows('Select system');
+    if(shipSystemsActions().length>1) arrows('Select repair',true);
+    btns.push(btn('ESC','Back','info'));
+    bar.innerHTML=btns.join('');
+    return;
+  }
+
   if(G.showOptions && !G.dead && !G.retired){
     btns.push(btn('ESC',G._kbScreen?'Back':'Close options','info'));
   } else if(G.dead || G.retired){
@@ -29155,72 +29145,170 @@ document.getElementById('active-missions-panel').addEventListener('keydown',even
     event.currentTarget.blur();
   }
 });
-const shipSystemsDialog=document.getElementById('ship-systems-dialog');
+// Inspection is a menu over the current location, never a new gameplay mode.
+// Keep its cursor outside the career save and discard it when the career/location changes.
+let shipSystemsView=null;
+
+function shipSystemsActive(){
+  if(shipSystemsView && (shipSystemsView.career!==G || (shipSystemsView.mode!==G?.mode && !shipSystemsView.repairing) ||
+     G.dead || G.retired || G.showOptions || G.dialogue)) shipSystemsView=null;
+  return !!shipSystemsView;
+}
+
+function shipSystemsIds(){
+  return Object.keys(SHIP_SYSTEMS).filter(id=>id!=='shields' || G.shipStats.shields);
+}
 
 function openShipSystems(){
-  if(!G || AUTOSAVE_STATE.transition || G.dead || G.retired || G.showOptions || G.dialogue) return;
-  renderShipSystems();
-  if(!shipSystemsDialog.open) shipSystemsDialog.showModal();
+  if(!G || canvasMenuBlocked() || G.dead || G.retired || G.showOptions || G.dialogue || DEBUG.on) return;
+  const origin=G.mode==='base'?'hangar':G.mode==='inventory'?'ship':'flight';
+  if(origin==='ship') G._viewTab='ship';
+  shipSystemsView={career:G,mode:G.mode,origin,id:'engine',method:0};
+  selectShipSystem('engine');
 }
 
 function closeShipSystems(){
-  if(shipSystemsDialog.open) shipSystemsDialog.close();
+  shipSystemsView=null;
+  renderAll();
 }
 
-function renderShipSystems(){
-  if(!G) return;
-  if(G.dead || G.retired){closeShipSystems();return;}
-  const focus=document.activeElement?.dataset.systemAction;
-  const stats=G.shipStats, systems=ensureShipSystems();
-  const atStation=(G.mode==='inventory'?G._prevMode:G.mode)==='base';
+function selectShipSystem(id){
+  shipSystemsView.id=id;
+  const actions=shipSystemsActions();
+  shipSystemsView.method=Math.max(0,actions.findIndex(action=>!action.reason));
+  renderAll();
+}
+
+function shipSystemsActions(){
+  const id=shipSystemsView.id,component=ensureShipSystems()[id];
+  const mode=G.mode==='inventory'?G._prevMode:G.mode;
+  if(mode==='base'){
+    const cost=(100-component.condition)*2;
+    return [{method:'station',label:'Restore ('+cost+' cr)',
+      detail:'Station technicians restore full integrity. No turn cost.',
+      reason:component.condition>=100?'Already at full integrity':G.credits<cost?'Need '+cost+' credits':''}];
+  }
   const engineer=G.crew.some(crew=>crew.hp>0 && crew.role==='engineer');
   const kits=G.inventory.filter(item=>item.usable==='repair_kit').length;
-  const rows=Object.entries(SHIP_SYSTEMS).map(([id,definition])=>{
-    if(id==='shields' && !stats.shields) return '';
-    const component=systems[id], bypass=Math.max(0,component.bypassUntil-G.turn);
-    let effect='Installed '+(stats[definition.stat]??1)+' · Effective '+shipSystemRating(G.ship,id);
-    if(id==='reactor') effect='Output '+shipReactorOutput()+' · Fitted demand '+shipWeaponPowerUsed();
-    if(id==='cooling') effect='Cooling '+shipCoolingRate()+'/turn · Heat capacity '+shipHeatCapacity();
-    if(id==='shields'){const shield=shipShieldReadout();effect='Charge '+shield.charge+' / '+shield.capacity+' · '+shield.state;}
-    if(id==='sensors') effect='Installed '+stats.sensorRange+' · Effective '+effectiveSensorRange();
-    if(id==='engine') effect='Installed '+stats.engineRating+' · Effective '+effectiveEngineRating();
-    if(id==='sensors' && effectiveSensorRange()===0) effect='OFFLINE · Existing charts retained; new terrain and live contacts hidden';
-    if(id==='fuelTank') effect='Usable '+G.maxFuel+' / '+stats.maxFuel+' · Fuel '+Math.floor(G.fuel)+(component.condition<=50?' · RUPTURED':'');
-    const button=(method,label,disabled)=>'<button type="button" data-system-action="'+id+':'+method+'" '+(disabled?'disabled':'')+'>'+label+'</button>';
-    return '<section class="ship-system-row"><div><strong>'+definition.name+'</strong>'+
-      '<span class="'+(component.condition<=50?'system-damaged':'')+'"> '+component.condition+'% integrity'+
-      (bypass?' · bypass '+bypass+' turns':'')+'</span><p>'+htmlEsc(effect)+'</p></div><div class="system-actions">'+
-      (atStation?button('station','Restore ('+((100-component.condition)*2)+' cr)',component.condition>=100 || G.credits<(100-component.condition)*2):
-        button('kit','Repair kit',!engineer || !kits || component.condition>=85 || !shipRepairAccess())+
-        button('bypass','Bypass 15 turns',!engineer || !shipSystemCanBypass(G.ship,id) || !shipRepairAccess()))+
-      '</div></section>';
-  }).join('');
-  const mounts=Array.from({length:stats.maxWeaponSlots||stats.weaponSlots},(_,slot)=>{
-    const weapon=SHIP_WEAPONS[G.installedWeapons?.[slot]];
-    const locked=slot>=stats.weaponSlots;
-    const reason=weapon && !shipWeaponOnline(G.ship,slot)?shipWeaponFitReason(slot,weapon):'';
-    return '<li>Mount '+(slot+1)+' · '+['','Light','Medium','Heavy'][shipMountSize(slot)]+
-      ' · '+htmlEsc(locked?'Locked':weapon?.name||'Empty')+
-      (weapon && !locked?' · '+(reason||((shipWeaponOnline(G.ship,slot)?'Online':'Offline')+' · '+weapon.power+' power · '+weapon.heat+' heat · reload '+weapon.cooldown+' · '+shipWeaponAvailability(G.ship,slot))):'')+'</li>';
-  }).join('');
-  document.getElementById('ship-systems-content').innerHTML=
-    '<p class="ship-system-summary">Heat '+Math.ceil(G.ship.heat)+' / '+shipHeatCapacity()+
-    ' · Reactor '+shipWeaponPowerUsed()+' / '+shipReactorOutput()+' · Repair kits '+kits+'</p>'+
-    '<p>Engineer field repairs consume a kit and one turn, restoring up to 85%. A bypass supports a damaged core for 15 turns. Tank ruptures require a kit or station repair. Station technicians restore full integrity.</p>'+
-    rows+'<h3>Weapon mounts</h3><p>Core services reserve 2 power; shields reserve their installed grade. Remaining power feeds mounts in order. Waiting doubles cooling.</p><ul>'+mounts+'</ul><p>Utility slots '+(G.installedModules||[]).length+' / '+stats.moduleSlots+
-    ' · '+htmlEsc((G.installedModules||[]).join(', ')||'No utility equipment')+'</p>';
-  if(focus) Array.from(shipSystemsDialog.querySelectorAll('[data-system-action]'))
-    .find(button=>button.dataset.systemAction===focus && !button.disabled)?.focus();
+  const access=!shipRepairAccess()?'Return to your ship':!engineer?'Requires a living engineer':'';
+  return [
+    {method:'kit',label:'Repair kit',detail:'Consumes 1 kit and 1 turn. Restores up to 85% integrity.',
+      reason:access || (component.condition>=85?'At the 85% field repair limit':!kits?'No repair kits aboard':'')},
+    {method:'bypass',label:'Bypass for 15 turns',detail:'Costs 1 turn. Supports a damaged core temporarily; no kit used.',
+      reason:access || (id==='fuelTank'?'A ruptured tank needs a kit or station repair':
+        component.bypassUntil>G.turn?'Bypass already active':!shipSystemCanBypass(G.ship,id)?'No bypass needed':'')}
+  ];
 }
 
-shipSystemsDialog.addEventListener('click',event=>{
-  const action=event.target.closest('[data-system-action]');
-  if(!action) return;
-  const [id,method]=action.dataset.systemAction.split(':');
-  repairShipSystem(id,method);
-  renderShipSystems();
-});
-shipSystemsDialog.addEventListener('cancel',event=>{event.preventDefault();closeShipSystems();});
+function activateShipSystemRepair(method){
+  const action=shipSystemsActions().find(action=>action.method===method);
+  if(!action || action.reason) return;
+  const view=shipSystemsView;
+  // Field actions briefly restore the underlying location while advancing its turn.
+  view.repairing=true;
+  try{repairShipSystem(view.id,method);}
+  finally{view.repairing=false;renderAll();}
+}
+
+function handleShipSystemsKey(key){
+  if(key==='Escape'){closeShipSystems();return;}
+  const ids=shipSystemsIds(),view=shipSystemsView;
+  if(key==='ArrowUp' || key==='ArrowDown'){
+    selectShipSystem(ids[(ids.indexOf(view.id)+(key==='ArrowUp'?-1:1)+ids.length)%ids.length]);
+  } else if(key==='ArrowLeft' || key==='ArrowRight' || key==='Tab'){
+    const count=shipSystemsActions().length;
+    view.method=(view.method+(key==='ArrowLeft'?-1:1)+count)%count;
+    renderAll();
+  } else if(key==='Enter' || key===' '){
+    activateShipSystemRepair(shipSystemsActions()[view.method].method);
+  }
+}
+
+function shipSystemEffect(id){
+  const stats=G.shipStats,component=ensureShipSystems()[id];
+  if(id==='reactor') return 'Output '+shipReactorOutput()+' / fitted demand '+shipWeaponPowerUsed();
+  if(id==='cooling') return 'Cooling '+shipCoolingRate()+'/turn / heat capacity '+shipHeatCapacity();
+  if(id==='shields'){
+    const shield=shipShieldReadout();
+    return 'Charge '+shield.charge+' / '+shield.capacity+' / '+shield.state;
+  }
+  if(id==='sensors') return effectiveSensorRange()===0?'OFFLINE · Existing charts retained; new terrain and live contacts hidden':
+    'Installed range '+stats.sensorRange+' / effective '+effectiveSensorRange();
+  if(id==='engine') return 'Installed rating '+stats.engineRating+' / effective '+effectiveEngineRating();
+  return 'Usable capacity '+G.maxFuel+' / '+stats.maxFuel+' / fuel '+Math.floor(G.fuel)+(component.condition<=50?' / RUPTURED':'');
+}
+
+function drawShipSystems(){
+  const cw=canvasWidth,ch=canvasHeight,view=shipSystemsView;
+  if(!shipSystemsIds().includes(view.id)){view.id='engine';view.method=0;}
+  const hangar=view.origin==='hangar',accent=hangar?'#44aaff':'#ffe066';
+  const x=hangar?cw/2-410:40,w=hangar?820:cw-80,top=hangar?78:110;
+  ctx.fillStyle='#030308';ctx.fillRect(0,0,cw,ch);
+  if(view.origin==='ship') drawInventoryFrame(closeShipSystems,'Back [Esc]');
+  ctx.textAlign=hangar?'center':'left';
+  ctx.font='bold '+(hangar?19:20)+'px Courier New';ctx.fillStyle=hangar?accent:'#aaddff';
+  ctx.fillText(hangar?'HANGAR / CORE SYSTEMS':'SHIP SYSTEMS',hangar?cw/2:x,hangar?30:68);
+  ctx.font='13px Courier New';ctx.fillStyle='#667788';
+  ctx.fillText(hangar?G.base.stationName:G.shipStats.hullType+' · '+(G.shipName||'Vessel'),hangar?cw/2:x,hangar?46:86,w);
+  ctx.fillStyle=hangar?'#223344':'#1a1a2a';ctx.fillRect(x,hangar?52:96,w,1);
+  if(view.origin!=='ship') canvasMenuButton('Back [Esc]',40,ch-27,closeShipSystems);
+  canvasMenuScroll=step=>handleShipSystemsKey(step<0?'ArrowUp':'ArrowDown');
+
+  const systems=ensureShipSystems(),listW=260,detailX=x+listW+24,detailW=w-listW-24;
+  const text=(value,tx,ty,color='#aabbcc',font='12px Courier New',maxW)=>{
+    ctx.textAlign='left';ctx.font=font;ctx.fillStyle=color;
+    if(maxW) ctx.fillText(value,tx,ty,maxW);else ctx.fillText(value,tx,ty);
+  };
+  text('CORE SYSTEMS',x,top-8,'#667788','bold 11px Courier New');
+  shipSystemsIds().forEach((id,index)=>{
+    const y=top+index*36,sel=id===view.id,condition=systems[id].condition;
+    const offline=id!=='fuelTank' && shipSystemRating(G.ship,id)===0;
+    ctx.fillStyle=sel?'#0e1a2a':'#08080f';ctx.fillRect(x,y,listW,30);
+    ctx.strokeStyle=sel?accent:'#1a1a2a';ctx.lineWidth=sel?1.5:1;ctx.strokeRect(x,y,listW,30);
+    if(sel) text('▶',x+6,y+19,accent);
+    text(SHIP_SYSTEMS[id].name,x+20,y+19,sel?accent:'#99aabb','bold 13px Courier New',listW-100);
+    ctx.textAlign='right';ctx.fillStyle=offline || condition<=50?'#ff9977':'#7799aa';ctx.fillText((offline?'OFF ':'')+condition+'%',x+listW-10,y+19);
+    canvasMenuTarget(x,y,listW,30,()=>selectShipSystem(id),{label:SHIP_SYSTEMS[id].name});
+  });
+  const component=systems[view.id],bypass=Math.max(0,component.bypassUntil-G.turn);
+  text(SHIP_SYSTEMS[view.id].name,detailX,top+14,'#aaddff','bold 16px Courier New');
+  text(component.condition+'% integrity'+(bypass?' · bypass '+bypass+' turns':''),detailX,top+35,
+    component.condition<=50?'#ff9977':'#99bbaa');
+  ctx.fillStyle='#11151d';ctx.fillRect(detailX,top+43,detailW,5);
+  ctx.fillStyle=component.condition<=50?'#bb6644':'#448877';ctx.fillRect(detailX,top+43,detailW*component.condition/100,5);
+  ctx.font='12px Courier New';ctx.fillStyle='#99aabb';ctx.textAlign='left';
+  drawWrappedText(shipSystemEffect(view.id),detailX,top+67,detailW,15,3);
+  shipSystemsActions().forEach((action,index)=>{
+    const y=top+112+index*51,sel=index===view.method;
+    ctx.fillStyle=action.reason?'#050508':sel?'#0e1a2a':'#08080f';ctx.fillRect(detailX,y,detailW,30);
+    ctx.strokeStyle=sel?accent:'#1a1a2a';ctx.lineWidth=sel?1.5:1;ctx.strokeRect(detailX,y,detailW,30);
+    text((sel?'▶ ':'')+action.label+(sel?' [Enter]':''),detailX+10,y+19,action.reason?'#556677':sel?accent:'#aabbcc','bold 13px Courier New');
+    canvasMenuTarget(detailX,y,detailW,30,action.reason?undefined:()=>activateShipSystemRepair(action.method),
+      {label:action.label,shortcut:sel?'Enter':undefined});
+    text(action.reason || action.detail,detailX+2,y+44,action.reason?'#aa8866':'#667788','11px Courier New',detailW-4);
+  });
+
+  // Loadout stays visible without making the passive ship-overview cards interactive.
+  const footer=ch-116;
+  ctx.fillStyle='#1a1a2a';ctx.fillRect(x,footer,w,1);
+  text('Heat '+Math.ceil(G.ship.heat)+' / '+shipHeatCapacity()+'   Power '+shipWeaponPowerUsed()+' / '+shipReactorOutput()+
+    '   Repair kits '+G.inventory.filter(item=>item.usable==='repair_kit').length,x,footer+17,'#88aabb');
+  const slots=G.shipStats.maxWeaponSlots||G.shipStats.weaponSlots,colW=w/Math.max(1,slots);
+  for(let slot=0;slot<slots;slot++){
+    const weapon=SHIP_WEAPONS[G.installedWeapons?.[slot]],locked=slot>=G.shipStats.weaponSlots,tx=x+slot*colW;
+    text('M'+(slot+1)+' '+['','Light','Medium','Heavy'][shipMountSize(slot)]+' · '+(locked?'Locked':weapon?.name||'Empty'),tx,footer+37,'#aabbcc','bold 11px Courier New',colW-10);
+    if(weapon && !locked){
+      text(weapon.power+' power / '+weapon.heat+' heat / reload '+weapon.cooldown,tx,footer+52,'#667788','11px Courier New',colW-10);
+      const reason=!shipWeaponOnline(G.ship,slot)?shipWeaponFitReason(slot,weapon):'';
+      text(reason || shipWeaponAvailability(G.ship,slot),tx,footer+67,reason?'#bb8866':'#779988','11px Courier New',colW-10);
+    }
+  }
+  const modules=G.installedModules||[];
+  text('Utilities '+modules.length+' / '+G.shipStats.moduleSlots+' · '+(modules.map(id=>id.replaceAll('_',' ')).join(', ')||'None'),x,footer+85,'#667788','11px Courier New',w);
+  const guideX=x+(view.origin==='ship'?0:130);
+  text('Core reserve: 2 power + shield grade. Mounts draw in order. Waiting doubles cooling.',guideX,footer+100,'#556677','10px Courier New',x+w-guideX);
+  ctx.lineWidth=1;
+}
 function crewAlive(){ return G.crew.some(c=>c.hp>0); }
 
 function atmosphereBiomeKey(key){
@@ -34511,11 +34599,6 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(shipSystemsDialog.open){
-    // Held activation keys must not repeatedly activate native modal buttons.
-    if(e.repeat && (e.key==='Enter'||e.key===' ')) e.preventDefault();
-    return;
-  }
   if(debugDialog.open){
     if(e.shiftKey && e.key.toLowerCase()==='b'){
       e.preventDefault();
@@ -34545,6 +34628,12 @@ document.addEventListener('keydown', e=>{
   if(menuControl && (!G?.dialogue || menuControl.closest('#save-notice') || menuControl.dataset.gameKey || menuControl.id==='shortcut-toggle') && (e.key==='Enter'||e.key===' ')){
     e.preventDefault();
     if(!e.repeat) menuControl.click();
+    return;
+  }
+
+  if(shipSystemsActive()){
+    e.preventDefault();
+    if(!e.repeat || !['Enter',' '].includes(e.key)) handleShipSystemsKey(e.key);
     return;
   }
 
@@ -37648,7 +37737,7 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
 // The compass is the only pointer control that can move or wait in the world.
 document.getElementById('compass-grid').addEventListener('mousedown',event=>{
   if(event.button!==0 || !G || G.dead || G.retired || canvasMenuBlocked() ||
-    G.showOptions || G.dialogue ||
+    G.showOptions || G.dialogue || shipSystemsActive() ||
     G._voidPrompt || G.stranded?.rescuePhase==='offer' || DEBUG.on) return;
   const direction = event.target.closest('.cmp-btn');
   if(!direction) return;

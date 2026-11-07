@@ -79,7 +79,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       G.ship.systems.shields.condition=100;G.shipCombat.asteroids=[];G.ship.weaponReadyAt=[G.turn];renderAll();
     });
     await page.keyboard.press('F3');
-    assert.equal(await page.locator('#ship-systems-dialog section strong').filter({hasText:'Shield generator'}).count(),0);
+    assert.equal(await page.evaluate(()=>canvasMenuTargets.some(target=>target.label==='Shield generator')),false);
     await page.keyboard.press('Escape');await page.keyboard.press('f');
     assert.equal(await page.evaluate(()=>G.turn),turn+1);
     assert.match(await page.locator('#log-list').textContent(),/Mass Driver hits UI Raider/);

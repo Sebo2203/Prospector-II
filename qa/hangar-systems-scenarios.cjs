@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict');
 const path=require('node:path');
 const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
+const {isSystemsOpen,canvasText,clickTarget,assertMenuFits}=require('./systems-menu-helpers.cjs');
 
 (async()=>{
   const browser=await chromium.launch({headless:true});
@@ -13,7 +14,6 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     await page.waitForFunction(()=>G?.galaxy && G.log.some(entry=>entry.msg.includes('Ready for departure')));
     await page.keyboard.press('Enter');await page.keyboard.press('Enter');
     for(let i=0;i<4;i++)await page.keyboard.press('ArrowDown');
-    const board=page.locator('#ship-systems-dialog');
     const clickHangarCore=async()=>{
       const point=await page.evaluate(()=>{
         const index=STATION_BUILDINGS[G.base.sel].actions().findIndex(action=>action.id==='ship_systems');
@@ -29,21 +29,28 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       assert.equal(await page.evaluate(()=>STATION_BUILDINGS[G.base.sel].actions()[G.base.subSel].id),'ship_systems');
       const before=await page.evaluate(()=>[G.turn,G.fuel,G.credits]);
       await page.keyboard.press('Enter');
-      assert.ok(await board.isVisible(),label+': keyboard activation must not immediately activate Close');
-      await page.keyboard.press('Escape');assert.ok(await board.isHidden());
+      assert.ok(await isSystemsOpen(page),label+': keyboard activation must not immediately activate Close');
+      await page.keyboard.press('Escape');assert.ok(!await isSystemsOpen(page));
       await page.keyboard.down('Enter');await page.keyboard.down('Enter');
-      assert.ok(await board.isVisible(),label+': held Enter must not close the new modal');
+      assert.ok(await isSystemsOpen(page),label+': held Enter must not close the new menu');
       await page.keyboard.up('Enter');
-      await page.keyboard.press('Enter');assert.ok(await board.isHidden(),'a separate intentional Enter can activate the focused Close button');
-      await clickHangarCore();assert.ok(await board.isVisible(),label+': native row click opens the same board');
+      await page.keyboard.press('Escape');assert.ok(!await isSystemsOpen(page),'Escape returns to the Hangar action list');
+      await clickHangarCore();assert.ok(await isSystemsOpen(page),label+': native row click opens the same board');
       await page.keyboard.press('Escape');
       const context=page.locator('#ctx-bar [data-game-key="Enter"]');
-      await context.click();assert.ok(await board.isVisible(),label+': context click stays open');
+      await context.click();assert.ok(await isSystemsOpen(page),label+': context click stays open');
       await page.keyboard.press('Escape');
-      await context.focus();await page.keyboard.press('Enter');assert.ok(await board.isVisible(),label+': keyboard activation of the context control stays open');
+      await context.focus();await page.keyboard.press('Enter');assert.ok(await isSystemsOpen(page),label+': keyboard activation of the context control stays open');
       await page.keyboard.press('Escape');await context.blur();
-      await page.keyboard.press('F3');assert.ok(await board.isVisible(),label+': F3 still works');
+      await page.keyboard.press('F3');assert.ok(await isSystemsOpen(page),label+': F3 still works');
+      assert.match(await canvasText(page),/HANGAR \/ CORE SYSTEMS/);
+      assert.equal(await page.locator('dialog[open]').count(),0,'the Hangar page stays in the game canvas');
+      await assertMenuFits(page);
       await page.screenshot({path:artifactPath(label+'-hangar-systems.png')});
+      const selected=await page.evaluate(()=>shipSystemsView.id);
+      const next=page.locator('#ctx-bar [data-game-key="ArrowDown"]');
+      await next.focus();await page.keyboard.press('Enter');
+      assert.notEqual(await page.evaluate(()=>shipSystemsView.id),selected,'focused context arrows activate the selected control, not a repair');
       await page.keyboard.press('Escape');
       assert.deepEqual(await page.evaluate(()=>[G.turn,G.fuel,G.credits]),before,'browsing does not charge resources or advance the career');
     };
@@ -51,11 +58,23 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     await page.evaluate(()=>damageShipSystem(G.ship,'sensors',25,'QA scenario'));
     await page.keyboard.press('Enter');
     const credits=await page.evaluate(()=>G.credits);
-    await board.locator('[data-system-action="sensors:station"]').focus();
+    for(let i=0;i<3;i++)await page.keyboard.press('ArrowDown');
+    assert.equal(await page.evaluate(()=>shipSystemsView.id),'sensors');
     await page.keyboard.press('Enter');
     assert.deepEqual(await page.evaluate(()=>[G.ship.systems.sensors.condition,G.credits]),[100,credits-50]);
-    assert.ok(await board.isVisible(),'intentional native repair works and stays in the board');
-    await page.keyboard.press('Escape');
+    assert.ok(await isSystemsOpen(page),'keyboard repair works and stays in the menu');
+    await page.keyboard.down('Enter');await page.keyboard.down('Enter');await page.keyboard.up('Enter');
+    assert.deepEqual(await page.evaluate(()=>[G.ship.systems.sensors.condition,G.credits]),[100,credits-50],'held activation cannot charge another repair');
+    await clickTarget(page,'Back [Esc]');
+    for(const viewport of [{width:1400,height:720},{width:800,height:600}]){
+      await page.setViewportSize(viewport);await page.keyboard.press('Enter');
+      for(const style of ['cockpit','classic']){
+        await page.evaluate(style=>{OPTIONS.uiStyle=style;applyUIStyle();renderAll();},style);
+        await assertMenuFits(page);
+        await page.screenshot({path:artifactPath('Hangar-systems-'+style+'-'+viewport.width+'.png')});
+      }
+      await page.keyboard.press('Escape');
+    }
     if(process.env.PROSPECTOR_QA_SAVE){
       // Optional supplied saves stay outside the repository and are never edited.
       const chooser=page.waitForEvent('filechooser');await page.evaluate(()=>loadFromFile());
@@ -64,6 +83,6 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       await verifyEntry('Provided-save');
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS: real Hangar keyboard, held key, mouse, context and F3 access; deliberate modal activation, paid repair, and optional provided-save reproduction.');
+    console.log('PASS: real Hangar keyboard, held key, mouse, context and F3 access; canvas styling and navigation, paid repair, and optional provided-save reproduction.');
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

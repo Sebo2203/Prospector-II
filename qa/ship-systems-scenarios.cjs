@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict');
 const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
+const {isSystemsOpen,canvasText,clickTarget,clickRepair,assertMenuFits}=require('./systems-menu-helpers.cjs');
 
 (async()=>{
   const browser=await chromium.launch({headless:true});
@@ -10,11 +11,15 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     await page.goto(gameUrl);
     await page.evaluate(()=>initGame('BULK_FREIGHTER','Systems QA','Systems QA'));
     await page.waitForFunction(()=>G?.galaxy && G.log.some(entry=>entry.msg.includes('Ready for departure')));
-    const dialog=page.getByRole('dialog',{name:'Ship Systems'});
     const systemsButton=page.getByRole('button',{name:'Ship systems',exact:false});
     const openingTurn=await page.evaluate(()=>G.turn);
     assert.equal(await systemsButton.count(),0,'galaxy context omits the redundant F3 control');
-    await page.keyboard.press('F3');assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+    await page.keyboard.press('F3');assert.ok(await isSystemsOpen(page));
+    const paused=await page.evaluate(()=>[G.turn,G.ship.x,G.ship.y,G.fuel]);
+    await page.locator('.cmp-btn').first().click();await page.keyboard.press('Space');
+    await page.keyboard.press('f');await page.keyboard.press('i');
+    assert.deepEqual(await page.evaluate(()=>[G.turn,G.ship.x,G.ship.y,G.fuel]),paused,'inspection blocks world controls');
+    await page.keyboard.press('Escape');
     await page.keyboard.press('i');
     await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
     assert.equal(await page.evaluate(()=>G._viewTab),'ship');
@@ -48,10 +53,15 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
         },index);
         await page.mouse.move(point.x,point.y);
         assert.notEqual(await page.locator('#gc').evaluate(element=>getComputedStyle(element).cursor),'pointer');
-        await page.mouse.click(point.x,point.y);assert.equal(await dialog.isVisible(),false);
+        await page.mouse.click(point.x,point.y);assert.equal(await isSystemsOpen(page),false);
       }
-      await clickInspect();assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
-      await page.keyboard.press('F3');assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+      await clickInspect();assert.ok(await isSystemsOpen(page));
+      assert.match(await canvasText(page),/INVENTORY CREW SHIP LOG .*SHIP SYSTEMS/,'inspection retains the real ship-menu tabs');
+      await assertMenuFits(page);
+      await page.screenshot({path:artifactPath('Ship-systems-menu-'+viewport.width+'.png')});
+      await clickTarget(page,'Back [Esc]');
+      assert.equal(await page.evaluate(()=>G._viewTab),'ship');
+      await page.keyboard.press('F3');assert.ok(await isSystemsOpen(page));await page.keyboard.press('Escape');
       await page.screenshot({path:artifactPath('Ship-overview-'+viewport.width+'.png')});
     }
     assert.equal(await page.evaluate(()=>G.turn),openingTurn,'all inspection paths remain free');
@@ -60,8 +70,8 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     await page.evaluate(()=>{damageShipSystem(G.ship,'engine',25,'access scenario');tryMove(1,0);});
     assert.ok(await page.evaluate(()=>G.stranded));
     await page.keyboard.press('i');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
-    await clickInspect();assert.ok(await dialog.isVisible(),'a stranded overlay must not cover the static inspection control');
-    await dialog.locator('[data-system-action="engine:bypass"]').click();
+    await clickInspect();assert.ok(await isSystemsOpen(page),'a stranded overlay must not cover the static inspection control');
+    await clickRepair(page,'engine','bypass');
     assert.deepEqual(await page.evaluate(()=>[G.mode,G._viewTab,G.stranded===null,effectiveEngineRating()]),['inventory','ship',true,1]);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');
     await page.evaluate(()=>{
@@ -79,14 +89,15 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     assert.equal(await page.evaluate(()=>G.visited.filter(Boolean).length),discovery,'blind travel must not reveal new terrain');
     assert.equal(await page.evaluate(()=>G.visited[3*MAP_W+4]),false);
     await page.keyboard.press('F3');
-    assert.ok(await dialog.isVisible());
-    assert.match(await dialog.textContent(),/OFFLINE · Existing charts retained/);
-    await dialog.locator('[data-system-action="sensors:bypass"]').click();
+    assert.ok(await isSystemsOpen(page));
+    await clickTarget(page,'Sensors');
+    assert.match(await canvasText(page),/OFFLINE · Existing charts retained/);
+    await clickRepair(page,'sensors','bypass');
     assert.equal(await page.evaluate(()=>effectiveSensorRange()),1,'a bypass can restore a rating-one sensor at 75% integrity');
     await page.evaluate(()=>G.inventory.push({name:'Repair Kit',usable:'repair_kit'}));
-    await page.evaluate(()=>renderShipSystems());
+    await page.evaluate(()=>renderAll());
     const before=await page.evaluate(()=>G.turn);
-    await dialog.locator('[data-system-action="sensors:kit"]').click();
+    await clickRepair(page,'sensors','kit');
     assert.deepEqual(await page.evaluate(before=>[G.turn-before,G.ship.systems.sensors.condition,effectiveSensorRange()],before),[1,85,1], 'an engineer restores a rating-one sensor with a kit');
     assert.equal(await page.evaluate(()=>G.inventory.some(item=>item.usable==='repair_kit')),false);
     await page.keyboard.press('Escape');
@@ -102,7 +113,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     });
     await page.keyboard.press('F3');
     const fuel=await page.evaluate(()=>G.fuel);
-    await dialog.locator('[data-system-action="fuelTank:station"]').click();
+    await clickRepair(page,'fuelTank','station');
     assert.deepEqual(await page.evaluate(()=>[G.maxFuel,G.fuel,G.ship.systems.fuelTank.condition]),[180,fuel,100]);
     await page.keyboard.press('Escape');
     await page.evaluate(()=>{
@@ -115,14 +126,14 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     assert.deepEqual(scan,[0,0],'offline scanning is blocked before charging time or fuel');
     assert.equal(await systemsButton.count(),0,'orbital context omits the generic F3 control');
     await page.keyboard.press('F3');
-    assert.ok(await dialog.isVisible(),'F3 still opens the board from orbit');
+    assert.ok(await isSystemsOpen(page),'F3 still opens the board from orbit');
     await page.screenshot({path:artifactPath('Ship-systems.png')});
     await page.keyboard.press('Escape');
 
     await page.evaluate(()=>{G.selPlanet=0;doInteract();});
     assert.equal(await page.evaluate(()=>G.mode),'planet');
     assert.equal(await systemsButton.count(),0,'planetside context omits the generic F3 control');
-    await page.keyboard.press('F3');assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
+    await page.keyboard.press('F3');assert.ok(await isSystemsOpen(page));await page.keyboard.press('Escape');
 
     // A fresh real career exercises the shared combat and core rules.
     await page.evaluate(()=>initGame('ATTACK_CORVETTE','Mount QA','Mount QA'));
@@ -155,10 +166,10 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     const disabled=await page.evaluate(()=>{const {x,y}=G.shipCombat.player,turn=G.turn;moveShipInCombat(-1,0);return [G.turn-turn,G.shipCombat.player.x-x,G.shipCombat.player.y-y];});
     assert.deepEqual(disabled,[0,0,0]);
     await page.keyboard.press('F3');
-    await dialog.locator('[data-system-action="engine:bypass"]').click();
+    await clickRepair(page,'engine','bypass');
     assert.equal(await page.evaluate(()=>effectiveEngineRating()),2);
     const repairTurn=await page.evaluate(()=>G.turn);
-    await dialog.locator('[data-system-action="sensors:bypass"]').click();
+    await clickRepair(page,'sensors','bypass');
     assert.deepEqual(await page.evaluate(turn=>[G.turn-turn,effectiveSensorRange(),G.ship.systems.sensors.bypassUntil-G.turn],repairTurn),[1,1,14]);
     await page.keyboard.press('Escape');
     const boost=await page.evaluate(()=>{
@@ -197,7 +208,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     assert.equal(await page.evaluate(()=>G.ship.shieldCharge),16,'shield recharge starts after the hit delay');
     await page.evaluate(()=>{G.inventory.push({name:'Repair Kit',usable:'repair_kit'});damageShipSystem(G.ship,'fuelTank',50,'scenario');});
     const ruptured=await page.evaluate(()=>[G.turn,G.fuel,G.maxFuel]);
-    await page.keyboard.press('F3');await dialog.locator('[data-system-action="fuelTank:kit"]').click();
+    await page.keyboard.press('F3');await clickRepair(page,'fuelTank','kit');
     assert.deepEqual(await page.evaluate(before=>[G.turn-before[0],G.fuel,G.maxFuel],ruptured),[1,ruptured[1],90],'field tank repair restores capacity, consumes one combat action and creates no fuel');
     await page.keyboard.press('Escape');
     await page.evaluate(()=>{
@@ -281,13 +292,24 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     await page.keyboard.press('Shift+B');
     for(const viewport of [{width:800,height:600},{width:640,height:480}]){
       await page.setViewportSize(viewport);await page.keyboard.press('F3');
-      assert.ok(await dialog.isVisible());
-      assert.ok(await dialog.evaluate(element=>{
-        const bounds=element.getBoundingClientRect();
-        return bounds.left>=0 && bounds.top>=0 && bounds.right<=innerWidth && bounds.bottom<=innerHeight && element.scrollWidth<=element.clientWidth;
-      }),'the repair board fits smaller windows without horizontal overflow');
+      assert.ok(await isSystemsOpen(page));
+      await assertMenuFits(page);
       await page.keyboard.press('Escape');
     }
+    // A held field-repair key must consume exactly one kit/turn even below the repair cap.
+    await page.evaluate(()=>{
+      G.mode='inventory';G._prevMode='system';G._viewTab='ship';
+      G.inventory=G.inventory.filter(item=>item.usable!=='repair_kit');
+      G.inventory.push({name:'Repair Kit',usable:'repair_kit'},{name:'Repair Kit',usable:'repair_kit'});
+      damageShipSystem(G.ship,'engine',100,'held-key scenario');renderAll();
+    });
+    await page.keyboard.press('F3');
+    const heldTurn=await page.evaluate(()=>G.turn);
+    await page.keyboard.down('Enter');await page.keyboard.down('Enter');await page.keyboard.up('Enter');
+    assert.equal(await page.evaluate(()=>G.turn),heldTurn+1);
+    assert.equal(await page.evaluate(()=>G.inventory.filter(item=>item.usable==='repair_kit').length),1);
+    assert.ok(await isSystemsOpen(page),'field repair retains its parent page across location turn dispatch');
+    await page.keyboard.press('Escape');
     assert.deepEqual(errors,[]);
     console.log('PASS: passive core readouts, empty unfitted shields, static inspect access, context cleanup, stranded inventory repair, core damage, blind travel/locks/scans, engineer repair/bypass/expiry, heat, independent reloads, shield delay, persistent retreat/load, SOS recovery, fitting and upgrades.');
   }finally{await browser.close();}

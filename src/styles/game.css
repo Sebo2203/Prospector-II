@@ -767,31 +767,6 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   line-height: 16px;
   color: #558877;
 }
-#ship-systems-dialog {
-  width: min(900px, calc(100vw - 24px));
-  max-height: calc(100vh - 24px);
-  overflow: auto;
-  margin: auto;
-  padding: 18px;
-  background: #0a0a0f;
-  color: #b9c6ce;
-  border: 1px solid #56728b;
-  font: 14px 'Courier New', monospace;
-}
-#ship-systems-dialog::backdrop { background: #000b; }
-.ship-system-header, .ship-system-row { display:flex; justify-content:space-between; gap:14px; align-items:center; }
-.ship-system-header { margin-bottom:12px; }
-.ship-system-row { border-top:1px solid #293743; padding:10px 0; }
-.ship-system-row p { color:#98abb8; margin-top:5px; }
-.system-actions { display:flex; gap:6px; flex-shrink:0; }
-.system-damaged { color:#ffad72; }
-#ship-systems-dialog button { font:inherit; padding:5px 8px; color:#c8dbe7; background:#182530; border:1px solid #496173; cursor:pointer; }
-#ship-systems-dialog button:disabled { color:#59646b; border-color:#29343b; cursor:default; }
-#ship-systems-dialog button:focus-visible { outline:2px solid #ffe066; }
-#ship-systems-dialog h3, #ship-systems-dialog ul { margin:12px 0 6px; }
-#ship-systems-dialog li { margin-left:20px; padding:3px 0; }
-.ship-system-summary { color:#8bd5ec; margin-bottom:8px; }
-
 #debug-playground-button {
   position: relative;
   z-index: 1100;

@@ -8,7 +8,6 @@ function renderAll(){
   renderSidebar();
   renderContextBar();
   renderActiveMissions();
-  if(shipSystemsDialog.open) renderShipSystems();
   renderPointerKeys();
   renderGalaxyMinimap();
   renderCriticalBanner();
@@ -22,6 +21,13 @@ function drawCanvas(){
   resetCanvasMenu();
   canvasMapView=null;
   ctx.clearRect(0,0,canvasWidth,canvasHeight);
+
+  if(shipSystemsActive()){
+    canvas.classList.remove('map-targeting');
+    pointerFireAim=null;
+    drawShipSystems();
+    return;
+  }
 
   if(G.mode==='planet'){
     drawPlanet();

@@ -1,7 +1,8 @@
 const INVENTORY_TABS = ['inventory','crew','ship','log'];
 
 function selectInventoryTab(tab){
-  if(G._viewTab===tab) return;
+  if(G._viewTab===tab && !shipSystemsView) return;
+  shipSystemsView=null;
   G._viewTab = tab;
   G._viewCrewSel = 0;
   G._inventoryExamine = false;
@@ -56,11 +57,9 @@ function inventoryItemCanBeUsed(item){
     'grapple','jetpack','capture_net','contain_crate','field_rations','rad_flush','sensor_drone','repair_kit'].includes(item?.usable);
 }
 
-function drawInventoryOverlay(){
+function drawInventoryFrame(close=closeInventoryMenu,closeLabel='Close [Esc]'){
   const cw = canvasWidth, ch = canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
-  ensureCrewMoraleState();
-  updateCrewLowMoraleFlags();
 
   const tab = G._viewTab || 'inventory';
 
@@ -84,7 +83,14 @@ function drawInventoryOverlay(){
   });
   ctx.fillStyle='#1a1a2a'; ctx.fillRect(40,40,cw-80,1);
   canvasMenuScroll = step=>handleInventoryKey(step<0?'ArrowUp':'ArrowDown');
-  canvasMenuButton('Close [Esc]',cw-125,12,closeInventoryMenu);
+  canvasMenuButton(closeLabel,cw-125,12,close);
+  return {cw,ch,tab};
+}
+
+function drawInventoryOverlay(){
+  ensureCrewMoraleState();
+  updateCrewLowMoraleFlags();
+  const {cw,ch,tab}=drawInventoryFrame();
 
   if(tab==='inventory'){
     // ── INVENTORY tab — usable/personal items ────────────────────

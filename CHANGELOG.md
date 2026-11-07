@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.57 integrates Ship Systems into its parent menus
+
+Released on `experiment/expedition-legacy`.
+
+- Replaced the separate browser Ship Systems dialog with an in-canvas page. Hangar inspection uses its blue station heading, dark action rows, selection marker and Back control. I → SHIP inspection retains the actual inventory tabs and yellow selection; Back returns to the ship overview. F3 from flight/combat opens the same detail content without changing gameplay mode.
+- Select a core to see integrity, effective performance, active bypass duration and applicable repairs. Repairs have visible costs or unavailability reasons. Heat, power, repair kits, mounts and utility equipment remain on the page. Unfitted shields remain absent, and ship-overview core cards remain passive. Removed the old native dialog markup and its separate CSS.
+- Mouse and keyboard share the existing repair action. Up/Down selects a core; Left/Right or Tab selects a repair; Enter applies it; Escape goes back. Held activation cannot repeat a repair. The compass and gameplay keys cannot advance the world while inspecting. Focused context controls and other overlays retain their own input handling.
+- Validation: all 55 repository tests and all 21 headless Edge suites passed. Affected scenarios cover both UI themes and multiple window sizes, parent navigation, held keys, mouse/context/F3 entry, field and station repairs, combat continuity and blocked world controls. The supplied Hangar save also passed through real file import without modification. Screenshots were inspected; human readability preference still needs the user's playtest.
+- Saves: no schema change; menu selection is not persisted. Repair amounts, credit/kit/turn costs, combat rules and equipment fitting are unchanged. [Equipment and controls](docs/experiment.md#mounts-core-systems-and-damage)
+
 ## 2026-11-07 — 0.28 experimental.56 fixes Hangar keyboard activation
 
 Released on `experiment/expedition-legacy`.
