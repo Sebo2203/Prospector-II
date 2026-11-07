@@ -1854,6 +1854,23 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 [data-ui-style="classic"] .cmp-btn.cmp-center { --key-face: #0a0a12; font-size: 9px; }
 [data-ui-style="classic"] :is(#shortcut-toggle,#active-missions-toggle) { --key-face: #17181d; color: #999da7; }
 [data-ui-style="classic"] .minimap-legend-title { color: #ffe066; }
+
+button.ctx-btn:disabled, button.ctx-btn:disabled:hover {
+  cursor:default;
+  color:#90979e;
+  border-color:#353b43;
+  background:#141820;
+  box-shadow:none;
+}
+button.ctx-btn:disabled .ck { color:#969da4; }
+
+#combat-shortcuts, #travel-shortcuts {
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(210px,1fr));
+  gap:5px 14px;
+}
+#combat-shortcuts[hidden], #travel-shortcuts[hidden] { display:none; }
 </style>
 </head>
 <body>
@@ -1951,7 +1968,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.54</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.55</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -1959,6 +1976,15 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
       </div>
       <div id="footer-panels">
         <div id="persist-hints" hidden>
+          <div id="combat-shortcuts" hidden>
+            <div>Move with configured keys or compass</div>
+            <div><span class="ck">1–3</span> select mount · <span class="ck">Tab</span> next target</div>
+            <div><span class="ck">F</span> fire · <span class="ck">B</span> boost forward</div>
+            <div><span class="ck" id="combat-wait-key">Space</span> wait and cool</div>
+            <div><span class="ck">R</span> disengage at edge · <span class="ck">H</span> surrender</div>
+            <div><span class="ck">F3</span> systems · <span class="ck">O</span> options · <span class="ck">+/−</span> log size</div>
+          </div>
+          <div id="travel-shortcuts">
           <div><span class="ck">WASD</span> cardinal move</div>
           <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
           <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
@@ -1966,6 +1992,7 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
           <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
           <div><span class="ck">ESC</span> back / close</div>
           <div><span class="ck">.</span> wait / repair (galaxy)</div>
+          </div>
         </div>
         <div id="active-missions-panel" tabindex="0" role="region" aria-label="Active missions and contracts" hidden></div>
       </div>
@@ -2075,8 +2102,8 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 </dialog>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.54';
-const GAME_VERSION_LABEL = 'v0.28 experimental.54';
+const GAME_VERSION = '0.28.0-experimental.55';
+const GAME_VERSION_LABEL = 'v0.28 experimental.55';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -10055,6 +10082,23 @@ function absorbShipHit(ship,damage,source='weapons fire'){
   if(ship.hp>0) rollShipSystemDamage(ship,hull,source);
   return hull;
 }
+
+// Presentation derives from fitted equipment and the next normal system tick.
+function shipShieldReadout(ship=G.ship){
+  const stats=shipSystemStats(ship);
+  if(!stats.shields || ship._homeCluster) return null;
+  ensureShipSystems(ship);
+  const capacity=shipShieldCapacity(ship), charge=Math.floor(Math.min(ship.shieldCharge,capacity));
+  const condition=shipSystemCondition(ship,'shields');
+  let state;
+  if(condition<=0 || (capacity===0 && shipReactorOutput(ship)>=2+stats.shields)) state='Generator failed';
+  else if(shipReactorOutput(ship)<2+stats.shields) state='Unpowered';
+  else if(charge>=capacity) state='Full';
+  else if(ship.shieldRechargeAt>G.turn) state='Recharge in '+(ship.shieldRechargeAt-G.turn)+' turn'+(ship.shieldRechargeAt-G.turn===1?'':'s');
+  else if(Math.max(0,ship.heat-shipCoolingRate(ship))+1>shipHeatCapacity(ship)) state='Heat limited';
+  else state='Recharging +3/turn';
+  return {charge,capacity,state,damaged:condition<100};
+}
 function addCargo(item){
   const cap = G.shipStats?.cargoCapacity ?? 1;
   if(G.cargo.length >= cap){
@@ -14058,30 +14102,25 @@ function setLogHTML(html){
   el.innerHTML = html;
 }
 
-function addLog(msg,cls){
+function addLog(msg,cls,category=G?.mode==='shipcombat'?'combat':undefined){
   cls=cls||'';
-  if(G?.mode==='shipcombat' && G.shipCombat){
-    const sc = G.shipCombat;
-    if(sc.log[0] === msg) return;
-    sc.log.unshift(msg);
-    if(sc.log.length > 10) sc.log.length = 10;
-    archiveLog('['+(sc.pirate?.name || 'ship combat')+'] '+msg, cls);
-    return;
-  }
   const latest = G.log[0];
   if(latest && latest.msg === msg && (latest.cls || '') === cls){
     latest.count = (latest.count || 1) + 1;
+    if(category) latest.category=category;
     G.msg = logDisplayText(latest);
     return;
   }
   const entry = {msg, cls, count:1, turn: G.turn||1};
+  if(category) entry.category=category;
   G.log.unshift(entry);
   G.msg=logDisplayText(entry);
 }
 
+function addCombatLog(msg,cls){addLog(msg,cls,'combat');}
+
 // Like addLog but silent — writes to G.log history only, no sidebar flash.
-// Use for high-frequency detail (e.g. per-round ship combat) that belongs in
-// the LOG tab but must NOT duplicate into the sidebar or msg-bar.
+// Use for historical detail that belongs in the LOG tab without a sidebar update.
 function archiveLog(msg,cls){
   cls=cls||'';
   G.log.unshift({msg, cls, count:1, turn: G.turn||1, archive:true});
@@ -14107,8 +14146,8 @@ function resetCanvasMenu(){
   canvas.style.cursor = '';
 }
 
-function canvasMenuTarget(x,y,w,h,activate,{hover,title}={}){
-  canvasMenuTargets.push({x,y,w,h,activate,hover,title});
+function canvasMenuTarget(x,y,w,h,activate,{hover,title,shortcut,label}={}){
+  canvasMenuTargets.push({x,y,w,h,activate,hover,title,shortcut,label,mode:G?.mode,view:G?._viewTab});
 }
 
 function canvasMenuButton(label,x,y,activate){
@@ -14120,7 +14159,9 @@ function canvasMenuButton(label,x,y,activate){
   ctx.strokeStyle = '#3a5268'; ctx.lineWidth = 1; ctx.strokeRect(x,y,w,22);
   ctx.fillStyle = '#aaddff'; ctx.fillText(label,x+8,y+15);
   ctx.restore();
-  canvasMenuTarget(x,y,w,22,activate);
+  const key=label.match(/\[([^\]]+)\]$/)?.[1];
+  const shortcut=key==='Esc'?'Escape':key?.length===1?key.toLowerCase():key;
+  canvasMenuTarget(x,y,w,22,activate,{shortcut,label});
 }
 
 function canvasMenuBlocked(){
@@ -19077,6 +19118,7 @@ function drawInventoryOverlay(){
         return false;
       }
       if(fid==='combat'){
+        if(entry.category==='combat') return true;
         // Explicit combat-tagged messages we now pipe from doShipFire use pirate name in brackets
         if(/^\[.+\] (You fire|They fire|They reject)/.test(entry.msg)) return true;
         // Keyword sweep for everything else combat-related
@@ -28601,11 +28643,17 @@ function renderSidebar(){
 function renderContextBar(){
   const bar = document.getElementById('ctx-bar');
   const btns = [];
+  document.getElementById('combat-shortcuts').hidden=G.mode!=='shipcombat';
+  document.getElementById('travel-shortcuts').hidden=G.mode==='shipcombat';
+  document.getElementById('combat-wait-key').textContent=codeLabel((OPTIONS.keybinds||DEFAULT_KEYBINDS).wait);
 
-  const btn = (key,label,cls='',action=key==='ESC'?'Escape':key==='Enter'?key:/^[A-Z0-9]$/.test(key)?key.toLowerCase():null) => {
+  const menuKeys=new Set(canvasMenuTargets.filter(target=>target.shortcut && target.mode===G.mode &&
+    (G.mode!=='inventory' || target.view===G._viewTab)).map(target=>target.shortcut));
+  const btn = (key,label,cls='',action=key==='ESC'?'Escape':key==='Enter'?key:/^[A-Z0-9]$/.test(key)?key.toLowerCase():null,disabled=false) => {
+    if(action && menuKeys.has(action.length===1?action.toLowerCase():action)) return '';
     const content=`<span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}`;
     return action
-      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control title="${htmlEsc(label)}">${content}</button>`
+      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control title="${htmlEsc(label)}" ${disabled?'disabled aria-disabled="true"':''}>${content}</button>`
       : `<div class="ctx-btn ${cls}">${content}</div>`;
   };
   const arrows = (label,horizontal=false) => {
@@ -28668,14 +28716,18 @@ function renderContextBar(){
   } else if(G.mode==='shipcombat'){
     const combat = G.shipCombat;
     const entry = shipCombatWeapons()[combat.weapon];
-    if(entry) btns.push(btn('F','Fire '+entry.weapon.name,'danger'));
+    if(entry){
+      const status=shipCombatWeaponStatus(combat,entry);
+      btns.push(btn('F','Fire '+entry.weapon.name+(status==='Ready'?'':' · '+combatStatusText(status)),'danger','f',status!=='Ready'));
+    }
     else btns.push(btn('!','Unarmed','warn'));
-    btns.push(btn('B','Boost forward','info'));
+    const boost=shipCombatBoostStatus(combat);
+    btns.push(btn('B',boost==='Ready'?'Boost forward 2 · 2 fuel · '+(18+effectiveEngineRating()*2)+' heat':'Boost · '+boost+(boost==='Too hot'?' (+'+(18+effectiveEngineRating()*2)+' heat)':''),'info','b',boost!=='Ready'));
     if(livingShipCombatEnemies(combat).length>1) btns.push(btn('Tab','Next target','info','Tab'));
     if(shipCombatEdge(combat.player)){
       const safe = shipCombatEscapeReady(combat);
       btns.push(btn('R',safe?'Disengage':'Disengage under fire',safe?'info':'warn'));
-    } else btns.push(btn('R','Disengage at map edge','info'));
+    } else btns.push(btn('R','Disengage · Reach map edge','info','r',true));
     if(combat.isNeutralTarget && combat.pirate.type==='patrol'){
       btns.push(btn('H',combat.surrenderWarned?'Confirm arrest':'Surrender to patrol','warn'));
     } else if(!combat.isNeutralTarget && !combat.pirate._homeCluster){
@@ -28977,8 +29029,6 @@ function renderContextBar(){
     }
     if(G._viewTab==='ship' && G.mode !== 'base' && G.mode !== 'planet' && (G.cargo?.length||0) > 0){
       arrows('Select cargo');
-      if(G._cargoExamine) btns.push(btn('X','Close examine','info'));
-      else btns.push(btn('X','Examine cargo','info'));
       if(G._jettisonConfirm) btns.push(btn('ESC','Cancel','info'));
     }
     btns.push(btn('ESC','Close','info'));
@@ -28992,7 +29042,7 @@ function renderContextBar(){
   }
   if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
      !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt &&
-     G.mode!=='galaxy' && G.mode!=='inventory'){
+     G.mode==='shipcombat'){
     btns.push(btn('F3','Ship systems','routine','F3'));
   }
   bar.innerHTML = btns.join('');
@@ -29126,11 +29176,12 @@ function renderShipSystems(){
   const engineer=G.crew.some(crew=>crew.hp>0 && crew.role==='engineer');
   const kits=G.inventory.filter(item=>item.usable==='repair_kit').length;
   const rows=Object.entries(SHIP_SYSTEMS).map(([id,definition])=>{
+    if(id==='shields' && !stats.shields) return '';
     const component=systems[id], bypass=Math.max(0,component.bypassUntil-G.turn);
     let effect='Installed '+(stats[definition.stat]??1)+' · Effective '+shipSystemRating(G.ship,id);
     if(id==='reactor') effect='Output '+shipReactorOutput()+' · Fitted demand '+shipWeaponPowerUsed();
     if(id==='cooling') effect='Cooling '+shipCoolingRate()+'/turn · Heat capacity '+shipHeatCapacity();
-    if(id==='shields') effect='Charge '+Math.floor(G.ship.shieldCharge)+' / '+shipShieldCapacity()+' · Recharge 3/turn after 3 turns without a hit';
+    if(id==='shields'){const shield=shipShieldReadout();effect='Charge '+shield.charge+' / '+shield.capacity+' · '+shield.state;}
     if(id==='sensors') effect='Installed '+stats.sensorRange+' · Effective '+effectiveSensorRange();
     if(id==='engine') effect='Installed '+stats.engineRating+' · Effective '+effectiveEngineRating();
     if(id==='sensors' && effectiveSensorRange()===0) effect='OFFLINE · Existing charts retained; new terrain and live contacts hidden';
@@ -31791,16 +31842,16 @@ function harmStationReputation(amount, reason){
   G.stationReputation = (G.stationReputation || 0) - amount;
   if(G.stationReputation <= -40){
     (G.neutralShips||[]).forEach(ns=>{ if(ns.type==='patrol' && ns.alive!==false) ns.hostile = true; });
-    addLog('Station patrol broadcasts: "Hostile transponder flagged. Stand down or be fired upon."','lc');
+    addCombatLog('Station patrol broadcasts: "Hostile transponder flagged. Stand down or be fired upon."','lc');
   } else if(reason){
-    addLog('Station reputation worsened: '+reason+' ('+G.stationReputation+').','lw');
+    addCombatLog('Station reputation worsened: '+reason+' ('+G.stationReputation+').','lw');
   }
 }
 
 function doFireAtNeutral(ns){
   if(!ns || ns.alive===false) return;
   if(!shipCombatWeapons().length){
-    addLog('No ship weapons ready to fire.','lw');
+    addCombatLog('No ship weapons ready to fire.','lw');
     renderAll();
     return;
   }
@@ -31816,16 +31867,16 @@ function doFireAtBase(base){
   const ss = G.shipStats || buildShipStats('LIGHT_SCOUT');
   const hasInstalled = (G.installedWeapons||[]).some(id=>id && SHIP_WEAPONS[id] && !SHIP_WEAPONS[id].placeholder);
   if(ss.weaponSlots===0 || !hasInstalled){
-    addLog('No weapons to fire at the base.','lw'); return;
+    addCombatLog('No weapons to fire at the base.','lw'); return;
   }
-  if(effectiveSensorRange()===0){addLog('No sensor lock. Restore sensors before firing.','lw');return;}
+  if(effectiveSensorRange()===0){addCombatLog('No sensor lock. Restore sensors before firing.','lw');return;}
   const entry=shipCombatWeapons().find(entry=>shipWeaponAvailability(G.ship,entry.slot)==='Ready');
-  if(!entry){addLog('No mount ready: check heat, reloads and core power.','lw');renderAll();return;}
+  if(!entry){addCombatLog('No mount ready: check heat, reloads and core power.','lw');renderAll();return;}
   commitShipWeapon(G.ship,entry.slot);
   const totalDmg=entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1);
   base.hp = Math.max(0, base.hp - totalDmg);
   const pct = Math.round((base.hp/base.maxHp)*100);
-  addLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
+  addCombatLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
   SFX.hullHit && SFX.hullHit();
 
   if(base.hp <= 0){
@@ -31837,12 +31888,12 @@ function doFireAtBase(base){
     // Kill all guards from this base
     G.pirates.forEach(p=>{ if(p.alive && p.homeX===base.x && p.homeY===base.y) p.alive=false; });
     earnCredits(3000);
-    addLog('*** '+base.name+' DESTROYED! Sector cleared. +3000 cr bonus! ***','lg');
+    addCombatLog('*** '+base.name+' DESTROYED! Sector cleared. +3000 cr bonus! ***','lg');
   } else {
     // Base returns fire — turret volley back at player
     const turretDmg = 8 + rnd(18);
     const hull=absorbShipHit(G.ship,turretDmg,'defense turrets');
-    addLog('Defense turrets return fire: '+turretDmg+' damage ('+hull+' hull).','lc');
+    addCombatLog('Defense turrets return fire: '+turretDmg+' damage ('+hull+' hull).','lc');
     SFX.hullHit && SFX.hullHit();
     if(G.ship.hp<=0){
       G.dead=true;
@@ -31872,7 +31923,7 @@ function startShipCombat(pirate,initiatedByPlayer=false){
   if(!pirate || G.mode==='shipcombat') return;
   if(!initiatedByPlayer && shipDisengagementActive(pirate)) return;
   if(isPirateSatisfied(pirate)){
-    addLog(pirate.name+' keeps its distance. The payoff is still fresh.','li');
+    addCombatLog(pirate.name+' keeps its distance. The payoff is still fresh.','li');
     renderAll();
     return;
   }
@@ -31891,12 +31942,13 @@ function startShipCombat(pirate,initiatedByPlayer=false){
 
   const label = ships.length>1 ? pirate.name+' and '+nearby.length+' wingmen close in!' : 'Contact: '+pirate.name+'.';
   G.shipCombat = {
-    pirate,isNeutralTarget,log:[label],
+    pirate,isNeutralTarget,
     playerShields:G.shipStats.shields||0,pirateShields:pirate.shields||0,
   };
   createShipCombatArena(G.shipCombat,ships);
   G.examine = null;
   G.mode = 'shipcombat';
+  addCombatLog(label,'lc');
   G.combatsFought = (G.combatsFought||0) + 1;
   trackEvent('ship_combat_started', analyticsBaseParams({
     enemy_name:pirate.name,
@@ -31910,7 +31962,7 @@ function resolveShipCombatKill(combat,enemy){
   const ship = enemy.ship;
   const report = (message,cls)=>{
     combat.result = {message,cls};
-    addLog(message,cls);
+    addCombatLog(message,cls);
   };
   if(enemy.collection==='neutralShips'){
     report(ship.name+' destroyed.','lc');
@@ -31975,7 +32027,7 @@ function moveShipAwayFromPirate(pirate){
 }
 
 function refuseShipSurrender(combat,message){
-  addLog(message,'lw');
+  addCombatLog(message,'lw');
   advanceShipCombat(combat);
 }
 
@@ -31995,16 +32047,14 @@ function doShipSurrender(){
     if(!sc.surrenderWarned){
       // First press — warn the player
       sc.surrenderWarned = true;
-      sc.log.unshift('PATROL: "Cut engines and prepare for boarding. Comply or be destroyed."');
-      sc.log.unshift('Surrendering to station patrol means arrest. Press [H] again to comply.');
-      addLog('Patrol demands you stand down. Press [H] again to accept arrest.','lw');
-      if(sc.log.length > 10) sc.log.length = 10;
+      addCombatLog('PATROL: "Cut engines and prepare for boarding. Comply or be destroyed."','lw');
+      addCombatLog('Patrol demands you stand down. Press [H] again to accept arrest.','lw');
       renderAll();
       return;
     }
     // Second press — jailed, game over
     beginCareerTurn();
-    addLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
+    addCombatLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
     G.jailed = true;
     G.dead = true;
     G.deathCause = 'You surrendered to '+pirate.name+' and were taken into custody. The crew spent the rest of their days in a station detention block. Your ship was impounded and auctioned.';
@@ -32016,7 +32066,7 @@ function doShipSurrender(){
   }
 
   // -- PIRATE SURRENDER — original logic -------------------------
-  if(sc.isNeutralTarget){ addLog(sc.pirate.name+': "No deals. Cut engines and stand by."','lw'); renderAll(); return; }
+  if(sc.isNeutralTarget){ addCombatLog(sc.pirate.name+': "No deals. Cut engines and stand by."','lw'); renderAll(); return; }
   const terms = getPirateSurrenderTerms(pirate);
   if(terms.offerValue < terms.demand){
     refuseShipSurrender(sc,'Surrender refused. Offer '+terms.offerValue+' cr value, demand '+terms.demand+'.');
@@ -32035,7 +32085,7 @@ function doShipSurrender(){
   }
   G.shipCombat = null;
   G.mode = 'galaxy';
-  addLog('Pirates accepted surrender: -'+terms.creditTake+' cr, cargo hold emptied. They will ignore you for a while.','lw');
+  addCombatLog('Pirates accepted surrender: -'+terms.creditTake+' cr, cargo hold emptied. They will ignore you for a while.','lw');
   moveShipAwayFromPirate(pirate);
   finishCareerTurn();
   renderAll();
@@ -32044,7 +32094,7 @@ function doShipRetreat(){
   const combat = G.shipCombat;
   if(G.mode!=='shipcombat' || !combat) return;
   if(!shipCombatEdge(combat.player)){
-    addLog('Reach the edge of the combat map to disengage.','li');
+    addCombatLog('Reach the edge of the combat map to disengage.','li');
     renderAll();
     return;
   }
@@ -32067,16 +32117,10 @@ function doShipRetreat(){
   G.shipCombat = null;
   G.mode = 'galaxy';
   moveShipAwayFromPirate(combat.pirate);
-  addLog('Disengaged from '+combat.pirate.name+(underFire?' under fire.':'.'),'li');
+  addCombatLog('Disengaged from '+combat.pirate.name+(underFire?' under fire.':'.'),'li');
   renderAll();
 }
-
-function adjustCombatLogFont(step){
-  const combat = G.shipCombat;
-  combat.logFontSize = Math.max(9,Math.min(16,(combat.logFontSize||12)+step));
-  renderAll();
-}
-const COMBAT_MAP = { width:27, height:17, x:12, y:42 };
+const COMBAT_MAP = { width:27, height:17, x:12, y:12 };
 const COMBAT_STEPS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 let pointerShipCombatAim = null;
 
@@ -32109,7 +32153,6 @@ function createShipCombatArena(combat, ships){
   combat.round = 1;
   combat.trails = [];
   combat.asteroids = [];
-  combat.logFontSize ??= 12;
 
   updateShipCombatSensors(combat);
 
@@ -32285,7 +32328,7 @@ function damageShipCombatPlayer(combat,damage){
     G.dead = true;
     G.shipCombat = null;
     G.mode = 'galaxy';
-    addLog('SHIP DESTROYED — game over.','lc');
+    addCombatLog('SHIP DESTROYED — game over.','lc');
   }
   return hull;
 }
@@ -32305,13 +32348,13 @@ function moveShipInCombat(dx,dy){
   const combat = G.shipCombat;
   if(!combat || G.dead) return;
   if(effectiveEngineRating()===0 || (G.fuel<=0 && !DEBUG.infiniteFuel)){
-    addLog('Engines offline. You can still fire or wait.','lw');
+    addCombatLog('Engines offline. You can still fire or wait.','lw');
     renderAll();
     return;
   }
   const to = {x:combat.player.x+dx,y:combat.player.y+dy};
   if(!shipCombatOpen(combat,to)){
-    addLog('That sector is blocked.','lw');
+    addCombatLog('That sector is blocked.','lw');
     renderAll();
     return;
   }
@@ -32319,7 +32362,7 @@ function moveShipInCombat(dx,dy){
   G.ship.heat+=2;
   if(damage){
     const hull = damageShipCombatPlayer(combat,damage);
-    if(!G.dead) addLog('Crossed plasma exhaust. '+damage+' damage ('+hull+' hull).','lw');
+    if(!G.dead) addCombatLog('Crossed plasma exhaust. '+damage+' damage ('+hull+' hull).','lw');
   }
   advanceShipCombat(combat,damage>0,'move');
 }
@@ -32335,7 +32378,7 @@ function doShipFire(){
   const entry = shipCombatWeapons()[combat.weapon];
   const status = entry ? shipCombatWeaponStatus(combat,entry) : 'No weapons installed';
   if(status!=='Ready'){
-    addLog(status+'.','lw');
+    addCombatLog(combatStatusText(status)+'.','lw');
     renderAll();
     return;
   }
@@ -32345,10 +32388,11 @@ function doShipFire(){
   commitShipWeapon(G.ship,slot);
   if(Math.random()<chance){
     const damage = weapon.minDmg+rnd(weapon.maxDmg-weapon.minDmg+1);
-    const hull = damageShipCombatEnemy(combat,enemy,damage);
-    addLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+hull+' hull).','lc');
+    const absorbed=Math.min(damage,enemy.ship.shieldCharge,shipShieldCapacity(enemy.ship));
+    addCombatLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+(damage-absorbed)+' hull).','lc');
+    damageShipCombatEnemy(combat,enemy,damage);
   } else {
-    addLog(weapon.name+' misses '+enemy.ship.name+'.','li');
+    addCombatLog(weapon.name+' misses '+enemy.ship.name+'.','li');
   }
   advanceShipCombat(combat,false,'fire');
 }
@@ -32372,13 +32416,13 @@ function moveShipCombatEnemy(combat,enemy){
     const damage = moveShipCombatActor(combat,enemy,next,enemy.ship._homeCluster ? 0 : effectiveEngineRating(enemy.ship));
     if(!enemy.ship._homeCluster) enemy.ship.heat+=2;
     if(damage){
-      addLog(enemy.ship.name+' crosses plasma exhaust ('+damage+' damage).','lc');
+      addCombatLog(enemy.ship.name+' crosses plasma exhaust ('+damage+' damage).','lc');
       damageShipCombatEnemy(combat,enemy,damage);
     }
   }
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
     enemy.escaped = true;
-    addLog(enemy.ship.name+' flies out of the combat area.','li');
+    addCombatLog(enemy.ship.name+' flies out of the combat area.','li');
   }
 }
 
@@ -32390,21 +32434,58 @@ function fireShipCombatEnemy(combat,enemy){
   else commitShipWeapon(ship,entry.slot);
   const chance=shipCombatHitChance(effectiveEngineRating(ship),effectiveEngineRating(),shipCombatDistance(enemy,combat.player));
   const damage=Math.random()<chance ? (entry ? entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1) : Math.max(1,ship.atk+rnd(4)-2)) : 0;
-  const hull=damage?damageShipCombatPlayer(combat,damage):0;
-  if(!G.dead) addLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),'lc');
+  const absorbed=Math.min(damage,G.ship.shieldCharge,shipShieldCapacity());
+  const hull=DEBUG.infiniteHull?0:Math.min(G.ship.hp,damage-absorbed);
+  addCombatLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),'lc');
+  if(damage) damageShipCombatPlayer(combat,damage);
   return damage>0;
+}
+
+// Shared readiness queries drive controls and their real action guards.
+function shipCombatBoostStatus(combat=G.shipCombat){
+  if(!combat || G.dead) return 'Unavailable';
+  if(effectiveEngineRating()===0) return 'Engines offline';
+  if(!DEBUG.infiniteFuel && G.fuel<2) return 'Needs 2 fuel';
+  if(G.ship.heat+18+effectiveEngineRating()*2>shipHeatCapacity()) return 'Too hot';
+  const {x,y,dx,dy}=combat.player;
+  if(![1,2].every(step=>shipCombatOpen(combat,{x:x+dx*step,y:y+dy*step}))) return 'Path blocked';
+  return 'Ready';
+}
+
+function combatStatusText(status){
+  return status.replace(/^Ready in (\d+)$/,(_,turns)=>'Reload '+turns+' action'+(turns==='1'?'':'s'));
+}
+
+function shipCombatEnemyActionStatus(combat,enemy){
+  const ship=enemy.ship;
+  if(ship._homeCluster){
+    const turns=Math.max(0,(ship.ramReadyAt||0)-G.turn);
+    if(turns) return 'Ram reloading: '+turns+' action'+(turns===1?'':'s');
+    return shipCombatEnemyCanFire(combat,enemy)?'Can ram':'Out of ram range';
+  }
+  const weapons=actorShipCombatWeapons(ship);
+  if(!weapons.length) return 'Unarmed';
+  if(effectiveSensorRange(ship)===0) return 'Sensors offline';
+  const powered=weapons.filter(entry=>shipWeaponOnline(ship,entry.slot));
+  if(!powered.length) return 'Mounts offline';
+  const ready=powered.filter(entry=>shipWeaponAvailability(ship,entry.slot)==='Ready');
+  if(!ready.length){
+    const turns=Math.min(...powered.map(entry=>Math.max(0,(ship.weaponReadyAt[entry.slot]||0)-G.turn)));
+    return turns?combatStatusText('Ready in '+turns):'Heat limited';
+  }
+  if(!ready.some(entry=>shipCombatDistance(enemy,combat.player)<=entry.weapon.range)) return 'Out of range';
+  if(!shipCombatShotClear(combat,enemy,combat.player)) return 'Shot blocked';
+  return shipCombatEnemyCanFire(combat,enemy)?'Can fire':'No sensor lock';
 }
 
 function boostShipInCombat(){
   const combat=G.shipCombat;
   if(!combat || G.dead) return;
   const heat=18+effectiveEngineRating()*2;
-  if(effectiveEngineRating()===0 || (!DEBUG.infiniteFuel && G.fuel<2) || G.ship.heat+heat>shipHeatCapacity()){
-    addLog('Boost requires working engines, 2 fuel and heat headroom.','lw');renderAll();return;
-  }
+  const status=shipCombatBoostStatus(combat);
+  if(status!=='Ready'){addCombatLog('Boost: '+status+'.','lw');renderAll();return;}
   const {x,y,dx,dy}=combat.player;
   const path=[{x:x+dx,y:y+dy},{x:x+dx*2,y:y+dy*2}];
-  if(!path.every(point=>shipCombatOpen(combat,point))){addLog('Boost path is blocked.','lw');renderAll();return;}
   if(!DEBUG.infiniteFuel){G.fuel-=2;G.fuelSpent=(G.fuelSpent||0)+2;}
   G.ship.heat+=heat;
   for(const point of path){
@@ -32433,7 +32514,7 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   }
   if(!livingShipCombatEnemies(combat).length){
     G.shipCombat=null;G.mode='galaxy';
-    addLog(combat.result?.message||'Combat ended.',combat.result?.cls||'li');
+    if(!combat.result) addCombatLog('Combat ended.','li');
   } else {
     combat.round++;
     combat.trails=combat.trails.filter(trail=>trail.expires>combat.round);
@@ -32453,10 +32534,6 @@ function drawShipCombatOverlay(){
   const activeWeapon = weapons[combat.weapon]?.weapon;
   const px = point=>map.x+point.x*TS, py = point=>map.y+point.y*TS;
   ctx.fillStyle='#090c13'; ctx.fillRect(0,0,canvasWidth,canvasHeight);
-  ctx.fillStyle='#e2eafb'; ctx.font='bold 16px Courier New'; ctx.textAlign='left';
-  ctx.fillText('TACTICAL COMBAT',12,23);
-  ctx.fillStyle='#879bb2'; ctx.font='12px Courier New';
-  ctx.fillText('Round '+combat.round+'  ·  Disengage at the edge  ·  Gray: asteroid  ·  Amber: exhaust',213,23);
   ctx.fillStyle='#050811'; ctx.fillRect(map.x,map.y,w,h);
 
   ctx.save();
@@ -32465,8 +32542,14 @@ function drawShipCombatOverlay(){
   ctx.clip();
   if(activeWeapon && effectiveSensorRange()>0){
     const range=activeWeapon.range;
-    ctx.fillStyle='#101c2a';
-    ctx.fillRect(px(player)-range*TS,py(player)-range*TS,(range*2+1)*TS,(range*2+1)*TS);
+    const available=shipWeaponAvailability(G.ship,weapons[combat.weapon].slot)==='Ready';
+    ctx.fillStyle=available?'#101c2a':'#11151d';
+    for(let y=0;y<map.height;y++) for(let x=0;x<map.width;x++){
+      const point={x,y}, occupant=living.find(enemy=>enemy.x===x && enemy.y===y);
+      if(shipCombatDistance(player,point)<=range && shipCombatShotClear(combat,player,occupant||point)){
+        ctx.fillRect(px(point),py(point),TS,TS);
+      }
+    }
   }
   ctx.strokeStyle='#202734'; ctx.lineWidth=1;
   ctx.beginPath();
@@ -32508,8 +32591,7 @@ function drawShipCombatOverlay(){
   ctx.strokeRect(map.x+0.5,map.y+0.5,w-1,h-1);
 
   if(selected && shipCombatContactVisible(combat,selected)){
-    ctx.strokeStyle=activeWeapon && shipCombatDistance(player,selected)<=activeWeapon.range &&
-      shipCombatShotClear(combat,player,selected) ? '#7fb6ca' : '#595d69';
+    ctx.strokeStyle=weapons[combat.weapon] && shipCombatWeaponStatus(combat,weapons[combat.weapon])==='Ready'?'#81d7aa':'#a18159';
     ctx.setLineDash([3,5]);
     ctx.beginPath();
     ctx.moveTo(px(player)+TS/2,py(player)+TS/2);
@@ -32548,58 +32630,73 @@ function drawShipCombatOverlay(){
 
 function drawShipCombatReadout(combat,weapons){
   const x=674, width=274, textX=x+10, textWidth=width-20;
-  const target = combat.enemies[combat.target];
+  const target=combat.enemies[combat.target];
   const text=(value,y,color='#aebdd0',font='12px Courier New')=>{
-    ctx.fillStyle=color; ctx.font=font; ctx.textAlign='left';
+    ctx.fillStyle=color;ctx.font=font;ctx.textAlign='left';
     ctx.fillText(value,textX,y,textWidth);
   };
-  ctx.fillStyle='#101924'; ctx.fillRect(x,42,width,408);
-  text('YOUR SHIP',58,'#a8d8f8','bold 13px Courier New');
-  text('Hull '+G.ship.hp+'/'+G.ship.maxHp+' · Shields '+Math.floor(G.ship.shieldCharge)+'/'+shipShieldCapacity(),75);
-  const delay=Math.max(0,G.ship.shieldRechargeAt-G.turn);
-  text('Shield recharge '+(delay?delay+' turns':'active')+' · 3/turn',90);
-  text('Heat '+G.ship.heat+'/'+shipHeatCapacity()+' · Cooling '+shipCoolingRate()+'/turn',105,G.ship.heat>=shipHeatCapacity()*0.8?'#f09878':'#aebdd0');
-  text('Power '+shipWeaponPowerUsed()+'/'+shipReactorOutput()+' · Sensors '+effectiveSensorRange(),120);
-  if(effectiveEngineRating()===0 || (G.fuel<=0 && !DEBUG.infiniteFuel)) text('Engines offline · F3 to repair',135,'#f09878');
-
-  text('TARGET',154,'#f0a9a6','bold 13px Courier New');
-  if(target && shipCombatContactVisible(combat,target)){
-    text(target.ship.name,171,'#f3dfaa');
-    text('Hull '+target.ship.hp+'/'+target.ship.maxHp+' · Shields '+target.shields,187);
-    text('Distance '+shipCombatDistance(combat.player,target)+' · Range '+shipCombatEnemyRange(target),203);
-    const ship=target.ship;
-    const powered=actorShipCombatWeapons(ship).filter(entry=>shipWeaponOnline(ship,entry.slot));
-    const remaining=Math.min(...powered.map(entry=>Math.max(0,(ship.weaponReadyAt[entry.slot]||0)-G.turn)));
-    const next=ship._homeCluster?'Ram '+Math.max(0,(ship.ramReadyAt||0)-G.turn):
-      !powered.length?'Mounts offline':powered.some(entry=>shipWeaponAvailability(ship,entry.slot)==='Ready')?'Weapon ready':remaining?'Reload '+remaining:'Too hot';
-    text('Heat '+ship.heat+'/'+shipHeatCapacity(ship)+' · '+next,218,'#b8a487','10px Courier New');
-  } else text('No live sensor contact',171,'#b8a487');
-  text('WEAPON MOUNTS',238,'#a8d8f8','bold 13px Courier New');
-  if(!weapons.length) text('No weapons installed',259,'#b8a487');
-  weapons.forEach((entry,index)=>{
-    const y=246+index*29;
-    const selected=index===combat.weapon;
-    ctx.fillStyle=selected?'#263d4c':'#17242f'; ctx.fillRect(textX,y,textWidth,26);
-    const status=shipCombatWeaponStatus(combat,entry);
-    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf'; ctx.font='bold 12px Courier New';
-    ctx.fillText((index+1)+'  '+entry.weapon.name,textX+6,y+11,textWidth-12);
-    ctx.font='10px Courier New'; ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';
-    ctx.fillText('H'+entry.weapon.heat+' · R'+entry.weapon.range+' · '+status,textX+6,y+22,textWidth-12);
-    canvasMenuTarget(textX,y,textWidth,26,()=>selectShipCombatWeapon(index));
-  });
-  const y=348;
-  text('COMMS LOG',y,'#a8d8f8','bold 13px Courier New');
-  if(combat.logFontSize>9) canvasMenuButton('−',x+width-60,y-16,()=>adjustCombatLogFont(-1));
-  if(combat.logFontSize<16) canvasMenuButton('+',x+width-32,y-16,()=>adjustCombatLogFont(1));
-  const font=combat.logFontSize+'px Courier New', lineH=combat.logFontSize+3;
-  ctx.font=font; ctx.textAlign='left';
-  let logY=y+22;
-  for(const message of combat.log){
-    logY=drawWrappedText(message,textX,logY,textWidth,lineH,Math.floor((443-logY)/lineH)+1)+3;
-    if(logY>443) break;
+  const heading=(value,y)=>{text(value,y,'#a8d8f8','bold 13px Courier New');return y+20;};
+  const meter=(label,value,max,y,color,right='')=>{
+    text(label+' '+value+'/'+max,y,color);
+    if(right){
+      ctx.fillStyle='#8e9daa';ctx.font='11px Courier New';ctx.textAlign='right';
+      ctx.fillText(right,x+width-10,y);
+    }
+    ctx.fillStyle='#171e27';ctx.fillRect(textX,y+5,textWidth,3);
+    ctx.fillStyle=color;ctx.fillRect(textX,y+5,Math.round(textWidth*Math.max(0,Math.min(1,max?value/max:0))),3);
+    return y+25;
+  };
+  ctx.fillStyle='#0c111a';ctx.fillRect(x,12,width,460);
+  let y=heading('YOUR SHIP',30);
+  y=meter('Hull',G.ship.hp,G.ship.maxHp,y,'#9acde8');
+  const shields=shipShieldReadout();
+  if(shields){
+    y=meter('Shields',shields.charge,shields.capacity,y,'#81c5df');
+    text(shields.state+(shields.damaged?' · damaged':''),y-8,'#8eaabb','11px Courier New');
+    y+=13;
   }
-  ctx.fillStyle='#7e90a3'; ctx.font='12px Courier New';
-  ctx.fillText('Move: compass/keys · Wait: reload + extra cooling · Boost: B · Core repairs: F3',12,472);
+  y=meter('Heat',G.ship.heat,shipHeatCapacity(),y,G.ship.heat>=shipHeatCapacity()*0.8?'#f0ad76':'#aebdd0','Cooling '+shipCoolingRate()+'/turn');
+  const faults=[];
+  if(effectiveEngineRating()===0) faults.push('Engines offline');
+  else if(G.fuel<=0 && !DEBUG.infiniteFuel) faults.push('No fuel for thrust');
+  if(effectiveSensorRange()===0) faults.push('Sensors offline');
+  if(shipWeaponPowerUsed()>shipReactorOutput()) faults.push('Power shortfall');
+  if(shipSystemCondition(G.ship,'cooling')===0) faults.push('Cooling failed');
+  ctx.font='11px Courier New';ctx.fillStyle='#edaa77';ctx.textAlign='left';
+  if(faults.length) y=drawWrappedText(faults.join(' · '),textX,y,textWidth,13,2)+3;
+
+  y=heading('SELECTED TARGET',y+1);
+  if(target && shipCombatContactVisible(combat,target)){
+    const ship=target.ship, natural=!!ship._homeCluster;
+    ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
+    y=drawWrappedText(ship.name,textX,y,textWidth,14,2)+2;
+    text('Hull '+ship.hp+'/'+ship.maxHp,y);y+=16;
+    const targetShields=shipShieldReadout(ship);
+    if(targetShields){text('Shields '+targetShields.charge+'/'+targetShields.capacity+' · '+targetShields.state,y,'#8eaabb','11px Courier New');y+=16;}
+    text('Distance '+shipCombatDistance(combat.player,target)+' · '+(natural?'Ram range 1':'Weapon range '+shipCombatEnemyRange(target)),y);y+=16;
+    const status=shipCombatEnemyActionStatus(combat,target);
+    text(status,y,status==='Can fire'||status==='Can ram'?'#f0a9a6':'#aebdd0');y+=16;
+    if(!natural && actorShipCombatWeapons(ship).length){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
+  } else {text('No live sensor contact',y,'#b8a487');y+=16;}
+
+  y=heading('WEAPON MOUNTS',y+1);
+  if(!weapons.length) text('No weapons installed',y,'#b8a487');
+  weapons.forEach((entry,index)=>{
+    const selected=index===combat.weapon, status=shipCombatWeaponStatus(combat,entry);
+    ctx.fillStyle=selected?'#1b3040':'#111b25';ctx.fillRect(textX,y,textWidth,34);
+    const label=combatStatusText(status);
+    ctx.font='11px Courier New';const statusWidth=ctx.measureText(label).width;
+    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf';ctx.font='bold 12px Courier New';ctx.textAlign='left';
+    ctx.fillText((index+1)+' '+entry.weapon.name,textX+6,y+13,textWidth-statusWidth-20);
+    ctx.font='11px Courier New';ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';ctx.textAlign='right';
+    ctx.fillText(label,textX+textWidth-6,y+13);
+    ctx.textAlign='left';ctx.fillStyle='#94a8ba';
+    ctx.fillText(entry.weapon.minDmg+'–'+entry.weapon.maxDmg+' dmg · Range '+entry.weapon.range+' · Heat '+entry.weapon.heat,textX+6,y+27,textWidth-12);
+    canvasMenuTarget(textX,y,textWidth,34,()=>selectShipCombatWeapon(index));
+    y+=37;
+  });
+  const selected=weapons[combat.weapon]?.weapon;
+  if(selected) text('Peak heat '+(G.ship.heat+selected.heat)+'/'+shipHeatCapacity()+' · Reload '+selected.cooldown+' action'+(selected.cooldown===1?'':'s'),y+10,'#8e9daa','11px Courier New');
 }
 function doRadioHailLegacy(ns){
   // Fallback for unknown ship types
@@ -34480,7 +34577,7 @@ document.addEventListener('keydown', e=>{
 
     if(!G.showOptions && (e.key==='-'||e.key==='='||e.key==='+') && !e.ctrlKey && !e.metaKey){
       const step = e.key==='-'?-1:1;
-      if(G.mode==='shipcombat') adjustCombatLogFont(step); else adjustLogFont(step);
+      adjustLogFont(step);
       return;
     }
 
@@ -36120,7 +36217,7 @@ function resolveCareerReferences(game){
   const combat = game.shipCombat;
   if(combat){
     if(!Array.isArray(combat.enemies) || !combat.enemies[combat.target] || !combat.player ||
-       !['log','weaponReady','seenTiles','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
+       !['weaponReady','seenTiles','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
        !Number.isSafeInteger(combat.round) || combat.round<1) throw invalidCareerSave();
     const participants = new Set();
     for(const enemy of combat.enemies){
@@ -36129,6 +36226,18 @@ function resolveCareerReferences(game){
       enemy.ship = actorAt(enemy.collection,enemy.ship);
       validateSavedShipSystems(enemy.ship,game.turn);
     }
+    // Earlier schema-2 builds kept a separate ten-line combat window. Promote
+    // its archived entries once, preserving their original turns and order.
+    if(Array.isArray(combat.log)){
+      const messages=new Set(combat.log);
+      const prefixes=combat.enemies.map(enemy=>'['+enemy.ship.name+'] ');
+      for(const entry of game.log){
+        if(!entry?.archive || typeof entry.msg!=='string') continue;
+        const prefix=prefixes.find(prefix=>entry.msg.startsWith(prefix));
+        if(prefix && messages.has(entry.msg.slice(prefix.length))){delete entry.archive;entry.category='combat';}
+      }
+    }
+    delete combat.log;delete combat.logFontSize;
     combat.pirate = combat.enemies[combat.target].ship;
     combat.weaponReady=game.ship.weaponReadyAt;
     combat.playerShields=game.ship.shieldCharge;

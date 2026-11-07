@@ -42,16 +42,16 @@ function harmStationReputation(amount, reason){
   G.stationReputation = (G.stationReputation || 0) - amount;
   if(G.stationReputation <= -40){
     (G.neutralShips||[]).forEach(ns=>{ if(ns.type==='patrol' && ns.alive!==false) ns.hostile = true; });
-    addLog('Station patrol broadcasts: "Hostile transponder flagged. Stand down or be fired upon."','lc');
+    addCombatLog('Station patrol broadcasts: "Hostile transponder flagged. Stand down or be fired upon."','lc');
   } else if(reason){
-    addLog('Station reputation worsened: '+reason+' ('+G.stationReputation+').','lw');
+    addCombatLog('Station reputation worsened: '+reason+' ('+G.stationReputation+').','lw');
   }
 }
 
 function doFireAtNeutral(ns){
   if(!ns || ns.alive===false) return;
   if(!shipCombatWeapons().length){
-    addLog('No ship weapons ready to fire.','lw');
+    addCombatLog('No ship weapons ready to fire.','lw');
     renderAll();
     return;
   }
@@ -67,16 +67,16 @@ function doFireAtBase(base){
   const ss = G.shipStats || buildShipStats('LIGHT_SCOUT');
   const hasInstalled = (G.installedWeapons||[]).some(id=>id && SHIP_WEAPONS[id] && !SHIP_WEAPONS[id].placeholder);
   if(ss.weaponSlots===0 || !hasInstalled){
-    addLog('No weapons to fire at the base.','lw'); return;
+    addCombatLog('No weapons to fire at the base.','lw'); return;
   }
-  if(effectiveSensorRange()===0){addLog('No sensor lock. Restore sensors before firing.','lw');return;}
+  if(effectiveSensorRange()===0){addCombatLog('No sensor lock. Restore sensors before firing.','lw');return;}
   const entry=shipCombatWeapons().find(entry=>shipWeaponAvailability(G.ship,entry.slot)==='Ready');
-  if(!entry){addLog('No mount ready: check heat, reloads and core power.','lw');renderAll();return;}
+  if(!entry){addCombatLog('No mount ready: check heat, reloads and core power.','lw');renderAll();return;}
   commitShipWeapon(G.ship,entry.slot);
   const totalDmg=entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1);
   base.hp = Math.max(0, base.hp - totalDmg);
   const pct = Math.round((base.hp/base.maxHp)*100);
-  addLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
+  addCombatLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
   SFX.hullHit && SFX.hullHit();
 
   if(base.hp <= 0){
@@ -88,12 +88,12 @@ function doFireAtBase(base){
     // Kill all guards from this base
     G.pirates.forEach(p=>{ if(p.alive && p.homeX===base.x && p.homeY===base.y) p.alive=false; });
     earnCredits(3000);
-    addLog('*** '+base.name+' DESTROYED! Sector cleared. +3000 cr bonus! ***','lg');
+    addCombatLog('*** '+base.name+' DESTROYED! Sector cleared. +3000 cr bonus! ***','lg');
   } else {
     // Base returns fire — turret volley back at player
     const turretDmg = 8 + rnd(18);
     const hull=absorbShipHit(G.ship,turretDmg,'defense turrets');
-    addLog('Defense turrets return fire: '+turretDmg+' damage ('+hull+' hull).','lc');
+    addCombatLog('Defense turrets return fire: '+turretDmg+' damage ('+hull+' hull).','lc');
     SFX.hullHit && SFX.hullHit();
     if(G.ship.hp<=0){
       G.dead=true;
@@ -123,7 +123,7 @@ function startShipCombat(pirate,initiatedByPlayer=false){
   if(!pirate || G.mode==='shipcombat') return;
   if(!initiatedByPlayer && shipDisengagementActive(pirate)) return;
   if(isPirateSatisfied(pirate)){
-    addLog(pirate.name+' keeps its distance. The payoff is still fresh.','li');
+    addCombatLog(pirate.name+' keeps its distance. The payoff is still fresh.','li');
     renderAll();
     return;
   }
@@ -142,12 +142,13 @@ function startShipCombat(pirate,initiatedByPlayer=false){
 
   const label = ships.length>1 ? pirate.name+' and '+nearby.length+' wingmen close in!' : 'Contact: '+pirate.name+'.';
   G.shipCombat = {
-    pirate,isNeutralTarget,log:[label],
+    pirate,isNeutralTarget,
     playerShields:G.shipStats.shields||0,pirateShields:pirate.shields||0,
   };
   createShipCombatArena(G.shipCombat,ships);
   G.examine = null;
   G.mode = 'shipcombat';
+  addCombatLog(label,'lc');
   G.combatsFought = (G.combatsFought||0) + 1;
   trackEvent('ship_combat_started', analyticsBaseParams({
     enemy_name:pirate.name,
@@ -161,7 +162,7 @@ function resolveShipCombatKill(combat,enemy){
   const ship = enemy.ship;
   const report = (message,cls)=>{
     combat.result = {message,cls};
-    addLog(message,cls);
+    addCombatLog(message,cls);
   };
   if(enemy.collection==='neutralShips'){
     report(ship.name+' destroyed.','lc');
@@ -226,7 +227,7 @@ function moveShipAwayFromPirate(pirate){
 }
 
 function refuseShipSurrender(combat,message){
-  addLog(message,'lw');
+  addCombatLog(message,'lw');
   advanceShipCombat(combat);
 }
 
@@ -246,16 +247,14 @@ function doShipSurrender(){
     if(!sc.surrenderWarned){
       // First press — warn the player
       sc.surrenderWarned = true;
-      sc.log.unshift('PATROL: "Cut engines and prepare for boarding. Comply or be destroyed."');
-      sc.log.unshift('Surrendering to station patrol means arrest. Press [H] again to comply.');
-      addLog('Patrol demands you stand down. Press [H] again to accept arrest.','lw');
-      if(sc.log.length > 10) sc.log.length = 10;
+      addCombatLog('PATROL: "Cut engines and prepare for boarding. Comply or be destroyed."','lw');
+      addCombatLog('Patrol demands you stand down. Press [H] again to accept arrest.','lw');
       renderAll();
       return;
     }
     // Second press — jailed, game over
     beginCareerTurn();
-    addLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
+    addCombatLog('You surrendered. Boarded, arrested, and taken to the station brig.','lc');
     G.jailed = true;
     G.dead = true;
     G.deathCause = 'You surrendered to '+pirate.name+' and were taken into custody. The crew spent the rest of their days in a station detention block. Your ship was impounded and auctioned.';
@@ -267,7 +266,7 @@ function doShipSurrender(){
   }
 
   // -- PIRATE SURRENDER — original logic -------------------------
-  if(sc.isNeutralTarget){ addLog(sc.pirate.name+': "No deals. Cut engines and stand by."','lw'); renderAll(); return; }
+  if(sc.isNeutralTarget){ addCombatLog(sc.pirate.name+': "No deals. Cut engines and stand by."','lw'); renderAll(); return; }
   const terms = getPirateSurrenderTerms(pirate);
   if(terms.offerValue < terms.demand){
     refuseShipSurrender(sc,'Surrender refused. Offer '+terms.offerValue+' cr value, demand '+terms.demand+'.');
@@ -286,7 +285,7 @@ function doShipSurrender(){
   }
   G.shipCombat = null;
   G.mode = 'galaxy';
-  addLog('Pirates accepted surrender: -'+terms.creditTake+' cr, cargo hold emptied. They will ignore you for a while.','lw');
+  addCombatLog('Pirates accepted surrender: -'+terms.creditTake+' cr, cargo hold emptied. They will ignore you for a while.','lw');
   moveShipAwayFromPirate(pirate);
   finishCareerTurn();
   renderAll();
@@ -295,7 +294,7 @@ function doShipRetreat(){
   const combat = G.shipCombat;
   if(G.mode!=='shipcombat' || !combat) return;
   if(!shipCombatEdge(combat.player)){
-    addLog('Reach the edge of the combat map to disengage.','li');
+    addCombatLog('Reach the edge of the combat map to disengage.','li');
     renderAll();
     return;
   }
@@ -318,12 +317,6 @@ function doShipRetreat(){
   G.shipCombat = null;
   G.mode = 'galaxy';
   moveShipAwayFromPirate(combat.pirate);
-  addLog('Disengaged from '+combat.pirate.name+(underFire?' under fire.':'.'),'li');
-  renderAll();
-}
-
-function adjustCombatLogFont(step){
-  const combat = G.shipCombat;
-  combat.logFontSize = Math.max(9,Math.min(16,(combat.logFontSize||12)+step));
+  addCombatLog('Disengaged from '+combat.pirate.name+(underFire?' under fire.':'.'),'li');
   renderAll();
 }

@@ -23,6 +23,18 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.55 unifies combat information and controls
+
+Released on `experiment/expedition-legacy`.
+
+- Deleted the separate combat log panel and its font controls. Engagements, attacks, component damage, surrender warnings and results now use the normal sidebar and saved LOG history; combat history is categorized explicitly. Attack messages precede their damage/kill outcomes, and victory messages are recorded once. The normal sidebar size controls and +/− keys also work during combat.
+- Reorganized the combat readout around hull, fitted shields, heat, selected target and weapon readiness. Unfitted generators have no shield/recharge display, including in the detailed inspector. Installed shields distinguish full, delayed, recharging, damaged, failed, unpowered and heat-limited conditions. Healthy reactor/sensor data is quieter; failures remain visible. Unarmed ships and natural ram attackers have appropriate descriptions.
+- Replaced abbreviated heat/range labels with readable damage/range/heat information and selected-shot peak heat/reload duration. Fire, Boost and pre-edge Disengage controls show unavailability before the player tries them; Fire/Boost reuse actual action guards. Clear firing lanes are shaded, and the target line agrees with full shot readiness rather than range/cover alone.
+- Removed duplicate context controls when an explicit menu button already carries the same shortcut, including cargo examination and Close. Core readouts remain passive and inspection stays on its static button. The generic F3 context button is now combat-only, including removal planetside and in orbit. Keyboard shortcuts remain available.
+- Removed the top TACTICAL COMBAT title, top hint strip and repeated bottom control hints. The arena and readout move up into that space; the HUD identifies the view and the collapsed Shortcuts panel provides combat-specific reference using the configured wait key.
+- Validation: all 55 repository tests and 20 headless Edge suites passed, with affected scenarios rerun after the final header removal. The new combat UI scenario covers shield states/absence, matching action/aim readiness, shared history and save/load, old local-log recovery, single victory recording, natural/unarmed targets, static-menu deduplication, shortcut reference and crowded three-mount layouts at two window sizes. These validate rules and presentation, not human readability approval or combat balance.
+- Saves: career schema 2 stays compatible with experimental.52–54. Matching old combat log entries retain their original turns when made visible in the sidebar. Movement allowance, NPC speed, engine effects, reloads and combat costs are unchanged; speed design remains a separate task.
+
 ## 2026-11-07 — 0.28 experimental.54 removes redundant ship controls
 
 Released on `experiment/expedition-legacy`.

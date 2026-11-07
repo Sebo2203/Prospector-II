@@ -1,4 +1,4 @@
-const COMBAT_MAP = { width:27, height:17, x:12, y:42 };
+const COMBAT_MAP = { width:27, height:17, x:12, y:12 };
 const COMBAT_STEPS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 let pointerShipCombatAim = null;
 
@@ -31,7 +31,6 @@ function createShipCombatArena(combat, ships){
   combat.round = 1;
   combat.trails = [];
   combat.asteroids = [];
-  combat.logFontSize ??= 12;
 
   updateShipCombatSensors(combat);
 
@@ -207,7 +206,7 @@ function damageShipCombatPlayer(combat,damage){
     G.dead = true;
     G.shipCombat = null;
     G.mode = 'galaxy';
-    addLog('SHIP DESTROYED — game over.','lc');
+    addCombatLog('SHIP DESTROYED — game over.','lc');
   }
   return hull;
 }
@@ -227,13 +226,13 @@ function moveShipInCombat(dx,dy){
   const combat = G.shipCombat;
   if(!combat || G.dead) return;
   if(effectiveEngineRating()===0 || (G.fuel<=0 && !DEBUG.infiniteFuel)){
-    addLog('Engines offline. You can still fire or wait.','lw');
+    addCombatLog('Engines offline. You can still fire or wait.','lw');
     renderAll();
     return;
   }
   const to = {x:combat.player.x+dx,y:combat.player.y+dy};
   if(!shipCombatOpen(combat,to)){
-    addLog('That sector is blocked.','lw');
+    addCombatLog('That sector is blocked.','lw');
     renderAll();
     return;
   }
@@ -241,7 +240,7 @@ function moveShipInCombat(dx,dy){
   G.ship.heat+=2;
   if(damage){
     const hull = damageShipCombatPlayer(combat,damage);
-    if(!G.dead) addLog('Crossed plasma exhaust. '+damage+' damage ('+hull+' hull).','lw');
+    if(!G.dead) addCombatLog('Crossed plasma exhaust. '+damage+' damage ('+hull+' hull).','lw');
   }
   advanceShipCombat(combat,damage>0,'move');
 }
@@ -257,7 +256,7 @@ function doShipFire(){
   const entry = shipCombatWeapons()[combat.weapon];
   const status = entry ? shipCombatWeaponStatus(combat,entry) : 'No weapons installed';
   if(status!=='Ready'){
-    addLog(status+'.','lw');
+    addCombatLog(combatStatusText(status)+'.','lw');
     renderAll();
     return;
   }
@@ -267,10 +266,11 @@ function doShipFire(){
   commitShipWeapon(G.ship,slot);
   if(Math.random()<chance){
     const damage = weapon.minDmg+rnd(weapon.maxDmg-weapon.minDmg+1);
-    const hull = damageShipCombatEnemy(combat,enemy,damage);
-    addLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+hull+' hull).','lc');
+    const absorbed=Math.min(damage,enemy.ship.shieldCharge,shipShieldCapacity(enemy.ship));
+    addCombatLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+(damage-absorbed)+' hull).','lc');
+    damageShipCombatEnemy(combat,enemy,damage);
   } else {
-    addLog(weapon.name+' misses '+enemy.ship.name+'.','li');
+    addCombatLog(weapon.name+' misses '+enemy.ship.name+'.','li');
   }
   advanceShipCombat(combat,false,'fire');
 }
@@ -294,13 +294,13 @@ function moveShipCombatEnemy(combat,enemy){
     const damage = moveShipCombatActor(combat,enemy,next,enemy.ship._homeCluster ? 0 : effectiveEngineRating(enemy.ship));
     if(!enemy.ship._homeCluster) enemy.ship.heat+=2;
     if(damage){
-      addLog(enemy.ship.name+' crosses plasma exhaust ('+damage+' damage).','lc');
+      addCombatLog(enemy.ship.name+' crosses plasma exhaust ('+damage+' damage).','lc');
       damageShipCombatEnemy(combat,enemy,damage);
     }
   }
   if(fleeing && enemy.ship.alive!==false && shipCombatEdge(enemy)){
     enemy.escaped = true;
-    addLog(enemy.ship.name+' flies out of the combat area.','li');
+    addCombatLog(enemy.ship.name+' flies out of the combat area.','li');
   }
 }
 
@@ -312,21 +312,58 @@ function fireShipCombatEnemy(combat,enemy){
   else commitShipWeapon(ship,entry.slot);
   const chance=shipCombatHitChance(effectiveEngineRating(ship),effectiveEngineRating(),shipCombatDistance(enemy,combat.player));
   const damage=Math.random()<chance ? (entry ? entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1) : Math.max(1,ship.atk+rnd(4)-2)) : 0;
-  const hull=damage?damageShipCombatPlayer(combat,damage):0;
-  if(!G.dead) addLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),'lc');
+  const absorbed=Math.min(damage,G.ship.shieldCharge,shipShieldCapacity());
+  const hull=DEBUG.infiniteHull?0:Math.min(G.ship.hp,damage-absorbed);
+  addCombatLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),'lc');
+  if(damage) damageShipCombatPlayer(combat,damage);
   return damage>0;
+}
+
+// Shared readiness queries drive controls and their real action guards.
+function shipCombatBoostStatus(combat=G.shipCombat){
+  if(!combat || G.dead) return 'Unavailable';
+  if(effectiveEngineRating()===0) return 'Engines offline';
+  if(!DEBUG.infiniteFuel && G.fuel<2) return 'Needs 2 fuel';
+  if(G.ship.heat+18+effectiveEngineRating()*2>shipHeatCapacity()) return 'Too hot';
+  const {x,y,dx,dy}=combat.player;
+  if(![1,2].every(step=>shipCombatOpen(combat,{x:x+dx*step,y:y+dy*step}))) return 'Path blocked';
+  return 'Ready';
+}
+
+function combatStatusText(status){
+  return status.replace(/^Ready in (\d+)$/,(_,turns)=>'Reload '+turns+' action'+(turns==='1'?'':'s'));
+}
+
+function shipCombatEnemyActionStatus(combat,enemy){
+  const ship=enemy.ship;
+  if(ship._homeCluster){
+    const turns=Math.max(0,(ship.ramReadyAt||0)-G.turn);
+    if(turns) return 'Ram reloading: '+turns+' action'+(turns===1?'':'s');
+    return shipCombatEnemyCanFire(combat,enemy)?'Can ram':'Out of ram range';
+  }
+  const weapons=actorShipCombatWeapons(ship);
+  if(!weapons.length) return 'Unarmed';
+  if(effectiveSensorRange(ship)===0) return 'Sensors offline';
+  const powered=weapons.filter(entry=>shipWeaponOnline(ship,entry.slot));
+  if(!powered.length) return 'Mounts offline';
+  const ready=powered.filter(entry=>shipWeaponAvailability(ship,entry.slot)==='Ready');
+  if(!ready.length){
+    const turns=Math.min(...powered.map(entry=>Math.max(0,(ship.weaponReadyAt[entry.slot]||0)-G.turn)));
+    return turns?combatStatusText('Ready in '+turns):'Heat limited';
+  }
+  if(!ready.some(entry=>shipCombatDistance(enemy,combat.player)<=entry.weapon.range)) return 'Out of range';
+  if(!shipCombatShotClear(combat,enemy,combat.player)) return 'Shot blocked';
+  return shipCombatEnemyCanFire(combat,enemy)?'Can fire':'No sensor lock';
 }
 
 function boostShipInCombat(){
   const combat=G.shipCombat;
   if(!combat || G.dead) return;
   const heat=18+effectiveEngineRating()*2;
-  if(effectiveEngineRating()===0 || (!DEBUG.infiniteFuel && G.fuel<2) || G.ship.heat+heat>shipHeatCapacity()){
-    addLog('Boost requires working engines, 2 fuel and heat headroom.','lw');renderAll();return;
-  }
+  const status=shipCombatBoostStatus(combat);
+  if(status!=='Ready'){addCombatLog('Boost: '+status+'.','lw');renderAll();return;}
   const {x,y,dx,dy}=combat.player;
   const path=[{x:x+dx,y:y+dy},{x:x+dx*2,y:y+dy*2}];
-  if(!path.every(point=>shipCombatOpen(combat,point))){addLog('Boost path is blocked.','lw');renderAll();return;}
   if(!DEBUG.infiniteFuel){G.fuel-=2;G.fuelSpent=(G.fuelSpent||0)+2;}
   G.ship.heat+=heat;
   for(const point of path){
@@ -355,7 +392,7 @@ function advanceShipCombat(combat=G.shipCombat,hitPlayer=false,action='wait'){
   }
   if(!livingShipCombatEnemies(combat).length){
     G.shipCombat=null;G.mode='galaxy';
-    addLog(combat.result?.message||'Combat ended.',combat.result?.cls||'li');
+    if(!combat.result) addCombatLog('Combat ended.','li');
   } else {
     combat.round++;
     combat.trails=combat.trails.filter(trail=>trail.expires>combat.round);

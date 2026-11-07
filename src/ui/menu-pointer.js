@@ -11,8 +11,8 @@ function resetCanvasMenu(){
   canvas.style.cursor = '';
 }
 
-function canvasMenuTarget(x,y,w,h,activate,{hover,title}={}){
-  canvasMenuTargets.push({x,y,w,h,activate,hover,title});
+function canvasMenuTarget(x,y,w,h,activate,{hover,title,shortcut,label}={}){
+  canvasMenuTargets.push({x,y,w,h,activate,hover,title,shortcut,label,mode:G?.mode,view:G?._viewTab});
 }
 
 function canvasMenuButton(label,x,y,activate){
@@ -24,7 +24,9 @@ function canvasMenuButton(label,x,y,activate){
   ctx.strokeStyle = '#3a5268'; ctx.lineWidth = 1; ctx.strokeRect(x,y,w,22);
   ctx.fillStyle = '#aaddff'; ctx.fillText(label,x+8,y+15);
   ctx.restore();
-  canvasMenuTarget(x,y,w,22,activate);
+  const key=label.match(/\[([^\]]+)\]$/)?.[1];
+  const shortcut=key==='Esc'?'Escape':key?.length===1?key.toLowerCase():key;
+  canvasMenuTarget(x,y,w,22,activate,{shortcut,label});
 }
 
 function canvasMenuBlocked(){

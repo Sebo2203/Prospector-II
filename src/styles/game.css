@@ -1044,3 +1044,20 @@ button.ctx-btn .ck { text-shadow: 0 1px #070d14; }
 [data-ui-style="classic"] .cmp-btn.cmp-center { --key-face: #0a0a12; font-size: 9px; }
 [data-ui-style="classic"] :is(#shortcut-toggle,#active-missions-toggle) { --key-face: #17181d; color: #999da7; }
 [data-ui-style="classic"] .minimap-legend-title { color: #ffe066; }
+
+button.ctx-btn:disabled, button.ctx-btn:disabled:hover {
+  cursor:default;
+  color:#90979e;
+  border-color:#353b43;
+  background:#141820;
+  box-shadow:none;
+}
+button.ctx-btn:disabled .ck { color:#969da4; }
+
+#combat-shortcuts, #travel-shortcuts {
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(210px,1fr));
+  gap:5px 14px;
+}
+#combat-shortcuts[hidden], #travel-shortcuts[hidden] { display:none; }

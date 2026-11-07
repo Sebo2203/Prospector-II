@@ -293,3 +293,20 @@ function absorbShipHit(ship,damage,source='weapons fire'){
   if(ship.hp>0) rollShipSystemDamage(ship,hull,source);
   return hull;
 }
+
+// Presentation derives from fitted equipment and the next normal system tick.
+function shipShieldReadout(ship=G.ship){
+  const stats=shipSystemStats(ship);
+  if(!stats.shields || ship._homeCluster) return null;
+  ensureShipSystems(ship);
+  const capacity=shipShieldCapacity(ship), charge=Math.floor(Math.min(ship.shieldCharge,capacity));
+  const condition=shipSystemCondition(ship,'shields');
+  let state;
+  if(condition<=0 || (capacity===0 && shipReactorOutput(ship)>=2+stats.shields)) state='Generator failed';
+  else if(shipReactorOutput(ship)<2+stats.shields) state='Unpowered';
+  else if(charge>=capacity) state='Full';
+  else if(ship.shieldRechargeAt>G.turn) state='Recharge in '+(ship.shieldRechargeAt-G.turn)+' turn'+(ship.shieldRechargeAt-G.turn===1?'':'s');
+  else if(Math.max(0,ship.heat-shipCoolingRate(ship))+1>shipHeatCapacity(ship)) state='Heat limited';
+  else state='Recharging +3/turn';
+  return {charge,capacity,state,damaged:condition<100};
+}

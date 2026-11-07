@@ -5,7 +5,7 @@ window.installPlaythroughPilot=function(profile){
   systems:{},surfaces:{},prices:{},goal:null,returning:false,basePrepared:false,stop:null,combatRounds:0,
   initial:JSON.parse(JSON.stringify({credits:G.credits,fuel:G.fuel,hull:G.ship.hp,crew:G.crew.map(c=>({name:c.name,role:c.role,hp:c.hp,skills:c.skills}))}))};
  const originalAddLog=addLog,originalArchive=archiveLog;
- addLog=function(msg,cls){p.events.push({action:p.actions,turn:G.turn,mode:G.mode,msg,cls:cls||''});return originalAddLog(msg,cls);};
+ addLog=function(msg,cls,category){p.events.push({action:p.actions,turn:G.turn,mode:G.mode,msg,cls:cls||''});return originalAddLog(msg,cls,category);};
  archiveLog=function(msg,cls){p.events.push({action:p.actions,turn:G.turn,mode:G.mode,msg,cls:cls||'',archive:true});return originalArchive(msg,cls);};
  p.events.push(...G.log.slice().reverse().map(e=>({...e,mode:G.mode,action:0})));
  const key=k=>document.dispatchEvent(new KeyboardEvent('keydown',{key:k,code:{Escape:'Escape',Enter:'Enter',i:'KeyI',t:'KeyT'}[k]||k,bubbles:true,cancelable:true}));

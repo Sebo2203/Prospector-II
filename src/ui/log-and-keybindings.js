@@ -25,30 +25,25 @@ function setLogHTML(html){
   el.innerHTML = html;
 }
 
-function addLog(msg,cls){
+function addLog(msg,cls,category=G?.mode==='shipcombat'?'combat':undefined){
   cls=cls||'';
-  if(G?.mode==='shipcombat' && G.shipCombat){
-    const sc = G.shipCombat;
-    if(sc.log[0] === msg) return;
-    sc.log.unshift(msg);
-    if(sc.log.length > 10) sc.log.length = 10;
-    archiveLog('['+(sc.pirate?.name || 'ship combat')+'] '+msg, cls);
-    return;
-  }
   const latest = G.log[0];
   if(latest && latest.msg === msg && (latest.cls || '') === cls){
     latest.count = (latest.count || 1) + 1;
+    if(category) latest.category=category;
     G.msg = logDisplayText(latest);
     return;
   }
   const entry = {msg, cls, count:1, turn: G.turn||1};
+  if(category) entry.category=category;
   G.log.unshift(entry);
   G.msg=logDisplayText(entry);
 }
 
+function addCombatLog(msg,cls){addLog(msg,cls,'combat');}
+
 // Like addLog but silent — writes to G.log history only, no sidebar flash.
-// Use for high-frequency detail (e.g. per-round ship combat) that belongs in
-// the LOG tab but must NOT duplicate into the sidebar or msg-bar.
+// Use for historical detail that belongs in the LOG tab without a sidebar update.
 function archiveLog(msg,cls){
   cls=cls||'';
   G.log.unshift({msg, cls, count:1, turn: G.turn||1, archive:true});

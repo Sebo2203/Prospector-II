@@ -10,10 +10,6 @@ function drawShipCombatOverlay(){
   const activeWeapon = weapons[combat.weapon]?.weapon;
   const px = point=>map.x+point.x*TS, py = point=>map.y+point.y*TS;
   ctx.fillStyle='#090c13'; ctx.fillRect(0,0,canvasWidth,canvasHeight);
-  ctx.fillStyle='#e2eafb'; ctx.font='bold 16px Courier New'; ctx.textAlign='left';
-  ctx.fillText('TACTICAL COMBAT',12,23);
-  ctx.fillStyle='#879bb2'; ctx.font='12px Courier New';
-  ctx.fillText('Round '+combat.round+'  ·  Disengage at the edge  ·  Gray: asteroid  ·  Amber: exhaust',213,23);
   ctx.fillStyle='#050811'; ctx.fillRect(map.x,map.y,w,h);
 
   ctx.save();
@@ -22,8 +18,14 @@ function drawShipCombatOverlay(){
   ctx.clip();
   if(activeWeapon && effectiveSensorRange()>0){
     const range=activeWeapon.range;
-    ctx.fillStyle='#101c2a';
-    ctx.fillRect(px(player)-range*TS,py(player)-range*TS,(range*2+1)*TS,(range*2+1)*TS);
+    const available=shipWeaponAvailability(G.ship,weapons[combat.weapon].slot)==='Ready';
+    ctx.fillStyle=available?'#101c2a':'#11151d';
+    for(let y=0;y<map.height;y++) for(let x=0;x<map.width;x++){
+      const point={x,y}, occupant=living.find(enemy=>enemy.x===x && enemy.y===y);
+      if(shipCombatDistance(player,point)<=range && shipCombatShotClear(combat,player,occupant||point)){
+        ctx.fillRect(px(point),py(point),TS,TS);
+      }
+    }
   }
   ctx.strokeStyle='#202734'; ctx.lineWidth=1;
   ctx.beginPath();
@@ -65,8 +67,7 @@ function drawShipCombatOverlay(){
   ctx.strokeRect(map.x+0.5,map.y+0.5,w-1,h-1);
 
   if(selected && shipCombatContactVisible(combat,selected)){
-    ctx.strokeStyle=activeWeapon && shipCombatDistance(player,selected)<=activeWeapon.range &&
-      shipCombatShotClear(combat,player,selected) ? '#7fb6ca' : '#595d69';
+    ctx.strokeStyle=weapons[combat.weapon] && shipCombatWeaponStatus(combat,weapons[combat.weapon])==='Ready'?'#81d7aa':'#a18159';
     ctx.setLineDash([3,5]);
     ctx.beginPath();
     ctx.moveTo(px(player)+TS/2,py(player)+TS/2);
@@ -105,56 +106,71 @@ function drawShipCombatOverlay(){
 
 function drawShipCombatReadout(combat,weapons){
   const x=674, width=274, textX=x+10, textWidth=width-20;
-  const target = combat.enemies[combat.target];
+  const target=combat.enemies[combat.target];
   const text=(value,y,color='#aebdd0',font='12px Courier New')=>{
-    ctx.fillStyle=color; ctx.font=font; ctx.textAlign='left';
+    ctx.fillStyle=color;ctx.font=font;ctx.textAlign='left';
     ctx.fillText(value,textX,y,textWidth);
   };
-  ctx.fillStyle='#101924'; ctx.fillRect(x,42,width,408);
-  text('YOUR SHIP',58,'#a8d8f8','bold 13px Courier New');
-  text('Hull '+G.ship.hp+'/'+G.ship.maxHp+' · Shields '+Math.floor(G.ship.shieldCharge)+'/'+shipShieldCapacity(),75);
-  const delay=Math.max(0,G.ship.shieldRechargeAt-G.turn);
-  text('Shield recharge '+(delay?delay+' turns':'active')+' · 3/turn',90);
-  text('Heat '+G.ship.heat+'/'+shipHeatCapacity()+' · Cooling '+shipCoolingRate()+'/turn',105,G.ship.heat>=shipHeatCapacity()*0.8?'#f09878':'#aebdd0');
-  text('Power '+shipWeaponPowerUsed()+'/'+shipReactorOutput()+' · Sensors '+effectiveSensorRange(),120);
-  if(effectiveEngineRating()===0 || (G.fuel<=0 && !DEBUG.infiniteFuel)) text('Engines offline · F3 to repair',135,'#f09878');
-
-  text('TARGET',154,'#f0a9a6','bold 13px Courier New');
-  if(target && shipCombatContactVisible(combat,target)){
-    text(target.ship.name,171,'#f3dfaa');
-    text('Hull '+target.ship.hp+'/'+target.ship.maxHp+' · Shields '+target.shields,187);
-    text('Distance '+shipCombatDistance(combat.player,target)+' · Range '+shipCombatEnemyRange(target),203);
-    const ship=target.ship;
-    const powered=actorShipCombatWeapons(ship).filter(entry=>shipWeaponOnline(ship,entry.slot));
-    const remaining=Math.min(...powered.map(entry=>Math.max(0,(ship.weaponReadyAt[entry.slot]||0)-G.turn)));
-    const next=ship._homeCluster?'Ram '+Math.max(0,(ship.ramReadyAt||0)-G.turn):
-      !powered.length?'Mounts offline':powered.some(entry=>shipWeaponAvailability(ship,entry.slot)==='Ready')?'Weapon ready':remaining?'Reload '+remaining:'Too hot';
-    text('Heat '+ship.heat+'/'+shipHeatCapacity(ship)+' · '+next,218,'#b8a487','10px Courier New');
-  } else text('No live sensor contact',171,'#b8a487');
-  text('WEAPON MOUNTS',238,'#a8d8f8','bold 13px Courier New');
-  if(!weapons.length) text('No weapons installed',259,'#b8a487');
-  weapons.forEach((entry,index)=>{
-    const y=246+index*29;
-    const selected=index===combat.weapon;
-    ctx.fillStyle=selected?'#263d4c':'#17242f'; ctx.fillRect(textX,y,textWidth,26);
-    const status=shipCombatWeaponStatus(combat,entry);
-    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf'; ctx.font='bold 12px Courier New';
-    ctx.fillText((index+1)+'  '+entry.weapon.name,textX+6,y+11,textWidth-12);
-    ctx.font='10px Courier New'; ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';
-    ctx.fillText('H'+entry.weapon.heat+' · R'+entry.weapon.range+' · '+status,textX+6,y+22,textWidth-12);
-    canvasMenuTarget(textX,y,textWidth,26,()=>selectShipCombatWeapon(index));
-  });
-  const y=348;
-  text('COMMS LOG',y,'#a8d8f8','bold 13px Courier New');
-  if(combat.logFontSize>9) canvasMenuButton('−',x+width-60,y-16,()=>adjustCombatLogFont(-1));
-  if(combat.logFontSize<16) canvasMenuButton('+',x+width-32,y-16,()=>adjustCombatLogFont(1));
-  const font=combat.logFontSize+'px Courier New', lineH=combat.logFontSize+3;
-  ctx.font=font; ctx.textAlign='left';
-  let logY=y+22;
-  for(const message of combat.log){
-    logY=drawWrappedText(message,textX,logY,textWidth,lineH,Math.floor((443-logY)/lineH)+1)+3;
-    if(logY>443) break;
+  const heading=(value,y)=>{text(value,y,'#a8d8f8','bold 13px Courier New');return y+20;};
+  const meter=(label,value,max,y,color,right='')=>{
+    text(label+' '+value+'/'+max,y,color);
+    if(right){
+      ctx.fillStyle='#8e9daa';ctx.font='11px Courier New';ctx.textAlign='right';
+      ctx.fillText(right,x+width-10,y);
+    }
+    ctx.fillStyle='#171e27';ctx.fillRect(textX,y+5,textWidth,3);
+    ctx.fillStyle=color;ctx.fillRect(textX,y+5,Math.round(textWidth*Math.max(0,Math.min(1,max?value/max:0))),3);
+    return y+25;
+  };
+  ctx.fillStyle='#0c111a';ctx.fillRect(x,12,width,460);
+  let y=heading('YOUR SHIP',30);
+  y=meter('Hull',G.ship.hp,G.ship.maxHp,y,'#9acde8');
+  const shields=shipShieldReadout();
+  if(shields){
+    y=meter('Shields',shields.charge,shields.capacity,y,'#81c5df');
+    text(shields.state+(shields.damaged?' · damaged':''),y-8,'#8eaabb','11px Courier New');
+    y+=13;
   }
-  ctx.fillStyle='#7e90a3'; ctx.font='12px Courier New';
-  ctx.fillText('Move: compass/keys · Wait: reload + extra cooling · Boost: B · Core repairs: F3',12,472);
+  y=meter('Heat',G.ship.heat,shipHeatCapacity(),y,G.ship.heat>=shipHeatCapacity()*0.8?'#f0ad76':'#aebdd0','Cooling '+shipCoolingRate()+'/turn');
+  const faults=[];
+  if(effectiveEngineRating()===0) faults.push('Engines offline');
+  else if(G.fuel<=0 && !DEBUG.infiniteFuel) faults.push('No fuel for thrust');
+  if(effectiveSensorRange()===0) faults.push('Sensors offline');
+  if(shipWeaponPowerUsed()>shipReactorOutput()) faults.push('Power shortfall');
+  if(shipSystemCondition(G.ship,'cooling')===0) faults.push('Cooling failed');
+  ctx.font='11px Courier New';ctx.fillStyle='#edaa77';ctx.textAlign='left';
+  if(faults.length) y=drawWrappedText(faults.join(' · '),textX,y,textWidth,13,2)+3;
+
+  y=heading('SELECTED TARGET',y+1);
+  if(target && shipCombatContactVisible(combat,target)){
+    const ship=target.ship, natural=!!ship._homeCluster;
+    ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
+    y=drawWrappedText(ship.name,textX,y,textWidth,14,2)+2;
+    text('Hull '+ship.hp+'/'+ship.maxHp,y);y+=16;
+    const targetShields=shipShieldReadout(ship);
+    if(targetShields){text('Shields '+targetShields.charge+'/'+targetShields.capacity+' · '+targetShields.state,y,'#8eaabb','11px Courier New');y+=16;}
+    text('Distance '+shipCombatDistance(combat.player,target)+' · '+(natural?'Ram range 1':'Weapon range '+shipCombatEnemyRange(target)),y);y+=16;
+    const status=shipCombatEnemyActionStatus(combat,target);
+    text(status,y,status==='Can fire'||status==='Can ram'?'#f0a9a6':'#aebdd0');y+=16;
+    if(!natural && actorShipCombatWeapons(ship).length){text('Heat '+ship.heat+'/'+shipHeatCapacity(ship),y,'#8e9daa','11px Courier New');y+=16;}
+  } else {text('No live sensor contact',y,'#b8a487');y+=16;}
+
+  y=heading('WEAPON MOUNTS',y+1);
+  if(!weapons.length) text('No weapons installed',y,'#b8a487');
+  weapons.forEach((entry,index)=>{
+    const selected=index===combat.weapon, status=shipCombatWeaponStatus(combat,entry);
+    ctx.fillStyle=selected?'#1b3040':'#111b25';ctx.fillRect(textX,y,textWidth,34);
+    const label=combatStatusText(status);
+    ctx.font='11px Courier New';const statusWidth=ctx.measureText(label).width;
+    ctx.fillStyle=selected?'#e2f2ff':'#9fafbf';ctx.font='bold 12px Courier New';ctx.textAlign='left';
+    ctx.fillText((index+1)+' '+entry.weapon.name,textX+6,y+13,textWidth-statusWidth-20);
+    ctx.font='11px Courier New';ctx.fillStyle=status==='Ready'?'#89dfaa':'#d6b482';ctx.textAlign='right';
+    ctx.fillText(label,textX+textWidth-6,y+13);
+    ctx.textAlign='left';ctx.fillStyle='#94a8ba';
+    ctx.fillText(entry.weapon.minDmg+'–'+entry.weapon.maxDmg+' dmg · Range '+entry.weapon.range+' · Heat '+entry.weapon.heat,textX+6,y+27,textWidth-12);
+    canvasMenuTarget(textX,y,textWidth,34,()=>selectShipCombatWeapon(index));
+    y+=37;
+  });
+  const selected=weapons[combat.weapon]?.weapon;
+  if(selected) text('Peak heat '+(G.ship.heat+selected.heat)+'/'+shipHeatCapacity()+' · Reload '+selected.cooldown+' action'+(selected.cooldown===1?'':'s'),y+10,'#8e9daa','11px Courier New');
 }

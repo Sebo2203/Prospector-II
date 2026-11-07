@@ -113,10 +113,16 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     });
     const scan=await page.evaluate(()=>{const before=[G.turn,G.fuel];doScan();return [G.turn-before[0],G.fuel-before[1]];});
     assert.deepEqual(scan,[0,0],'offline scanning is blocked before charging time or fuel');
-    await systemsButton.click();
-    assert.ok(await dialog.isVisible(),'orbital play exposes the same mouse-accessible board');
+    assert.equal(await systemsButton.count(),0,'orbital context omits the generic F3 control');
+    await page.keyboard.press('F3');
+    assert.ok(await dialog.isVisible(),'F3 still opens the board from orbit');
     await page.screenshot({path:artifactPath('Ship-systems.png')});
     await page.keyboard.press('Escape');
+
+    await page.evaluate(()=>{G.selPlanet=0;doInteract();});
+    assert.equal(await page.evaluate(()=>G.mode),'planet');
+    assert.equal(await systemsButton.count(),0,'planetside context omits the generic F3 control');
+    await page.keyboard.press('F3');assert.ok(await dialog.isVisible());await page.keyboard.press('Escape');
 
     // A fresh real career exercises the shared combat and core rules.
     await page.evaluate(()=>initGame('ATTACK_CORVETTE','Mount QA','Mount QA'));

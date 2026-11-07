@@ -19,11 +19,12 @@ function renderShipSystems(){
   const engineer=G.crew.some(crew=>crew.hp>0 && crew.role==='engineer');
   const kits=G.inventory.filter(item=>item.usable==='repair_kit').length;
   const rows=Object.entries(SHIP_SYSTEMS).map(([id,definition])=>{
+    if(id==='shields' && !stats.shields) return '';
     const component=systems[id], bypass=Math.max(0,component.bypassUntil-G.turn);
     let effect='Installed '+(stats[definition.stat]??1)+' · Effective '+shipSystemRating(G.ship,id);
     if(id==='reactor') effect='Output '+shipReactorOutput()+' · Fitted demand '+shipWeaponPowerUsed();
     if(id==='cooling') effect='Cooling '+shipCoolingRate()+'/turn · Heat capacity '+shipHeatCapacity();
-    if(id==='shields') effect='Charge '+Math.floor(G.ship.shieldCharge)+' / '+shipShieldCapacity()+' · Recharge 3/turn after 3 turns without a hit';
+    if(id==='shields'){const shield=shipShieldReadout();effect='Charge '+shield.charge+' / '+shield.capacity+' · '+shield.state;}
     if(id==='sensors') effect='Installed '+stats.sensorRange+' · Effective '+effectiveSensorRange();
     if(id==='engine') effect='Installed '+stats.engineRating+' · Effective '+effectiveEngineRating();
     if(id==='sensors' && effectiveSensorRange()===0) effect='OFFLINE · Existing charts retained; new terrain and live contacts hidden';

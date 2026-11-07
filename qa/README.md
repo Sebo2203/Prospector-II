@@ -68,6 +68,7 @@ The full set runs sequentially in isolated processes, with a five-minute ceiling
 | `previews` | Galaxy sample art/boarding, ASCII, and 80 pixel comparisons with the preserved pre-extraction orbital renderer |
 | `ships` | 384 ship/direction/background/opacity combinations, transparency, subtle radio glyphs over space/nebulae, role/combat art, sensor concealment and ASCII |
 | `ship-previews` | Native ship-selection and hull-change screenshots, old/new ship compositing comparison |
+| `combat-ui` | Shared sidebar combat history, schema-2 local-log recovery, equipment-aware shield states, action/aiming readiness, disabled controls, natural/unarmed target descriptions, shortcut deduplication, combat reference and crowded readout fit |
 | `ship-systems` | Static I → SHIP inspection access, passive core readouts, blank unfitted shields, context cleanup, stranded inventory repair, component damage and engineer mitigation, blind chart/scan/target boundaries, kit repair and bypass expiry, pointer boosts, heat and independent reloads, shield delay, retreat/load continuity, disabled NPC sensors, SOS drive recovery, fitting/upgrades and native debug damage controls |
 | `turns` | Oxygen, daylight and crew status during surface fire and waiting, paid orbital scans, and one turn per casino event |
 | `morale` | Actual encouragement rolls, temporary boost, failure, cooldown enforcement, save/load, exact expiry, repeated attempts and zero base morale |

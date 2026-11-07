@@ -85,7 +85,7 @@ document.addEventListener('keydown', e=>{
 
     if(!G.showOptions && (e.key==='-'||e.key==='='||e.key==='+') && !e.ctrlKey && !e.metaKey){
       const step = e.key==='-'?-1:1;
-      if(G.mode==='shipcombat') adjustCombatLogFont(step); else adjustLogFont(step);
+      adjustLogFont(step);
       return;
     }
 

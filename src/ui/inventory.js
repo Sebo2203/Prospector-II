@@ -689,6 +689,7 @@ function drawInventoryOverlay(){
         return false;
       }
       if(fid==='combat'){
+        if(entry.category==='combat') return true;
         // Explicit combat-tagged messages we now pipe from doShipFire use pirate name in brackets
         if(/^\[.+\] (You fire|They fire|They reject)/.test(entry.msg)) return true;
         // Keyword sweep for everything else combat-related

@@ -133,7 +133,7 @@ function resolveCareerReferences(game){
   const combat = game.shipCombat;
   if(combat){
     if(!Array.isArray(combat.enemies) || !combat.enemies[combat.target] || !combat.player ||
-       !['log','weaponReady','seenTiles','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
+       !['weaponReady','seenTiles','trails','asteroids'].every(key=>Array.isArray(combat[key])) ||
        !Number.isSafeInteger(combat.round) || combat.round<1) throw invalidCareerSave();
     const participants = new Set();
     for(const enemy of combat.enemies){
@@ -142,6 +142,18 @@ function resolveCareerReferences(game){
       enemy.ship = actorAt(enemy.collection,enemy.ship);
       validateSavedShipSystems(enemy.ship,game.turn);
     }
+    // Earlier schema-2 builds kept a separate ten-line combat window. Promote
+    // its archived entries once, preserving their original turns and order.
+    if(Array.isArray(combat.log)){
+      const messages=new Set(combat.log);
+      const prefixes=combat.enemies.map(enemy=>'['+enemy.ship.name+'] ');
+      for(const entry of game.log){
+        if(!entry?.archive || typeof entry.msg!=='string') continue;
+        const prefix=prefixes.find(prefix=>entry.msg.startsWith(prefix));
+        if(prefix && messages.has(entry.msg.slice(prefix.length))){delete entry.archive;entry.category='combat';}
+      }
+    }
+    delete combat.log;delete combat.logFontSize;
     combat.pirate = combat.enemies[combat.target].ship;
     combat.weaponReady=game.ship.weaponReadyAt;
     combat.playerShields=game.ship.shieldCharge;

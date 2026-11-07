@@ -6,11 +6,17 @@
 function renderContextBar(){
   const bar = document.getElementById('ctx-bar');
   const btns = [];
+  document.getElementById('combat-shortcuts').hidden=G.mode!=='shipcombat';
+  document.getElementById('travel-shortcuts').hidden=G.mode==='shipcombat';
+  document.getElementById('combat-wait-key').textContent=codeLabel((OPTIONS.keybinds||DEFAULT_KEYBINDS).wait);
 
-  const btn = (key,label,cls='',action=key==='ESC'?'Escape':key==='Enter'?key:/^[A-Z0-9]$/.test(key)?key.toLowerCase():null) => {
+  const menuKeys=new Set(canvasMenuTargets.filter(target=>target.shortcut && target.mode===G.mode &&
+    (G.mode!=='inventory' || target.view===G._viewTab)).map(target=>target.shortcut));
+  const btn = (key,label,cls='',action=key==='ESC'?'Escape':key==='Enter'?key:/^[A-Z0-9]$/.test(key)?key.toLowerCase():null,disabled=false) => {
+    if(action && menuKeys.has(action.length===1?action.toLowerCase():action)) return '';
     const content=`<span class="ck">[${htmlEsc(key)}]</span> ${htmlEsc(label)}`;
     return action
-      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control title="${htmlEsc(label)}">${content}</button>`
+      ? `<button type="button" class="ctx-btn ${cls}" data-game-key="${htmlEsc(action)}" data-menu-control title="${htmlEsc(label)}" ${disabled?'disabled aria-disabled="true"':''}>${content}</button>`
       : `<div class="ctx-btn ${cls}">${content}</div>`;
   };
   const arrows = (label,horizontal=false) => {
@@ -73,14 +79,18 @@ function renderContextBar(){
   } else if(G.mode==='shipcombat'){
     const combat = G.shipCombat;
     const entry = shipCombatWeapons()[combat.weapon];
-    if(entry) btns.push(btn('F','Fire '+entry.weapon.name,'danger'));
+    if(entry){
+      const status=shipCombatWeaponStatus(combat,entry);
+      btns.push(btn('F','Fire '+entry.weapon.name+(status==='Ready'?'':' · '+combatStatusText(status)),'danger','f',status!=='Ready'));
+    }
     else btns.push(btn('!','Unarmed','warn'));
-    btns.push(btn('B','Boost forward','info'));
+    const boost=shipCombatBoostStatus(combat);
+    btns.push(btn('B',boost==='Ready'?'Boost forward 2 · 2 fuel · '+(18+effectiveEngineRating()*2)+' heat':'Boost · '+boost+(boost==='Too hot'?' (+'+(18+effectiveEngineRating()*2)+' heat)':''),'info','b',boost!=='Ready'));
     if(livingShipCombatEnemies(combat).length>1) btns.push(btn('Tab','Next target','info','Tab'));
     if(shipCombatEdge(combat.player)){
       const safe = shipCombatEscapeReady(combat);
       btns.push(btn('R',safe?'Disengage':'Disengage under fire',safe?'info':'warn'));
-    } else btns.push(btn('R','Disengage at map edge','info'));
+    } else btns.push(btn('R','Disengage · Reach map edge','info','r',true));
     if(combat.isNeutralTarget && combat.pirate.type==='patrol'){
       btns.push(btn('H',combat.surrenderWarned?'Confirm arrest':'Surrender to patrol','warn'));
     } else if(!combat.isNeutralTarget && !combat.pirate._homeCluster){
@@ -382,8 +392,6 @@ function renderContextBar(){
     }
     if(G._viewTab==='ship' && G.mode !== 'base' && G.mode !== 'planet' && (G.cargo?.length||0) > 0){
       arrows('Select cargo');
-      if(G._cargoExamine) btns.push(btn('X','Close examine','info'));
-      else btns.push(btn('X','Examine cargo','info'));
       if(G._jettisonConfirm) btns.push(btn('ESC','Cancel','info'));
     }
     btns.push(btn('ESC','Close','info'));
@@ -397,7 +405,7 @@ function renderContextBar(){
   }
   if(!G.dead && !G.retired && !G.showOptions && !G.dialogue && !BARTER.active &&
      !G.examine && !G.rangeTarget && !G._itemAimMode && !G._voidPrompt &&
-     G.mode!=='galaxy' && G.mode!=='inventory'){
+     G.mode==='shipcombat'){
     btns.push(btn('F3','Ship systems','routine','F3'));
   }
   bar.innerHTML = btns.join('');

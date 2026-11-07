@@ -18,7 +18,7 @@ Use **Shift+Z** to dive or surface, **Shift+O** to refill oxygen at the ship, an
 
 Ship encounters open a turn-based combat map. Nearby pirates or hostile patrols can fight as a group of up to four ships. Use movement keys or the compass to fly one tile. Asteroids are optional cover and block both movement and shots. Amber exhaust is hazardous to any ship that crosses it. Stronger engines leave more damaging exhaust that lasts longer.
 
-Click a target or press **Tab** to cycle contacts. Click a weapon or use its displayed number to select it, then press **F** or click **Fire**. A second click on the mouse-selected target also fires. The weapon panel shows its range, whether cover blocks the shot, and the remaining cooldown. Moving and waiting both give weapons time to reload and let opponents act.
+Click a target or press **Tab** to cycle contacts. Click a weapon or use its displayed number to select it, then press **F** or click **Fire**. A second click on the mouse-selected target also fires. The weapon panel shows damage, range, heat and action readiness, including reload, obstruction, heat and power limits. The selected shot also shows peak heat and its reload duration. Unavailable Fire, Boost and pre-edge Disengage buttons explain the blocking condition; keyboard attempts use the same guards. Moving and waiting both give weapons time to reload and let opponents act. Clear firing lanes are shaded; a green target line means the selected shot is ready, while amber means it is unavailable. Unfitted shields have no combat charge/recharge display. Installed shields show full, delayed, recharging, damaged, failed, unpowered or heat-limited state as applicable. Healthy reactor/sensor diagnostics stay quiet; failures appear in the readout. Natural entities show ram information, and unarmed ships are labelled explicitly.
 
 Normal thrust adds 2 heat and uses no extra fuel inside the arena. **B / Boost forward** moves two clear tiles along your current heading, costs 2 fuel and adds 18 + twice the effective engine rating in heat. Both tiles leave exhaust. Blocked boosts and unavailable shots consume no turn. Waiting provides an extra turn's cooling while opponents still act.
 
@@ -26,7 +26,7 @@ Fly to an edge and use **R** to disengage. Enemies with a clear shot and a ready
 
 ## Mounts, core systems and damage
 
-Open **I → SHIP → Inspect / repair**, **Hangar → Core Systems**, or **F3** to inspect installed ratings, effective performance, integrity, usable tank capacity, heat, power and weapon status. The ship overview shows passive core conditions and effective values, with a blank slot when shields are not fitted. Use its static **Inspect / repair [F3]** button for the detailed board. Galaxy and inventory context bars omit the duplicate F3 control; the shortcut remains available. Jettison stays in the ship menu and on **J**, without a duplicate context button. Native buttons support mouse, Tab and Enter; Escape closes the board. Inspecting is free.
+Open **I → SHIP → Inspect / repair**, **Hangar → Core Systems**, or **F3** to inspect installed ratings, effective performance, integrity, usable tank capacity, heat, power and weapon status. The ship overview shows passive core conditions and effective values, with a blank slot when shields are not fitted. Use its static **Inspect / repair [F3]** button for the detailed board. The F3 context control appears during combat; ordinary galaxy, orbital and surface views use the shortcut or the ship menu. Explicit menu buttons suppress context buttons with the same shortcut, including cargo examination and Close. Essential hints remain on the primary controls and in the collapsed Shortcuts reference. Jettison stays in the ship menu and on **J**, without a duplicate context button. Native buttons support mouse, Tab and Enter; Escape closes the board. Inspecting is free.
 
 | Hull | Mounts available / maximum | Mount sizes in order | Base reactor | Cooling / turn | Heat capacity |
 | --- | --- | --- | ---: | ---: | ---: |
@@ -70,7 +70,7 @@ Talk to a crew member and choose **Check morale → Issue encouragement** to att
 
 Open **I → LOG**. The default **6 / RECORDS** view starts with active science contracts, known open rescue leads, and pending deliveries. Survey totals, known civilization relationships, closed incidents, and history follow. Major discoveries and rescue events also appear in ALL and MISSION. The log keeps known discoveries in the save. Repeated scans update the existing finding. Use **J** in the ship inventory tab to jettison cargo.
 
-The sidebar log carries routine updates, NPC speech, and radio traffic. The full-width banner is for immediate action, such as critical fuel or oxygen, a rescue decision, armed explosives, or an adjacent singularity.
+The sidebar log carries combat events, routine updates, NPC speech, and radio traffic. Combat has no separate log window or font controls; its events also stay in LOG history. The normal sidebar controls and +/− keys adjust log text during combat. The collapsed Shortcuts reference switches to combat controls during an encounter. The full-width banner is for immediate action, such as critical fuel or oxygen, a rescue decision, armed explosives, or an adjacent singularity.
 
 ## Science work and survey sales
 

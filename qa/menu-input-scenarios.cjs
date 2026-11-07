@@ -191,7 +191,7 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     await page.locator('#persist-bar').screenshot({path:artifactPath('Shortcut-legend.png')});
     assert.equal(await legend.locator('button,a,[tabindex],[onclick]').count(),0);
     for(const key of ['I','O']){
-      const label=legend.locator('.ck').filter({hasText:new RegExp('^'+key+'$')});
+      const label=legend.locator('.ck:visible').filter({hasText:new RegExp('^'+key+'$')});
       const color=await label.evaluate(el=>getComputedStyle(el).color);
       await label.hover();
       assert.equal(await label.evaluate(el=>getComputedStyle(el).color),color);
@@ -426,14 +426,15 @@ const {chromium,gameUrl,artifactPath} = require('./runtime.cjs');
     const combat = await page.evaluate(()=>[G.turn,G.ship.hp,G.shipCombat.pirate.hp]);
     await click(290,455);
     assert.deepEqual(await page.evaluate(()=>[G.turn,G.ship.hp,G.shipCombat.pirate.hp]),combat);
-    const font = await page.evaluate(()=>G.shipCombat.logFontSize);
+    const font = await page.locator('#log-list .log-entry').first().evaluate(element=>parseFloat(getComputedStyle(element).fontSize));
     await press('=');
-    assert.equal(await page.evaluate(()=>G.shipCombat.logFontSize),font+1);
+    assert.equal(await page.locator('#log-list .log-entry').first().evaluate(element=>parseFloat(getComputedStyle(element).fontSize)),font+1);
     await page.evaluate(()=>{
       const fire=doShipFire;
       window.qaFireCount=0;
       doShipFire=()=>{ qaFireCount++; fire(); };
     });
+    await page.evaluate(()=>{const combat=G.shipCombat;combat.asteroids=[];combat.enemies[0].x=combat.player.x+2;combat.enemies[0].y=combat.player.y;renderAll();});
     await action(/Fire Pulse Laser/).click();
     assert.equal(await page.evaluate(()=>qaFireCount),1);
 

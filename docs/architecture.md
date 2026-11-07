@@ -38,6 +38,12 @@ The root keeps a 1400×720 logical layout. `src/ui/scaling-and-compass.js` fits 
 
 The tactical arena uses local rounds for exhaust. Committed actions also advance the career clock while the encounter resolves locally. Ship reloads use absolute career-turn deadlines, while heat and shields tick through `finishCareerTurn`. Galaxy movement keeps its existing travel and wait rules.
 
+### Shared menu controls and combat presentation
+
+`canvasMenuButton` records its displayed shortcut and current view on the transient canvas hit area. The context bar suppresses an action already present as an explicit button in that view. This removes duplicate controls while retaining the shortcut on the primary control. Fire and Boost readiness come from the same queries used by the action guards; unavailable context buttons are disabled with the reason visible. The tactical aiming line uses the actual selected shot status.
+
+Combat events use ordinary `addLog` entries with category `combat`, and appear in the normal sidebar and LOG history. There is no separate active combat log or font size. Schema-2 encounters from earlier builds are accepted: matching archived local-log entries are promoted to the sidebar once, retaining their order and original turns, and the obsolete local log fields are dropped. Actor identity, clocks and weapon deadlines are unchanged. Tactical movement/speed rules are unchanged by this presentation pass.
+
 ### Ship equipment
 
 `src/ships/systems.js` owns hull mount profiles, installed-versus-effective core ratings, power allocation, heat, shields, critical damage and engineer repairs. Nominal player equipment stays in `G.shipStats`; the physical six-core integrity/bypass map, heat, shield charge/recharge deadline, system clock and per-mount `weaponReadyAt` deadlines live on `G.ship`. NPCs use the same persistent fields and a generated `systemStats`/weapon loadout on their authoritative roster actor. Encounters retain display aliases, synchronized from that actor; loading rebinds reload-array aliases and actor IDs.
