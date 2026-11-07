@@ -7,47 +7,10 @@ function drawShipCombatOverlay(){
   const selected = combat.enemies[combat.target];
   const living = livingShipCombatEnemies(combat);
   const weapons = shipCombatWeapons();
-  const activeWeapon = weapons[combat.weapon]?.weapon;
   const px = point=>map.x+point.x*TS, py = point=>map.y+point.y*TS;
-  ctx.fillStyle='#090c13'; ctx.fillRect(0,0,canvasWidth,canvasHeight);
-  ctx.fillStyle='#050811'; ctx.fillRect(map.x,map.y,w,h);
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(map.x,map.y,w,h);
-  ctx.clip();
-  if(activeWeapon && effectiveSensorRange()>0){
-    const range=activeWeapon.range;
-    const available=shipWeaponAvailability(G.ship,weapons[combat.weapon].slot)==='Ready';
-    ctx.fillStyle=available?'#101c2a':'#11151d';
-    for(let y=0;y<map.height;y++) for(let x=0;x<map.width;x++){
-      const point={x,y}, occupant=living.find(enemy=>enemy.x===x && enemy.y===y);
-      if(shipCombatDistance(player,point)<=range && shipCombatShotClear(combat,player,occupant||point)){
-        ctx.fillRect(px(point),py(point),TS,TS);
-      }
-    }
-  }
-  ctx.strokeStyle='#202734'; ctx.lineWidth=1;
-  ctx.beginPath();
-  for(let x=1;x<map.width;x++){
-    ctx.moveTo(map.x+x*TS,map.y); ctx.lineTo(map.x+x*TS,map.y+h);
-  }
-  for(let y=1;y<map.height;y++){
-    ctx.moveTo(map.x,map.y+y*TS); ctx.lineTo(map.x+w,map.y+y*TS);
-  }
-  ctx.stroke();
-  ctx.restore();
-
-  for(const trail of combat.trails){
-    if(!DEBUG.fullVision && (effectiveSensorRange()===0 || shipCombatDistance(player,trail)>6+effectiveSensorRange()*3)) continue;
-    const x=px(trail), y=py(trail);
-    ctx.fillStyle='#563322'; ctx.fillRect(x+2,y+2,TS-4,TS-4);
-    ctx.fillStyle='#e09a52'; ctx.font='bold 14px Courier New';
-    ctx.fillText(String(trail.damage),x+5,y+16);
-    if(!living.some(enemy=>shipCombatDistance(enemy,trail)===0)){
-      canvasMenuTarget(x,y,TS,TS,null,{title:'Plasma exhaust · '+trail.damage+' damage · '+(trail.expires-combat.round)+' rounds left'});
-    }
-  }
+  ctx.fillStyle='#03050a';ctx.fillRect(0,0,canvasWidth,canvasHeight);
+  drawShipCombatSpace();
+  drawShipCombatPlasma(combat);
   for(const rock of combat.asteroids){
     if(!DEBUG.fullVision && !combat.seenTiles[rock.y*map.width+rock.x]) continue;
     const x=px(rock), y=py(rock);
@@ -55,12 +18,7 @@ function drawShipCombatOverlay(){
     ctx.fillStyle='#788797'; ctx.fillRect(x+6,y+4,10,4);
     ctx.fillStyle='#252f3a'; ctx.fillRect(x+13,y+13,8,6);
     if(OPTIONS.asciiMode){
-      ctx.fillStyle='#c5ceda'; ctx.fillText('#',x+8,y+16);
-    }
-  }
-  for(let y=0;y<map.height;y++) for(let x=0;x<map.width;x++){
-    if(!DEBUG.fullVision && !combat.seenTiles[y*map.width+x]){
-      ctx.fillStyle='#020409';ctx.fillRect(px({x}),py({y}),TS,TS);
+      ctx.fillStyle='#c5ceda';ctx.font='bold 18px Courier New';ctx.textAlign='left';ctx.fillText('#',x+6,y+18);
     }
   }
   ctx.strokeStyle=shipCombatEscapeReady(combat)?'#87d8a6':shipCombatEdge(player)?'#995c60':'#457661';
@@ -75,12 +33,10 @@ function drawShipCombatOverlay(){
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  ctx.fillStyle='#20495d'; ctx.fillRect(px(player)+2,py(player)+2,TS-4,TS-4);
   drawDirectionalShip(G.shipStats.sprite||'player_ship',px(player),py(player),player.dx,player.dy);
   for(const enemy of living){
     if(!shipCombatContactVisible(combat,enemy)) continue;
     const x=px(enemy), y=py(enemy), ship=enemy.ship;
-    ctx.fillStyle='#501d27'; ctx.fillRect(x+2,y+2,TS-4,TS-4);
     if(ship._homeCluster){
       if(OPTIONS.asciiMode) drawAsciiTile('gas_entity',x,y);
       else DRAW.gas_entity(ctx,x,y,ship.variant);
@@ -90,8 +46,14 @@ function drawShipCombatOverlay(){
     } else {
       drawDirectionalShip('pirate_ship',x,y,enemy.dx,enemy.dy);
     }
-    ctx.strokeStyle=enemy===selected?'#ffe097':'#a44d52';
-    ctx.strokeRect(x+1,y+1,TS-2,TS-2);
+    if(enemy===selected){
+      ctx.strokeStyle='#ffe097';ctx.lineWidth=1;
+      ctx.beginPath();
+      for(const [xx,yy,sx,sy] of [[x+1,y+1,1,1],[x+TS-1,y+1,-1,1],[x+1,y+TS-1,1,-1],[x+TS-1,y+TS-1,-1,-1]]){
+        ctx.moveTo(xx,yy+sy*5);ctx.lineTo(xx,yy);ctx.lineTo(xx+sx*5,yy);
+      }
+      ctx.stroke();
+    }
     canvasMenuTarget(x,y,TS,TS,()=>{
       if(pointerShipCombatAim?.combat===combat && pointerShipCombatAim.enemy===enemy && enemy===selected){
         doShipFire();
@@ -102,6 +64,7 @@ function drawShipCombatOverlay(){
     },{title:ship.name+' · '+ship.hp+' hull · Range '+shipCombatDistance(player,enemy)});
   }
   drawShipCombatReadout(combat,weapons);
+  drawShipCombatNearbyPlasma(combat);
 }
 
 function drawShipCombatReadout(combat,weapons){
@@ -124,6 +87,8 @@ function drawShipCombatReadout(combat,weapons){
   };
   ctx.fillStyle='#0c111a';ctx.fillRect(x,12,width,460);
   let y=heading('YOUR SHIP',30);
+  ctx.font='11px Courier New';ctx.fillStyle='#8e9daa';ctx.textAlign='right';
+  ctx.fillText(shipCombatSensorRange()?'Sensor range '+shipCombatSensorRange():'Sensors offline',x+width-10,30,textWidth-90);
   y=meter('Hull',G.ship.hp,G.ship.maxHp,y,'#9acde8');
   const shields=shipShieldReadout();
   if(shields){
@@ -173,4 +138,69 @@ function drawShipCombatReadout(combat,weapons){
   });
   const selected=weapons[combat.weapon]?.weapon;
   if(selected) text('Peak heat '+(G.ship.heat+selected.heat)+'/'+shipHeatCapacity()+' · Reload '+selected.cooldown+' action'+(selected.cooldown===1?'':'s'),y+10,'#8e9daa','11px Courier New');
+}
+
+// Space and its star field are continuous; neither fog nor weapon range paints tile backgrounds.
+function drawShipCombatSpace(){
+  const map=COMBAT_MAP;
+  let seed=((G.seed||1)^Math.imul(G.ship.x+1,73856093)^Math.imul(G.ship.y+1,19349663))>>>0;
+  for(let i=0;i<38;i++){
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    const x=map.x+2+seed%(map.width*TS-4);
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    const y=map.y+2+seed%(map.height*TS-4);
+    ctx.fillStyle=i%7===0?'#46505d':'#222b38';ctx.fillRect(x,y,1,1);
+  }
+}
+
+function drawShipCombatPlasma(combat){
+  const visible=combat.trails.filter(trail=>shipCombatInSensorRange(combat,trail));
+  const center=point=>({x:COMBAT_MAP.x+point.x*TS+TS/2,y:COMBAT_MAP.y+point.y*TS+TS/2});
+  ctx.save();
+  if(!OPTIONS.asciiMode){
+    ctx.lineCap='round';
+    for(const trail of visible){
+      if(!trail.dx && !trail.dy) continue;
+      const next={x:trail.x+(trail.dx||0),y:trail.y+(trail.dy||0)};
+      const follows=visible.some(other=>other.x===next.x && other.y===next.y) ||
+        (next.x===combat.player.x && next.y===combat.player.y) ||
+        livingShipCombatEnemies(combat).some(enemy=>shipCombatContactVisible(combat,enemy) && enemy.x===next.x && enemy.y===next.y);
+      if(!follows) continue;
+      const from=center(trail),to=center(next);
+      const remaining=Math.max(0,trail.expires-combat.round),life=Math.max(1,trail.damage/2);
+      ctx.globalAlpha=Math.min(1,remaining/life);
+      for(const [width,color] of [[8,'#47220f'],[4,'#9c4016'],[1,'#e78c36']]){
+        ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
+        ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha=1;
+  for(const trail of visible){
+    const life=Math.max(1,trail.damage/2),remaining=Math.max(0,trail.expires-combat.round);
+    const stage=Math.min(3,Math.max(0,Math.floor((1-Math.min(1,remaining/life))*4)));
+    const x=COMBAT_MAP.x+trail.x*TS,y=COMBAT_MAP.y+trail.y*TS;
+    drawSprite('combat_plasma_'+stage,x,y);
+    if(!livingShipCombatEnemies(combat).some(enemy=>enemy.x===trail.x && enemy.y===trail.y)){
+      canvasMenuTarget(x,y,TS,TS,null,{title:'Plasma exhaust · '+trail.damage+' damage · '+remaining+' rounds left'});
+    }
+  }
+  ctx.restore();
+}
+
+function drawShipCombatNearbyPlasma(combat){
+  const player=combat.player,boostEnd={x:player.x+player.dx*2,y:player.y+player.dy*2};
+  const hazards=combat.trails.filter(trail=>shipCombatInSensorRange(combat,trail) &&
+    (shipCombatDistance(player,trail)<=1 || (trail.x===boostEnd.x && trail.y===boostEnd.y)));
+  if(!hazards.length) return;
+  const entries=hazards.map(trail=>{
+    const dx=trail.x-player.x,dy=trail.y-player.y;
+    const direction=Math.abs(dx)>1 || Math.abs(dy)>1?'Boost end':dx===0 && dy===0?'Here':
+      (dy<0?'N':dy>0?'S':'')+(dx<0?'W':dx>0?'E':'');
+    return direction+' '+trail.damage+'/'+Math.max(0,trail.expires-combat.round);
+  });
+  const x=COMBAT_MAP.x+4,y=COMBAT_MAP.y+COMBAT_MAP.height*TS+17;
+  ctx.font='11px Courier New';ctx.textAlign='left';ctx.fillStyle='#bb9778';
+  ctx.fillText('Nearby plasma: direction · damage / rounds remaining',x,y);
+  ctx.fillStyle='#d8ad80';drawWrappedText(entries.join(' · '),x,y+14,COMBAT_MAP.width*TS-8,12,2);
 }

@@ -130,15 +130,23 @@ function shipCombatEnemyRange(enemy){
   return Math.max(0,...actorShipCombatWeapons(enemy.ship).filter(entry=>shipWeaponOnline(enemy.ship,entry.slot)).map(entry=>entry.weapon.range));
 }
 
+function shipCombatSensorRange(ship=G.ship){
+  const rating=effectiveSensorRange(ship);
+  return rating>0?6+rating*3:0;
+}
+
+function shipCombatInSensorRange(combat,point){
+  const range=shipCombatSensorRange();
+  return DEBUG.fullVision || (range>0 && shipCombatDistance(combat.player,point)<=range);
+}
+
 function shipCombatContactVisible(combat,enemy){
-  return DEBUG.fullVision || (effectiveSensorRange()>0 &&
-    shipCombatDistance(combat.player,enemy)<=6+effectiveSensorRange()*3);
+  return shipCombatInSensorRange(combat,enemy);
 }
 
 function updateShipCombatSensors(combat){
-  const range=effectiveSensorRange()>0?6+effectiveSensorRange()*3:0;
   for(let y=0;y<COMBAT_MAP.height;y++) for(let x=0;x<COMBAT_MAP.width;x++){
-    if(DEBUG.fullVision || (range && shipCombatDistance(combat.player,{x,y})<=range)) combat.seenTiles[y*COMBAT_MAP.width+x]=true;
+    if(shipCombatInSensorRange(combat,{x,y})) combat.seenTiles[y*COMBAT_MAP.width+x]=true;
   }
 }
 
@@ -151,7 +159,7 @@ function syncShipCombatSystems(combat){
 }
 
 function shipCombatEnemyThreat(combat,enemy){
-  return (enemy.ship._homeCluster || (effectiveSensorRange(enemy.ship)>0 && shipCombatDistance(enemy,combat.player)<=6+effectiveSensorRange(enemy.ship)*3)) &&
+  return (enemy.ship._homeCluster || (effectiveSensorRange(enemy.ship)>0 && shipCombatDistance(enemy,combat.player)<=shipCombatSensorRange(enemy.ship))) &&
     shipCombatDistance(enemy,combat.player)<=shipCombatEnemyRange(enemy) &&
     shipCombatShotClear(combat,enemy,combat.player);
 }
@@ -186,7 +194,7 @@ function shipCombatPlasma(combat,point){
 function moveShipCombatActor(combat,actor,to,engine){
   if(engine>0){
     const old = shipCombatPlasma(combat,actor);
-    const trail = {x:actor.x,y:actor.y,damage:engine*2,expires:combat.round+engine+1};
+    const trail = {x:actor.x,y:actor.y,dx:to.x-actor.x,dy:to.y-actor.y,damage:engine*2,expires:combat.round+engine+1};
     if(old) Object.assign(old,trail);
     else combat.trails.push(trail);
   }
@@ -277,7 +285,7 @@ function doShipFire(){
 
 function moveShipCombatEnemy(combat,enemy){
   if(!enemy.ship._homeCluster && (effectiveEngineRating(enemy.ship)===0 || effectiveSensorRange(enemy.ship)===0)) return;
-  const sight=6+effectiveSensorRange(enemy.ship)*3;
+  const sight=shipCombatSensorRange(enemy.ship);
   if(shipCombatDistance(enemy,combat.player)<=sight) enemy.lastSeenPlayer={x:combat.player.x,y:combat.player.y};
   const destination=enemy.lastSeenPlayer;
   if(!destination) return;

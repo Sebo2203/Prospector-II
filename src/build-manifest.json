@@ -16,6 +16,7 @@
     "src/ui/canvas-and-messages.js",
     "src/assets/sprites.js",
     "src/assets/ship-sprites.js",
+    "src/assets/combat-sprites.js",
     "src/rendering/sprite-loader.js",
     "src/rendering/ship-art.js",
     "src/rendering/station-art.js",

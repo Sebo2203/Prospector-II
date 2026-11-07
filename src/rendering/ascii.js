@@ -1,4 +1,8 @@
 const ASCII = {
+  combat_plasma_0: {ch:'*',bg:null,fg:'#ffdd88'},
+  combat_plasma_1: {ch:'*',bg:null,fg:'#ffbb55'},
+  combat_plasma_2: {ch:'*',bg:null,fg:'#ee8833'},
+  combat_plasma_3: {ch:'·',bg:null,fg:'#aa5522'},
   // Galaxy
   player_ship:    { ch:'?', bg:'#04040c', fg:'#aaddff' },
   ship_corvette:  { ch:'?', bg:'#04040c', fg:'#ff8866' },

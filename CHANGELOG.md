@@ -23,6 +23,16 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.58 gives tactical combat an empty-space presentation
+
+Released on `experiment/expedition-legacy`.
+
+- Removed the combat grid, tiled weapon-range shading, rectangular fog fills and colored ship-cell backgrounds. The arena now uses continuous dark space with sparse fixed stars and selected-target corner brackets. Targeting readiness and the arena's disengagement boundary remain visible.
+- Clarified the reported range discrepancy: the former lit area was selected-weapon reach with clear firing lanes, not sensors. The readout now states actual sensor range separately from mount range. Ships and live exhaust use one shared current-sensor predicate; charted asteroid positions remain known. Sensor formulas, weapon reach and target rules are unchanged.
+- Replaced numeric exhaust cells with the original Prospector R197 plasma sprites, imported from its retained unmodified space atlas with original credits/notice. Exact magenta becomes alpha; other source pixels are preserved. Existing damage and expiry determine the fade sprite; movement direction supports connecting glow. Nearby damage/lifetime values remain available without hover in a directional summary, including the boost destination. ASCII uses warm exhaust symbols.
+- Validation: all 56 repository tests and 22 headless Edge suites passed. The new source-asset test verifies atlas hash, pixel identity/transparency and reproducibility. The combat-space scenario covers absence of tiled fills, contact/exhaust culling after sensor damage despite chart history, original fade sprites, hazard information, no rendering RNG or state changes, and sprite/ASCII presentation at two window sizes. Existing combat, core, repair, save/load and gameplay scenarios passed; screenshots were inspected. Human aesthetic approval and combat balance remain playtest work.
+- Saves: schema 2 unchanged. New trail segments record direction for presentation; no migration was added. Hull/core damage, exhaust strength/lifetime, heat, reloads, turn costs and NPC speed are unchanged. [Original art and reproduction](docs/art-direction.md#tactical-space-and-original-plasma-art)
+
 ## 2026-11-07 — 0.28 experimental.57 integrates Ship Systems into its parent menus
 
 Released on `experiment/expedition-legacy`.

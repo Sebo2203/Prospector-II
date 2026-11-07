@@ -1,7 +1,7 @@
 const IMG = {};
 function loadSprites(){
   return new Promise(resolve => {
-    const sources={...SPRITES_B64,...SHIP_SPRITES_B64};
+    const sources={...SPRITES_B64,...SHIP_SPRITES_B64,...COMBAT_SPRITES_B64};
     const keys = Object.keys(sources);
     let loaded = 0;
     keys.forEach(k => {
