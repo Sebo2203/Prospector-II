@@ -58,7 +58,7 @@ function doFireAtNeutral(ns){
   const wasHostile = !!ns.hostile;
   harmStationReputation(ns.type==='patrol' ? 35 : 20, 'attacked '+ns.name);
   if(ns.type==='patrol') ns.hostile = true;
-  startShipCombat(ns);
+  startShipCombat(ns,true);
   ns._wasHostileAtEngagement = wasHostile;
 }
 
@@ -116,8 +116,15 @@ function isPirateSatisfied(pirate){
   return !!(pirate && pirate.satisfiedUntil && G.turn < pirate.satisfiedUntil);
 }
 
-function startShipCombat(pirate){
+const SHIP_DISENGAGEMENT_TURNS = 5;
+
+function shipDisengagementActive(ship){
+  return G.turn < (ship.disengagedUntil || 0);
+}
+
+function startShipCombat(pirate,initiatedByPlayer=false){
   if(!pirate || G.mode==='shipcombat') return;
+  if(!initiatedByPlayer && shipDisengagementActive(pirate)) return;
   if(isPirateSatisfied(pirate)){
     addLog(pirate.name+' keeps its distance. The payoff is still fresh.','li');
     renderAll();
@@ -127,7 +134,7 @@ function startShipCombat(pirate){
   const isNeutralTarget = collection==='neutralShips';
   const nearby = collection==='pirates' || (isNeutralTarget && pirate.type==='patrol')
     ? (G[collection]||[]).filter(ship=>ship!==pirate && ship.alive!==false &&
-      (ship.hp??1)>0 && shipCombatDistance(ship,pirate)<=1 &&
+      (ship.hp??1)>0 && !shipDisengagementActive(ship) && shipCombatDistance(ship,pirate)<=1 &&
       (isNeutralTarget ? ship.type==='patrol' && ship.hostile : !isPirateSatisfied(ship))).slice(0,3)
     : [];
   const ships = [pirate,...nearby];
@@ -304,6 +311,9 @@ function doShipRetreat(){
       if(shipCombatEnemyCanFire(combat,enemy)) fireShipCombatEnemy(combat,enemy);
       if(G.dead){ renderAll(); return; }
     }
+  }
+  for(const {ship} of livingShipCombatEnemies(combat)){
+    ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;
   }
   G.shipCombat = null;
   G.mode = 'galaxy';

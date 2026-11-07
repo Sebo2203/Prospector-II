@@ -64,7 +64,7 @@ function moveGasEntities(){
     }
 
     // ── Chase: player in nebula and within 6 tiles ─────────────────────────────
-    if(playerInNebula && dist <= 6){
+    if(playerInNebula && dist <= 6 && !shipDisengagementActive(ge)){
       ge._chaseTurns = (ge._chaseTurns||0) + 1;
       const {mx,my} = stepToward(ge.x,ge.y,G.ship.x,G.ship.y);
       tryMoveNebula(ge, mx, my);
@@ -86,7 +86,7 @@ function moveGasEntities(){
 
   // Check if any gas entity has reached the player tile → initiate combat
   if(playerInNebula){
-    const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y);
+    const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y && !shipDisengagementActive(ge));
     if(arrived && G.mode==='galaxy'){
       addLog(arrived.name+' ENGULFS your ship, attempting to devour the hull!','lc');
       startShipCombat(arrived);
@@ -203,7 +203,7 @@ function movePirates(){
     let isChasing = false;
     const satisfied = isPirateSatisfied(p);
 
-    if(satisfied){
+    if(satisfied || shipDisengagementActive(p)){
       p._chaseTurns = 0;
       p._gaveUp = 0;
       if(p.pirateType==='roamer'){

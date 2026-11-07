@@ -101,9 +101,9 @@ function doWaitGalaxy(){
   movePirates();
   moveGasEntities();
   tickNpcStranded();
-  const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
+  const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y&&!shipDisengagementActive(p));
   if(pirateHere && !DEBUG.shipInvisible){ startShipCombat(pirateHere); return; }
-  const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===G.ship.x&&ns.y===G.ship.y);
+  const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===G.ship.x&&ns.y===G.ship.y&&!shipDisengagementActive(ns));
   if(hostilePatrolHere && !DEBUG.shipInvisible){ startShipCombat(ensureNeutralCombatStats(hostilePatrolHere)); return; }
   renderAll();
 }

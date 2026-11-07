@@ -32,7 +32,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     }
     stats.push({name,transparent,preserved});
    }
-   const career=JSON.stringify(G);debugEnterPalette('galaxy');
+   const career=serializeCareer(G);debugEnterPalette('galaxy');
    const original=drawDerelictStation;let wreckCalls=0;
    drawDerelictStation=(...args)=>{wreckCalls++;return original(...args);};
    try{
@@ -42,7 +42,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
     }
     OPTIONS.asciiMode=true;debugPaletteVisit('galaxy:DERELICT');drawCanvas();OPTIONS.asciiMode=false;
    }finally{drawDerelictStation=original;debugReturnFromPalette();}
-   if(JSON.stringify(G)!==career)throw Error('Palette changed career');
+   if(serializeCareer(G)!==career)throw Error('Palette changed career');
    return {stats,checks:['real alpha and no opaque tile corners','background preserved over space and both nebulae','galaxy and biome derelicts plus Mercy use shared wreck art','native boarding and ASCII retained','exact career restoration'],image:sheet.toDataURL()};
   });
   fs.writeFileSync(artifactPath('Station-art-preview.png'),Buffer.from(report.image.split(',')[1],'base64'));delete report.image;

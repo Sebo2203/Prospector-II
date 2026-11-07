@@ -212,12 +212,12 @@ function tryMove(dx,dy,confirmed){
     }
 
     // Check if we moved onto a pirate tile ? forced combat
-    const pirateHere = G.pirates.find(p=>p.alive&&p.x===nx&&p.y===ny);
+    const pirateHere = G.pirates.find(p=>p.alive&&p.x===nx&&p.y===ny&&!shipDisengagementActive(p));
     if(pirateHere && !DEBUG.shipInvisible){
       startShipCombat(pirateHere);
       return;
     }
-    const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===nx&&ns.y===ny);
+    const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===nx&&ns.y===ny&&!shipDisengagementActive(ns));
     if(hostilePatrolHere && !DEBUG.shipInvisible){
       startShipCombat(ensureNeutralCombatStats(hostilePatrolHere));
       return;

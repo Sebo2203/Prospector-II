@@ -666,7 +666,7 @@ document.addEventListener('keydown', e=>{
     if(e.key==='f'||e.key==='F'){
       if(G.mode==='galaxy'){
         const p=G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-        if(p){ startShipCombat(p); return; }
+        if(p){ startShipCombat(p,true); return; }
         const ns=nearestNeutralTarget(1);
         if(ns){ doFireAtNeutral(ns); return; }
         // Fire on pirate base if standing on it and no live pirate here

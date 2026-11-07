@@ -27,6 +27,11 @@ Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 
 Development on `experiment/expedition-legacy`.
 
+### Tactical withdrawal
+
+- A successful retreat stops surviving opponents from pursuing or automatically restarting combat for the next five career turns. They keep their hostility and damage, and the player can choose to attack again. This addresses a freighter playtest where a Raider Frigate re-engaged after 13 withdrawals.
+- All 47 repository tests and the Edge combat suite passed, including a reload during the pursuit break.
+
 ### World generation and morale
 
 - Aquatic civilizations now have a connected basin next to the default landing site. Settlements and locals spawn inside it, and seabed obstacles stay outside that footprint. Surface and underwater views share the civilization's diplomacy state after a reload. Hostile primitive locals now initialize with their own description.

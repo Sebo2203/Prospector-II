@@ -121,9 +121,16 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
     await page.keyboard.press('r');
     assert.deepEqual(await page.evaluate(()=>[G.mode,G.ship.hp]),['galaxy',retreatHp-4]);
 
+    assert.ok(await page.evaluate(()=>autoSave()));
+    assert.ok(await page.evaluate(()=>loadFromStorage()));
+    assert.deepEqual(await page.evaluate(()=>{
+      const raider=G.pirates[2];
+      startShipCombat(raider);
+      return [G.mode,raider.disengagedUntil-G.turn];
+    }),['galaxy',6],'a retreat prevents instant re-engagement and survives a reload');
     await page.evaluate(()=>{
       G.pirates[2].hp=31;
-      startShipCombat(G.pirates[2]);
+      startShipCombat(G.pirates[2],true);
       G.shipCombat.playerShields=0;
       installSaveSnapshot(parseSaveSnapshot(serializeCareer(G)));
       renderAll();

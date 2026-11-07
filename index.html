@@ -19633,7 +19633,7 @@ function moveNeutralShips(){
       if(ns.hostile){
         const chaseDist = Math.abs(ns.x - G.ship.x) + Math.abs(ns.y - G.ship.y);
         const PATROL_GIVE_UP = 12;
-        if(DEBUG.shipInvisible || chaseDist > PATROL_GIVE_UP){
+        if(DEBUG.shipInvisible || chaseDist > PATROL_GIVE_UP || shipDisengagementActive(ns)){
           const route = ns.patrolRoute;
           if(route && route.length > 0){
             const wp = route[ns.patrolIdx % route.length];
@@ -19741,7 +19741,7 @@ function doStrandedWait(){
   // SOS makes pirates in range more aggressive (treat as if distance halved)
   if(st.sos && !DEBUG.shipInvisible){
     const aggressivePirate = G.pirates.find(p=>{
-      if(!p.alive) return false;
+      if(!p.alive || shipDisengagementActive(p)) return false;
       const dist = Math.abs(p.x-G.ship.x)+Math.abs(p.y-G.ship.y);
       return dist <= 12; // doubled aggression range
     });
@@ -19754,7 +19754,7 @@ function doStrandedWait(){
   }
 
   // Check if any pirate has reached our tile → combat even stranded
-  const pirateArrived = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
+  const pirateArrived = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y&&!shipDisengagementActive(p));
   if(pirateArrived && !DEBUG.shipInvisible){
     addLog(pirateArrived.name+' closes in on your disabled ship!','lc');
     G.stranded = null;
@@ -29566,12 +29566,12 @@ function tryMove(dx,dy,confirmed){
     }
 
     // Check if we moved onto a pirate tile ? forced combat
-    const pirateHere = G.pirates.find(p=>p.alive&&p.x===nx&&p.y===ny);
+    const pirateHere = G.pirates.find(p=>p.alive&&p.x===nx&&p.y===ny&&!shipDisengagementActive(p));
     if(pirateHere && !DEBUG.shipInvisible){
       startShipCombat(pirateHere);
       return;
     }
-    const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===nx&&ns.y===ny);
+    const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===nx&&ns.y===ny&&!shipDisengagementActive(ns));
     if(hostilePatrolHere && !DEBUG.shipInvisible){
       startShipCombat(ensureNeutralCombatStats(hostilePatrolHere));
       return;
@@ -30874,7 +30874,7 @@ function moveGasEntities(){
     }
 
     // ── Chase: player in nebula and within 6 tiles ─────────────────────────────
-    if(playerInNebula && dist <= 6){
+    if(playerInNebula && dist <= 6 && !shipDisengagementActive(ge)){
       ge._chaseTurns = (ge._chaseTurns||0) + 1;
       const {mx,my} = stepToward(ge.x,ge.y,G.ship.x,G.ship.y);
       tryMoveNebula(ge, mx, my);
@@ -30896,7 +30896,7 @@ function moveGasEntities(){
 
   // Check if any gas entity has reached the player tile → initiate combat
   if(playerInNebula){
-    const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y);
+    const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y && !shipDisengagementActive(ge));
     if(arrived && G.mode==='galaxy'){
       addLog(arrived.name+' ENGULFS your ship, attempting to devour the hull!','lc');
       startShipCombat(arrived);
@@ -31013,7 +31013,7 @@ function movePirates(){
     let isChasing = false;
     const satisfied = isPirateSatisfied(p);
 
-    if(satisfied){
+    if(satisfied || shipDisengagementActive(p)){
       p._chaseTurns = 0;
       p._gaveUp = 0;
       if(p.pirateType==='roamer'){
@@ -31164,7 +31164,7 @@ function doFireAtNeutral(ns){
   const wasHostile = !!ns.hostile;
   harmStationReputation(ns.type==='patrol' ? 35 : 20, 'attacked '+ns.name);
   if(ns.type==='patrol') ns.hostile = true;
-  startShipCombat(ns);
+  startShipCombat(ns,true);
   ns._wasHostileAtEngagement = wasHostile;
 }
 
@@ -31222,8 +31222,15 @@ function isPirateSatisfied(pirate){
   return !!(pirate && pirate.satisfiedUntil && G.turn < pirate.satisfiedUntil);
 }
 
-function startShipCombat(pirate){
+const SHIP_DISENGAGEMENT_TURNS = 5;
+
+function shipDisengagementActive(ship){
+  return G.turn < (ship.disengagedUntil || 0);
+}
+
+function startShipCombat(pirate,initiatedByPlayer=false){
   if(!pirate || G.mode==='shipcombat') return;
+  if(!initiatedByPlayer && shipDisengagementActive(pirate)) return;
   if(isPirateSatisfied(pirate)){
     addLog(pirate.name+' keeps its distance. The payoff is still fresh.','li');
     renderAll();
@@ -31233,7 +31240,7 @@ function startShipCombat(pirate){
   const isNeutralTarget = collection==='neutralShips';
   const nearby = collection==='pirates' || (isNeutralTarget && pirate.type==='patrol')
     ? (G[collection]||[]).filter(ship=>ship!==pirate && ship.alive!==false &&
-      (ship.hp??1)>0 && shipCombatDistance(ship,pirate)<=1 &&
+      (ship.hp??1)>0 && !shipDisengagementActive(ship) && shipCombatDistance(ship,pirate)<=1 &&
       (isNeutralTarget ? ship.type==='patrol' && ship.hostile : !isPirateSatisfied(ship))).slice(0,3)
     : [];
   const ships = [pirate,...nearby];
@@ -31410,6 +31417,9 @@ function doShipRetreat(){
       if(shipCombatEnemyCanFire(combat,enemy)) fireShipCombatEnemy(combat,enemy);
       if(G.dead){ renderAll(); return; }
     }
+  }
+  for(const {ship} of livingShipCombatEnemies(combat)){
+    ship.disengagedUntil=G.turn+1+SHIP_DISENGAGEMENT_TURNS;
   }
   G.shipCombat = null;
   G.mode = 'galaxy';
@@ -33581,9 +33591,9 @@ function doWaitGalaxy(){
   movePirates();
   moveGasEntities();
   tickNpcStranded();
-  const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
+  const pirateHere = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y&&!shipDisengagementActive(p));
   if(pirateHere && !DEBUG.shipInvisible){ startShipCombat(pirateHere); return; }
-  const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===G.ship.x&&ns.y===G.ship.y);
+  const hostilePatrolHere = (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.type==='patrol'&&ns.hostile&&ns.x===G.ship.x&&ns.y===G.ship.y&&!shipDisengagementActive(ns));
   if(hostilePatrolHere && !DEBUG.shipInvisible){ startShipCombat(ensureNeutralCombatStats(hostilePatrolHere)); return; }
   renderAll();
 }
@@ -34298,7 +34308,7 @@ document.addEventListener('keydown', e=>{
     if(e.key==='f'||e.key==='F'){
       if(G.mode==='galaxy'){
         const p=G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
-        if(p){ startShipCombat(p); return; }
+        if(p){ startShipCombat(p,true); return; }
         const ns=nearestNeutralTarget(1);
         if(ns){ doFireAtNeutral(ns); return; }
         // Fire on pirate base if standing on it and no live pirate here
