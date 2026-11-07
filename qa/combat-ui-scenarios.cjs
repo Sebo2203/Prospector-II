@@ -16,11 +16,12 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       G.shipCombat.asteroids=[];ship.weaponReadyAt=[G.turn+100];renderAll();
     });
     const readout=()=>page.evaluate(()=>{
-      const text=[],allText=[],lines=[],fill=ctx.fillText,stroke=ctx.stroke;
+      const text=[],allText=[],lines=[],rects=[],fill=ctx.fillText,stroke=ctx.stroke,rect=ctx.fillRect;
       ctx.fillText=function(value,x,y,...rest){allText.push(String(value));if(x>=674)text.push({text:String(value),y});return fill.call(this,value,x,y,...rest);};
+      ctx.fillRect=function(x,y,w,h){rects.push({x,y,w,h,color:this.fillStyle});return rect.call(this,x,y,w,h);};
       ctx.stroke=function(...args){if(ctx.getLineDash().length)lines.push(ctx.strokeStyle);return stroke.apply(this,args);};
-      try{drawCanvas();}finally{ctx.fillText=fill;ctx.stroke=stroke;}
-      return {text:text.map(entry=>entry.text),positions:text,lines,allText};
+      try{drawCanvas();}finally{ctx.fillText=fill;ctx.stroke=stroke;ctx.fillRect=rect;}
+      return {text:text.map(entry=>entry.text),positions:text,lines,allText,rects};
     });
     let view=await readout();
     assert.ok(!view.text.some(text=>/shield|recharg/i.test(text)),'unfitted shields have no combat readout');
@@ -145,6 +146,52 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
       return [...document.querySelectorAll('#ctx-bar button')].every(button=>!keys.has(button.dataset.gameKey));
     }),'explicit menu buttons replace their duplicate context controls');
     await page.keyboard.press('x');assert.match(await page.locator('#sidebar').textContent(),/UI Test Cargo/);
+    // Bars, result colors and the real save/menu/Continue path share a fresh encounter.
+    await page.evaluate(()=>initGame('ATTACK_CORVETTE','Color QA','Color QA'));
+    await page.waitForFunction(()=>G?.shipName==='Color QA' && G.log.some(entry=>entry.msg.includes('Ready for departure')));
+    await page.evaluate(()=>{
+      const enemy={name:'Color Raider',x:G.ship.x,y:G.ship.y,hp:150,maxHp:300,guns:1,atk:6,engineRating:2,shields:1,alive:true,pirateType:'guard'};
+      G.pirates=[enemy];G.installedWeapons=['mass_driver'];startShipCombat(enemy);
+      enemy.shieldCharge=10;enemy.weaponReadyAt=[G.turn+100];
+      const combat=G.shipCombat;combat.asteroids=[];combat.enemies[0].x=combat.player.x+3;combat.enemies[0].y=combat.player.y;renderAll();
+    });
+    view=await readout();
+    const own=view.text.slice(0,view.text.indexOf('SELECTED TARGET'));
+    assert.ok(!own.some(text=>text.startsWith('Hull ')),'the left gauge owns the player hull display');
+    for(const [label,color] of [['Hull 150/300','#e4b98c'],['Shields 10/20','#81c5df']]){
+      const y=view.positions.find(entry=>entry.text===label).y;
+      assert.ok(view.rects.some(rect=>rect.y===y+5 && rect.w===127 && rect.color===color),'selected target has an accurate half-full '+label+' bar');
+    }
+    for(const test of [
+      {side:'player',hit:true,cls:'lg',rgb:'rgb(144, 240, 160)'},
+      {side:'player',hit:false,cls:'ln',rgb:'rgb(145, 154, 162)'},
+      {side:'enemy',hit:false,cls:'ll',rgb:'rgb(255, 224, 144)'},
+      {side:'enemy',hit:true,cls:'lc',rgb:'rgb(240, 144, 144)'}
+    ]){
+      await page.evaluate(test=>{
+        const enemy=G.shipCombat.enemies[0].ship;
+        Math.random=()=>test.hit?0.5:0.999999;
+        G.ship.heat=0;G.ship.weaponReadyAt=[G.turn];enemy.heat=0;
+        enemy.weaponReadyAt=[G.turn+(test.side==='enemy'?1:100)];renderAll();
+      },test);
+      await page.keyboard.press(test.side==='player'?'f':'Space');
+      const entry=await page.evaluate(test=>G.log.find(entry=>test.side==='player'?entry.msg.startsWith('Mass Driver '+(test.hit?'hits':'misses')+' Color Raider'):entry.msg.startsWith('Color Raider fires') && (test.hit?!entry.msg.includes('miss.'):entry.msg.includes('miss.'))),test);
+      assert.equal(entry.cls,test.cls);
+      const node=page.locator('#log-list .log-entry').filter({hasText:entry.msg}).last();
+      assert.equal(await node.evaluate(element=>getComputedStyle(element).color),test.rgb);
+    }
+    const snapshot=()=>page.evaluate(()=>JSON.stringify([G.turn,G.ship.hp,G.fuel,G.credits,G.ship.systems,G.shipCombat.round,G.shipCombat.player,G.shipCombat.trails,G.shipCombat.enemies.map(enemy=>[enemy.ship.hp,enemy.ship.heat,enemy.ship.weaponReadyAt])]));
+    for(const pointer of [false,true]){
+      const before=await snapshot();
+      if(pointer)await page.locator('#game-escape').click();else await page.keyboard.press('Escape');
+      await page.waitForFunction(()=>G===null && !AUTOSAVE_STATE.transition);
+      assert.equal(await page.evaluate(()=>MENU_STATE.screen),'main');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(()=>G?.mode==='shipcombat' && !AUTOSAVE_STATE.transition && !AUTOSAVE_STATE.loading);
+      assert.equal(await snapshot(),before,'Escape saves and resumes the same encounter without disengaging or advancing time');
+      assert.ok(await page.evaluate(()=>['lg','ln','ll','lc'].every(cls=>G.log.some(entry=>entry.cls===cls && entry.category==='combat'))));
+    }
+    await page.screenshot({path:artifactPath('Combat-target-bars-and-colors.png')});
     assert.deepEqual(errors,[]);
     console.log('PASS: shared sidebar combat history, legacy log recovery, truthful shields/actions/aiming, quiet diagnostics, natural and unarmed targets, shortcuts and compact three-mount layout.');
   }finally{await browser.close();}

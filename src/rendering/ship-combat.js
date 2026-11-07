@@ -89,7 +89,6 @@ function drawShipCombatReadout(combat,weapons){
   let y=heading('YOUR SHIP',30);
   ctx.font='11px Courier New';ctx.fillStyle='#8e9daa';ctx.textAlign='right';
   ctx.fillText(shipCombatSensorRange()?'Sensor range '+shipCombatSensorRange():'Sensors offline',x+width-10,30,textWidth-90);
-  y=meter('Hull',G.ship.hp,G.ship.maxHp,y,'#9acde8');
   const shields=shipShieldReadout();
   if(shields){
     y=meter('Shields',shields.charge,shields.capacity,y,'#81c5df');
@@ -111,9 +110,9 @@ function drawShipCombatReadout(combat,weapons){
     const ship=target.ship, natural=!!ship._homeCluster;
     ctx.font='bold 12px Courier New';ctx.fillStyle='#f3dfaa';ctx.textAlign='left';
     y=drawWrappedText(ship.name,textX,y,textWidth,14,2)+2;
-    text('Hull '+ship.hp+'/'+ship.maxHp,y);y+=16;
+    y=meter('Hull',ship.hp,ship.maxHp,y,'#e4b98c');
     const targetShields=shipShieldReadout(ship);
-    if(targetShields){text('Shields '+targetShields.charge+'/'+targetShields.capacity+' · '+targetShields.state,y,'#8eaabb','11px Courier New');y+=16;}
+    if(targetShields)y=meter('Shields',targetShields.charge,targetShields.capacity,y,'#81c5df',targetShields.state);
     text('Distance '+shipCombatDistance(combat.player,target)+' · '+(natural?'Ram range 1':'Weapon range '+shipCombatEnemyRange(target)),y);y+=16;
     const status=shipCombatEnemyActionStatus(combat,target);
     text(status,y,status==='Can fire'||status==='Can ram'?'#f0a9a6':'#aebdd0');y+=16;
@@ -155,27 +154,6 @@ function drawShipCombatSpace(){
 
 function drawShipCombatPlasma(combat){
   const visible=combat.trails.filter(trail=>shipCombatInSensorRange(combat,trail));
-  const center=point=>({x:COMBAT_MAP.x+point.x*TS+TS/2,y:COMBAT_MAP.y+point.y*TS+TS/2});
-  ctx.save();
-  if(!OPTIONS.asciiMode){
-    ctx.lineCap='round';
-    for(const trail of visible){
-      if(!trail.dx && !trail.dy) continue;
-      const next={x:trail.x+(trail.dx||0),y:trail.y+(trail.dy||0)};
-      const follows=visible.some(other=>other.x===next.x && other.y===next.y) ||
-        (next.x===combat.player.x && next.y===combat.player.y) ||
-        livingShipCombatEnemies(combat).some(enemy=>shipCombatContactVisible(combat,enemy) && enemy.x===next.x && enemy.y===next.y);
-      if(!follows) continue;
-      const from=center(trail),to=center(next);
-      const remaining=Math.max(0,trail.expires-combat.round),life=Math.max(1,trail.damage/2);
-      ctx.globalAlpha=Math.min(1,remaining/life);
-      for(const [width,color] of [[8,'#47220f'],[4,'#9c4016'],[1,'#e78c36']]){
-        ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
-        ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();
-      }
-    }
-  }
-  ctx.globalAlpha=1;
   for(const trail of visible){
     const life=Math.max(1,trail.damage/2),remaining=Math.max(0,trail.expires-combat.round);
     const stage=Math.min(3,Math.max(0,Math.floor((1-Math.min(1,remaining/life))*4)));
@@ -185,7 +163,6 @@ function drawShipCombatPlasma(combat){
       canvasMenuTarget(x,y,TS,TS,null,{title:'Plasma exhaust · '+trail.damage+' damage · '+remaining+' rounds left'});
     }
   }
-  ctx.restore();
 }
 
 function drawShipCombatNearbyPlasma(combat){

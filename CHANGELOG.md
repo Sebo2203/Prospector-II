@@ -23,6 +23,17 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.59 simplifies combat readouts and menu access
+
+Released on `experiment/expedition-legacy`.
+
+- Removed the duplicate player hull row/bar from the combat panel; the left hull gauge remains its display. Selected targets now have proportional hull and fitted-shield bars with numeric values and shield state. Unfitted shields remain absent and crowded three-mount layouts still fit.
+- Escape and the top-left ESC button now use the normal transactional save-and-return-to-main-menu action during combat. Continue restores the same encounter without advancing time, disengaging or triggering enemy actions. This replaces combat's Escape-only movement/disengagement hint; actual withdrawal remains R at the arena edge.
+- Player weapon hits are green and player misses muted gray. Enemy hits are red and enemy misses yellow, including natural ram results. The same classes persist into saved LOG history; player hits on pirate bases also use green. Added a neutral gray log class without changing unrelated messages.
+- Reversed experimental.58's connecting exhaust glow. Original plasma sprites, fading, hazard information, strength and expiry remain; new segments no longer store unused direction fields.
+- Validation: all 56 repository tests and six affected headless Edge suites passed. Scenarios verify actual sidebar colors after real hit/miss actions, accurate half-full target bars, omitted player hull duplication, keyboard and HUD Escape/menu/Continue preserving encounter state and result classes, sprite-only exhaust, scaled/ASCII presentation, crowded readouts, combat rules, shared menu routing, log and autosave behavior. Screenshots were inspected; aesthetic preference still needs the user's playtest.
+- Saves: schema 2 unchanged; no migration added. Damage, shields, heat, reloads, trail damage/lifetime, movement and NPC speed are unchanged. [Combat controls and presentation](docs/experiment.md#tactical-ship-combat)
+
 ## 2026-11-07 — 0.28 experimental.58 gives tactical combat an empty-space presentation
 
 Released on `experiment/expedition-legacy`.

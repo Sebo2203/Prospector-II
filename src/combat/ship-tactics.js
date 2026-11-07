@@ -194,7 +194,7 @@ function shipCombatPlasma(combat,point){
 function moveShipCombatActor(combat,actor,to,engine){
   if(engine>0){
     const old = shipCombatPlasma(combat,actor);
-    const trail = {x:actor.x,y:actor.y,dx:to.x-actor.x,dy:to.y-actor.y,damage:engine*2,expires:combat.round+engine+1};
+    const trail = {x:actor.x,y:actor.y,damage:engine*2,expires:combat.round+engine+1};
     if(old) Object.assign(old,trail);
     else combat.trails.push(trail);
   }
@@ -275,10 +275,10 @@ function doShipFire(){
   if(Math.random()<chance){
     const damage = weapon.minDmg+rnd(weapon.maxDmg-weapon.minDmg+1);
     const absorbed=Math.min(damage,enemy.ship.shieldCharge,shipShieldCapacity(enemy.ship));
-    addCombatLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+(damage-absorbed)+' hull).','lc');
+    addCombatLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+(damage-absorbed)+' hull).','lg');
     damageShipCombatEnemy(combat,enemy,damage);
   } else {
-    addCombatLog(weapon.name+' misses '+enemy.ship.name+'.','li');
+    addCombatLog(weapon.name+' misses '+enemy.ship.name+'.','ln');
   }
   advanceShipCombat(combat,false,'fire');
 }
@@ -322,7 +322,7 @@ function fireShipCombatEnemy(combat,enemy){
   const damage=Math.random()<chance ? (entry ? entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1) : Math.max(1,ship.atk+rnd(4)-2)) : 0;
   const absorbed=Math.min(damage,G.ship.shieldCharge,shipShieldCapacity());
   const hull=DEBUG.infiniteHull?0:Math.min(G.ship.hp,damage-absorbed);
-  addCombatLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),'lc');
+  addCombatLog(ship.name+(entry?' fires '+entry.weapon.name:' rams')+' — '+(damage?damage+' damage ('+hull+' hull).':'miss.'),damage?'lc':'ll');
   if(damage) damageShipCombatPlayer(combat,damage);
   return damage>0;
 }

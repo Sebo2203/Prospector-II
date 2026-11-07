@@ -755,7 +755,7 @@ function drawInventoryOverlay(){
       ctx.textAlign='left';
     } else {
       // Colour map matching sidebar log colours
-      const logColors = { lc:'#ff4444', ll:'#ffcc44', lw:'#ff9955', lg:'#44ff88', li:'#7788aa', '':'#99aaaa' };
+      const logColors = { ln:'#919aa2', lc:'#ff4444', ll:'#ffcc44', lw:'#ff9955', lg:'#44ff88', li:'#7788aa', '':'#99aaaa' };
       // Entries were ordered chronologically before wrapping so continuation
       // lines stay below the first line of their message.
       const slice = filtered.slice(G._logScroll, G._logScroll+visRows);

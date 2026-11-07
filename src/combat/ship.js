@@ -76,7 +76,7 @@ function doFireAtBase(base){
   const totalDmg=entry.weapon.minDmg+rnd(entry.weapon.maxDmg-entry.weapon.minDmg+1);
   base.hp = Math.max(0, base.hp - totalDmg);
   const pct = Math.round((base.hp/base.maxHp)*100);
-  addCombatLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','ll');
+  addCombatLog(entry.weapon.name+' hits '+base.name+' for '+totalDmg+' damage! ('+pct+'% integrity remaining)','lg');
   SFX.hullHit && SFX.hullHit();
 
   if(base.hp <= 0){

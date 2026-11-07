@@ -17,13 +17,14 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     combat.seenTiles.fill(true);combat.asteroids=[];combat.trails=[];renderAll();
   });
   const observe=()=>page.evaluate(()=>{
-    const images=[],text=[],rects=[],fill=ctx.fillText,rect=ctx.fillRect,image=ctx.drawImage,random=Math.random;
+    const images=[],text=[],rects=[],strokes=[],fill=ctx.fillText,rect=ctx.fillRect,image=ctx.drawImage,stroke=ctx.stroke,random=Math.random;
     let rolls=0;Math.random=()=>{rolls++;return random();};
     ctx.fillText=function(t,x,y,...args){text.push({text:String(t),x,y});return fill.call(this,t,x,y,...args);};
     ctx.fillRect=function(x,y,w,h){rects.push({x,y,w,h,color:this.fillStyle});return rect.call(this,x,y,w,h);};
+    ctx.stroke=function(...args){strokes.push({color:this.strokeStyle,width:this.lineWidth});return stroke.apply(this,args);};
     ctx.drawImage=function(img,...args){images.push({key:Object.keys(IMG).find(key=>IMG[key]===img),x:args[0],y:args[1]});return image.call(this,img,...args);};
-    try{drawCanvas();}finally{ctx.fillText=fill;ctx.fillRect=rect;ctx.drawImage=image;Math.random=random;}
-    return {images,text,rects,rolls,targets:canvasMenuTargets.map(target=>target.title||'')};
+    try{drawCanvas();}finally{ctx.fillText=fill;ctx.fillRect=rect;ctx.drawImage=image;ctx.stroke=stroke;Math.random=random;}
+    return {images,text,rects,strokes,rolls,targets:canvasMenuTargets.map(target=>target.title||'')};
   });
   let view=await observe();
   assert.equal(await page.evaluate(()=>shipCombatSensorRange()),15);
@@ -45,6 +46,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     combat.trails.push({x:24,y:9,dx:-1,dy:0,damage:4,expires:combat.round+2});renderAll();
   });
   view=await observe();
+  assert.ok(!view.strokes.some(stroke=>stroke.width>1),'plasma renders as separate sprites without connecting strokes');
   assert.equal(view.images.filter(image=>image.key?.startsWith('combat_plasma_')).length,4,'four original fade stages render; out-of-range exhaust stays hidden');
   assert.equal(new Set(view.images.filter(image=>image.key?.startsWith('combat_plasma_')).map(image=>image.key)).size,4);
   assert.ok(!view.text.some(t=>t.x<660 && t.y<420 && /^\d+$/.test(t.text)),'no numeric plasma tiles');

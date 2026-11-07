@@ -118,9 +118,8 @@ document.addEventListener('keydown', e=>{
       if(e.key==='Tab'){ e.preventDefault(); cycleShipCombatTarget(e.shiftKey?-1:1); return; }
       if(/^[1-5]$/.test(e.key) && !e.code.startsWith('Numpad')){ selectShipCombatWeapon(Number(e.key)-1); return; }
       if(e.key==='Escape'){
-        G.shipCombat.surrenderWarned = false;
-        addLog('Use the compass or movement keys. Fire [F], select target [Tab], or disengage at the map edge [R].','li');
-        renderAll();
+        e.preventDefault();
+        void returnToMainMenuFromGame();
         return;
       }
     }
