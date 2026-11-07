@@ -24,6 +24,10 @@ Current guides link to the version source rather than duplicate a changing numbe
 
 Optional browser-based checks and native-action playthrough controllers live in [qa/](../qa/README.md), with their own pinned Playwright dependency and portable Chromium setup. They resolve the built HTML relative to the repository and keep generated evidence in ignored `qa/artifacts/`. The root build/tests retain their dependency-free setup. Fixtures used by scenario checks are separate from unassisted career policies; both must report their actual limits and outcomes.
 
+## Save compatibility policy
+
+Backward save compatibility is not a project requirement. Do not spend development work on migrations, compatibility shims or preserving obsolete save formats unless the user explicitly requests it. Change and bump the career schema when it improves the implementation, and reject unsupported files clearly. Current-format validation, transactional integrity and preserving the active career when an import fails are still required. Existing compatible formats may continue to load; that does not create a compatibility promise for future builds. This policy is also recorded in `AGENTS.md`.
+
 ## Runtime model
 
 This is a source organization step, not a conversion to ES modules. The main game still executes in one classic inline script with shared lexical bindings and global functions. The separate analytics and feedback/barter script blocks remain in their original positions. This preserves inline HTML handlers, declaration visibility and registration order.

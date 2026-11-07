@@ -14,6 +14,8 @@ Saves belong to the browser profile/site or desktop app's local storage; they ar
 
 The Debug Palette retains the original career. Choose **Debug Palette → Return to Career** to restore it.
 
+Backward compatibility is not maintained as a development requirement. Experimental save formats may change without migration; unsupported formats must fail clearly while leaving an active career intact. See the [repository policy](architecture.md#save-compatibility-policy).
+
 ## Implementation and maintenance
 
 - `src/persistence/autosave-store.js` owns IndexedDB access, record integrity and the ordered/coalescing write queue. Database `prospector_autosaves`, schema version 1, has one `slots` store with `current` and `previous` records. Each record has envelope format 1, JSON `raw`, a checksum, timestamp and a small menu summary. The checksum detects accidental damage; it is not an authentication mechanism.

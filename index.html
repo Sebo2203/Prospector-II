@@ -1968,7 +1968,7 @@ button.ctx-btn:disabled .ck { color:#969da4; }
   <div id="ctx-bar"></div>
   <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.55</span></div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">v0.28 experimental.56</span></div>
     <div id="persist-shortcuts">
       <div id="footer-toggles">
         <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
@@ -2102,8 +2102,8 @@ button.ctx-btn:disabled .ck { color:#969da4; }
 </dialog>
 
 <script>// Filled from package.json by the single-file build.
-const GAME_VERSION = '0.28.0-experimental.55';
-const GAME_VERSION_LABEL = 'v0.28 experimental.55';
+const GAME_VERSION = '0.28.0-experimental.56';
+const GAME_VERSION_LABEL = 'v0.28 experimental.56';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{
@@ -34511,7 +34511,11 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(shipSystemsDialog.open) return;
+  if(shipSystemsDialog.open){
+    // Held activation keys must not repeatedly activate native modal buttons.
+    if(e.repeat && (e.key==='Enter'||e.key===' ')) e.preventDefault();
+    return;
+  }
   if(debugDialog.open){
     if(e.shiftKey && e.key.toLowerCase()==='b'){
       e.preventDefault();
@@ -34881,7 +34885,11 @@ document.addEventListener('keydown', e=>{
       return; // eat all other keys while examining
     }
 
-    if(G.mode==='base'){ handleStationKey(e.key); return; }
+    if(G.mode==='base'){
+      // An activation that opens a modal must not also click its newly focused button.
+      if(e.key==='Enter'||e.key===' ') e.preventDefault();
+      handleStationKey(e.key); return;
+    }
 
     // System view — planet selection
     if(G.mode==='system'){

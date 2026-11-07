@@ -11,6 +11,7 @@ const suites = {
   'ship-combat': 'ship-combat-scenarios.cjs',
   'combat-ui': 'combat-ui-scenarios.cjs',
   'ship-systems': 'ship-systems-scenarios.cjs',
+  'hangar-systems': 'hangar-systems-scenarios.cjs',
   turns: 'turn-scenarios.cjs',
   morale: 'morale-scenarios.cjs',
   worldgen: 'foundation-worldgen.cjs',

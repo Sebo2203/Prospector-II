@@ -23,6 +23,15 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-07 — 0.28 experimental.56 fixes Hangar keyboard activation
+
+Released on `experiment/expedition-legacy`.
+
+- Reproduced the reported Core Systems failure using the supplied save and a fresh career. Pressing Enter on the Hangar action opened the native modal, then the same key's browser default action clicked its newly focused Close button. Station activation now consumes Enter/Space before dispatch, so the board remains open. Repeated activation keys cannot repeatedly trigger its native buttons; separate intentional button presses, Tab and Escape still work.
+- Recorded the user's standing policy in `AGENTS.md`, the architecture guide and autosave guide: backward save compatibility is not a requirement, and migrations/compatibility shims must not be added unless explicitly requested. Removed the conflicting instructions to preserve save shape and legacy-read compatibility. Current-format validation, transactional integrity and preserving an active career on failed load remain required.
+- Validation: all 55 repository tests and five affected headless Edge suites passed. The new Hangar scenario uses real keyboard, held-key, canvas click, context-button and F3 paths, verifies deliberate modal activation and paid repair, and optionally imports a supplied save through the real file picker. The supplied save passed without modification. Personal saves and generated screenshots are excluded from commits.
+- This fix changes keyboard handling, not the save format or game rules. [Save compatibility policy](docs/architecture.md#save-compatibility-policy)
+
 ## 2026-11-07 — 0.28 experimental.55 unifies combat information and controls
 
 Released on `experiment/expedition-legacy`.

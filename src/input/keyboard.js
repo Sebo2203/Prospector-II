@@ -19,7 +19,11 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('keydown', e=>{
   if(AUTOSAVE_STATE.transition){e.preventDefault();return;}
-  if(shipSystemsDialog.open) return;
+  if(shipSystemsDialog.open){
+    // Held activation keys must not repeatedly activate native modal buttons.
+    if(e.repeat && (e.key==='Enter'||e.key===' ')) e.preventDefault();
+    return;
+  }
   if(debugDialog.open){
     if(e.shiftKey && e.key.toLowerCase()==='b'){
       e.preventDefault();
@@ -389,7 +393,11 @@ document.addEventListener('keydown', e=>{
       return; // eat all other keys while examining
     }
 
-    if(G.mode==='base'){ handleStationKey(e.key); return; }
+    if(G.mode==='base'){
+      // An activation that opens a modal must not also click its newly focused button.
+      if(e.key==='Enter'||e.key===' ') e.preventDefault();
+      handleStationKey(e.key); return;
+    }
 
     // System view — planet selection
     if(G.mode==='system'){
