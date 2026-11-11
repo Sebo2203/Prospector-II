@@ -11,6 +11,9 @@ const {canvasText,clickTarget,assertMenuFits}=require('./systems-menu-helpers.cj
   const start=async id=>{
    await page.evaluate(id=>initGame(id,'Hull QA','Hull QA'),id);
    await page.waitForFunction(()=>G?.galaxy && G.log.some(entry=>entry.msg.includes('Ready for departure')));
+   // Hull quote identity includes crew IDs. Settle the first transactional save
+   // before reviewing quotes so its ID assignment cannot invalidate the fixture's quote.
+   assert.ok(await page.evaluate(async()=>await autoSave()));
   };
   await start('ATTACK_CORVETTE');
   await page.evaluate(()=>{G.credits=10000;G.installedWeapons=['artemis'];G.installedModules=['fuel_scoop'];G.ship.ammo.artemis=5;G.ship.weaponReadyAt=[G.turn+5];});

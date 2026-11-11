@@ -23,6 +23,14 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-12 — Await initial save before hull-exchange QA
+
+Branch: `main`; test-only follow-up to experimental.96 publication. Game version and HTML unchanged.
+
+Changes and reason: GitHub's Linux headless run exposed a timing race in the hull scenario after the same checks passed locally. The reviewed quote includes crew identity; an unconfirmed initial autosave can assign those IDs between review and confirmation, correctly making the old quote stale. The scenario now awaits its first successful transactional save before reviewing hull exchanges. Purchase, cost, equipment, cooldown, save/load and input assertions are unchanged; no game guard was weakened.
+
+Validation: the focused `hulls` suite passed locally with the awaited startup save. The preceding publication records the 114 root tests, all 49 distinct local browser suites and three-hull smoke results. GitHub Actions supplies the Linux recheck for this follow-up. Saves/schema and runtime behavior unchanged; no executable changes. The publication's exclusions remain in effect.
+
 ## 2026-11-12 — Publish experimental.96 to main
 
 Branch: `main`. Version remains `0.28.0-experimental.96`; this publishes the existing experimental game without relabeling it as a stable release.
