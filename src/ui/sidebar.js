@@ -212,7 +212,7 @@ function renderCrewDialogueContextSidebar(){
     html += `<div style="color:#ffe066;font-size:12px;font-weight:bold;margin-bottom:6px;border-bottom:1px solid #332a11;padding-bottom:2px">MORALE</div>`;
     crewMoraleBreakdown(c).forEach(row=>{
       html += `<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid #111827">`;
-      html += `<span style="color:#667788;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(row.label)}</span>`;
+      html += `<span title="${htmlEsc(row.label)}" style="color:#667788;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(row.label)}</span>`;
       html += `<span style="color:${row.col};white-space:nowrap">${htmlEsc(row.value)}</span>`;
       html += `</div>`;
     });
@@ -221,7 +221,7 @@ function renderCrewDialogueContextSidebar(){
     html += `<div style="color:#ff6688;font-size:12px;font-weight:bold;margin-bottom:6px;border-bottom:1px solid #332222;padding-bottom:2px">STATUS</div>`;
     crewMedicalBreakdown(c).forEach(row=>{
       html += `<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid #111827">`;
-      html += `<span style="color:#667788;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(row.label)}</span>`;
+      html += `<span title="${htmlEsc(row.label)}" style="color:#667788;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(row.label)}</span>`;
       html += `<span style="color:${row.col};white-space:nowrap">${htmlEsc(row.value)}</span>`;
       html += `</div>`;
     });
@@ -233,16 +233,42 @@ function renderCrewDialogueContextSidebar(){
   return html;
 }
 
+function renderCrewStrip(){
+  const living = G.crew.filter(c=>c.hp>0);
+  if(!living.length) return '<div style="color:#f07070;font-size:13px">All crew dead!</div>';
+
+  const ordered = [
+    ...living.filter(c=>CREW_ROLES[c.role]?.special),
+    ...living.filter(c=>!CREW_ROLES[c.role]?.special),
+  ];
+  const badges = ordered.map(c=>{
+    const role = CREW_ROLES[c.role];
+    const maxHp = c.maxHp>0 ? c.maxHp : c.hp;
+    const fraction = Math.min(1,c.hp/maxHp);
+    const health = fraction<0.3 ? 'critical' : fraction<0.6 ? 'low' : 'good';
+    const conditions = visibleCrewStatusList(c).map(status=>{
+      const label = CREW_STATUS_DEFS[status.id]?.label || status.id || 'Condition';
+      const level = status.intensity ?? status.severity ?? 1;
+      return level>1 ? label+' (level '+level+')' : label;
+    });
+    const details = htmlEsc([c.name || 'Unknown', role?.label || 'Crew',
+      c.hp+'/'+maxHp+' HP'+(health==='critical'?' (critical)':''),
+      ...conditions].join(' · '));
+    const marker = conditions.length ? '<span class="crew-badge-status" aria-hidden="true">!</span>' : '';
+    return `<div class="crew-badge crew-badge-${health}" role="listitem" title="${details}" aria-label="${details}" style="--crew-hp:${fraction*100}%">
+      <span aria-hidden="true">${htmlEsc(role?.badge || '?')}</span>${marker}
+      <span class="crew-badge-meter" aria-hidden="true"></span>
+    </div>`;
+  });
+  return `<div class="crew-strip" role="list" aria-label="Living crew">${badges.join('')}</div>`;
+}
+
 function renderSidebar(){
   if(G.dialogue?.id === 'crew_basic' || G.dialogue?.id === 'captain_log'){
     document.querySelectorAll('#sidebar .s-title').forEach(el=>el.style.display='');
     document.getElementById('crew-list').innerHTML = renderCrewDialogueContextSidebar();
     document.getElementById('inv-list').innerHTML = '';
-    setLogHTML(G.log.slice(0,12).map(l=>{
-      const age = (G.turn||0) - (l.turn||0);
-      const opacity = age === 0 ? 1.0 : 0.75;
-      return `<div class="log-entry ${l.cls}" style="opacity:${opacity}">${htmlEsc(logDisplayText(l))}</div>`;
-    }).join(''));
+    renderCommsLog();
     return;
   }
 
@@ -277,7 +303,7 @@ function renderSidebar(){
       html += `<div style="color:#ff6688;font-size:12px;font-weight:bold;margin-bottom:6px">STATUS</div>`;
       crewMedicalBreakdown(c).forEach(row=>{
         html += `<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid #111827">`;
-        html += `<span style="color:#667788;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(row.label)}</span>`;
+        html += `<span title="${htmlEsc(row.label)}" style="color:#667788;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(row.label)}</span>`;
         html += `<span style="color:${row.col};white-space:nowrap">${htmlEsc(row.value)}</span>`;
         html += `</div>`;
       });
@@ -465,57 +491,11 @@ function renderSidebar(){
   // Restore section titles when not examining
   document.querySelectorAll('#sidebar .s-title').forEach(el=>el.style.display='');
 
-  // Crew — filter out dead members (hp<=0) for display clarity
-  const living=G.crew.filter(c=>c.hp>0);
-  if(!living.length){
-    document.getElementById('crew-list').innerHTML = '<div style="color:#f07070;font-size: 13px">All crew dead!</div>';
-  } else {
-    // Specials first, then grunts grouped by role
-    const specials = living.filter(c=>CREW_ROLES[c.role]?.special);
-    const grunts   = living.filter(c=>!CREW_ROLES[c.role]?.special);
-    // Group grunts by role
-    const gruntGroups = {};
-    grunts.forEach(c=>{ gruntGroups[c.role]=(gruntGroups[c.role]||[]); gruntGroups[c.role].push(c); });
-
-    let html = '';
-    specials.forEach(c=>{
-      const p=c.hp/c.maxHp;
-      const cl=p<0.3?'cr':p<0.6?'co':'cg';
-      const roleData=CREW_ROLES[c.role];
-      const st = crewStatusSummary(c);
-      html+=`<div class="crew-row"><span style="color:${roleData.col}">${roleData.label}${st?' <span style="color:#d488ff">'+st+'</span>':''}</span><span class="${cl}" style="font-size: 13px">${c.hp}/${c.maxHp}</span></div>`;
-    });
-    Object.entries(gruntGroups).forEach(([role, members])=>{
-      const roleData=CREW_ROLES[role];
-      const avgHpPct = members.reduce((s,c)=>s+c.hp/c.maxHp,0)/members.length;
-      const cl=avgHpPct<0.3?'cr':avgHpPct<0.6?'co':'cg';
-      const label = members.length>1 ? roleData.label+' ×'+members.length : roleData.label;
-      const hpStr = members.length>1 ? members.map(c=>c.hp).join('/') : members[0].hp+'/'+members[0].maxHp;
-      const groupedStatuses = new Map();
-      members.forEach(c=>{
-        visibleCrewStatusList(c).forEach(s=>{
-          const def = CREW_STATUS_DEFS[s.id] || { short:(s.id||'?').slice(0,3).toUpperCase() };
-          const val = s.intensity ?? s.severity ?? 1;
-          const text = def.short + (val > 1 ? val : '');
-          groupedStatuses.set(text, (groupedStatuses.get(text)||0) + 1);
-        });
-      });
-      const statusSummary = [...groupedStatuses.entries()]
-        .map(([text,count])=>text+(count>1?'×'+count:''))
-        .join(' ');
-      const st = statusSummary ? ' <span style="color:#d488ff">'+statusSummary+'</span>' : '';
-      html+=`<div class="crew-row"><span style="color:${roleData.col}">${label}${st}</span><span class="${cl}" style="font-size: 13px">${hpStr}</span></div>`;
-    });
-    document.getElementById('crew-list').innerHTML = html;
-  }
+  document.getElementById('crew-list').innerHTML = renderCrewStrip();
 
   // Inventory hidden from sidebar — shown in dedicated inventory overlay only
 
   // Log
-  setLogHTML(G.log.filter(l=>!l.archive).slice(0,18).map(l=>{
-    const age = (G.turn||0) - (l.turn||0);
-    const opacity = age === 0 ? 1.0 : 0.75;
-    return `<div class="log-entry ${l.cls}" style="opacity:${opacity}">${htmlEsc(logDisplayText(l))}</div>`;
-  }).join(''));
+  renderCommsLog();
 }
 

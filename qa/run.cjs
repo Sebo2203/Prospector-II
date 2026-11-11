@@ -1,0 +1,67 @@
+const { spawnSync } = require('node:child_process');
+const path = require('node:path');
+const suites = {
+  interface: 'interface-scenarios.cjs',
+  'menu-input': 'menu-input-scenarios.cjs',
+  stations: 'station-art-scenarios.cjs',
+  version: 'version-scenarios.cjs',
+  palette: 'palette-scenarios.cjs',
+  previews: 'palette-icons-scenarios.cjs',
+  ships: 'ship-art-scenarios.cjs',
+  'ship-combat': 'ship-combat-scenarios.cjs',
+  artemis: 'artemis-scenarios.cjs',
+  'missile-flight': 'missile-flight-scenarios.cjs',
+  'combat-resolution': 'combat-resolution-scenarios.cjs',
+  'nebula-encounters': 'nebula-encounters-scenarios.cjs',
+  'nebula-damage': 'nebula-damage-scenarios.cjs',
+  'nebula-combat': 'nebula-combat-scenarios.cjs',
+  'scan-landing': 'scan-landing-scenarios.cjs',
+  'landing-impact': 'landing-impact-scenarios.cjs',
+  'crew-equipment': 'crew-equipment-scenarios.cjs',
+  'scan-comms': 'scan-comms-scenarios.cjs',
+  calendar: 'calendar-scenarios.cjs',
+  'attack-confirmation': 'attack-confirmation-scenarios.cjs',
+  'comms-log': 'comms-log-scenarios.cjs',
+  'ship-rewards': 'ship-rewards-scenarios.cjs',
+  'improvised-repair': 'improvised-repair-scenarios.cjs',
+  disengagement: 'disengagement-scenarios.cjs',
+  'ship-pursuit': 'ship-pursuit-scenarios.cjs',
+  'combat-ui': 'combat-ui-scenarios.cjs',
+  'combat-space': 'combat-space-scenarios.cjs',
+  'combat-cover': 'combat-cover-scenarios.cjs',
+  ramming: 'ramming-scenarios.cjs',
+  'combat-feedback': 'combat-feedback-scenarios.cjs',
+  'combat-speed': 'combat-speed-scenarios.cjs',
+  'ship-systems': 'ship-systems-scenarios.cjs',
+  'hangar-systems': 'hangar-systems-scenarios.cjs',
+  hulls: 'hull-framework-scenarios.cjs',
+  armament: 'armament-scenarios.cjs',
+  bridge: 'bridge-combat-scenarios.cjs',
+  turns: 'turn-scenarios.cjs',
+  oxygen: 'oxygen-scenarios.cjs',
+  morale: 'morale-scenarios.cjs',
+  'crew-balance': 'crew-balance-scenarios.cjs',
+  'repeat-training': 'repeat-training-scenarios.cjs',
+  worldgen: 'foundation-worldgen.cjs',
+  'ship-previews': 'ship-art-previews.cjs',
+  encounters: 'encounter-discovery.cjs',
+  rescue: 'spatial-scenarios.cjs',
+  career: 'career-scenarios.cjs',
+  log: 'log-tests.cjs',
+  missions: 'active-missions-scenarios.cjs',
+  autosave: 'autosave-scenarios.cjs'
+};
+const names = process.argv.slice(2);
+const selected = names.length ? names : Object.keys(suites);
+for (const name of selected) {
+  if (!suites[name]) throw Error(`Unknown suite ${name}; choose ${Object.keys(suites).join(', ')}`);
+}
+for (const name of selected) {
+  console.log(`\nRunning ${name}`);
+  const result = spawnSync(process.execPath, [path.join(__dirname, suites[name])], {
+    cwd: __dirname, stdio: 'inherit', timeout: 300000
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status || 1);
+}
+console.log(`\nPassed ${selected.length} headless suites.`);

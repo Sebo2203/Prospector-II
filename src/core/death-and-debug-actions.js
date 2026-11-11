@@ -7,6 +7,10 @@ function atmosphereBiomeKey(key){
 }
 
 function atmosphereBiome(key){
+  if(G?.planets?.[key]?.isQuarantine){
+    const q=G.expedition?.quarantine;
+    return {...BIOMES.DERELICT,oxyDrain:q?.air===0&&!q?.repaired?2:0};
+  }
   return BIOMES[atmosphereBiomeKey(key)] || { oxyDrain:1.5 };
 }
 
@@ -129,6 +133,7 @@ function debugApplyCrewStatus(id){
 function pruneDead(){
   debugRestoreCrewHp();
   const deadCrew = G.crew.filter(c=>c.hp<=0);
+  G.crewDeaths=(G.crewDeaths||0)+deadCrew.length;
   if(deadCrew.length) applyCrewDeathMorale(deadCrew);
   // Remove crew members with hp<=0 to prevent ghost-state bugs
   G.crew=G.crew.filter(c=>c.hp>0);
@@ -137,10 +142,13 @@ function pruneDead(){
 function checkDeath(){
   pruneDead();
   if(!crewAlive() && !G.dead){
+    const spaceCombat=G.mode==='shipcombat';
     // Figure out the most recent cause from the log
     const combatDeath = G.log.find(l=>l.cls==='lc'&&l.msg.includes('has died'));
     const oxyDeath    = G.log.find(l=>l.msg.includes('suffocated') || l.msg.includes('drowned'));
-    if(oxyDeath && (!combatDeath || G.log.indexOf(oxyDeath)<G.log.indexOf(combatDeath))){
+    if(spaceCombat){
+      G.deathCause='The last crew member succumbed to wounds during ship combat. No one remained to bring the ship home.';
+    } else if(oxyDeath && (!combatDeath || G.log.indexOf(oxyDeath)<G.log.indexOf(combatDeath))){
       const wasUnderwater = oxyDeath.msg.includes('drowned');
       G.deathCause = wasUnderwater
         ? 'The crew drowned — oxygen ran out underwater.'
@@ -155,6 +163,7 @@ function checkDeath(){
     }
     addLog('ALL CREW DEAD — mission failed.','lc');
     G.dead=true;
+    if(spaceCombat){G.shipCombat=null;G.mode='galaxy';}
   }
   if(G.ship.hp<=0 && !G.dead){
     G.deathCause = 'The ship was destroyed in deep space.';

@@ -1,3 +1,7 @@
+const CREW_ENCOURAGE_BONUS = 3;
+const CREW_ENCOURAGE_DURATION = 30;
+const CREW_ENCOURAGE_COOLDOWN = 40;
+
 function ensureCrewMoraleState(){
   if(!G) return;
   ensureCrewStatusState();
@@ -14,6 +18,7 @@ function ensureCrewMoraleState(){
     if(c.grief === undefined) c.grief = 0;
     if(c.drinkGlow === undefined) c.drinkGlow = 0;
     if(c.drugRush === undefined) c.drugRush = 0;
+    if(c.eventMorale === undefined) c.eventMorale = 0;
     if(c.lowMoraleSince === undefined) c.lowMoraleSince = null;
     if(c.unpaidDocks === undefined) c.unpaidDocks = 0;
   });
@@ -55,8 +60,12 @@ function timeAwayFromPortPenalty(){
 function crewMoraleScore(c){
   ensureCrewMoraleState();
   const awayPenalty = timeAwayFromPortPenalty();
-  const score = (c.moraleBase || 55) + (c.drinkGlow || 0) + (c.drugRush || 0) - (c.grief || 0) - awayPenalty;
+  const score = (c.moraleBase ?? 55) + crewEncouragementBonus(c) + (c.drinkGlow || 0) + (c.drugRush || 0) + (c.eventMorale || 0) - (c.grief || 0) - awayPenalty;
   return Math.max(0, Math.min(135, score));
+}
+
+function crewEncouragementBonus(c){
+  return (c.encouragedUntil || 0)>G.turn ? CREW_ENCOURAGE_BONUS : 0;
 }
 
 function crewMoodFace(c){
@@ -81,7 +90,26 @@ function adjustCrewMoraleBase(delta, livingOnly=true){
   ensureCrewMoraleState();
   (G.crew||[]).forEach(c=>{
     if(livingOnly && c.hp <= 0) return;
-    c.moraleBase = Math.max(0, Math.min(100, (c.moraleBase || 55) + delta));
+    c.moraleBase = Math.max(0, Math.min(100, (c.moraleBase ?? 55) + delta));
+  });
+  updateCrewLowMoraleFlags();
+}
+
+function adjustCrewEventMorale(delta){
+  ensureCrewMoraleState();
+  (G.crew||[]).filter(c=>c.hp>0).forEach(c=>{
+    c.eventMorale=Math.max(-12,Math.min(12,c.eventMorale+delta));
+  });
+  updateCrewLowMoraleFlags();
+}
+
+// Called once per committed career turn, never by rendering or menu navigation.
+function tickCrewMorale(){
+  ensureCrewMoraleState();
+  (G.crew||[]).filter(c=>c.hp>0).forEach(c=>{
+    if(G.turn%6===0) c.drinkGlow=Math.max(0,c.drinkGlow-1);
+    if(G.turn%3===0) c.drugRush=Math.max(0,c.drugRush-1);
+    if(G.turn%5===0) c.eventMorale-=Math.sign(c.eventMorale);
   });
   updateCrewLowMoraleFlags();
 }
@@ -91,7 +119,7 @@ function applyCrewDeathMorale(deadCrew){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.grief = Math.min(45, (c.grief || 0) + 14);
-    c.moraleBase = Math.max(0, (c.moraleBase || 55) - 8);
+    c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 8);
   });
   if(deadCrew?.length && G.crew.some(c=>c.hp>0)){
     const names = deadCrew.map(crewDisplayName).join(', ');
@@ -105,7 +133,6 @@ function boostCrewFromDrink(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drinkGlow = Math.min(16, (c.drinkGlow || 0) + 6);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 3);
     c.grief = Math.max(0, (c.grief || 0) - 2);
   });
   updateCrewLowMoraleFlags();
@@ -116,7 +143,6 @@ function boostCrewFromDrugs(){
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
     c.drugRush = Math.min(60, (c.drugRush || 0) + 48);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 6);
     c.grief = Math.max(0, (c.grief || 0) - 4);
   });
   updateCrewLowMoraleFlags();
@@ -126,8 +152,7 @@ function boostCrewFromMildAntidepressants(){
   ensureCrewMoraleState();
   (G.crew||[]).forEach(c=>{
     if(c.hp <= 0) return;
-    c.drugRush = Math.min(28, (c.drugRush || 0) + 16);
-    c.moraleBase = Math.min(100, (c.moraleBase || 55) + 2);
+    c.drugRush = Math.max(c.drugRush || 0, Math.min(28, (c.drugRush || 0) + 16));
     c.grief = Math.max(0, (c.grief || 0) - 6);
   });
   updateCrewLowMoraleFlags();
@@ -150,7 +175,7 @@ function processCrewPayrollAtStarbase(stationName){
   }
   payable.forEach(c=>{
     c.unpaidDocks = Math.min(4, (c.unpaidDocks || 0) + 1);
-    c.moraleBase = Math.max(0, (c.moraleBase || 55) - 10);
+    c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 10);
   });
   G.lastPayrollTurn = G.turn || 1;
   addLog('You cannot cover crew payroll at '+stationName+'. Morale takes a hit.','lw');

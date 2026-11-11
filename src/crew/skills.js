@@ -1,31 +1,33 @@
-function skillXpForLevel(level){ return level * 10; }
+function skillXpForLevel(level){ return 25 * level; }
 
 function giveSkillXP(crewMember, skillId, amount){
-  if(!crewMember || crewMember.hp <= 0) return false;
+  if(!crewMember || crewMember.hp <= 0 || !CREW_SKILLS.some(skill=>skill.id===skillId) ||
+     !Number.isFinite(amount) || amount<=0) return false;
   if(!crewMember.skills) crewMember.skills = { nav:0, sci:0, cbt:0, soc:0, med:0, eng:0 };
   if(!crewMember._skillXp) crewMember._skillXp = {};
-  const currentLevel = crewMember.skills[skillId] || 0;
+  let currentLevel = crewMember.skills[skillId] || 0;
   if(currentLevel >= 10) return false; // already maxed
   crewMember._skillXp[skillId] = (crewMember._skillXp[skillId] || 0) + amount;
-  const needed = skillXpForLevel(currentLevel + 1);
-  if(crewMember._skillXp[skillId] >= needed){
-    crewMember._skillXp[skillId] -= needed;
-    crewMember.skills[skillId] = currentLevel + 1;
+  let levelled=false;
+  while(currentLevel<10 && crewMember._skillXp[skillId]>=skillXpForLevel(currentLevel+1)){
+    crewMember._skillXp[skillId] -= skillXpForLevel(currentLevel+1);
+    crewMember.skills[skillId] = ++currentLevel;
     addLog(crewDisplayName(crewMember)+' — '+
       (CREW_SKILLS.find(s=>s.id===skillId)?.label||skillId)+
       ' skill increased to '+crewMember.skills[skillId]+'!','ll');
-    return true; // levelled up
+    levelled=true;
   }
-  return false;
+  if(currentLevel===10) crewMember._skillXp[skillId]=0;
+  return levelled;
 }
-// Five skill categories, 0–10 scale.
+// Six skill categories, 0–10 scale.
 const CREW_SKILLS = [
   { id:'nav', label:'Navigation', abbr:'NAV', col:'#70d8ff',
-    desc:'Survival landings, nebula navigation, scan quality' },
+    desc:'Ship evasion, survival landings, nebula navigation, scan quality' },
   { id:'sci', label:'Science',    abbr:'SCI', col:'#70f090',
     desc:'Biodata analysis, alien comms, future: hacking' },
   { id:'cbt', label:'Combat',     abbr:'CBT', col:'#f07070',
-    desc:'Attack accuracy and damage in ground combat' },
+    desc:'Ship gunnery; attack accuracy and damage in ground combat' },
   { id:'soc', label:'Social',     abbr:'SOC', col:'#d488ff',
     desc:'Command, morale, discipline, negotiation and social pressure' },
   { id:'med', label:'Medicine',   abbr:'MED', col:'#ff6688',

@@ -8,27 +8,29 @@
 function getExamineName(x, y){
   if(G.mode==='galaxy' || G.mode==='examine_galaxy'){
     // Check ships first (they sit on top of tiles)
-    const SENSOR_RANGE = G.shipStats?.sensorRange ?? 3;
-    const pirate = G.pirates.find(p=>p.alive&&p.x===x&&p.y===y);
+    const SENSOR_RANGE = effectiveSensorRange();
+    const liveSensors=SENSOR_RANGE>0 || DEBUG.fullVision;
+    if(!liveSensors && !G.visited[y*MAP_W+x]) return 'Uncharted space — sensors offline';
+    const pirate = liveSensors && G.pirates.find(p=>p.alive&&p.x===x&&p.y===y);
     if(pirate){
       const pdist = Math.abs(pirate.x-G.ship.x)+Math.abs(pirate.y-G.ship.y);
       if(!DEBUG.fullVision && pdist > SENSOR_RANGE) return 'Unknown Contact';
       return pirate.name;
     }
-    const neutral = (G.neutralShips||[]).find(ns=>ns.x===x&&ns.y===y);
+    const neutral = liveSensors && (G.neutralShips||[]).find(ns=>ns.alive!==false&&ns.x===x&&ns.y===y);
     if(neutral){
       const ndist = Math.abs(neutral.x-G.ship.x)+Math.abs(neutral.y-G.ship.y);
       if(!DEBUG.fullVision && ndist > SENSOR_RANGE) return 'Unknown Contact';
       return { type:'galaxy_ship', ns: neutral, dist: ndist };
     }
-    const gasEnt = (G.gasEntities||[]).find(ge=>ge.alive&&ge.x===x&&ge.y===y);
+    const gasEnt = liveSensors && (G.gasEntities||[]).find(ge=>ge.alive&&ge.x===x&&ge.y===y);
     if(gasEnt){
       const gdist = Math.abs(gasEnt.x-G.ship.x)+Math.abs(gasEnt.y-G.ship.y);
       if(!DEBUG.fullVision && gdist > SENSOR_RANGE + 2) return 'Unknown Nebula Reading';
       return gasEnt.name + ', a predatory gas entity that hunts ships inside nebulae.';
     }
-    const lootThere = (G.nebulaLoot||[]).find(l=>l.x===x&&l.y===y);
-    if(lootThere) return '✦ Nebula Crystal drifting at combat site. Move here or press Enter to collect.';
+    const lootThere = liveSensors && (G.nebulaLoot||[]).find(l=>l.x===x&&l.y===y);
+    if(lootThere) return '✦ '+lootThere.item.name+' drifting at combat site. Move here or press Enter to collect.';
     // Then the tile itself
     const cell = G.galaxy[y]?.[x];
     if(!cell) return 'Unknown';
@@ -60,6 +62,8 @@ function getExamineName(x, y){
   }
 
   if(G.mode==='planet' || G.mode==='examine_planet'){
+    const quarantineInfo=quarantineExamine(x,y);
+    if(quarantineInfo) return quarantineInfo;
     // Check enemies
     const enemy = (G.enemies[G.curPlanet]||[]).find(e=>e.alive&&!e.hidden&&e.x===x&&e.y===y);
     if(enemy) return { type:'creature', enemy };

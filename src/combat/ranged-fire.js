@@ -115,10 +115,7 @@ function resolveRangedShot(shooter, profile){
 
 function finishRangedFireTurn(){
   G.rangeTarget = null;
-  G.turn++;
-  moveEnemies();
-  processPlanetHazards();
-  checkDeath();
+  completeSurfaceAction(undefined,'combat');
   renderAll();
 }
 

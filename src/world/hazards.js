@@ -552,6 +552,44 @@ function processPlanetHazards(){
   }
 
   applyHallucinogenicExposure();
-  tickCrewStatuses('planet');
 }
 
+
+// Only the existing charged-gas event calls this; encounter/fuel probabilities stay separate.
+function rollNebulaDischarge(classId,navigation){
+  const signature=(SHIP_CLASSES[classId]||SHIP_CLASSES.LIGHT_SCOUT).nebulaSignature;
+  const major=Math.random()<0.15;
+  const strength=major?12+rnd(13):2+rnd(7);
+  const mitigation=Math.max(0.2,1-Math.max(0,navigation)*0.05);
+  return {damage:Math.max(1,Math.round(strength*signature*mitigation)),major};
+}
+
+// Movement, waiting, field work and pulsar measurements share the same hazard.
+function applyPulsarExposure(){
+  if(G.dead || G.retired) return;
+  // Pulsar radiation proximity (within 4 tiles = hazard; 5+ = safe)
+  (G.pulsars||[]).forEach(pu=>{
+    const d = Math.abs(G.ship.x-pu.x)+Math.abs(G.ship.y-pu.y);
+    if(d === 0){
+      // Direct tile — lethal dose
+      addLog('PULSAR DIRECT EXPOSURE — LETHAL RADIATION DOSE!','lc');
+      applyRadiationExposureToCrew(4, 'pulsar_direct');
+      const dmg = 20 + rnd(15);
+      const hull=absorbShipHit(G.ship,dmg,'pulsar radiation');
+      if(dmg>0) SFX.hullHit && SFX.hullHit();
+      addLog('Electromagnetic pulse strips '+dmg+' hull integrity!','lc');
+      if(G.ship.hp<=0){
+        G.dead=true;
+        G.deathCause='The ship was destroyed by a lethal radiation burst from '+pu.name+'.';
+      }
+    } else if(d <= 2){
+      addLog('PULSAR PROXIMITY — intense radiation bombardment! ('+pu.name+')','lc');
+      applyRadiationExposureToCrew(2, 'pulsar_close');
+    } else if(d <= 4){
+      if(Math.random() < 0.65){
+        addLog('Elevated radiation from nearby pulsar '+pu.name+'. Crew exposure detected.','lw');
+        applyRadiationExposureToCrew(1, 'pulsar_near');
+      }
+    }
+  });
+}

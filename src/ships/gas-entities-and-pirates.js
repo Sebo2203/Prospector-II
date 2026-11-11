@@ -6,19 +6,19 @@ function collectNebulaLootAt(x, y){
   const stored = addCargo(loot.item);
   if(stored){
     G.nebulaLoot.splice(idx, 1);
-    addLog('Nebula Crystal recovered and loaded into cargo hold.','lg');
+    addLog(loot.item.name+' recovered and loaded into cargo hold.','lg');
     renderAll();
     return true;
   } else {
-    addLog('Nebula Crystal detected here, cargo hold still full. Offload cargo first.','lw');
+    addLog(loot.item.name+' detected here, cargo hold still full. Offload cargo first.','lw');
     renderAll();
     return false;
   }
 }
 
 function moveGasEntities(){
+  if(G?.debugPalette && !G.debugPalette.simulate) return;
   if(!G.gasEntities || G.mode !== 'galaxy') return;
-  if((G.turn || 0) < 300) return;  // Entities dormant until turn 300
 
   const playerCell = G.galaxy?.[G.ship.y]?.[G.ship.x];
   const playerInNebula = playerCell?.type === 'NEBULA';
@@ -63,7 +63,7 @@ function moveGasEntities(){
     }
 
     // ── Chase: player in nebula and within 6 tiles ─────────────────────────────
-    if(playerInNebula && dist <= 6){
+    if(playerInNebula && !DEBUG.shipInvisible && dist <= 6 && !shipDisengagementActive(ge)){
       ge._chaseTurns = (ge._chaseTurns||0) + 1;
       const {mx,my} = stepToward(ge.x,ge.y,G.ship.x,G.ship.y);
       tryMoveNebula(ge, mx, my);
@@ -84,8 +84,8 @@ function moveGasEntities(){
   });
 
   // Check if any gas entity has reached the player tile → initiate combat
-  if(playerInNebula){
-    const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y);
+  if(playerInNebula && !DEBUG.shipInvisible){
+    const arrived = G.gasEntities.find(ge=>ge.alive && ge.x===G.ship.x && ge.y===G.ship.y && !shipDisengagementActive(ge));
     if(arrived && G.mode==='galaxy'){
       addLog(arrived.name+' ENGULFS your ship, attempting to devour the hull!','lc');
       startShipCombat(arrived);
@@ -94,15 +94,16 @@ function moveGasEntities(){
 }
 
 function movePirates(){
+  if(G?.debugPalette && !G.debugPalette.simulate) return;
   // -- Deferred initial spawn — guards and roamers fill in from turn 50 --
   if(G.turn >= 50){
     const PIRATE_CLASSES_SPAWN=[
-      { name:'Corvette',     hp:30,  maxHp:30,  atk:4,  engineRating:3, shields:0, maxShields:0, guns:1 },
-      { name:'Frigate',      hp:50,  maxHp:50,  atk:6,  engineRating:3, shields:0, maxShields:0, guns:1 },
+      { combatTactic:'brawler', name:'Corvette',     hp:30,  maxHp:30,  atk:4,  engineRating:3, shields:0, maxShields:0, guns:1 },
+      { combatTactic:'skirmisher', name:'Frigate',      hp:50,  maxHp:50,  atk:6,  engineRating:3, shields:0, maxShields:0, guns:1 },
       { name:'Gunship',      hp:70,  maxHp:70,  atk:8,  engineRating:2, shields:1, maxShields:1, guns:2 },
-      { name:'Heavy Cruiser',hp:100, maxHp:100, atk:11, engineRating:2, shields:1, maxShields:2, guns:2 },
-      { name:'Dreadnought',  hp:160, maxHp:160, atk:16, engineRating:1, shields:3, maxShields:3, guns:3 },
-      { name:'Flagship',     hp:260, maxHp:260, atk:21, engineRating:1, shields:5, maxShields:5, guns:4 },
+      { combatTactic:'brawler', name:'Heavy Cruiser',hp:100, maxHp:100, atk:11, engineRating:2, shields:1, maxShields:2, guns:2 },
+      { combatTactic:'brawler', name:'Dreadnought',  hp:160, maxHp:160, atk:16, engineRating:1, shields:3, maxShields:3, guns:3 },
+      { combatTactic:'sniper', name:'Flagship',     hp:260, maxHp:260, atk:21, engineRating:1, shields:5, maxShields:5, guns:4 },
     ];
     // Spawn guards slowly, filling each base up to its own quota.
     const activeBasesForGuards = (G.pirateBases||[]).filter(b=>!b.destroyed);
@@ -180,9 +181,9 @@ function movePirates(){
     let rx=base.x+rnd(5)-2, ry=base.y+rnd(5)-2;
     rx=Math.max(1,Math.min(MAP_W-2,rx)); ry=Math.max(1,Math.min(MAP_H-2,ry));
     const PIRATE_CLASSES=[
-      { name:'Corvette',hp:30,maxHp:30,atk:4,engineRating:3,shields:0,maxShields:0,guns:1 },
-      { name:'Frigate', hp:50,maxHp:50,atk:6,engineRating:3,shields:0,maxShields:0,guns:1 },
-      { name:'Cruiser', hp:80,maxHp:80,atk:9,engineRating:2,shields:1,maxShields:1,guns:2 },
+      { combatTactic:'brawler', name:'Corvette',hp:30,maxHp:30,atk:4,engineRating:3,shields:0,maxShields:0,guns:1 },
+      { combatTactic:'skirmisher', name:'Frigate', hp:50,maxHp:50,atk:6,engineRating:3,shields:0,maxShields:0,guns:1 },
+      { combatTactic:'sniper', name:'Cruiser', hp:80,maxHp:80,atk:9,engineRating:2,shields:1,maxShields:1,guns:2 },
     ];
     const pc = PIRATE_CLASSES[rnd(2)];
     G.pirates.push({ x:rx, y:ry, homeX:base.x, homeY:base.y,
@@ -192,8 +193,6 @@ function movePirates(){
     base.lastRespawn = G.turn;
   });
 
-  const playerEngine = G.shipStats?.engineRating ?? 2;
-
   G.pirates.forEach(p=>{
     if(!p.alive) return;
     const distToPlayer = Math.abs(p.x-G.ship.x)+Math.abs(p.y-G.ship.y);
@@ -201,7 +200,7 @@ function movePirates(){
     let isChasing = false;
     const satisfied = isPirateSatisfied(p);
 
-    if(satisfied){
+    if(satisfied || shipDisengagementActive(p)){
       p._chaseTurns = 0;
       p._gaveUp = 0;
       if(p.pirateType==='roamer'){
@@ -224,7 +223,7 @@ function movePirates(){
       })();
 
       // Pursuit cap: roamers give up after 10 consecutive chase turns
-      if(!DEBUG.shipInvisible && distToPlayer<=10 && !nearBase){
+      if(!DEBUG.shipInvisible && effectiveSensorRange(p)>0 && distToPlayer<=10 && !nearBase){
         p._chaseTurns = (p._chaseTurns||0) + 1;
         if(p._chaseTurns <= 10){
           tx=G.ship.x; ty=G.ship.y;
@@ -247,7 +246,7 @@ function movePirates(){
     } else {
       // Guard: patrol near home base, chase if player gets close
       const distToHome = Math.abs(p.x-p.homeX)+Math.abs(p.y-p.homeY);
-      if(!DEBUG.shipInvisible && distToPlayer<=6 && distToHome<=10){
+      if(!DEBUG.shipInvisible && effectiveSensorRange(p)>0 && distToPlayer<=6 && distToHome<=10){
         tx=G.ship.x; ty=G.ship.y;
         isChasing = true;
       } else {
@@ -257,19 +256,8 @@ function movePirates(){
       }
     }
 
-    // Engine-rated movement. While chasing, speed is relative to the player's
-    // engine: equal engines trade one tile for one tile, faster pirates gain,
-    // and slower pirates only move on some chase turns.
-    const pirateEngine = p.engineRating || 2;
-    let steps;
-    if(isChasing){
-      p._chaseMoveBank = (p._chaseMoveBank || 0) + (pirateEngine / Math.max(1, playerEngine));
-      steps = Math.floor(p._chaseMoveBank);
-      p._chaseMoveBank -= steps;
-    } else {
-      p._chaseMoveBank = 0;
-      steps = Math.max(1, Math.min(pirateEngine, 2)); // relaxed max 2 steps when wandering
-    }
+    // Shared with civilian flight: same engine ratio, bank and relaxed roaming cap.
+    const steps=galaxyShipMoveBudget(p,isChasing);
 
     for(let s=0; s<steps; s++){
       const ctx2 = { tx, ty }; // need current target each step

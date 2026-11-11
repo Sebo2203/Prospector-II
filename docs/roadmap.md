@@ -2,7 +2,11 @@
 
 Prospector II should become a turn-based expedition roguelite about making a living at the edge of a changing sector. A run starts with a vulnerable ship, a small crew, and practical work: survey, trade, salvage, research, or fight. The player can retire with what they earned, or stay long enough to uncover ancient places, meet another spacefaring people, and decide what happens when the sector faces a crisis. The ending should remember the places visited, people helped or harmed, and dangers left unresolved.
 
-This is a destination and an order of work, not a promise to put every idea from the original comments into one release. The comments in `src/html/legacy-design-notes.html` supply the strange worlds, ships, and threats below. Their implementation labels are historical: current code is the source of truth.
+The [difficulty philosophy](design-philosophy.md) governs this roadmap: frequent early death and lethal bad luck are expected. Progress buys temporary breathing room, while the intended threat curve escalates with run age independently of player progress. Only exceptional cunning should consistently stay ahead of that curve. A coherent, complete game does not mean that most runs survive. This is the intended design; a comprehensive run-age escalation system is not yet implemented.
+
+The design follows Matthias Mennel’s *Prospector*. Captains earn their living through exploration, trade, research, salvage, and combat, then choose when to retire. Preserve the five civilization tiers and their distinct rules for language, gifts, aid, permission, and boundaries. The original design notes supply many of the worlds and threats below. [Original manual](https://ruzzoli.de/roguelikes/shrine/prospector/manual.html) · [Manual PDF](https://ruzzoli.de/roguelikes/shrine/prospector/Manual.pdf) · [Historical design notes](../src/html/legacy-design-notes.html)
+
+The milestones below describe planned work. See the [expedition guide](experiment.md) for current mechanics and the [changelog](../CHANGELOG.md) for shipped changes.
 
 ## What a complete run should feel like
 
@@ -11,11 +15,15 @@ This is a destination and an order of work, not a promise to put every idea from
 3. **Change the sector.** The player makes choices that affect a world, faction, route, or crew member. Those effects appear later through news, encounters, prices, access, or danger rather than only in the immediate dialogue.
 4. **Decide when to leave.** Retirement is available before the grand stories are complete. Staying creates chances for a richer legacy and exposes the crew to growing risk. A run closes with a personal career account and a sector outcome based on what actually happened.
 
-The game needs four promises to make this work. **Knowledge matters:** scans, examination, rumors, and the journal help the player make informed choices. **The crew matters:** wounds, illness, morale, and expertise affect expeditions and recovery. **The sector remembers:** sites, civilizations, factions, and crises persist through saves and respond to decisions. **Careers differ:** the starting hull and chosen livelihood create useful approaches, not mandatory story locks.
+The game needs four promises to make this work. **Knowledge matters:** scans, examination, rumors, and the log help the player make informed choices. **The crew matters:** wounds, illness, morale, and expertise affect expeditions and recovery. **The sector remembers:** sites, civilizations, factions, and crises persist through saves and respond to decisions. **Careers differ:** the starting hull and chosen livelihood create useful approaches, not mandatory story locks.
 
 For example, a surveyor could answer a quarantine ship's call, carry a sick passenger to a station, and later find the station refusing incoming ships. The same run might discover the robot factory responsible for raids, negotiate help from an alien colony, and divert a planet-killing vessel. The final account would mention those linked events. Another captain could sell the quarantine ship for parts, never meet the colony, and retire early with a very different story.
 
 ## The foundation already in the game
+
+The original foundation review identified save failures, disconnected entity references, inconsistent action clocks, dry aquatic worlds, and a zero-morale fallback. Experimental.7 addressed autosave capacity, failure recovery, and file/storage compatibility. Browser regression scripts now run in the repository’s test workflow. [Foundation review](archive/foundation-review-2026-10-31.md) · [Autosaves](autosave.md) · [Testing](../qa/README.md)
+
+Experimental.46 preserves actor identities across saves, gives surface actions, scans and tactical combat a consistent career clock, reserves reachable seabed settlements for aquatic civilizations, and preserves zero crew morale. Validate encounter readability and the whole-career economy with complete runs. The archived retirement attempts ended below their wealth target and record where the test pilot struggled. [Playthrough reports](archive/README.md)
 
 The modular `src/` tree already contains a generated galaxy, planets and civilizations, surface exploration, ship and ground combat, crew conditions and morale, stations, science work, saves, and several authored encounter types. Ringworlds, ruined ringworlds, bloom worlds, nuclear-war worlds, and talking trees have code now, despite older comments describing them as plans. The roadmap should deepen and connect these systems before adding another long list of isolated encounters.
 
@@ -24,21 +32,34 @@ The modular `src/` tree already contains a generated galaxy, planets and civiliz
 | Procedural worlds and authored oddities | Many discoveries need a lead, a decision, and a later consequence. |
 | Crew health, disease, hallucinations, and morale | These need readable warnings, recovery choices, and occasional story consequences. |
 | Civilizations and station interactions | Local state needs to feed sector news, diplomacy, access, and endings. |
-| Science contracts | The small set of one-time jobs runs out; careers need renewable work and larger expeditions. |
-| Artemis launcher and ship equipment | The launcher lacks ammunition, and damage/repair is not yet a meaningful ship-management loop. |
+| Science contracts | Experimental.4 added renewable work and recovery from blocked jobs; larger expeditions and whole-career balance still need work. |
+| Tactical ship combat | Experimental.45 added positional combat, cover, exhaust, and fleet encounters. Encounter pacing, weapon balance, and further ship systems need playtesting. |
+| Artemis launcher and ship equipment | Experimental.79 added guided Artemis fire, purchased finite missiles and occasional armed raiders; experimental.80 adds actual saved missile flight and delayed impacts. Persistent cores/repair already exist; long-career fitting and recovery balance still need playtesting. |
 | Six authored humanity outcomes | Retirement skips the sector-outcome screen; outcomes need to follow run history instead of a random selection. |
 
-## Release 0.27 — The expedition remembers
+The experimental.46 career runs reached short retirement on all three starting hulls. The longer scout run was destroyed by a Dreadnought with 1,856 credits of its 10,000-credit target. Prioritize threat readability and the cost of engaging or withdrawing before adding another resource to manage. The arena already tracks weapon reloads per slot. Experimental.52 implements shared heat for weapons/boosts, per-mount reload deadlines on the career clock, shield capacity/recharge, reactor fitting and persistent core damage with engineer recovery. Experimental.62 adds engine-relative tactical NPC movement with checked substeps and saved fractional credit. Review range control and escape balance, especially fast upgraded Corvettes versus slow hulls, alongside heat/reloads before expanding combat content. The foundation is tested; full combat careers, loadout balance and opponent variety remain playtesting work. [Playtest results](../CHANGELOG.md#career-playtests)
 
-Make the sector legible before making it bigger. Add a saved **captain's journal** with discovered systems and bodies, scan findings, civilization notes, unsold survey work, active leads, and a compact history of major decisions. The journal should distinguish a rumor from something confirmed. Unknown places remain unknown. A separate event history lets later encounters and endings react to facts without parsing prose from the log.
+## Implemented foundation — the expedition remembers
 
-Build one complete incident on that foundation: the **Quarantine Ship**. A distress signal leads to a drifting vessel with an illness and a valuable cargo. The captain can rescue survivors, isolate them, strip the ship, or leave. The crew's health and morale, the next station's response, and the journal should reflect the choice. The ship is a small enough story to establish the pattern for every later authored encounter: lead → discovery → informed choice → immediate cost → delayed response.
+The integrated log records known discoveries, survey work, science leads, and survivor outcomes. Mercy of Dawn connects a distress lead to boarding, treatment, transport, and station delivery. Its location is set during galaxy generation and revealed by sensors. This incident is the pattern for later stories with choices, costs, and persistent aftermath. [Expedition guide](experiment.md)
 
-**Exit:** Leave the incident, save and reload, then encounter a later consequence that agrees with the journal. The first implementation slice is the shared journal/history data and view; the second is this incident.
+Next, use playtesting to assess rescue actions, lighting, pressure, ferry trips, and medical tradeoffs. Extend those patterns into the sealed ringworld, robot factory, and Apollo’s Sanctuary below.
 
 ## Release 0.32 — A ship and crew worth bringing home
 
-Turn resources into expedition decisions. Give engines, sensors, life support, weapons, and cargo systems condition that affects existing actions. Damage should be visible, repairable with parts or station service, and serious without producing arbitrary soft locks. Finish the **Artemis launcher** with ammunition, purchase, combat use, and save behavior. Add a modest ship lab that converts survey or salvage finds into a small set of useful field supplies; it should support exploration, not become a broad crafting tree.
+Experimental.83 implements the first [hull framework](hull-framework.md): derived physical envelopes, shared spare refit space and frame support, removable refits, size-dependent travel/handling/landing risk, condition-aware trade-in and local equipment stores. The paged purchase catalog is separate from the unchanged three starters. Prices and operating costs need whole-career playtesting. Additional hulls, availability progression, cargo-mass simulation and a layout for four or more combat mounts remain planned.
+
+Current combat follow-up: experimental.78 resolves immobile-ship stalemates through existing stranded/SOS handling and fixes target-dependent fleet surrender. Experimental.86 adds [CBT/NAV bridge participation, real player crew casualties, combat training and distinct enemy tactics](ship-combat-crew.md), with a 192-fight bounded matchup audit. Experimental.91 adds rare multi-tile asteroid cover up to 2×2. Experimental.93 adds separated NPC escapes requiring actual pursuit and blue/pink nebula arenas with gas-only/mixed layouts, traversable obscuring pockets and lightning. Experimental.94 removes advance lightning warnings and adds mutual shield-bypassing rams, asteroid boost collisions and moving-target wraith contact. Experimental.96 fixes the nebula schedule/save state after failed withdrawal and adds a [combined combat audit](combat-integration-audit-2026-11-11.md) covering seeded single/fleet encounters, selective ramming, attrition chains and saved continuation. Economics were not rebalanced. Wider fitting/controller coverage, richer NPC crew simulation, human tactical playtesting and independent run-age escalation remain work.
+
+### Future combat environments — planned
+
+- **Near pulsars:** distinct arena presentation and positional hazards tied to the nearby pulsar. Decide on readable beam/radiation timing and meaningful safe versus exposed positions before implementation.
+- **Near wormholes:** distinct arena presentation and spatial effects appropriate to a wormhole, with explicit movement/escape rules and warnings.
+- **Further variation:** expand layout families, terrain combinations and environmental events within each setting so encounters near the same object need not repeat one map. Keep environmental hazards legible, turn-based and consistent for both sides.
+
+These are future design notes, not implemented maps. Ordinary space and the implemented nebula environments remain the current arena families.
+
+Turn resources into expedition decisions. The experimental game already gives six core systems persistent condition, with parts, improvised repairs and station service. Experimental.79 completes the **Artemis launcher** with ammunition purchase, guided player/NPC combat and persistent magazines. Test their whole-career balance and recovery decisions, while keeping damage serious without arbitrary soft locks. A broader life-support/equipment loop and a modest ship lab remain planned; the lab should convert survey or salvage finds into a small set of useful field supplies, not become a broad crafting tree.
 
 Crew illness, fatigue, and morale should have warnings and remedies. A mutiny or refusal is a rare escalation of neglected conditions with chances to de-escalate. Give each starting hull at least one distinct advantage in crisis resolution: cargo space and supplies, scientific analysis, or tactical force. No choice of hull should make an ending unreachable.
 
@@ -52,13 +73,13 @@ Build three substantial planet arcs from the old design notes, each with clues, 
 - **The robot factory:** descend into an automated industrial world. Destroy, reprogram, or abandon its surviving core. A neglected or mishandled core can send robot ships into nearby systems later.
 - **Apollo's Sanctuary:** a temple world with a guardian that can be fought, studied, or approached through a discovered ritual. The peaceful path rewards preparation rather than guessing dialogue options.
 
-Make leads appear through surveys, rumors, and the journal. Use the game's visual language—surface tiles, examination text, and strong ASCII moments—to make each place recognizable. Add smaller rare hazards, such as a sandworm or crystal minefield, only after the three arcs can be played from first clue to consequence.
+Make leads appear through surveys, rumors, and the log. Use the game's visual language—surface tiles, examination text, and strong ASCII moments—to make each place recognizable. Add smaller rare hazards, such as a sandworm or crystal minefield, only after the three arcs can be played from first clue to consequence.
 
 **Exit:** Every arc can be completed through at least two distinct approaches, and the resulting world state is visible on a return visit or elsewhere in the sector.
 
 ## Release 0.50 — A living sector
 
-Make stations, pirates, research groups, and local civilizations react to what the captain does. Keep standing understandable: players should see who trusts or fears them and why. Add sector news at stations and in the journal to report changes the player could reasonably learn. Contact with a nonspacefaring civilization should allow observation, trade, interference, or protection with consequences for that society and for interested factions.
+Make stations, pirates, research groups, and local civilizations react to what the captain does. Keep standing understandable: players should see who trusts or fears them and why. Add sector news at stations and in the log to report changes the player could reasonably learn. Contact with a nonspacefaring civilization should allow observation, trade, interference, or protection with consequences for that society and for interested factions.
 
 Give pirates and patrols interactions besides instant combat: demands, bargains, pursuit, assistance, and consequences for attacking neutral vessels. Refresh science contracts after a cooldown, with targets known to be reachable; add a few multi-step research expeditions that point toward the world arcs. Let trading and salvage remain viable ways to fund a run as the sector changes.
 
@@ -74,9 +95,9 @@ Peace opens cooperation and new ways to solve a crisis; hostility creates a sust
 
 ## Release 0.74 — The sector in danger
 
-Make the **planet-killing Titan** the major late-run crisis. Rumors and debris foreshadow it; direct discovery starts a clearly shown clock. The player can investigate a weakness, assemble help, disable or redirect it, attack at great cost, or leave it alone. Targets, warnings, and deadlines must be readable. The robot factory's spreading ships form a slower, smaller crisis that can intersect with faction and alien choices.
+Make the **planet-killing Titan** the major late-run crisis. Its threat schedule should advance with run age independently of the player's readiness. Rumors, debris and direct discovery reveal its progress and remaining time rather than granting a fresh clock. The player can investigate a weakness, assemble help, disable or redirect it, attack at great cost, or leave it alone. Targets, warnings, and deadlines must be readable. The robot factory's spreading ships form a slower, smaller crisis that can intersect with faction and alien choices.
 
-Crises should escalate through encounters, map state, station news, and lost or protected worlds. A player who retires before resolving one is making a valid choice; the ending tells the truth about that risk. No crisis timer starts invisibly at game creation, and no critical resolution depends on a single rare random drop.
+Crises should escalate through encounters, map state, station news, and lost or protected worlds. A player who retires before resolving one is making a valid choice; the ending tells the truth about that risk. Sector escalation must not wait for player progress or discovery. Threats may already be advancing before the captain learns about them; the world need not grant a safe preparation period. Knowledge and earlier clues can improve the odds, without making every disaster avoidable. No critical resolution should depend on a single mandatory rare random drop.
 
 **Exit:** The Titan can be resolved by more than one route or allowed to strike, and the sector changes accordingly. The robot threat can be contained, redirected, or left to spread.
 
@@ -88,14 +109,21 @@ Wire the existing personal retirement story, humanity/sector outcome screen, and
 
 ## Release 0.95 → 1.0 — Finish the game
 
-Play complete runs with each starting hull and with at least one trade, science, and combat-focused career. Balance earnings, repairs, encounter frequency, travel time, and crisis pacing around those runs. Keep rare stories surprising without making progress depend on them. Audit keyboard controls, ASCII readability, encounter exits, save migration, and the generated `index.html` build. Give new players an opening contract and clear explanations for the journal, ship condition, and retirement choice.
+Play complete runs with each starting hull and with at least one trade, science, and combat-focused career. Balance earnings, repairs, encounter frequency, travel time, and crisis pacing around those runs. Keep rare stories surprising without making progress depend on them. Audit keyboard controls, ASCII readability, encounter exits, save migration, and the generated `index.html` build. Give new players an opening contract and clear explanations for the log, ship condition, and retirement choice.
 
 **1.0 means:** a new player can begin, learn, earn, make consequential choices, and reach a coherent ending without developer intervention; major paths do not trap the player; saves restore those paths; the built single-file distribution plays the same game as the modular source.
 
 ## After 1.0: expansions, not prerequisites
 
-The old comments have enough ideas for years of additions: a prison planet that can release a monster, a stellar gun, a dying sun, a space whale, the nebula devourer, a human seed ship, a maze, more predators, invasions, troop transport, and nuclear weapons. Colony and station construction are especially large systems and deserve their own expansion. These should attach to the journal, faction, crisis, and ending framework above so they become new stories within the same game, rather than isolated scenes. None is required to call the core game complete.
+The old comments have enough ideas for years of additions: a prison planet that can release a monster, a stellar gun, a dying sun, a space whale, the nebula devourer, a human seed ship, a maze, more predators, invasions, troop transport, and nuclear weapons. Colony and station construction are especially large systems and deserve their own expansion. These should attach to the log, faction, crisis, and ending framework above so they become new stories within the same game, rather than isolated scenes. None is required to call the core game complete.
 
 ## How to build it
 
-Deliver each release through small, reviewable vertical slices. For an authored encounter, the slice includes discovery, choice, response, departure, save/reload, and any promised later consequence. Document the new state before adding it to saves, keep older saves readable, and test the actual player path in a browser. Edit `src/`, rebuild `index.html`, and run the build checks for gameplay changes. Preserve the current classic-script/shared-global order and turn rules unless a feature explicitly changes them. Keep private playtester material out of the public repository.
+Deliver each milestone as a playable slice that includes discovery, choice, response, departure, save and reload, and any promised later consequence. Use the [contributor rules](../AGENTS.md) and [testing guide](../qa/README.md) to verify the player path. For ongoing work on terrain transitions and planetary visual cohesion, see [art direction](art-direction.md).
+
+
+## Calendar and activity time
+
+Experimental.70 implements a reporting-only elapsed clock alongside unchanged turn-based rules. It totals location/activity time, shows a normalized local solar clock tied to the existing daylight cycle, and includes durations in the career record. See [parallel time reporting](time-reporting.md) for current rates and limits.
+
+A later gameplay redesign could intentionally move illness/recovery, payroll, morale, rescue deadlines, contracts and temporary repairs onto calendar durations. That conversion is not implemented: tactical sequencing, daylight progression and all gameplay timers still use their original turn rules. Keep weapon reload and combat presentation on an appropriate tactical clock. Do not silently reinterpret every old deadline or invent past activity times.

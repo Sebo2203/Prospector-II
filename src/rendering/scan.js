@@ -9,28 +9,27 @@ function drawScanView(){
   const floorSprite = TILE[floorTileType]?.sprite || 'earth_floor';
   const floorAscii  = ASCII[floorSprite] || {bg:'#0a1a08', fg:'#2a5a1a'};
   function drawScanBaseFloor(tileType, sx, sy, bg){
-    const info = TILE[tileType];
-    if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx, sx, sy);
-    else if(OPTIONS.asciiMode) drawAsciiTile(tileType, sx, sy, bg);
-    else drawSprite(info?.sprite || tileType, sx, sy, bg);
+    drawTerrainFloor(tileType,sx,sy,scCamX+sx/TS,scCamY+sy/TS,bg);
   }
 
   // Draw all tiles, using scanMask for visibility
   const mask = pdata.scanMask;
   const _W = PW(pdata), _H = PH(pdata);
-  const hasLanded = !!pdata.visited?.some(Boolean);
   // Camera centred on scan cursor, clamped to map
   const scx = G.scanCursorX ?? pdata.spawnX;
   const scy = G.scanCursorY ?? pdata.spawnY;
   const scCamX = Math.max(0, Math.min(_W - VIEW_W, scx - Math.floor(VIEW_W/2)));
   const scCamY = Math.max(0, Math.min(_H - VIEW_H, scy - Math.floor(VIEW_H/2)));
+  canvasMapView={camX:scCamX,camY:scCamY,width:_W,height:_H};
+  const terrain = terrainTileGrid(ctx);
   for(let vy=0;vy<VIEW_H;vy++){
     const y = scCamY+vy;
     if(y<0||y>=_H) continue;
     for(let vx=0;vx<VIEW_W;vx++){
       const x = scCamX+vx;
       if(x<0||x>=_W) continue;
-      const sx=(x-scCamX)*TS, sy=(y-scCamY)*TS;
+      const sx=vx*TS, sy=vy*TS;
+      terrain.align(vx,vy);
       if(!mask || !mask[y*_W+x]){
         ctx.fillStyle='#04040c'; ctx.fillRect(sx,sy,TS,TS);
         continue;
@@ -125,10 +124,7 @@ function drawScanView(){
         else if(cell.type==='MINERAL_SAMPLE') { ctx.fillStyle='#cc8800'; ctx.fillRect(sx+9,sy+9,7,7); ctx.fillStyle='#ffe066'; ctx.fillRect(sx+10,sy+10,4,4); }
       } else if(cell.type==='SHIP'){
         drawScanCellBg();
-        if(hasLanded){
-          if(!OPTIONS.asciiMode) drawSpriteDarkMatteKeyed('ship_tile', sx, sy, '#aaaacc');
-          else drawAsciiTile('SHIP', sx, sy, floorAscii.bg);
-        }
+        // SHIP also stores the remembered landing site; the ship is in orbit during a scan.
       } else if(cell.type==='rw_void'){
         ctx.fillStyle='#02020a'; ctx.fillRect(sx,sy,TS,TS);
         const starSeed=(x*7919+y*1049)%1000;
@@ -145,13 +141,14 @@ function drawScanView(){
             drawSpriteDarkMatteKeyed(sp, sx, sy, floorAscii.bg);
           }
         } else {
-          drawSprite(sp, sx, sy, floorAscii.bg);
+          drawTerrainSprite(sp,sx,sy,x,y,floorAscii.bg);
         }
       } else {
         drawScanBaseFloor(floorTileType, sx, sy, floorAscii.bg);
       }
     }
   }
+  terrain.restore();
 
   if(Number.isInteger(G.scanCursorX) && Number.isInteger(G.scanCursorY)){
     const valid = canLandAt(pdata, G.scanCursorX, G.scanCursorY);
@@ -166,24 +163,26 @@ function drawScanView(){
   }
 
   // Semi-transparent scan overlay tint so it feels like satellite imagery
-  ctx.fillStyle='rgba(0,30,60,0.18)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='rgba(0,30,60,0.18)'; ctx.fillRect(0,0,canvasWidth,canvasHeight);
 
   // Smoke clouds block scan view
   if(pdata.smokeClouds){
     pdata.smokeClouds.forEach(c=>{
       if(!pdata.scanMask || !pdata.scanMask[c.y*PW(pdata)+c.x]) return;
+      const vx = c.x-scCamX, vy = c.y-scCamY;
+      if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H) return;
+      terrain.align(vx,vy);
       ctx.fillStyle='rgba(20,14,8,0.85)';
-      ctx.fillRect((c.x-scCamX)*TS, (c.y-scCamY)*TS, TS, TS);
+      ctx.fillRect(vx*TS,vy*TS,TS,TS);
     });
+    terrain.restore();
   }
 
   // HUD label
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth;
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,cw,22);
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#70d8ff'; ctx.textAlign='center';
   ctx.fillText('SATELLITE SCAN  -  '+pKey.split(':')[0].replace(',',' ').toUpperCase()+'  -  '+B.name.toUpperCase(), cw/2, 15);
-  ctx.font='14px Courier New'; ctx.fillStyle='#334455';
-  ctx.fillText('[ Arrows ] Move landing zone    [ Enter ] Land    [ ESC ] Back', cw/2, ch-8);
   ctx.textAlign='left';
 }
 

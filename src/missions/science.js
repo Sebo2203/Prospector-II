@@ -19,13 +19,22 @@ function ensureScienceJobState(){
   if(G.scienceJob.nextIndex === undefined) G.scienceJob.nextIndex = 0;
   if(G.scienceJob.completed === undefined) G.scienceJob.completed = 0;
   if(!Array.isArray(G.scienceJob.completedTypes)) G.scienceJob.completedTypes = [];
+  if(!Array.isArray(G.scienceJob.reportedCivilizations)) G.scienceJob.reportedCivilizations = [];
+  if(!G.scienceJob.serial) G.scienceJob.serial = 0;
   return G.scienceJob;
 }
 
 function remainingScienceJobTypes(){
   const state = ensureScienceJobState();
   const done = new Set(state.completedTypes || []);
-  return SCIENCE_JOB_TYPES.filter(type => !done.has(type));
+  const eligible=SCIENCE_JOB_TYPES.filter(type=>{
+    if(type==='data_box') return (G.shipStats?.cargoCapacity||0)>(G.cargo||[]).length;
+    if(type==='artifact') return G.galaxy?.some(row=>row.some(cell=>cell.type==='SYSTEM' && cell.planets?.some(p=>p.biome==='ANCIENT')));
+    return true;
+  });
+  const different=eligible.filter(type=>type!==state.lastType);
+  const pool=different.length?different:eligible;
+  return [...pool.filter(type=>!done.has(type)),...pool.filter(type=>done.has(type))];
 }
 
 function scienceJobName(job){
@@ -72,24 +81,25 @@ function findScienceJobPlanet(filterFn){
 }
 
 function findScienceJobVoidTile(){
-  let sx, sy, t=0;
-  do {
-    sx = 5+rnd(MAP_W-10); sy = 3+rnd(MAP_H-8); t++;
-  } while(t<500 && (
-    G.galaxy[sy][sx].type !== 'VOID' ||
-    Math.abs(sx-G.ship.x)+Math.abs(sy-G.ship.y) < 10 ||
-    (G.npcStranded||[]).some(s=>Math.abs(s.x-sx)+Math.abs(s.y-sy)<5)
-  ));
-  return t>=500 ? null : { x:sx, y:sy };
+  const candidates=[],range=Math.min(30,Math.max(10,Math.floor(G.maxFuel/3)));
+  for(let y=Math.max(1,G.ship.y-range);y<Math.min(MAP_H-1,G.ship.y+range+1);y++){
+    for(let x=Math.max(1,G.ship.x-range);x<Math.min(MAP_W-1,G.ship.x+range+1);x++){
+      const distance=Math.abs(x-G.ship.x)+Math.abs(y-G.ship.y);
+      if(distance<8 || distance>range || G.galaxy[y][x].type!=='VOID' || G.galaxy[y][x]._npcStranded) continue;
+      if((G.npcStranded||[]).some(s=>Math.abs(s.x-x)+Math.abs(s.y-y)<5)) continue;
+      candidates.push({x,y});
+    }
+  }
+  return candidates.length?candidates[rnd(candidates.length)]:null;
 }
 
 function scienceJobDetail(){
   const state = ensureScienceJobState();
   const job = state.active;
-  if(job) return scienceJobName(job)+' — '+(job.status || 'in progress');
+  if(job) return scienceJobName(job)+' — '+(job.status || 'in progress')+' — '+job.reward+' cr';
   const remaining = remainingScienceJobTypes();
   if(!remaining.length) return 'No remaining field contracts';
-  if(G.turn < state.cooldownUntil) return 'No field work available right now';
+  if(G.turn < state.cooldownUntil) return 'New field work in '+(state.cooldownUntil-G.turn)+' turns';
   const nextType = remaining[state.nextIndex % remaining.length];
   return 'Available: '+scienceJobName({type:nextType});
 }
@@ -110,7 +120,7 @@ function startScienceJob(){
     return false;
   }
   const type = remaining[state.nextIndex % remaining.length];
-  let job = { type, startedTurn:G.turn, reward:0, status:'in progress' };
+  let job = { type, id:'science:'+(state.serial+1), startedTurn:G.turn, reward:0, status:'in progress' };
 
   if(type === 'artifact'){
     // Artifact contracts must point at a real ancient world: normal planet generation
@@ -130,7 +140,7 @@ function startScienceJob(){
     const spot = findScienceJobVoidTile();
     if(!spot){ addLog('No suitable search area found for a lost research ship. Try later.','lw'); return false; }
     const name = 'RSV '+pick(['Kepler','Aster','Tsiolkovsky','Curie','Mendel','Sagan']);
-    const mapKey = spot.x+','+spot.y+':research';
+    const mapKey = spot.x+','+spot.y+':research:'+job.id;
     const ship = { x:spot.x, y:spot.y, type:'research', name, mapKey, age:0, noSos:true, scienceJob:true };
     if(!G.npcStranded) G.npcStranded = [];
     G.npcStranded.push(ship);
@@ -150,12 +160,12 @@ function startScienceJob(){
     job.status = 'retrieve research data';
     addLog('Science contract accepted: find the lost research ship '+name+'.','lg');
     if(driftMag === 0){
-      addLog('Last fix: sector '+reportedX+','+reportedY+'. Signal was clean — position should be reliable. No SOS beacon detected.','li');
+      addLog('Last fix: sector '+(reportedX+1)+','+(reportedY+1)+'. Signal was clean — position should be reliable. No SOS beacon detected.','li');
     } else if(driftMag <= 2){
-      addLog('Last fix: sector '+reportedX+','+reportedY+' — ship was underway when signal cut out. Drift likely minor.','li');
+      addLog('Last fix: sector '+(reportedX+1)+','+(reportedY+1)+' — ship was underway when signal cut out. Drift likely minor.','li');
       addLog('No SOS beacon detected. Check the reported sector and nearby tiles.','lw');
     } else {
-      addLog('Last fix: sector '+reportedX+','+reportedY+' — but the beacon died mid-transit. Position confidence is low.','li');
+      addLog('Last fix: sector '+(reportedX+1)+','+(reportedY+1)+' — but the beacon died mid-transit. Position confidence is low.','li');
       addLog('No SOS beacon detected. Conduct a wider search around the reported coordinates.','lw');
     }
   } else if(type === 'civilization'){
@@ -187,7 +197,9 @@ function startScienceJob(){
   }
 
   state.active = job;
+  state.serial++;
   state.nextIndex = remaining.length > 1 ? rnd(remaining.length) : 0;
+  recordExpeditionEvent(job.id+':accepted','contract','Accepted '+scienceJobName(job)+'. '+job.reward+' cr on completion.');
   trackEvent('science_job_taken', analyticsBaseParams({
     job_type: job.type,
     reward: job.reward || 0,
@@ -197,6 +209,29 @@ function startScienceJob(){
 
 function countInventoryByName(name){
   return (G.inventory||[]).filter(i=>i.name === name).length;
+}
+
+function scienceSaleItems(){
+  const reserved=scienceJobReservedItemNames(ensureScienceJobState().active);
+  return (G.inventory||[]).filter(item=>(item.value||0)>0 && !item.usable && !item.questItem &&
+    !item.isCapturedCreature && !reserved.has(item.name));
+}
+
+function closeResearchShipContract(job){
+  if(job?.type!=='research_ship') return;
+  const ship=(G.npcStranded||[]).find(s=>s.mapKey===job.target?.mapKey);
+  if(ship){ship.type='dead';ship.boarded=true;ship.boardedAge=0;ship.scienceJob=false;}
+}
+
+function abandonScienceJob(){
+  const state=ensureScienceJobState(),job=state.active;
+  if(!job) return false;
+  closeResearchShipContract(job);
+  if(job.type==='data_box') G.cargo=G.cargo.filter(item=>item.questItem!=='science_data_box');
+  state.active=null;state.lastType=job.type;state.cooldownUntil=G.turn+rollScienceJobCooldown();
+  recordExpeditionEvent((job.id||'science:legacy:'+state.completed)+':abandoned','contract','Relinquished '+scienceJobName(job)+' at the Science Office. No payment received.');
+  addLog('Contract relinquished. No payment received; replacement work follows the usual cooldown.','li');
+  return true;
 }
 
 function removeInventoryByName(name, count){
@@ -228,15 +263,17 @@ function completeScienceJob(){
     done = removeInventoryByName('Ancient Artifact', 1);
     if(!done) addLog('Science Office still needs an ancient artifact.','li');
   } else if(job.type === 'research_ship'){
-    done = removeInventoryByName('Research Ship Data', 1);
+    const index=G.inventory.findIndex(item=>item.name==='Research Ship Data' && (!job.id || item.scienceJobId===job.id));
+    if(index>=0){G.inventory.splice(index,1);done=true;}
     if(!done) addLog('Science Office still needs the lost ship data.','li');
   } else if(job.type === 'civilization'){
-    const civSurvey = Object.values(G.planets||{}).find(p=>p.civilization && p.visited?.some(Boolean) && getSurveySaleValue(p) > (p.surveySoldValue||0));
+    const civSurvey = Object.entries(G.planets||{}).find(([key,p])=>p.civilization &&
+      !state.reportedCivilizations.includes(key) && p.visited?.some(Boolean) && getSurveySaleValue(p)>0);
     if(civSurvey){
-      civSurvey.surveySoldValue = getSurveySaleValue(civSurvey);
+      state.reportedCivilizations.push(civSurvey[0]);
       done = true;
     } else {
-      addLog('Science Office needs unsold survey data from an intelligent civilization.','li');
+      addLog('Science Office needs documented survey data from a civilization not already reported under a contract.','li');
     }
   } else if(job.type === 'alien_corpses'){
     done = removeInventoryByName('Alien Corpse', job.required || 5);
@@ -258,6 +295,9 @@ function completeScienceJob(){
     mission_turns: Math.max(0, (G.turn || 0) - (job.startedTurn || 0)),
   }));
   if(!(state.completedTypes||[]).includes(job.type)) state.completedTypes.push(job.type);
+  state.lastType=job.type;
+  closeResearchShipContract(job);
+  recordExpeditionEvent((job.id||'science:legacy:'+state.completed)+':complete','contract','Completed '+scienceJobName(job)+'. Earned '+(job.reward||0)+' cr.');
   state.active = null;
   state.cooldownUntil = G.turn + rollScienceJobCooldown();
   state.completed = (state.completed||0) + 1;
@@ -289,11 +329,22 @@ function seedResearchShipJobMap(mapKey){
   const pdata = G.planets[mapKey];
   if(!pdata || pdata._scienceJobSeeded) return;
   pdata._scienceJobSeeded = true;
+  // Damage can carve detached floor pockets into the hull. Objectives and
+  // defenders must belong to the deck reachable from the boarding airlock.
+  const reachable=new Set([pdata.spawnX+','+pdata.spawnY]),queue=[{x:pdata.spawnX,y:pdata.spawnY}];
+  for(let i=0;i<queue.length;i++){
+    const p=queue[i];
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const x=p.x+dx,y=p.y+dy,key=x+','+y;
+      if(reachable.has(key)||!TILE[pdata.grid[y]?.[x]?.type]?.pass)continue;
+      reachable.add(key);queue.push({x,y});
+    }
+  }
   const floors = [];
   for(let y=1;y<PH(pdata)-1;y++){
     for(let x=1;x<PW(pdata)-1;x++){
       const t = pdata.grid[y]?.[x]?.type;
-      if(TILE[t]?.pass && !(x===pdata.spawnX && y===pdata.spawnY)) floors.push({x,y});
+      if(TILE[t]?.pass && reachable.has(x+','+y) && !(x===pdata.spawnX && y===pdata.spawnY)) floors.push({x,y});
     }
   }
   function takeFloor(){
@@ -302,7 +353,7 @@ function seedResearchShipJobMap(mapKey){
   }
   const consoleTile = takeFloor();
   if(consoleTile){
-    pdata.grid[consoleTile.y][consoleTile.x] = { type:'station_console', scienceJobData:true };
+    pdata.grid[consoleTile.y][consoleTile.x] = { type:'station_console', scienceJobData:true, scienceJobId:job.id };
   }
   G.enemies[mapKey] = G.enemies[mapKey] || [];
   for(let i=0;i<3 && floors.length;i++){

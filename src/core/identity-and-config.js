@@ -1,3 +1,6 @@
+// Filled from package.json by the single-file build.
+const GAME_VERSION = '__GAME_VERSION__';
+const GAME_VERSION_LABEL = '__GAME_VERSION_LABEL__';
 
 // ─── File identity hash — changes whenever the file content changes ───
 const _FILE_HASH = (()=>{

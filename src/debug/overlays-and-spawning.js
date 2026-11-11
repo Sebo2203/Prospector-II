@@ -4,6 +4,9 @@ const DEBUG_GALAXY_OBJ_TYPES = [
   { id:'BLACK_HOLE',    label:'Black Hole',    col:'#ff8800' },
   { id:'DERELICT',      label:'Derelict',      col:'#6688aa' },
   { id:'PIRATE_BASE',   label:'Pirate Base',   col:'#bb3311' },
+  ...['BASE','WAYPOINT','CASINO','NEBULA_PINK','NEBULA_BLUE','GAS_WRAITH','GAS_DEVOURER',
+    'TRADER','CARGO_SHIP','SCIENCE_SHIP','PATROL','PIRATE','PIRATE_WING','ARTEMIS_RAIDER','BRIDGE_DRILL','NEBULA_COMBAT','HULL_WORKSHOP','STRANDED_ALIVE','STRANDED_DEAD','RESEARCH_SHIP','NEBULA_LOOT','QUARANTINE']
+    .map(id=>({id,label:id.replaceAll('_',' '),col:'#88bbcc',place:(x,y)=>debugBuildPaletteGalaxyObject(id,x,y)})),
 ];
 
 const DEBUG_CIV_TIERS = [
@@ -27,7 +30,7 @@ function debugResetCivilizationState(civ){
 function debugApplySelectedCivAggression(){
   const pd = debugCurrentPlanetData();
   if(!pd?.civilization){
-    addLog('DEBUG: No civilization on current planet. Press 6 to spawn one.','lw');
+    addLog('DEBUG: No civilization on current planet. Use the Civilization panel to spawn one.','lw');
     renderAll();
     return;
   }
@@ -68,21 +71,6 @@ function debugToggleCurrentCivHostile(){
   renderAll();
 }
 
-function cycleArrayIndex(current, len, dir, allowRandom=false){
-  const min = allowRandom ? -1 : 0;
-  const span = len + (allowRandom ? 1 : 0);
-  let next = (current ?? min) + dir;
-  if(next < min) next = min + span - 1;
-  if(next >= len) next = min;
-  return next;
-}
-
-function cycleStringChoice(current, values, dir){
-  const opts = ['', ...values];
-  const idx = Math.max(0, opts.indexOf(current ?? ''));
-  return opts[(idx + dir + opts.length) % opts.length];
-}
-
 function debugPinnedCivTraits(tier){
   if(tier === 'primitive'){
     return {
@@ -102,68 +90,6 @@ function debugPinnedCivTraits(tier){
   return out;
 }
 
-function debugCivSubMenuRows(){
-  const tierPick = DEBUG_CIV_TIERS[(DEBUG.debugCivTier||0) % DEBUG_CIV_TIERS.length];
-  const tier = tierPick?.id || 'primitive';
-  const speciesValue = DEBUG.debugCivSpecies < 0 ? 'Random' : CIV_SPECIES_TYPES[DEBUG.debugCivSpecies % CIV_SPECIES_TYPES.length];
-  const rows = [
-    { key:'tier', label:'Tier', value:tierPick?.label || 'Primitive' },
-    { key:'species', label:'Species', value:speciesValue },
-    { key:'aggression', label:'Aggression', value:CIV_AGGRESSION[(DEBUG.debugCivAggression||0) % CIV_AGGRESSION.length] },
-  ];
-  if(tier === 'primitive'){
-    rows.push(
-      { key:'primDiet', label:'Diet', value:DEBUG.civPrimDiet < 0 ? 'Random' : PRIM_DIETS[DEBUG.civPrimDiet] },
-      { key:'primSocial', label:'Social', value:DEBUG.civPrimSocial < 0 ? 'Random' : PRIM_SOCIAL[DEBUG.civPrimSocial] },
-      { key:'primCuriosity', label:'Curiosity', value:DEBUG.civPrimCuriosity < 0 ? 'Random' : PRIM_CURIOSITY[DEBUG.civPrimCuriosity] },
-      { key:'primHonor', label:'Honor', value:DEBUG.civPrimHonor < 0 ? 'Random' : PRIM_HONOR[DEBUG.civPrimHonor] },
-    );
-  } else {
-    Object.entries(CIVI_TRAITS[tier] || {}).forEach(([axis, values])=>{
-      const debugKey = 'civTrait'+axis[0].toUpperCase()+axis.slice(1);
-      rows.push({ key:'trait:'+debugKey, label:axis, value:DEBUG[debugKey] || 'Random', values });
-    });
-  }
-  // Live-edit rows for an already-spawned civ on the current planet
-  const pd = debugCurrentPlanetData();
-  const liveState = pd?.civilization ? ensureCivilizationState(pd) : null;
-  const langVals = ['0','1','2','3','4','5'];
-  const alertVals = ['0','1','2','3','4','5'];
-  rows.push({ key:'liveLanguage', label:'Language (live)', value: liveState ? String(Math.max(0, Math.min(5, liveState.languageProgress || 0))) : '—', values: langVals, liveOnly: true });
-  rows.push({ key:'liveAlert',    label:'Alert (live)',    value: liveState ? String(Math.max(0, Math.min(5, liveState.alert || 0)))             : '—', values: alertVals, liveOnly: true });
-
-  rows.push({ key:'spawn', label:'Spawn civilization', value:'Enter / Space' });
-  rows.push({ key:'close', label:'Close submenu', value:'Esc / C' });
-  return rows;
-}
-
-function debugCivSubMenuApplyRow(row, dir){
-  if(!row) return;
-  if(row.key === 'tier') DEBUG.debugCivTier = cycleArrayIndex(DEBUG.debugCivTier || 0, DEBUG_CIV_TIERS.length, dir);
-  else if(row.key === 'species') DEBUG.debugCivSpecies = cycleArrayIndex(DEBUG.debugCivSpecies ?? -1, CIV_SPECIES_TYPES.length, dir, true);
-  else if(row.key === 'aggression') DEBUG.debugCivAggression = cycleArrayIndex(DEBUG.debugCivAggression || 0, CIV_AGGRESSION.length, dir);
-  else if(row.key === 'primDiet') DEBUG.civPrimDiet = cycleArrayIndex(DEBUG.civPrimDiet ?? -1, PRIM_DIETS.length, dir, true);
-  else if(row.key === 'primSocial') DEBUG.civPrimSocial = cycleArrayIndex(DEBUG.civPrimSocial ?? -1, PRIM_SOCIAL.length, dir, true);
-  else if(row.key === 'primCuriosity') DEBUG.civPrimCuriosity = cycleArrayIndex(DEBUG.civPrimCuriosity ?? -1, PRIM_CURIOSITY.length, dir, true);
-  else if(row.key === 'primHonor') DEBUG.civPrimHonor = cycleArrayIndex(DEBUG.civPrimHonor ?? -1, PRIM_HONOR.length, dir, true);
-  else if(row.key?.startsWith('trait:')) DEBUG[row.key.slice(6)] = cycleStringChoice(DEBUG[row.key.slice(6)], row.values || [], dir);
-  else if(row.key === 'liveLanguage'){
-    const pd = debugCurrentPlanetData();
-    if(!pd?.civilization){ addLog('DEBUG: No civilization on current planet.','lw'); return; }
-    const state = ensureCivilizationState(pd);
-    const cur = Math.max(0, Math.min(5, state.languageProgress || 0));
-    state.languageProgress = Math.max(0, Math.min(5, cur + dir));
-  }
-  else if(row.key === 'liveAlert'){
-    const pd = debugCurrentPlanetData();
-    if(!pd?.civilization){ addLog('DEBUG: No civilization on current planet.','lw'); return; }
-    const state = ensureCivilizationState(pd);
-    const cur = Math.max(0, Math.min(5, state.alert || 0));
-    state.alert = Math.max(0, Math.min(5, cur + dir));
-    if(state.alert <= 2) state.hostile = false;
-  }
-}
-
 function debugCivStatusRows(){
   const pd = debugCurrentPlanetData();
   const civ = pd?.civilization || null;
@@ -176,186 +102,15 @@ function debugCivStatusRows(){
   ];
 }
 
-function drawDebugCivSubMenu(){
-  const rows = debugCivSubMenuRows();
-  const statusRows = debugCivStatusRows();
-  const pad = 10, lh = 22, w = 520;
-  const x = canvas.width - w - 8, y = 8;
-  const h = pad*2 + (rows.length + statusRows.length + 4)*lh;
-  ctx.fillStyle='rgba(0,0,0,0.9)';
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle='#88ffcc'; ctx.lineWidth=1;
-  ctx.strokeRect(x, y, w, h);
-  ctx.font='bold 15px Courier New'; ctx.textAlign='left';
-  ctx.fillStyle='#88ffcc';
-  ctx.fillText('CIV DEBUG SUBMENU', x+pad, y+pad+lh);
-  ctx.font='14px Courier New';
-  ctx.fillStyle='#aaaacc';
-  ctx.fillText('Up/Down select   Left/Right change   Enter spawn   Esc/C close', x+pad, y+pad+lh*2);
-  rows.forEach((row, i)=>{
-    const yy = y + pad + lh*(i+3);
-    const sel = i === (DEBUG.civSubSel || 0);
-    ctx.fillStyle = sel ? '#ffe066' : row.key === 'spawn' ? '#90f0a0' : row.key === 'close' ? '#ff8888' : '#cccccc';
-    ctx.fillText((sel?'> ':'  ')+row.label+': '+row.value, x+pad, yy);
-  });
-  const statusTopY = y + pad + lh*(rows.length+3.6);
-  ctx.fillStyle = '#223333';
-  ctx.fillRect(x+8, statusTopY - 14, w-16, 1);
-  ctx.font = '12px Courier New';
-  statusRows.forEach((row, i)=>{
-    const yy = statusTopY + i*lh;
-    ctx.fillStyle = '#667788';
-    ctx.fillText(row.label+':', x+pad, yy);
-    ctx.fillStyle = '#ccddcc';
-    ctx.fillText(row.value, x+pad+130, yy);
-  });
-}
-
-function debugItemRowsFromCatalog(catalog, type){
-  const rows = [];
-  catalog.forEach(group=>{
-    rows.push({ type:'header', label:group.cat });
-    group.items.forEach(item=>rows.push({ type, label:type === 'cargo' ? (COMMODITIES[item]?.name || item) : item.name, item }));
-  });
-  return rows;
-}
-
-function drawDebugItemSubMenu(){
-  const leftRows = debugItemRowsFromCatalog(DEBUG_ITEM_CATALOG, 'inventory');
-  const rightRows = debugItemRowsFromCatalog(DEBUG_CARGO_CATALOG, 'cargo');
-  drawDebugItemSubMenu._leftRows = leftRows;
-  drawDebugItemSubMenu._rightRows = rightRows;
-
-  // Fill the entire canvas
-  const x = 0, y = 0, w = canvas.width, h = canvas.height;
-  const pad = 18, lh = 26, footerH = 28;
-  const gap = 16;
-  const colW = Math.floor((w - pad * 3 - gap) / 2);
-
-  // Header: title on line 1, legend on line 2, column labels on line 3, divider after
-  const titleY  = pad + 22;
-  const legendY = titleY + 24;
-  const colLblY = legendY + 24;
-  const headerH = colLblY + 14;   // divider sits here
-  const searchBarH = DEBUG.itemSubSearch !== undefined ? 34 : 0;
-  const listTop = headerH + searchBarH;
-  const maxVisible = Math.floor((h - listTop - footerH) / lh);
-
-  ctx.fillStyle = '#060810';
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2;
-  ctx.strokeRect(x+1, y+1, w-2, h-2);
-
-  ctx.font = 'bold 20px Courier New'; ctx.textAlign = 'left';
-  ctx.fillStyle = '#ffe066';
-  ctx.fillText('DEBUG — ITEM SUBMENU', x+pad, titleY);
-
-  ctx.font = '14px Courier New';
-  ctx.fillStyle = '#7788aa';
-  ctx.fillText('←/→ switch column    ↑/↓ select    Enter spawn    F search    Esc / I  close', x+pad, legendY);
-
-  // Column labels — left and right aligned to their column x
-  const leftCX  = x + pad;
-  const rightCX = x + pad + colW + gap;
-  ctx.font = 'bold 13px Courier New';
-  ctx.fillStyle = (DEBUG.itemSubCol||'left') === 'left' ? '#88ccff' : '#445566';
-  ctx.fillText('── INVENTORY ITEMS ──', leftCX, colLblY);
-  ctx.fillStyle = (DEBUG.itemSubCol||'left') === 'right' ? '#88ccff' : '#445566';
-  ctx.fillText('── CARGO COMMODITIES ──', rightCX, colLblY);
-
-  ctx.fillStyle = '#223';
-  ctx.fillRect(x+4, headerH+2, w-8, 1);
-
-  // Search bar — shown when itemSubSearch is active
-  if(DEBUG.itemSubSearch !== undefined){
-    const sbY = headerH + 8;
-    const sbH = 22;
-    ctx.fillStyle = '#0a0e1a';
-    ctx.fillRect(x+pad, sbY, w-pad*2, sbH);
-    ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 1;
-    ctx.strokeRect(x+pad, sbY, w-pad*2, sbH);
-    ctx.font = '14px Courier New';
-    ctx.fillStyle = '#aabbcc';
-    ctx.fillText('Search: ', x+pad+6, sbY+15);
-    ctx.fillStyle = '#ffffff';
-    const cursor = Math.floor(Date.now()/500)%2===0 ? '▌' : '';
-    ctx.fillText((DEBUG.itemSubSearch||'')+cursor, x+pad+74, sbY+15);
-  }
-
-  // Vertical divider
-  const divX = x + pad + colW + Math.round(gap/2);
-  ctx.fillStyle = '#1a2030';
-  ctx.fillRect(divX, listTop+4, 1, maxVisible * lh);
-
-  const drawCol = (rows, colName, cx, selected)=>{
-    const active = colName === (DEBUG.itemSubCol || 'left');
-    let scrollTop = Math.max(0, selected - Math.floor(maxVisible / 2));
-    scrollTop = Math.min(scrollTop, Math.max(0, rows.length - maxVisible));
-    const visible = rows.slice(scrollTop, scrollTop + maxVisible);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(cx, listTop+4, colW, maxVisible*lh);
-    ctx.clip();
-
-    visible.forEach((row, vi)=>{
-      const i = scrollTop + vi;
-      const yy = listTop + 4 + vi*lh + lh - 6;
-      const sel = selected === i && active;
-      if(sel){
-        ctx.fillStyle = 'rgba(80,68,0,0.9)';
-        ctx.fillRect(cx, listTop+4+vi*lh, colW, lh);
-        ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 1;
-        ctx.strokeRect(cx+0.5, listTop+4+vi*lh+0.5, colW-1, lh-1);
-      }
-      if(row.type === 'header'){
-        ctx.font = 'bold 12px Courier New';
-        ctx.fillStyle = '#556633';
-        ctx.fillText('── '+String(row.label||'').toUpperCase()+' ──', cx+6, yy);
-      } else {
-        const itemCol = row.type === 'cargo' ? (COMMODITIES[row.item]?.col||'#aaa') : (row.item.col||'#aaa');
-        ctx.fillStyle = itemCol;
-        ctx.fillRect(cx+6, yy-14, 10, 10);
-        ctx.font = sel ? 'bold 15px Courier New' : '14px Courier New';
-        ctx.fillStyle = sel ? '#ffffff' : '#cccccc';
-        const label = String(row.label||'');
-        ctx.fillText(label.length > 38 ? label.slice(0,37)+'…' : label, cx+22, yy);
-      }
-    });
-    ctx.restore();
-
-    // Scroll indicator — only at bottom
-    if(scrollTop + maxVisible < rows.length){
-      ctx.font = '13px Courier New';
-      ctx.fillStyle = '#667';
-      ctx.textAlign = 'center';
-      ctx.fillText('▼ more', cx+colW/2, listTop+4+maxVisible*lh+footerH-6);
-      ctx.textAlign = 'left';
-    }
-  };
-
-  drawCol(leftRows, 'left',  leftCX,  DEBUG.itemSubSel  || 0);
-  drawCol(rightRows,'right', rightCX, DEBUG.itemSubSelR || 0);
-}
-
-function debugItemSubMenuSpawn(){
-  if(!G) return;
-  const col = DEBUG.itemSubCol || 'left';
-  drawDebugItemSubMenu();
-  const rows = col === 'right' ? drawDebugItemSubMenu._rightRows : drawDebugItemSubMenu._leftRows;
-  const selKey = col === 'right' ? 'itemSubSelR' : 'itemSubSel';
-  const row = rows[Math.max(0, Math.min(DEBUG[selKey] || 0, rows.length - 1))];
-  if(!row || row.type === 'header') return;
+function debugSpawnItem(row){
   if(row.type === 'cargo'){
-    const commodityId = row.item;
-    if(addCargo(makeCommodityItem(commodityId, 'debug', 0))) addLog('DEBUG: Cargo added: '+(COMMODITIES[commodityId]?.name || commodityId)+'.','lg');
+    if(addCargo(makeCommodityItem(row.item, 'debug', 0))) addLog('DEBUG: Cargo added: '+row.label+'.','lg');
   } else {
     G.inventory.push({ ...row.item });
-    addLog('DEBUG: Item added: '+row.item.name+'.','lg');
+    addLog('DEBUG: Item added: '+row.label+'.','lg');
   }
   renderAll();
 }
-
 function debugSpawnCivilizationOnCurrentPlanet(){
   if(G.mode !== 'planet'){
     addLog('DEBUG: Civilization spawn only works on planet surface.','lw');
@@ -393,7 +148,7 @@ function debugSpawnCivilizationOnCurrentPlanet(){
   // Aquatic civilizations live on the seabed — generate/regenerate the underwater
   // map so their structures are placed there, not on the surface land grid.
   if(species === 'Aquatic'){
-    const uwKey = G.curPlanet + '_uw';
+    const uwKey = G.curPlanet + ':uw';
     generateUnderwaterMap(uwKey, G.curPlanet);
     G.planets[uwKey] = G.planets[uwKey] || {};
     G.planets[uwKey].civilization = pd.civilization;
@@ -434,100 +189,6 @@ function debugSpawnCivilizationOnCurrentPlanet(){
   renderAll();
 }
 
-function drawDebugOverlay(){
-  if(DEBUG.civSubMenu){
-    drawDebugCivSubMenu();
-    return;
-  }
-  if(DEBUG.itemSubMenu){
-    drawDebugItemSubMenu();
-    return;
-  }
-  const pad = 10, lh = 22, w = 430;
-  const x = canvas.width - w - 8, y = 8;
-
-  const items = [
-    { key:'1', label:'Infinite Fuel',           val: DEBUG.infiniteFuel    },
-    { key:'2', label:'Infinite Hull',           val: DEBUG.infiniteHull    },
-    { key:'3', label:'Full Vision',             val: DEBUG.fullVision      },
-    { key:'4', label:'Infinite O2',             val: DEBUG.infiniteOxy     },
-    { key:'7', label:'Infinite Crew HP',        val: DEBUG.infiniteCrewHp  },
-    { key:'8', label:'Invisible to enemy ships', val: DEBUG.shipInvisible   },
-    { key:'9', label:['Pre-scan debug planets','Pre-scan all planets','Scan no planets'][DEBUG.preScan||0], val: DEBUG.preScan !== 2 },
-    { key:'0', label:'FPS Counter',             val: DEBUG.showFPS         },
-  ];
-
-  // Total rows: title + items + money + spawner controls + civ + tools + close
-  const totalRows = 1 + items.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1;
-  const h = pad*2 + totalRows*lh;
-
-  ctx.fillStyle='rgba(0,0,0,0.82)';
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle='#ff4400'; ctx.lineWidth=1;
-  ctx.strokeRect(x, y, w, h);
-
-  ctx.font='bold 15px Courier New'; ctx.textAlign='left';
-
-  let row = 0;
-  const ly = ()=> y + pad + (row++)*lh + lh; // advance and return y
-
-  ctx.fillStyle='#ff4400';
-  ctx.fillText('⚙ DEBUG MODE  #'+getFileHash(), x+pad, ly());
-
-  items.forEach(item=>{
-    ctx.fillStyle = item.val ? '#44ff88' : '#666666';
-    ctx.fillText('['+item.key+'] '+item.label+': '+(item.val?'ON':'OFF'), x+pad, ly());
-  });
-
-  ctx.fillStyle='#ffe066';
-  ctx.fillText('[M] +1000 cr  (have: '+G.credits+')', x+pad, ly());
-
-  ctx.fillStyle='#aaddff';
-  ctx.fillText('[V] Galaxy Spawn Report', x+pad, ly());
-
-  ctx.fillStyle='#ffaa44';
-  const debugBiomes = Object.keys(BIOMES);
-  const selBiome = debugBiomes[DEBUG.spawnBiome % debugBiomes.length];
-  const spawnModeActive = DEBUG.spawnMode === 'galaxy_obj';
-  ctx.fillText('[5] Spawn: '+(spawnModeActive ? 'GALAXY OBJ' : 'System')+'  ◄►: '+selBiome, x+pad, ly());
-
-  // Galaxy object spawn selector
-  const selGObj = DEBUG_GALAXY_OBJ_TYPES[DEBUG.spawnGalaxyObj % DEBUG_GALAXY_OBJ_TYPES.length];
-  ctx.fillStyle = spawnModeActive ? '#00ddaa' : '#446655';
-  ctx.fillText('[X] Galaxy Obj Mode'+(spawnModeActive?' [ON]':' [off]')+'  ◄►: '+selGObj.label, x+pad, ly());
-
-  ctx.fillStyle='#ff6622';
-  ctx.fillText('[Enter] → Place next to Starbase', x+pad, ly());
-
-  const civTierNames = DEBUG_CIV_TIERS.map(t=>t.label);
-  const civTierLabel = civTierNames[(DEBUG.debugCivTier||0) % civTierNames.length];
-  const civAgg = CIV_AGGRESSION[(DEBUG.debugCivAggression||0) % CIV_AGGRESSION.length];
-  const civPdata = G.mode==='planet' ? G.planets?.[G.curPlanet] : null;
-  const civState = civPdata?.civilization ? civPdata.civilization.tierLabel+' '+civPdata.civilization.species+' / '+civPdata.civilization.aggression+(civPdata.civilization.state?.hostile?' / HOSTILE':'') : 'none';
-  ctx.fillStyle = '#88ffcc';
-  ctx.fillText('[6] Spawn Civ: '+civTierLabel+' / '+civAgg+'  (current: '+civState+')', x+pad, ly());
-
-  ctx.fillStyle = '#88ccff';
-  ctx.fillText('[C] Civ Menu   [T] Tier   [A] Aggression   [Shift+A] Apply', x+pad, ly());
-
-  ctx.fillStyle = '#ff8888';
-  ctx.fillText('[K] Toggle Current Civ Hostile/Clear Hostility', x+pad, ly());
-
-  ctx.fillStyle=G.mode==='planet' ? '#ffaaa0' : '#664444';
-  ctx.fillText('[G] Spawn Gunner Alien', x+pad, ly());
-
-  ctx.fillStyle=G.mode==='planet' ? '#44ffdd' : '#1a5548';
-  ctx.fillText('[N] Regen planet + overlay Ancient Ruins', x+pad, ly());
-
-  ctx.fillStyle='#d488ff';
-  ctx.fillText('[R] Rad  [D] Disease  [H] Hallucination', x+pad, ly());
-
-  ctx.fillStyle='#554433';
-  ctx.fillText('Shift+B to close', x+pad, ly());
-
-  ctx.textAlign='left';
-}
-
 function buildDebugGalaxyReportRows(){
   const rows = [];
   const cells = (G?.galaxy || []).flat();
@@ -564,39 +225,6 @@ function buildDebugGalaxyReportRows(){
   return rows;
 }
 
-function drawDebugGalaxyReportPopup(){
-  const rows = buildDebugGalaxyReportRows();
-  const w = 660, pad = 16, lh = 22;
-  const h = pad*2 + 46 + rows.length*lh + 26;
-  const x = Math.floor((canvas.width - w)/2);
-  const y = Math.floor((canvas.height - h)/2);
-  ctx.fillStyle='rgba(0,0,0,0.9)';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='rgba(4,10,18,0.98)';
-  ctx.fillRect(x,y,w,h);
-  ctx.strokeStyle='#44aaff';
-  ctx.lineWidth=2;
-  ctx.strokeRect(x,y,w,h);
-  ctx.font='bold 20px Courier New';
-  ctx.textAlign='left';
-  ctx.fillStyle='#aaddff';
-  ctx.fillText('GALAXY SPAWN REPORT', x+pad, y+pad+22);
-  ctx.font='13px Courier New';
-  ctx.fillStyle='#6688aa';
-  ctx.fillText('Generated and current galaxy population.  ESC / V closes.', x+pad, y+pad+42);
-  ctx.font='bold 14px Courier New';
-  let yy = y + pad + 72;
-  rows.forEach(([label,value])=>{
-    ctx.fillStyle='#88ccff';
-    ctx.fillText(label, x+pad, yy);
-    ctx.fillStyle='#ddddcc';
-    ctx.fillText(String(value), x+210, yy);
-    yy += lh;
-  });
-  ctx.textAlign='left';
-  ctx.lineWidth=1;
-}
-
 function debugSpawnSystem(){
   if(G.mode !== 'galaxy') { addLog('Debug spawn only works on galaxy map.','lw'); renderAll(); return; }
 
@@ -604,141 +232,147 @@ function debugSpawnSystem(){
   const biomeKey  = biomeKeys[DEBUG.spawnBiome % biomeKeys.length];
   const B = BIOMES[biomeKey];
 
-  // Place next to Starbase Alpha — find nearest VOID tile
-  const homeBase = (G.bases||[]).find(b=>b.name==='Starbase Alpha') || G.bases?.[0];
-  const bx=homeBase?.x ?? Math.floor(MAP_W/2), by=homeBase?.y ?? Math.floor(MAP_H/2);
-  const offsets=[[1,0],[-1,0],[0,1],[0,-1],[2,0],[-2,0],[0,2],[0,-2],[1,1],[-1,1],[1,-1],[-1,-1],[3,0],[-3,0],[0,3],[0,-3]];
-  let placed=false;
-  for(const [dx,dy] of offsets){
-    const tx=bx+dx, ty=by+dy;
-    if(tx<1||tx>=MAP_W-1||ty<1||ty>=MAP_H-1) continue;
-    if(G.galaxy[ty][tx].type!=='VOID') continue;
-
-    // Build planet descriptor
-    const sysName = 'Debug-'+biomeKey;
-    // Skip CAVE as a standalone planet — caves only exist inside other planets
-    const _skipBiomes = ['CAVE'];
-    if(_skipBiomes.includes(biomeKey)){ addLog('DEBUG: CAVE is not a standalone planet — spawn a rocky biome and enter it.','li'); placed=true; break; }
-    const scanState = (DEBUG.preScan === 2) ? 'none' : 'full';
-    const desc = { name:sysName, biome:biomeKey, biomeName:B.name, orbitSlot:0, scanState };
-    if(biomeKey==='GAS_GIANT'){
-      desc.moons=[
-        { name:sysName+' Moon', biome:'MOON_ROCK', biomeName:BIOMES.MOON_ROCK.name, moonIdx:0,
-          avgTemp:-80, gravity:'0.6', atmosphere:'Trace', radius:'0.25', scanState },
-        { name:sysName+' Station', biome:'ANCIENT_STATION', biomeName:'Ancient Refueling Station',
-          moonIdx:1, avgTemp:-60, gravity:'0.4', atmosphere:'Vacuum', radius:'0.12',
-          isAncientStation:true, scanState },
-      ];
-    } else if(biomeKey==='ANCIENT_STATION'){
-      desc.isAncientStation = true;
-    }
-
-    G.galaxy[ty][tx] = {
-      type:'SYSTEM', name:sysName, starType:'YELLOW',
-      planets:[desc],
-    };
-
-    // Pre-generate the planet map so it exists before landing
-    const _pKey = tx+','+ty+':0';
-    if(biomeKey==='ANCIENT_STATION'||desc.isAncientStation) generateAncientStation(_pKey);
-    else if(biomeKey==='DERELICT') generateDerelict(_pKey);
-    else if(biomeKey==='RINGWORLD'||desc.isRingworld) generateRingworld(_pKey);
-    else if(biomeKey==='DESTROYED_RINGWORLD'||desc.isDestroyedRingworld) generateDestroyedRingworld(_pKey);
-    else if(biomeKey==='NUCLEAR_WAR'||desc.isNuclearWar) generateNuclearPlanet(_pKey);
-    else if(biomeKey==='BLOOM'||desc.isBloomWorld) generateBloomPlanet(_pKey);
-    else generatePlanet(_pKey, biomeKey);
-
-    // If rocky biome — force a cave entrance into the planet map
-    const _hasCaveRocks = BIOMES[biomeKey]?.rockDensity > 0;
-    if(_hasCaveRocks && G.planets[_pKey]){
-      const _pdata = G.planets[_pKey];
-      const _B = BIOMES[biomeKey];
-      const _caveKey = _pKey+':cave';
-      // Find a rock tile to place the entrance on
-      let _cx=-1, _cy=-1;
-      for(let _y=1;_y<PH(_pdata)-1&&_cx<0;_y++){
-        for(let _x=1;_x<PW(_pdata)-1;_x++){
-          const _t=_pdata.grid[_y][_x].type;
-          if(_t===_B.rock||_t===_B.rock2){ _cx=_x; _cy=_y; break; }
-        }
-      }
-      if(_cx>=0){
-        _pdata.grid[_cy][_cx]={type:'CAVE_ENTRANCE',caveKey:_caveKey};
-        addLog('DEBUG: Cave entrance placed at ('+_cx+','+_cy+') on '+biomeKey+' planet.','li');
-      } else {
-        addLog('DEBUG: No rock tile found for cave entrance on '+biomeKey+'.','lw');
-      }
-    }
-
-    // Reveal it
-    G.visited[ty*MAP_W+tx]=true;
-    addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press Enter to land.','lg');
-    placed=true;
-    break;
+  if(biomeKey==='CAVE'){
+    addLog('DEBUG: CAVE is not a standalone planet — spawn a rocky biome and enter it.','li');
+    renderAll();
+    return;
   }
-  if(!placed) addLog('DEBUG: No VOID tile near starbase to spawn into.','lw');
+  const sector = findDebugSpawnSector();
+  if(!sector){
+    addLog('DEBUG: No empty adjacent sector for the system.','lw');
+    renderAll();
+    return;
+  }
+  const {x:tx,y:ty} = sector;
+  const sysName = 'Debug-'+biomeKey;
+  const scanState = (DEBUG.preScan === 2) ? 'none' : 'full';
+  const desc = { name:sysName, biome:biomeKey, biomeName:B.name, orbitSlot:0, scanState };
+  if(biomeKey==='GAS_GIANT'){
+    desc.moons=[
+      { name:sysName+' Moon', biome:'MOON_ROCK', biomeName:BIOMES.MOON_ROCK.name, moonIdx:0,
+        avgTemp:-80, gravity:'0.6', atmosphere:'Trace', radius:'0.25', scanState },
+      { name:sysName+' Station', biome:'ANCIENT_STATION', biomeName:'Ancient Refueling Station',
+        moonIdx:1, avgTemp:-60, gravity:'0.4', atmosphere:'Vacuum', radius:'0.12',
+        isAncientStation:true, scanState },
+    ];
+  } else if(biomeKey==='ANCIENT_STATION'){
+    desc.isAncientStation = true;
+  }
+
+  G.galaxy[ty][tx] = {
+    type:'SYSTEM', name:sysName, starType:'YELLOW',
+    planets:[desc],
+  };
+
+  // Pre-generate the planet map so it exists before landing
+  const _pKey = tx+','+ty+':0';
+  if(biomeKey==='ANCIENT_STATION'||desc.isAncientStation) generateAncientStation(_pKey);
+  else if(biomeKey==='DERELICT') generateDerelict(_pKey);
+  else if(biomeKey==='RINGWORLD'||desc.isRingworld) generateRingworld(_pKey);
+  else if(biomeKey==='DESTROYED_RINGWORLD'||desc.isDestroyedRingworld) generateDestroyedRingworld(_pKey);
+  else if(biomeKey==='NUCLEAR_WAR'||desc.isNuclearWar) generateNuclearPlanet(_pKey);
+  else if(biomeKey==='BLOOM'||desc.isBloomWorld) generateBloomPlanet(_pKey);
+  else generatePlanet(_pKey, biomeKey);
+
+  // If rocky biome — force a cave entrance into the planet map
+  const _hasCaveRocks = BIOMES[biomeKey]?.rockDensity > 0;
+  if(_hasCaveRocks && G.planets[_pKey]){
+    const _pdata = G.planets[_pKey];
+    const _B = BIOMES[biomeKey];
+    const _caveKey = _pKey+':cave';
+    // Find a rock tile to place the entrance on
+    let _cx=-1, _cy=-1;
+    for(let _y=1;_y<PH(_pdata)-1&&_cx<0;_y++){
+      for(let _x=1;_x<PW(_pdata)-1;_x++){
+        const _t=_pdata.grid[_y][_x].type;
+        if(_t===_B.rock||_t===_B.rock2){ _cx=_x; _cy=_y; break; }
+      }
+    }
+    if(_cx>=0){
+      _pdata.grid[_cy][_cx]={type:'CAVE_ENTRANCE',caveKey:_caveKey};
+      addLog('DEBUG: Cave entrance placed at ('+_cx+','+_cy+') on '+biomeKey+' planet.','li');
+    } else {
+      addLog('DEBUG: No rock tile found for cave entrance on '+biomeKey+'.','lw');
+    }
+  }
+
+  // Reveal it
+  G.visited[ty*MAP_W+tx]=true;
+  addLog('DEBUG: Spawned '+biomeKey+' system at ('+tx+','+ty+'). Press Enter to land.','lg');
   renderAll();
+}
+
+function findDebugSpawnSector(){
+  const occupants = [
+    ...(G.neutralShips||[]), ...(G.pirates||[]), ...(G.gasEntities||[]),
+    ...(G.npcStranded||[]), ...(G.nebulaLoot||[]),
+  ];
+  const offsets = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+  for(const [dx,dy] of offsets){
+    const x = G.ship.x + dx, y = G.ship.y + dy;
+    if(G.galaxy[y]?.[x]?.type!=='VOID') continue;
+    if(occupants.some(object=>object.alive!==false && object.x===x && object.y===y)) continue;
+    return {x,y};
+  }
+  return null;
 }
 
 function debugSpawnGalaxyObj(){
   if(G.mode !== 'galaxy'){ addLog('DEBUG: Galaxy object spawn only works on galaxy map.','lw'); renderAll(); return; }
   const objType = DEBUG_GALAXY_OBJ_TYPES[DEBUG.spawnGalaxyObj % DEBUG_GALAXY_OBJ_TYPES.length];
-  const homeBase = (G.bases||[]).find(b=>b.name==='Starbase Alpha') || G.bases?.[0];
-  const bx = homeBase?.x ?? Math.floor(MAP_W/2);
-  const by = homeBase?.y ?? Math.floor(MAP_H/2);
-  const offsets = [[2,0],[-2,0],[0,2],[0,-2],[3,0],[-3,0],[0,3],[0,-3],[2,1],[-2,1],[2,-1],[-2,-1],[1,2],[-1,2],[1,-2],[-1,-2]];
-  let placed = false;
-  for(const [dx,dy] of offsets){
-    const tx=bx+dx, ty=by+dy;
-    if(tx<1||tx>=MAP_W-1||ty<1||ty>=MAP_H-1) continue;
-    if(G.galaxy[ty][tx].type !== 'VOID') continue;
-
-    let cellData;
-    if(objType.id === 'ROGUE_PLANET'){
-      const name = 'Debug Rogue';
-      const rpPlanetDesc = {
-        name, biome:'FROZEN', biomeName: BIOMES.FROZEN?.name||'Frozen',
-        orbitSlot:0, scanState:'none',
-        avgTemp:-180, gravity:'3.2', atmosphere:'None', radius:'0.55',
-      };
-      cellData = { type:'ROGUE_PLANET', name, planets:[rpPlanetDesc] };
-      G.roguePlanets = G.roguePlanets || [];
-      G.roguePlanets.push({ x:tx, y:ty, name });
-    } else if(objType.id === 'PULSAR'){
-      const name = 'Debug PSR';
-      cellData = { type:'PULSAR', name };
-      G.pulsars = G.pulsars || [];
-      G.pulsars.push({ x:tx, y:ty, name });
-    } else if(objType.id === 'BLACK_HOLE'){
-      cellData = { type:'BLACK_HOLE', name:'Debug Singularity' };
-      G.blackHoles = G.blackHoles || [];
-      G.blackHoles.push({ x:tx, y:ty });
-    } else if(objType.id === 'DERELICT'){
-      const DERELICT_NAMES = ['DSS Erebus','DSS Vanguard','Station Threnody','Station Morrow',
-        'DSS Koval','Outpost Silica','DSS Heliodor','Station Lacuna'];
-      const dname = pick(DERELICT_NAMES);
-      cellData = { type:'DERELICT', name:dname };
-      G.derelicts = G.derelicts || [];
-      G.derelicts.push({ x:tx, y:ty, name:dname });
-    } else if(objType.id === 'PIRATE_BASE'){
-      const PIRATE_BASE_NAMES = ['Cutthroat Station','Ironjaw Anchorage','The Maw',
-        'Voidbreaker Post','Redrock Station','Corsair\'s Rest'];
-      const pbName = pick(PIRATE_BASE_NAMES);
-      cellData = { type:'PIRATE_BASE', name:pbName };
-      G.pirateBases = G.pirateBases || [];
-      G.pirateBases.push({ x:tx, y:ty, name:pbName, hp:1000, maxHp:1000, destroyed:false, lastRespawn:0 });
-    }
-
-    if(cellData){
-      G.galaxy[ty][tx] = cellData;
-      G.visited[ty*MAP_W+tx] = true;
-      addLog('DEBUG: Spawned '+objType.label+' at ('+tx+','+ty+').','lg');
-      placed = true;
-    }
-    break;
+  const sector = findDebugSpawnSector();
+  if(sector){
+    placeDebugGalaxyObject(objType,sector.x,sector.y);
+  } else {
+    addLog('DEBUG: No empty adjacent sector for the galaxy object.','lw');
   }
-  if(!placed) addLog('DEBUG: No VOID tile near starbase for galaxy object.','lw');
   renderAll();
+}
+
+function placeDebugGalaxyObject(objType,tx,ty){
+  let cellData;
+  if(objType.place){
+    cellData=objType.place(tx,ty);
+  } else if(objType.id === 'ROGUE_PLANET'){
+    const name = 'Debug Rogue';
+    const rpPlanetDesc = {
+      name, biome:'FROZEN', biomeName: BIOMES.FROZEN?.name||'Frozen',
+      orbitSlot:0, scanState:'none',
+      avgTemp:-180, gravity:'3.2', atmosphere:'None', radius:'0.55',
+    };
+    cellData = { type:'ROGUE_PLANET', name, planets:[rpPlanetDesc] };
+    G.roguePlanets = G.roguePlanets || [];
+    G.roguePlanets.push({ x:tx, y:ty, name });
+  } else if(objType.id === 'PULSAR'){
+    const name = 'Debug PSR';
+    cellData = { type:'PULSAR', name };
+    G.pulsars = G.pulsars || [];
+    G.pulsars.push({ x:tx, y:ty, name });
+  } else if(objType.id === 'BLACK_HOLE'){
+    cellData = { type:'BLACK_HOLE', name:'Debug Singularity' };
+    G.blackHoles = G.blackHoles || [];
+    G.blackHoles.push({ x:tx, y:ty });
+  } else if(objType.id === 'DERELICT'){
+    const DERELICT_NAMES = ['DSS Erebus','DSS Vanguard','Station Threnody','Station Morrow',
+      'DSS Koval','Outpost Silica','DSS Heliodor','Station Lacuna'];
+    const dname = pick(DERELICT_NAMES);
+    cellData = { type:'DERELICT', name:dname };
+    G.derelicts = G.derelicts || [];
+    G.derelicts.push({ x:tx, y:ty, name:dname });
+  } else if(objType.id === 'PIRATE_BASE'){
+    const PIRATE_BASE_NAMES = ['Cutthroat Station','Ironjaw Anchorage','The Maw',
+      'Voidbreaker Post','Redrock Station','Corsair\'s Rest'];
+    const pbName = pick(PIRATE_BASE_NAMES);
+    cellData = { type:'PIRATE_BASE', name:pbName };
+    G.pirateBases = G.pirateBases || [];
+    G.pirateBases.push({ x:tx, y:ty, name:pbName, hp:1000, maxHp:1000, destroyed:false, lastRespawn:0 });
+  }
+
+  if(!cellData) return false;
+  G.galaxy[ty][tx] = cellData;
+  G.visited[ty*MAP_W+tx] = true;
+  addLog('DEBUG: Spawned '+objType.label+' at ('+tx+','+ty+').','lg');
+  return true;
 }
 
 function debugRegenWithAncientRuins(){

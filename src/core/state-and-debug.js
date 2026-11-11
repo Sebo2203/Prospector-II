@@ -12,12 +12,9 @@ const DEBUG = {
   showFPS:      false,
   spawnBiome:   0,
   spawnGalaxyObj: 0,   // index into DEBUG_GALAXY_OBJ_TYPES
-  spawnMode:    'biome', // 'biome' | 'galaxy_obj'
   debugCivTier: 0,
+  debugCivSpecies: -1,
   debugCivAggression: 1,
-  // Civ sub-menu
-  civSubMenu:   false,
-  civSubSel:    0,
   // Pinned primitive traits (index into array; -1 = random)
   civPrimDiet:      -1,
   civPrimSocial:    -1,
@@ -30,19 +27,14 @@ const DEBUG = {
   civTraitBureaucracy: '',
   civTraitMedia:       '',
   civTraitPolicy:      '',
-  // Item sub-menu
-  itemSubMenu: false,
-  itemSubSel:  0,
-  galaxyReport: false,
   // Combat logger
   combatLog:   false,
 };
 
 // ── DEBUG COMBAT LOGGER ──────────────────────────────────────────────────────
 // When DEBUG.combatLog is ON every combat-relevant event is stamped with turn,
-// entity stats, speed budget, and damage. Toggle with [P] in the debug menu.
-// [L] downloads the full log as a .txt file for later review.
-// The last 30 entries also appear live in the debug overlay panel.
+// entity stats, speed budget, and damage. Toggle it in the debug menu.
+// Download the full log as a .txt file from the debug menu.
 
 const _COMBAT_LOG_ENTRIES = [];   // { turn, event, data }
 const _COMBAT_LOG_MAX = 2000;     // ring-buffer cap
@@ -84,13 +76,3 @@ function debugCombatLogDownload(){
   URL.revokeObjectURL(a.href);
   addLog('DEBUG: combat log downloaded ('+_COMBAT_LOG_ENTRIES.length+' entries).','lw');
 }
-
-function resetDebugSubMenus(){
-  DEBUG.civSubMenu = false;
-  DEBUG.civSubSel = 0;
-  DEBUG.itemSubMenu = false;
-  DEBUG.itemSubSel = 0;
-  DEBUG.itemSubSelR = 0;
-  DEBUG.itemSubCol = 'left';
-}
-

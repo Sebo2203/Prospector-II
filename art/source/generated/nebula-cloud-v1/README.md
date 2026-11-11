@@ -1,0 +1,7 @@
+# Nebula cloud texture
+
+Generated with the built-in `image_gen` tool for Prospector II. `cloud-source.png` retains the selected transparent original. `cloud.png` is the proportionally reduced transparent texture used by combat rendering. Recreate it with `node tools/prepare-nebula-cloud.cjs` after the headless QA setup; normal builds only read the checked-in PNG through `npm run art:plasma`.
+
+## Exact generation prompt
+
+Use case: stylized-concept. Asset type: transparent nebula gas texture for a top-down 2D space roguelike. Create ONE broad horizontal astronomical nebula cloud, approximately 2:1 overall silhouette, formed from natural swirling filaments, wisps and uneven turbulent density. Deep muted blue and smoky indigo with subtle pale blue highlights; restrained luminosity suitable behind tiny ships on very dark space. Authentic space-nebula texture, organic and irregular, with holes and tendrils and very soft transparent edges tapering fully to alpha; no enclosing shape or rectangle. It must read as diffuse interstellar gas, not smoke from a fire, not a glowing gem and not a solid object. Fully transparent background, including the open holes and the entire margin. No stars, no planets, no asteroids, no ships, no symbols, no lightning, no text, no grid, no frame, no black or colored background. Cohesive wider-than-tall cloud centered with ample transparent margin. Detailed texture that remains readable when reduced for a game.

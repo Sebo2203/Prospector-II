@@ -1,7 +1,7 @@
 function drawCivilizationBoundaryOverlay(){
   const notice = civilizationActiveBoundaryNotice();
   if(!notice) return;
-  const cw = canvas.width;
+  const cw = canvasWidth;
   const x = Math.round(cw/2 - 260);
   const y = 72;
   const w = 520;
@@ -51,7 +51,7 @@ function drawDialogueOverlay(){
   const def = currentDialogueDef();
   const node = currentDialogueNode();
   if(!dlg || !def || !node) return;
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const w = Math.min(720, cw - 80);
   const h = Math.min(390, ch - 90);
   const x = Math.round((cw - w) / 2);
@@ -67,6 +67,7 @@ function drawDialogueOverlay(){
   if((dlg.sel || 0) < dlg.optScroll) dlg.optScroll = dlg.sel || 0;
   if((dlg.sel || 0) >= dlg.optScroll + visibleOptCount) dlg.optScroll = (dlg.sel || 0) - visibleOptCount + 1;
   const visibleOpts = opts.slice(dlg.optScroll, dlg.optScroll + visibleOptCount);
+  canvasMenuScroll = moveDialogueSelection;
 
   ctx.save();
   ctx.fillStyle='rgba(0,0,0,0.58)';
@@ -127,6 +128,10 @@ function drawDialogueOverlay(){
   visibleOpts.forEach((opt,visibleI)=>{
     const i = visibleI + (dlg.optScroll || 0);
     const oy = optTop + visibleI*28;
+    if(!opt.disabled) canvasMenuTarget(x+18,oy-18,w-36,24,()=>{
+      dlg.sel = i;
+      chooseDialogueOption(i);
+    });
     const sel = i === (dlg.sel || 0);
     ctx.fillStyle = sel ? '#0e1a2a' : '#08080f';
     ctx.fillRect(x+18, oy-18, w-36, 24);
@@ -180,10 +185,10 @@ function drawDialogueOverlay(){
     }
   }
 
-  ctx.font='12px Courier New';
-  ctx.fillStyle='#445566';
-  ctx.textAlign='center';
-  ctx.fillText('↑/↓ select   Enter choose   1-9 quick choose   ESC close', x+w/2, y+h-14);
   ctx.restore();
+  if(dialogueAllowsEscape()) canvasMenuButton('Close [Esc]',x+w-108,y+h-30,()=>{
+    G.dialogue = null;
+    renderAll();
+  });
 }
 

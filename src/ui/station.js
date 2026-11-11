@@ -1,8 +1,42 @@
+function drawHangarWeaponPicker(b,cw,ch){
+  const slot=b.weaponSlot||0,weapons=Object.values(SHIP_WEAPONS),selected=b.weaponSel||0;
+  const left=cw/2-410,width=820,mountNames=['','Light','Medium','Heavy'];
+  const current=SHIP_WEAPONS[G.installedWeapons[slot]];
+  ctx.textAlign='center';ctx.font='bold 19px Courier New';ctx.fillStyle='#44aaff';
+  ctx.fillText('HANGAR / ARMAMENT',cw/2,28);
+  ctx.font='12px Courier New';ctx.fillStyle='#8297ab';
+  ctx.fillText('MOUNT '+(slot+1)+'  ·  '+mountNames[shipMountSize(slot)]+'  ·  '+(current?current.name:'Empty'),cw/2,46);
+  ctx.fillStyle='#223344';ctx.fillRect(left,52,width,1);
+  const rowHeight=62,top=60;
+  weapons.forEach((weapon,index)=>{
+    const y=top+index*rowHeight,active=index===selected,fitted=G.installedWeapons[slot]===weapon.id;
+    const owned=ownedShipWeaponCount(weapon.id);
+    canvasMenuTarget(left,y,width,56,()=>{b.weaponSel=index;renderAll();},{label:weapon.name});
+    ctx.fillStyle=active?'#0e1a2a':'#080f17';ctx.fillRect(left,y,width,56);
+    ctx.strokeStyle=active?'#44aaff':'#233344';ctx.lineWidth=active?1.5:1;ctx.strokeRect(left,y,width,56);
+    ctx.textAlign='left';ctx.font='bold 13px Courier New';ctx.fillStyle=active?'#ffffff':'#b3c9dd';
+    if(active)ctx.fillText('▶',left+7,y+18);
+    ctx.fillText(weapon.name,left+24,y+18,width-260);
+    ctx.textAlign='right';ctx.font='bold 11px Courier New';ctx.fillStyle=fitted?'#80b8d9':'#e5c478';
+    ctx.fillText(fitted?'FITTED HERE':weapon.placeholder?'UNAVAILABLE':owned?owned+' IN STORES · FREE TO FIT':weapon.cost+' cr',left+width-12,y+18,225);
+    ctx.textAlign='left';ctx.font='11px Courier New';ctx.fillStyle='#98adbf';
+    ctx.fillText(weapon.minDmg+'–'+weapon.maxDmg+' damage · Range '+weapon.range+' · '+mountNames[weapon.mountSize]+' mount · '+weapon.power+' power · '+weapon.heat+' heat · Reload '+weapon.cooldown+'t',left+24,y+34,width-48);
+    ctx.fillStyle='#657d91';ctx.fillText(weapon.desc,left+24,y+49,width-48);
+  });
+  const weapon=weapons[selected],reason=weapon.placeholder?'This weapon is not available.':shipWeaponInstallReason(slot,weapon);
+  const price=shipWeaponInstallPrice(weapon),afford=G.credits>=price;
+  ctx.textAlign='left';ctx.font='12px Courier New';ctx.fillStyle=reason?'#b7a284':'#8ca9bf';
+  ctx.fillText(reason||(!afford?'Insufficient credits: need '+price+' cr.':weapon.name+' · '+(price?'Installation '+price+' cr':'Owned equipment; no fitting charge')),left,392,width);
+  if(!reason&&afford)canvasMenuButton(price?'Buy and install [Enter]':'Fit from stores [Enter]',left,416,()=>handleStationKey('Enter'));
+  ctx.textAlign='left';
+}
+
 function drawBaseOverlay(){
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
 
   const b = G.base;
+  const back = ()=>handleStationKey('Escape');
 
   // Retirement confirm screen
   if(b.confirm === 'retire'){
@@ -30,6 +64,8 @@ function drawBaseOverlay(){
     ctx.font='bold 16px Courier New';
     ctx.fillStyle='#44ff88'; ctx.fillText('[ ENTER ]  Confirm', cx-80, 264);
     ctx.fillStyle='#ff6644'; ctx.fillText('[ ESC ]  Cancel', cx+90, 264);
+    canvasMenuTarget(cx-154,246,146,26,()=>handleStationKey('Enter'));
+    canvasMenuTarget(cx+27,246,146,26,back);
     ctx.textAlign='left';
     return;
   }
@@ -96,11 +132,13 @@ function drawBaseOverlay(){
     // Prompt
     ctx.font='bold 15px Courier New'; ctx.fillStyle='#ffe066';
     ctx.fillText('[ ENTER ]  See your career stats', cx, ch-30);
+    canvasMenuTarget(cx-180,ch-48,360,26,()=>handleStationKey('Enter'));
     ctx.textAlign='left';
     return;
   }
 
   if(b.screen === 'main'){
+    canvasMenuScroll = step=>handleStationKey(step<0?'ArrowUp':'ArrowDown');
     // Header
     ctx.font='bold 21px Courier New'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
     ctx.fillText((G.base.stationName||'STARBASE').toUpperCase(), cw/2, 36);
@@ -121,6 +159,7 @@ function drawBaseOverlay(){
       if(visIdx < 0 || visIdx >= bldgVisible) return;
       const sel = i === b.sel;
       const bx = cw/2 - 410, by = BLDG_TOP + visIdx*(BLDG_ROW_H+BLDG_GAP), bw = 820, bh = BLDG_ROW_H;
+      canvasMenuTarget(bx,by,bw,bh,()=>{ b.sel=i; handleStationKey('Enter'); });
       ctx.fillStyle = sel ? '#0e1a2a' : '#08080f';
       ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = sel ? bldg.col : '#1a1a2a';
@@ -144,10 +183,8 @@ function drawBaseOverlay(){
       ctx.fillText('▼ more', cw/2, BLDG_BOT - 2);
     }
 
-    // Footer
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-
   } else if(b.screen === 'sub'){
+    canvasMenuScroll = step=>handleStationKey(step<0?'ArrowUp':'ArrowDown');
     const bldg = STATION_BUILDINGS[b.sel];
     const actions = bldg.actions();
 
@@ -159,7 +196,8 @@ function drawBaseOverlay(){
     ctx.fillStyle='#223344'; ctx.fillRect(cw/2-410, 52, 820, 1);
 
     // Action list — scrollable (compact rows: label + detail on one line)
-    const ROW_H = 36, LIST_TOP = 56, LIST_BOT = ch - 28;
+    const armament=bldg.id==='hangar'&&b.hangarSub==='armament';
+    const ROW_H = armament?46:36, LIST_TOP = 56, LIST_BOT = ch - (armament?44:28);
     const visibleRows = Math.floor((LIST_BOT - LIST_TOP) / ROW_H);
     // Clamp scroll so selected item is always visible
     b.subScroll = b.subScroll || 0;
@@ -175,8 +213,9 @@ function drawBaseOverlay(){
       const visIdx = i - b.subScroll;
       if(visIdx < 0 || visIdx >= visibleRows) return;
       const sel = i === b.subSel;
-      const ax = cw/2 - 410, ay = LIST_TOP + visIdx*ROW_H, aw = 820, ah = 30;
+      const ax = cw/2 - 410, ay = LIST_TOP + visIdx*ROW_H, aw = 820, ah = armament?40:30;
       const dim = act.disabled;
+      if(!dim && !act._header) canvasMenuTarget(ax,ay,aw,ah,()=>{ b.subSel=i; handleStationKey('Enter'); });
       // Section headers — compact divider row
       if(act._header){
         ctx.fillStyle='#0a0a12'; ctx.fillRect(ax, ay, aw, ah);
@@ -192,15 +231,16 @@ function drawBaseOverlay(){
       ctx.strokeStyle = dim ? '#111118' : sel ? bldg.col : '#1a1a2a';
       ctx.lineWidth = sel ? 1.5 : 1;
       ctx.strokeRect(ax, ay, aw, ah);
-      if(sel && !dim){ ctx.fillStyle=bldg.col; ctx.font='bold 12px Courier New'; ctx.textAlign='left'; ctx.fillText('▶', ax+6, ay+19); }
+      if(sel && !dim){ ctx.fillStyle=bldg.col; ctx.font='bold 12px Courier New'; ctx.textAlign='left'; ctx.fillText('▶', ax+6, ay+(armament?16:19)); }
       // Label
       ctx.font='bold 13px Courier New';
       ctx.fillStyle = dim ? '#333344' : sel ? '#ffffff' : '#cccccc';
-      ctx.textAlign='left'; ctx.fillText(act.label, ax+20, ay+19);
-      // Detail — right-aligned, smaller, muted
+      ctx.textAlign='left'; ctx.fillText(act.label, ax+20, ay+(armament?16:19),armament?aw-40:aw);
+      // Armament descriptions get their own aligned line, leaving room for long weapon names.
       ctx.font='11px Courier New';
-      ctx.fillStyle = dim ? '#222233' : sel ? '#889aaa' : '#445566';
-      ctx.textAlign='right'; ctx.fillText(act.detail, ax+aw-8, ay+19);
+      ctx.fillStyle = armament?(dim?'#526070':sel?'#889aaa':'#65788b'):(dim?'#222233':sel?'#889aaa':'#445566');
+      ctx.textAlign=armament?'left':'right';
+      ctx.fillText(act.detail,armament?ax+20:ax+aw-8,ay+(armament?32:19),armament?aw-40:aw);
       ctx.textAlign='left';
     });
 
@@ -215,9 +255,6 @@ function drawBaseOverlay(){
       ctx.fillStyle='#667788'; ctx.font='13px Courier New'; ctx.textAlign='center';
       ctx.fillText('▼ more', cw/2, LIST_BOT + 12);
     }
-
-    // Footer
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
 
   } else if(b.screen === 'recruit'){
     const HIRE_ROLES = [
@@ -243,6 +280,7 @@ function drawBaseOverlay(){
       const isSel = i === sel;
       const roleData = CREW_ROLES[r.key];
       const ax=cx-280, ay=listTop+i*rowH, aw=560, ah=54;
+      canvasMenuTarget(ax,ay,aw,ah,()=>{ b.recruitSel=i; renderAll(); });
       ctx.fillStyle = isSel ? '#0e1a10' : '#080810';
       ctx.fillRect(ax,ay,aw,ah);
       ctx.strokeStyle = isSel ? (roleData?.col||'#aaa') : '#1a1a2a';
@@ -261,155 +299,93 @@ function drawBaseOverlay(){
     ctx.textAlign='center'; ctx.font='13px Courier New';
     ctx.fillStyle = canAfford ? '#ffaa44' : '#662222';
     ctx.fillText(canAfford ? '[ ENTER ]  Hire '+HIRE_ROLES[sel]?.label+' for '+HIRE_ROLES[sel]?.cost+' cr' : 'Not enough credits', cx, listTop+HIRE_ROLES.length*rowH+16);
-    ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   Enter confirm   ESC back', cx, ch-14);
+    if(canAfford) canvasMenuTarget(cx-250,listTop+HIRE_ROLES.length*rowH,500,22,()=>handleStationKey('Enter'));
 
   } else if(b.screen === 'installweapon'){
-    {
-    const slot = b.weaponSlot || 0;
-    const cx = cw/2;
-    const weapons = Object.values(SHIP_WEAPONS);
-    const sel = b.weaponSel || 0;
-
-    ctx.textAlign='center';
-    ctx.fillStyle='#1a1a2a'; ctx.fillRect(cx-340, 8, 680, 1);
-
-    const rowH=64, listTop=14;
-    weapons.forEach((wdef, i)=>{
-      const isSel = i === sel;
-      const isInstalled = (G.installedWeapons||[]).includes(wdef.id);
-      const ax=cx-300, ay=listTop+i*rowH, aw=600, ah=56;
-      ctx.fillStyle = isSel ? '#0e1a10' : '#080810';
-      ctx.fillRect(ax,ay,aw,ah);
-      ctx.strokeStyle = isSel ? '#ff9944' : '#1a1a2a';
-      ctx.lineWidth = isSel ? 2 : 1;
-      ctx.strokeRect(ax,ay,aw,ah);
-      if(isSel){ ctx.fillStyle='#ff9944'; ctx.font='bold 14px Courier New'; ctx.textAlign='left'; ctx.fillText('▶', ax+8, ay+22); }
-      ctx.font='bold 14px Courier New'; ctx.fillStyle= wdef.placeholder ? '#886644' : (isSel ? '#ffcc88' : '#aa7744');
-      ctx.textAlign='left'; ctx.fillText(wdef.name, ax+28, ay+20);
-      ctx.font='12px Courier New'; ctx.fillStyle='#445566';
-      ctx.fillText(wdef.desc, ax+28, ay+36);
-      ctx.textAlign='right';
-      if(wdef.placeholder){
-        ctx.fillStyle='#554422'; ctx.fillText('NOT YET AVAILABLE', ax+aw-12, ay+20);
-      } else {
-        ctx.fillStyle='#ffe066'; ctx.fillText(wdef.cost+' cr', ax+aw-12, ay+20);
-        ctx.fillStyle='#556644'; ctx.fillText(wdef.minDmg+'–'+wdef.maxDmg+' dmg', ax+aw-12, ay+36);
-      }
-      if(isInstalled && !wdef.placeholder){
-        ctx.fillStyle='#335533'; ctx.font='11px Courier New'; ctx.fillText('installed', ax+aw-12, ay+50);
-      }
-      ctx.textAlign='left';
-    });
-
-    const selW = weapons[sel];
-    ctx.textAlign='center'; ctx.font='13px Courier New';
-    if(selW.placeholder){
-      ctx.fillStyle='#554422'; ctx.fillText('This weapon is not yet available.', cx, listTop+weapons.length*rowH+16);
-    } else if(G.credits < selW.cost){
-      ctx.fillStyle='#662222'; ctx.fillText('Insufficient credits (need '+selW.cost+' cr, have '+G.credits+').', cx, listTop+weapons.length*rowH+16);
-    } else {
-      ctx.fillStyle='#ff9944'; ctx.fillText('[ ENTER ]  Install '+selW.name+' for '+selW.cost+' cr', cx, listTop+weapons.length*rowH+16);
-    }
-    ctx.fillStyle='#334455'; ctx.fillText('↑ ↓ navigate   ESC cancel', cx, ch-14);
-    }
+    drawHangarWeaponPicker(b,cw,ch);
   } else if(b.screen === 'changehull'){
-    const HULL_IDS = ['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE'];
-    const hullSel = b.hullSel || 0;
-    const cx = cw/2;
-    const HULL_COST = 3000;
-
-    ctx.textAlign='center';
-    ctx.font='bold 17px Courier New'; ctx.fillStyle='#44aaff';
-    ctx.fillText('— CHANGE HULL TYPE —', cx, 28);
-    ctx.font='13px Courier New'; ctx.fillStyle='#445566';
-    ctx.fillText('Cost: '+HULL_COST+' cr  ·  All upgrades reset to new hull base  ·  HP ratio preserved', cx, 46);
-    ctx.fillStyle='#1a2a3a'; ctx.fillRect(cx-340, 52, 680, 1);
-
-    const cardW=200, cardH=260, cardGap=20;
-    const totalCardW = HULL_IDS.length*(cardW+cardGap)-cardGap;
-    const cardStartX = cx - totalCardW/2;
-
-    HULL_IDS.forEach((id, i)=>{
-      const cls = SHIP_CLASSES[id];
-      const isSel = i === hullSel;
-      const isCurrent = id === G.shipStats?.classId;
-      const bx = cardStartX + i*(cardW+cardGap), by = 62;
-
-      ctx.fillStyle = isCurrent ? '#0a0a18' : isSel ? '#0a1a2a' : '#080810';
-      ctx.fillRect(bx, by, cardW, cardH);
-      ctx.strokeStyle = isCurrent ? '#334488' : isSel ? '#44aaff' : '#1a1a2a';
-      ctx.lineWidth = isSel ? 2 : 1;
-      ctx.strokeRect(bx, by, cardW, cardH);
-
-      // Hull name
-      ctx.font='bold 13px Courier New'; ctx.fillStyle= isSel ? '#aaddff' : '#556677';
-      ctx.textAlign='center';
-      ctx.fillText(cls.hullType.toUpperCase(), bx+cardW/2, by+14);
-      if(isCurrent){ ctx.font='10px Courier New'; ctx.fillStyle='#334466'; ctx.fillText('(current)', bx+cardW/2, by+26); }
-
-      // Sprite
-      const sprKey = cls.sprite || 'player_ship';
-      if(IMG[sprKey] && IMG[sprKey].complete){
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(IMG[sprKey], bx+cardW/2-24, by+(isCurrent?30:22), 48, 48);
-      }
-
-      // Stats
-      const stats = [
-        ['HP',      cls.baseHp+' → '+cls.maxUpgradeHp],
-        ['Fuel',    cls.baseFuel+' → '+cls.maxUpgradeFuel],
-        ['Cargo',   cls.cargoCapacity+' (base)'],
-        ['Sensors', cls.sensorRange+' → '+cls.maxUpgradeSensor],
-        ['Shields', cls.shields+' → '+cls.maxShields],
-        ['Engine',  cls.engineRating+(cls.maxUpgradeEngine>cls.engineRating?' → '+cls.maxUpgradeEngine:'')],
-        ['Weapons', cls.weaponSlots+' → '+cls.maxWeaponSlots+' slots'],
-        ['Modules', cls.moduleSlots+' → '+cls.maxModuleSlots+' slots'],
-        ['Crew',    cls.maxCrew+(cls.maxUpgradeCrew>cls.maxCrew?' → '+cls.maxUpgradeCrew:'')+' max'],
-      ];
-      ctx.textAlign='left';
-      stats.forEach((s, si)=>{
-        const sy = by + (isCurrent ? 82 : 74) + si*16;
-        ctx.font='11px Courier New'; ctx.fillStyle='#334455';
-        ctx.fillText(s[0], bx+10, sy);
-        ctx.fillStyle= isSel ? '#8899bb' : '#445566';
-        ctx.fillText(s[1], bx+70, sy);
-      });
-
-      // Desc — word-wrapped
-      ctx.font='10px Courier New'; ctx.fillStyle='#2a3a4a';
-      ctx.textAlign='center';
-      const descWords = cls.desc.split(' ');
-      const descMaxW = cardW - 16;
-      let descLine = '', descY = by + cardH - 30;
-      const descLines = [];
-      descWords.forEach(w => {
-        const test = descLine ? descLine+' '+w : w;
-        if(ctx.measureText(test).width > descMaxW && descLine){ descLines.push(descLine); descLine=w; }
-        else descLine = test;
-      });
-      if(descLine) descLines.push(descLine);
-      const descLineH = 13;
-      const descStartY = by + cardH - 8 - (descLines.length-1)*descLineH;
-      descLines.forEach((dl,di) => ctx.fillText(dl, bx+cardW/2, descStartY+di*descLineH));
-    });
-
-    // Confirm prompt
-    const selCls = SHIP_CLASSES[HULL_IDS[hullSel]];
-    const isCurr = HULL_IDS[hullSel] === G.shipStats?.classId;
-    ctx.textAlign='center';
-    ctx.font='13px Courier New';
-    if(isCurr){
-      ctx.fillStyle='#334455'; ctx.fillText('Already flying this hull type.', cx, 62+260+22);
-    } else if(G.credits < HULL_COST){
-      ctx.fillStyle='#662222'; ctx.fillText('Insufficient credits (need '+HULL_COST+' cr, have '+G.credits+').', cx, 62+260+22);
-    } else {
-      ctx.fillStyle='#44aaff';
-      ctx.fillText('[ ENTER ]  Purchase '+selCls.hullType+' for '+HULL_COST+' cr', cx, 62+260+22);
-    }
-    ctx.font='13px Courier New'; ctx.fillStyle='#334455';
-    ctx.fillText('← → navigate   ESC cancel', cx, ch-14);
+    drawHullShipyard(b,cw,ch);
   }
 
+  canvasMenuButton(b.screen==='main'?'Undock [Esc]':'Back [Esc]',40,ch-27,back);
   ctx.textAlign='left';
 }
 
+
+function handleStationKey(key){
+  const b = G.base;
+  // Retirement confirm screen
+  if(b.confirm==='retire'){
+    if(key==='Enter'||key===' '){
+      b.confirm='retire_story';
+      // Pick a random story variant now and lock it so redraws stay consistent
+      const _tier = RETIREMENT_TIERS.find(t=>G.credits>=t.min&&G.credits<=t.max)||RETIREMENT_TIERS[0];
+      G.retirementStoryIdx     = Math.floor(Math.random() * _tier.story.length);
+      const _picked = _tier.story[G.retirementStoryIdx];
+      G.retirementNoEpilogue  = !!(_picked && _picked.noEpilogue);
+      G.retirementEpilogueIdx = Math.floor(Math.random() * RETIREMENT_EPILOGUES.length);
+      // DEAD — pre-roll humanity arc indices ready for when the screen is wired in
+      G.retirementHumanityIdx      = Math.floor(Math.random() * HUMANITY_OUTCOMES.length);
+      G.retirementHumanityCodaIdx  = Math.floor(Math.random() * HUMANITY_CODAS_ALIVE.length);
+      renderAll(); return;
+    }
+    if(key==='Escape'){ b.confirm=null; renderAll(); return; }
+    return;
+  }
+  // Retirement story screen — press Enter to proceed to stats
+  if(b.confirm==='retire_story'){
+    if(key==='Enter'||key===' '){ G.retired=true; renderAll(); return; }
+    return;
+  }
+  if(b.screen==='main'){
+    if(key==='ArrowUp'){   b.sel=Math.max(0,b.sel-1); renderAll(); return; }
+    if(key==='ArrowDown'){ b.sel=Math.min(STATION_BUILDINGS.length-1,b.sel+1); renderAll(); return; }
+    if(key==='Enter'){ b.screen='sub'; b.subSel=0; b.subScroll=0; b.medbaySub=null; b.scienceCorpSub=false; renderAll(); return; }
+    if(key==='Escape'){ G.mode='galaxy'; addLog('Undocked.','li'); renderAll(); return; }
+  } else if(b.screen==='recruit'){
+    const HIRE_COUNT = 6;
+    if(key==='ArrowUp'){   b.recruitSel=Math.max(0,(b.recruitSel||0)-1); renderAll(); return; }
+    if(key==='ArrowDown'){ b.recruitSel=Math.min(HIRE_COUNT-1,(b.recruitSel||0)+1); renderAll(); return; }
+    if(key==='Enter'){ executeBaseAction('recruit_confirm'); renderAll(); return; }
+    if(key==='Escape'){ b.screen='sub'; renderAll(); return; }
+  } else if(b.screen==='installweapon'){
+    const weapons3 = Object.values(SHIP_WEAPONS);
+    if(key==='ArrowUp'){   b.weaponSel=Math.max(0,(b.weaponSel||0)-1); renderAll(); return; }
+    if(key==='ArrowDown'){ b.weaponSel=Math.min(weapons3.length-1,(b.weaponSel||0)+1); renderAll(); return; }
+    if(key==='Enter'){ executeBaseAction('confirminstall'); renderAll(); return; }
+    if(key==='Escape'){ b.screen='sub'; renderAll(); return; }
+  } else if(b.screen==='changehull'){
+    const ids=hangarHullIds();
+    const deltas={ArrowLeft:-1,ArrowUp:-1,ArrowRight:1,ArrowDown:1,PageUp:-4,PageDown:4};
+    if(key in deltas){selectHullForPurchase(Math.max(0,Math.min(ids.length-1,(b.hullSel||0)+deltas[key])));return;}
+    if(key==='Enter'){executeBaseAction('confirmhull');renderAll();return;}
+    if(key==='Escape'){b.hullQuoteKey=null;b.screen='sub';renderAll();return;}
+  } else if(b.screen==='sub'){
+    const actions = STATION_BUILDINGS[b.sel].actions();
+    // Skip over header rows and disabled rows when navigating
+    function subStep(dir){
+      let next = b.subSel + dir;
+      while(next >= 0 && next < actions.length && (actions[next]._header || actions[next].disabled)){
+        next += dir;
+      }
+      if(next >= 0 && next < actions.length) b.subSel = next;
+    }
+    if(key==='ArrowUp'){   subStep(-1); renderAll(); return; }
+    if(key==='ArrowDown'){ subStep(1);  renderAll(); return; }
+    if(key==='Enter'){
+      const act = actions[b.subSel];
+      if(act && !act.disabled && !act._header) executeBaseAction(act.id);
+      return;
+    }
+    if(key==='Escape'){
+      if(b.medbaySub === 'vend'){
+        b.medbaySub = null;
+        b.subSel = 0;
+        b.subScroll = 0;
+        renderAll(); return;
+      }
+      b.screen='main'; b.subScroll=0; b.medbaySub=null; b.scienceCorpSub=false; if(b.hangarSub) b.hangarSub='top'; renderAll(); return;
+    }
+  }
+  return;
+}

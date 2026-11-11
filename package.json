@@ -1,13 +1,15 @@
 {
   "name": "prospector-ii",
-  "version": "0.26.0",
+  "version": "0.28.0-experimental.96",
   "private": true,
-  "description": "Modular source experiment with a single HTML release artifact.",
+  "description": "Prospector II experimental development with modular sources and a single HTML build.",
   "engines": { "node": ">=22" },
   "scripts": {
     "build": "node tools/build-single-file.js",
+    "art:ships": "node tools/import-prospector-ships.js",
+    "art:plasma": "node tools/import-prospector-plasma.js",
     "check": "node tools/build-single-file.js --check",
-    "test": "node --test tests/build.test.js tests/interior-resources.test.js tests/casino-interior.test.js && npm run check",
+    "test": "node --test tests/*.test.js && npm run check",
     "verify:migration": "node tools/verify-migration.js"
   }
 }

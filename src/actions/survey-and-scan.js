@@ -11,6 +11,63 @@ function getSelectedSystemBody(){
   return { pDesc, targetDesc, pKey };
 }
 
+// Detailed readings belong in orbital view. Generated populations take
+// precedence over biome estimates.
+function bodyScanReadings(desc,pdata){
+  const biome=BIOMES[desc.biome]||{};
+  const noSurface=desc.biome==='GAS_GIANT';
+  const mineral=biome.minerals>=10?'Abundant':biome.minerals>=6?'Rich':biome.minerals>=3?'Moderate':'Scarce';
+  const civ=pdata?.civilization;
+  let life='None detected';
+  if(civ) life=civ.tierLabel+' '+civ.species;
+  else {
+    const actual=pdata?.spawnedAliens;
+    const chance=biome.alienChance??1, max=biome.aliens??0;
+    const count=actual??(chance*(1+max)/2);
+    const prefix=actual===undefined?'~':'';
+    if(count>0 && (actual!==undefined || (chance>0 && max>0)))
+      life=actual===undefined && chance<=0.25?'Unlikely':prefix+(count>=8?'Teeming':count>=5?'Active':count>=2?'Sparse':'Unlikely');
+  }
+  return [
+    ['Avg Temp',desc.avgTemp!==undefined?desc.avgTemp+' C':'Unknown'],
+    ['Gravity',desc.gravity!==undefined?desc.gravity+' m/s2':'Unknown'],
+    ['Atmosphere',desc.atmosphere||'Unknown'],
+    ['Radius',desc.radius!==undefined?desc.radius+'x Earth':'Unknown'],
+    ['Oxygen',noSurface?'Cannot land':biome.oxyDrain===0?'Breathable':biome.oxyDrain!==undefined?'-'+biome.oxyDrain+'%/step':'Unknown'],
+    ['Minerals',noSurface?'No surface':mineral],
+    ['Lifeforms',life],
+    ['Biodata',biome.biodata>=7?'Abundant':biome.biodata>=4?'Rich':biome.biodata>=1?'Traces':'None'],
+    ['Hazards',biome.hazards?.length?biome.hazards.map(h=>
+      ({METEOR:'Meteors',LAVA_FLOOR:'Lava',SMOKE:'Gas vents',AMMONIA:'Ammonia',GEYSER:'Geysers'})[h]||h).join(', '):'None detected'],
+  ];
+}
+
+function bodyScanHint(desc,pdata){
+  if(!['partial','full'].includes(desc.scanState)) return '';
+  const unusualBody=body=>['RINGWORLD','DESTROYED_RINGWORLD','NUCLEAR_WAR','BLOOM',
+    'TALKING_TREES','ANCIENT','ANCIENT_STATION','DERELICT'].includes(body?.biome) ||
+    body?.isRingworld || body?.isDestroyedRingworld || body?.isNuclearWar ||
+    body?.isBloomWorld || body?.isTalkingTreesWorld || body?.isAncientStation;
+  if(['BLOOM','TALKING_TREES'].includes(desc.biome) || desc.isBloomWorld || desc.isTalkingTreesWorld)
+    return 'Scan: the biological returns have an unusual rhythm.';
+  if(pdata?.civilization) return 'Scan: a few surface patterns look unusually regular.';
+  if(unusualBody(desc)) return 'Scan: some contours do not quite fit the surrounding terrain.';
+  if(desc.biome==='GAS_GIANT' && desc.scanState==='full' && desc.moons?.some(unusualBody))
+    return 'Scan: one of the secondary returns does not quite fit the rest.';
+  // Scattered structures only suggest an anomaly when their surface footprint
+  // is actually revealed; do not inspect concealed loot or building interiors.
+  const width=pdata?.grid?.[0]?.length||0;
+  const regularSurface=pdata?.grid?.some((row,y)=>row.some((cell,x)=>
+    (pdata.scanMask?.[y*width+x] || pdata.visited?.[y*width+x]) &&
+    ['ANCIENT_ROAD','ANCIENT_WALL','ANCIENT_OUTPOST','ancient_statue'].includes(cell.type)));
+  return regularSurface?'Scan: a few surface patterns look unusually regular.':'';
+}
+
+function logBodyScanHint(desc,pdata){
+  const hint=bodyScanHint(desc,pdata);
+  if(hint) addLog(hint,'li');
+}
+
 function getOrCreateScanPlanetData(pKey, biomeKey, scanState){
   if(!G.planets[pKey]){
     if(biomeKey==='ANCIENT_STATION') generateAncientStation(pKey);
@@ -52,14 +109,15 @@ function getScanCoverage(mask){
 }
 
 function getSurveySaleValue(pdata){
-  if(!pdata) return 0;
+  if(!pdata || pdata.isDerelict || pdata.isAncientStation || pdata.isCasino || pdata.isQuarantine ||
+    ['DERELICT','ANCIENT_STATION','CASINO'].includes(pdata.biome)) return 0;
   const scanMask = pdata.scanMask || [];
   const explored = pdata.explored || [];
   let scannedTiles = 0;
   let exploredTiles = 0;
   const len = Math.max(scanMask.length, explored.length);
   for(let i=0;i<len;i++){
-    if(scanMask[i]) scannedTiles++;
+    if(scanMask[i] || explored[i]) scannedTiles++;
     if(explored[i]) exploredTiles++;
   }
   const scanOnlyTiles = Math.max(0, scannedTiles - exploredTiles);
@@ -78,16 +136,14 @@ function getSurveyPayoutBreakdown(){
     let exploredTiles = 0;
     const len = Math.max(scanMask.length, explored.length);
     for(let i=0;i<len;i++){
-      if(scanMask[i]) scannedTiles++;
+      if(scanMask[i] || explored[i]) scannedTiles++;
       if(explored[i]) exploredTiles++;
     }
-    const scanOnlyTiles = Math.max(0, scannedTiles - exploredTiles);
-    const baseValue = Math.floor(scanOnlyTiles * SURVEY_SCAN_TILE_VALUE + exploredTiles * SURVEY_EXPLORE_TILE_VALUE);
     const full = scannedTiles >= PW(pdata) * PH(pdata);
-    const currentValue = full ? baseValue + SURVEY_FULL_SCAN_BONUS : baseValue;
+    const currentValue = getSurveySaleValue(pdata);
     const soldValue = pdata.surveySoldValue || 0;
     if(currentValue > soldValue) pending += currentValue - soldValue;
-    if(full && soldValue < currentValue){
+    if(full && currentValue>0 && soldValue < currentValue){
       const bodyName = findBodyNameByKey(pKey);
       if(bodyName) fullBonusBodies.push(bodyName);
     }
@@ -250,7 +306,11 @@ function doViewScan(){
 function doScan(){
   const body = getSelectedSystemBody();
   if(!body) return;
-  const { pDesc, targetDesc, pKey } = body;
+  const { targetDesc, pKey } = body;
+  if(effectiveSensorRange()===0){
+    addLog('Sensors offline. Repair the sensor core before scanning.','lw');
+    renderAll();return;
+  }
 
   if(targetDesc.scanState==='full' || DEBUG.preScan === 1){
     if(DEBUG.preScan === 1) targetDesc.scanState = 'full';
@@ -260,61 +320,42 @@ function doScan(){
 
   if(G.fuel<=0){ addLog('Not enough fuel to run scanners.','lw'); renderAll(); return; }
   if(!DEBUG.infiniteFuel){ G.fuel = Math.max(0, G.fuel-1); G.fuelSpent=(G.fuelSpent||0)+1; }
-  G.turn++;
+  beginCareerTurn('scan');
   const B = BIOMES[targetDesc.biome] || {};
   const difficulty = B.scanDifficulty ?? 0.6;
   const bestNavScan  = Math.max(0, ...(G.crew.filter(c=>c.hp>0).map(c=>c.skills?.nav||0)));
   const scoutBonus   = bestNavScan >= 2 ? 0.15 : 0;
-  const sensorBonus  = ((G.shipStats?.sensorRange ?? 3) - 3) * 0.08;
+  const sensorBonus  = (effectiveSensorRange() - 3) * 0.08;
   // NAV skill: best navigator's skill adds up to +0.20 scan success
   const navScanBonus = bestNavScan * 0.02;
   const roll = Math.random();
 
   if(roll < difficulty + scoutBonus + sensorBonus + navScanBonus){
-    // Successful scan — best navigator gains 2 NAV XP
+    // Every successful paid scan trains navigation; completed-scan browsing is free.
     const navCrewScan = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.nav||0)-(a.skills?.nav||0))[0];
-    if(navCrewScan) giveSkillXP(navCrewScan, 'nav', 2);
-    const wasUnscanned = !targetDesc.scanState || targetDesc.scanState==='failed';
+    const wasUnscanned = !targetDesc.scanState || targetDesc.scanState==='none' || targetDesc.scanState==='failed';
     if(targetDesc.biome==='GAS_GIANT'){
       targetDesc.scanState = 'full';
+      if(navCrewScan) giveSkillXP(navCrewScan,'nav',2);
       if(wasUnscanned) G.planetsScanned=(G.planetsScanned||0)+1;
-      addLog('Scan complete: '+targetDesc.name+' - Gas Giant.','lg');
-      addLog('Massive hydrogen-helium atmosphere. Cannot land.','li');
-      if(pDesc.moons&&pDesc.moons.length){
-        addLog(pDesc.moons.length+' moon'+(pDesc.moons.length>1?'s':'')+' detected and catalogued.','lg');
-        pDesc.moons.forEach(m=> addLog('  > '+m.name+' ['+BIOMES[m.biome].name+']','li'));
-      } else {
-        addLog('No moons detected.','li');
-      }
+      logBodyScanHint(targetDesc);
     } else {
       const pdata = getOrCreateScanPlanetData(pKey, targetDesc.biome, targetDesc.scanState);
       const coverage = revealScanProgress(pdata, difficulty, scoutBonus + sensorBonus);
+      if(navCrewScan) giveSkillXP(navCrewScan,'nav',2);
       targetDesc.scanState = coverage >= 1 ? 'full' : 'partial';
       if(wasUnscanned) G.planetsScanned=(G.planetsScanned||0)+1;
-      const mineralHint = B.minerals>=8 ? 'Rich mineral deposits.' : B.minerals>=4 ? 'Moderate minerals.' : 'Few minerals.';
-      const _civScanHint = G.planets[pKey]?.civilization;
-      const alienHint   = _civScanHint
-        ? _civScanHint.tierLabel+' '+_civScanHint.species+' civilization detected.'
-        : B.aliens>=2 ? 'Some lifeforms detected.' : 'Low lifeform readings.';
-      const oxyHint     = B.oxyDrain===0 ? 'Breathable atmosphere.' : B.oxyDrain>=2.5 ? 'Hostile atmosphere - suit critical.' : 'Suit required.';
-      addLog((coverage >= 1 ? 'Scan complete: ' : 'Scan progress: ')+targetDesc.name,'lg');
-      addLog(B.name+'. '+oxyHint,'li');
-      addLog(mineralHint+' '+alienHint,'li');
-      addLog('Terrain coverage: '+Math.round(coverage*100)+'%.','li');
-      // Civilization hint from scan data
-      const _civScan = G.planets[pKey]?.civilization;
-      if(_civScan) addLog('Civilization detected: '+_civScan.tierLabel+' '+_civScan.species+' ('+_civScan.aggression+').','ll');
+      logBodyScanHint(targetDesc,pdata);
     }
   } else if(roll < (difficulty + scoutBonus + navScanBonus)*1.5){
     if(targetDesc.biome==='GAS_GIANT'){
       targetDesc.scanState = 'partial';
-      addLog('Partial scan: '+targetDesc.name+' - '+B.name+'. Interference prevents full reading.','lw');
+      logBodyScanHint(targetDesc);
     } else {
       const pdata = getOrCreateScanPlanetData(pKey, targetDesc.biome, targetDesc.scanState);
       const coverage = revealScanProgress(pdata, Math.max(0.15, difficulty * 0.55), scoutBonus * 0.5);
       targetDesc.scanState = coverage >= 1 ? 'full' : 'partial';
-      addLog('Partial scan: '+targetDesc.name+' - '+B.name+'.','lw');
-      addLog('Terrain coverage: '+Math.round(coverage*100)+'%.','li');
+      logBodyScanHint(targetDesc,pdata);
     }
   } else {
     if(targetDesc.biome!=='GAS_GIANT'){
@@ -327,5 +368,7 @@ function doScan(){
     addLog('Scan failed. Dense atmosphere or interference. Try again.','lw');
   }
 
+  recordSurveyFinding(body);
+  finishCareerTurn();
   renderAll();
 }

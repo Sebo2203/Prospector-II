@@ -1,5 +1,6 @@
 function radioRange(){
-  return (G.shipStats?.sensorRange ?? 3) + 5;
+  const sensors=effectiveSensorRange();
+  return sensors>0?sensors+5:0;
 }
 
 function neutralShipDistance(ns){

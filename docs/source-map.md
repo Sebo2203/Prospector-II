@@ -4,6 +4,26 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 
 | File | Lines at extraction |
 | --- | ---: |
+| [src/combat/ship-collisions.js](../src/combat/ship-collisions.js) | Added later: physical sizes, mutual hull ramming, asteroid boost impacts and terminal maneuver commitment |
+| [src/combat/ship-environment.js](../src/combat/ship-environment.js) | Added later: seeded nebula pockets, symmetric direct-fire penalties and persisted unannounced lightning |
+| [src/rendering/ship-environment.js](../src/rendering/ship-environment.js) | Added later: pixel-art nebula backdrop, charted pockets, ASCII and unannounced lightning strikes |
+| [src/combat/ship-crew.js](../src/combat/ship-crew.js) | Added later: active bridge skill selection, combat XP and hull-impact crew injuries/deaths |
+| [src/combat/ship-ai.js](../src/combat/ship-ai.js) | Added later: enemy range/weapon roles, return-fire/cooling decisions and bounded cover routing |
+| [src/ships/hull-framework.js](../src/ships/hull-framework.js) | Added later: physical envelopes, refit space/support, operating costs, local equipment stores and hull exchange transactions |
+| [src/ui/hull-yard.js](../src/ui/hull-yard.js) | Added later: paged hull catalog and reviewed purchase quote |
+| [src/combat/ship-missiles.js](../src/combat/ship-missiles.js) | Added later: persistent tactical guided flight, bounded cover routing, impact resolution and delayed base bombardment |
+| [src/missions/expedition.js](../src/missions/expedition.js) | Added later: saved log facts and survey register |
+| [src/assets/combat-sprites.js](../src/assets/combat-sprites.js) | Atlas combat sprites, large asteroids and approved pixel nebula art; embedded by tools/import-prospector-plasma.js |
+| [src/assets/ship-sprites.js](../src/assets/ship-sprites.js) | Added later: generated original ship frames; see art-direction.md |
+| [src/rendering/station-art.js](../src/rendering/station-art.js) | Added later: transparent cached derelict wreck artwork |
+| [src/rendering/ship-art.js](../src/rendering/ship-art.js) | Added later: civilian role silhouettes and compass frame selection |
+| [src/rendering/system-body-icons.js](../src/rendering/system-body-icons.js) | Shared existing orbital-body art for the system view and debug previews |
+| [src/missions/quarantine-ship.js](../src/missions/quarantine-ship.js) | Added later: spatial rescue, survivor state, atmosphere and transport |
+| [src/rendering/quarantine.js](../src/rendering/quarantine.js) | Added later: deck fixtures and visible survivors |
+| [src/ui/log-records.js](../src/ui/log-records.js) | Added later: integrated LOG records, history and wrapping |
+| [src/ui/active-missions.js](../src/ui/active-missions.js) | Compact footer objectives derived from active contracts, rescue knowledge and carried quest cargo |
+| [src/ui/menu-pointer.js](../src/ui/menu-pointer.js) | Canvas menu hit areas, pointer routing, wheel navigation, and hover previews |
+| [src/ui/pointer-keys.js](../src/ui/pointer-keys.js) | On-screen keys for setup, feedback, and movement rebinding |
 | [src/core/identity-and-config.js](../src/core/identity-and-config.js) | 109 |
 | [src/ui/canvas-and-messages.js](../src/ui/canvas-and-messages.js) | 38 |
 | [src/assets/sprites.js](../src/assets/sprites.js) | 64 |
@@ -29,6 +49,8 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/crew/status-effects.js](../src/crew/status-effects.js) | 767 |
 | [src/crew/morale.js](../src/crew/morale.js) | 270 |
 | [src/crew/recruitment-and-survey-rewards.js](../src/crew/recruitment-and-survey-rewards.js) | 51 |
+| [src/ships/systems.js](../src/ships/systems.js) | Mounts, persistent core integrity, heat, shields, fitting and repairs |
+| [src/ui/ship-systems.js](../src/ui/ship-systems.js) | Hangar/ship canvas inspection pages and shared keyboard/pointer repair controls |
 | [src/ships/classes.js](../src/ships/classes.js) | 112 |
 | [src/core/cargo-and-analytics.js](../src/core/cargo-and-analytics.js) | 73 |
 | [src/core/new-game.js](../src/core/new-game.js) | 134 |
@@ -87,7 +109,11 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/crew/oxygen.js](../src/crew/oxygen.js) | 86 |
 | [src/combat/ground-and-enemies.js](../src/combat/ground-and-enemies.js) | 434 |
 | [src/ships/gas-entities-and-pirates.js](../src/ships/gas-entities-and-pirates.js) | 294 |
+| [src/actions/calendar.js](../src/actions/calendar.js) | Reporting-only calendar, local solar display and activity/location totals |
+| [src/combat/ship-rewards.js](../src/combat/ship-rewards.js) | Role-weighted salvage, persistent pirate bounty claims and station settlement |
 | [src/combat/ship.js](../src/combat/ship.js) | 761 |
+| [src/combat/ship-tactics.js](../src/combat/ship-tactics.js) | Added later: tactical arena, movement, weapon timing, exhaust, and enemy actions |
+| [src/rendering/ship-combat.js](../src/rendering/ship-combat.js) | Added later: tactical arena display, contacts, and weapons |
 | [src/economy/radio-trade.js](../src/economy/radio-trade.js) | 87 |
 | [src/actions/interaction-and-landing.js](../src/actions/interaction-and-landing.js) | 313 |
 | [src/actions/survey-and-scan.js](../src/actions/survey-and-scan.js) | 331 |
@@ -95,10 +121,19 @@ The ordered lists in `src/build-manifest.json` preserve the original execution o
 | [src/actions/station-purchases.js](../src/actions/station-purchases.js) | 631 |
 | [src/actions/wait-and-fuel.js](../src/actions/wait-and-fuel.js) | 208 |
 | [src/input/keyboard.js](../src/input/keyboard.js) | 1495 |
+| [src/debug/playground.js](../src/debug/playground.js) | Added later: disposable galaxy/surface playground and sample catalogs |
+| [src/debug/menu.js](../src/debug/menu.js) | Added later: clickable debug tools and sample directory |
 | [src/audio/sound-effects.js](../src/audio/sound-effects.js) | 217 |
 | [src/persistence/save-load.js](../src/persistence/save-load.js) | 183 |
+| [src/persistence/autosave-store.js](../src/persistence/autosave-store.js) | Added later: transactional autosave records, integrity and ordered writes |
 | [src/platform/desktop-download.js](../src/platform/desktop-download.js) | 14 |
 | [src/ui/menu-and-settings.js](../src/ui/menu-and-settings.js) | 1153 |
 | [src/ui/scaling-and-compass.js](../src/ui/scaling-and-compass.js) | 96 |
 | [src/rendering/procedural-sprites.js](../src/rendering/procedural-sprites.js) | 216 |
 | [src/core/startup.js](../src/core/startup.js) | 2 |
+
+`src/combat/ship-feedback.js` provides disposable shot animation and ordered impact audio; it does not own game rules or save data.
+
+`src/ships/neutral-movement.js` also owns the shared galaxy engine-ratio budget and safe escape-sector candidates used by pirates, civilian flight and tactical exits.
+
+`shipRelativeMoveBudget` in `src/ships/neutral-movement.js` supplies the shared relative-speed kernel; tactical actor banks are owned by `src/combat/ship-tactics.js` and validated by `src/persistence/career-snapshot.js`. NPC engine defaults are centralized in `src/ships/classes.js`.

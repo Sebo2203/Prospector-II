@@ -1,5 +1,5 @@
 function drawRetirementScreen(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const tier = RETIREMENT_TIERS.find(t=>G.credits>=t.min&&G.credits<=t.max)||RETIREMENT_TIERS[0];
 
   // Background
@@ -29,13 +29,16 @@ function drawRetirementScreen(){
   const stats = [
     ['Credits Saved',     G.credits+' cr',                         tier.col],
     ['Credits Earned',    (G.creditsEarned||G.credits)+' cr',      '#ffe066'],
-    ['Career Length',     G.turn+' turns',                         '#aaccee'],
+    ['Career Length',     formatCareerDuration(G.careerTime?.minutes||0),                         '#aaccee'],
     ['Systems Visited',   Object.keys(G.planets||{}).length,       '#70d8ff'],
     ['Planets Scanned',   G.planetsScanned||0,                     '#70d8ff'],
     ['Crew Survived',     G.crew.filter(c=>c.hp>0).length+' / '+(G.crewHired||G.crew.length), '#70f090'],
     ['Pirates Defeated',  (G.pirates||[]).filter(p=>!p.alive).length, '#ff8866'],
     ['Fuel Spent',        (G.fuelSpent||0)+' units',               '#ddaa33'],
     ['Combats Fought',    G.combatsFought||0,                      '#ffcc44'],
+    ['Combat time',formatCareerDuration(G.careerTime?.activities.combat||0),'#aaccee'],
+    ['Repair time',formatCareerDuration(G.careerTime?.activities.repair||0),'#aaccee'],
+    ...CAREER_TIME_LOCATIONS.map(key=>[key[0].toUpperCase()+key.slice(1)+' time',formatCareerDuration(G.careerTime?.locations[key]||0),'#aaccee']),
   ];
 
   const col1x = cx-290, col2x = cx+20;
@@ -73,30 +76,25 @@ function drawRetirementScreen(){
 
   ctx.fillStyle='#112233'; ctx.fillRect(cx-300, divY+38, 600, 1);
 
+  ctx.font='12px Courier New'; ctx.fillStyle='#8aaabb';
+  ctx.fillText(expeditionLegacy(), cx, divY+65, cw-50);
+
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#ffe066';
   ctx.fillText('[ ENTER  or  SPACE ]  →  Main Menu', cx, ch-30);
+  canvasMenuTarget(cx-190,ch-49,380,29,()=>void returnToMainMenuFromGame());
   ctx.textAlign='left';
 }
 
 function drawInGameOptions(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   ctx.fillStyle='rgba(0,0,0,0.88)'; ctx.fillRect(0,0,cw,ch);
   const cx=cw/2;
-  if(G._kbScreen){
-    drawKeybindingsScreen(cx);
-  } else {
-    drawOptionsScreen(cx);
-    ctx.fillStyle='rgba(0,0,0,0.92)';
-    ctx.fillRect(cx-300, ch-60, 600, 50);
-    ctx.font='14px Courier New'; ctx.fillStyle='#334455'; ctx.textAlign='center';
-    ctx.fillText('Up/Down select   Left/Right change   Enter activate',cx,ch-36);
-    ctx.fillText('F feedback   ESC close options',cx,ch-18);
-    ctx.textAlign='left';
-  }
+  if(G._kbScreen) drawKeybindingsScreen(cx);
+  else drawOptionsScreen(cx);
 }
 
 function drawGameOverOverlay(){
-  const cw=canvas.width, ch=canvas.height;
+  const cw=canvasWidth, ch=canvasHeight;
   const isJailed = !!G.jailed;
 
   // ── Special screen: C4 destroyed the ship, crew stranded on a planet ─────
@@ -132,7 +130,7 @@ function drawGameOverOverlay(){
     }
     ctx.fillStyle='#2a1000'; ctx.fillRect(cw/2-200,_fy+6,400,1);
     const _sy=_fy+22; ctx.font='14px Courier New';
-    [['Turns survived',G.turn],['Credits earned',G.credits],['Planets visited',Object.keys(G.planets).length]].forEach((_s,_i)=>{
+    [['Elapsed',formatCareerDuration(G.careerTime?.minutes||0)],['Turns survived',G.turn],['Credits earned',G.credits],['Planets visited',Object.keys(G.planets).length]].forEach((_s,_i)=>{
       ctx.fillStyle='#3a1a08'; ctx.textAlign='right'; ctx.fillText(_s[0],cw/2+10,_sy+_i*20);
       ctx.fillStyle='#996644'; ctx.textAlign='left';  ctx.fillText(_s[1],cw/2+20,_sy+_i*20);
     });
@@ -192,7 +190,7 @@ function drawGameOverOverlay(){
   const stats=[
     ['Turns survived',  G.turn],
     ['Credits earned',  G.credits],
-    ['Crew lost',       3-G.crew.length],
+    ['Recorded crew deaths', G.crewDeaths],
     ['Planets visited', Object.keys(G.planets).length],
     ['Items collected', (G.inventory.length + G.log.filter(l=>l.cls==='ll').length)],
   ];
@@ -205,11 +203,14 @@ function drawGameOverOverlay(){
     ctx.fillText(s[1], cw/2+20, sy+i*24);
   });
 
+  drawCareerTimeSummary(cw/2,ch-100,cw-80);
+
   // Prompt
   ctx.textAlign='center';
   ctx.font='bold 16px Courier New';
   ctx.fillStyle='#ffe066';
   ctx.fillText('[ ENTER  or  SPACE ]  →  Main Menu', cw/2, ch-30);
+  canvasMenuTarget(cw/2-190,ch-49,380,29,()=>void returnToMainMenuFromGame());
 
   ctx.textAlign='left';
 }

@@ -17,10 +17,6 @@ function doToggleDive(){
 
   const hasDivingSuit = G.crew.some(c => c.hp > 0 && c.armorUsable === 'armor_diving');
 
-  // Diving itself costs one turn of O2 — sealing and descending is not free
-  const diveCost = hasDivingSuit ? 2 : 8;
-  G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - diveCost);
-
   // Generate underwater overlay lazily (mirrors surface grid)
   const uwKey = G.curPlanet + ':uw';
   if(!G.planets[uwKey]){
@@ -36,13 +32,13 @@ function doToggleDive(){
 
   // Switch to underwater map; player stays at same (x,y)
   G.curPlanet = uwKey;
-  revealPlanet(uwKey, G.player.x, G.player.y);
 
   if(hasDivingSuit){
     addLog('You dive below the surface. The world above dissolves into shifting light. Diving suit sealed — O2 draining slowly.','lw');
   } else {
     addLog('You plunge under without a diving suit. Water pressure immediately stresses the seals — O2 draining fast.','lc');
   }
+  completeSurfaceAction();
   renderAll();
 }
 
@@ -79,7 +75,7 @@ function doUnderwaterSurface(){
     addLog('You surface.','li');
   }
 
-  revealPlanet(G.curPlanet, G.player.x, G.player.y);
+  completeSurfaceAction();
   renderAll();
 }
 function doRefillOxygen(){
@@ -103,12 +99,21 @@ function doRefillOxygen(){
 //  LIFT OFF  (L key) — must be on ship tile AND have living crew
 // ─────────────────────────────────────────────────────────────────
 function doLiftOff(){
-  if(G.mode!=='planet') return;
+  if(G.mode!=='planet'||G.dead||G.retired) return;
+  const leavingCasino=!!G.planets[G.curPlanet]?.isCasino;
   if(!crewAlive()){ addLog('No living crew — cannot lift off!','lc'); renderAll(); return; }
   const cell=G.planets[G.curPlanet]?.grid[G.player.y][G.player.x];
   if(cell?.type==='SHIP'){
-    if(G.fuel<=0){ addLog('No fuel left - unable to launch.','lc'); renderAll(); return; }
-    if(!DEBUG.infiniteFuel) G.fuel = Math.max(0, G.fuel-1);
+    const launchFuel=hullSize();
+    if(!DEBUG.infiniteFuel&&G.fuel+1e-9<launchFuel){
+      G.dead=true;
+      G.deathCause='Insufficient fuel for liftoff. With no way home, the stranded crew exhausted their supplies. No one returned.';
+      G.examine=null;G.rangeTarget=null;G._itemAimMode=null;
+      addLog(G.deathCause,'lc');renderAll();return;
+    }
+    if(quarantineInterior()) transferQuarantinePassengers();
+    if(quarantineInterior()) leaveQuarantineDeck();
+    spendShipFuel(launchFuel);
     G.oxygen=100;
     G.underwater=false;
     G._underwaterWarned=false;
@@ -122,6 +127,7 @@ function doLiftOff(){
     G.examine = null;
     G.rangeTarget = null;
     G._itemAimMode = null;
+    recordCareerTime('travel',15,leavingCasino?'stations':'space');
     SFX.liftoff();
     addLog(leavingCasino ? 'Undocked from The Void Royale.' : 'Lifted off. Back in orbit.','lg');
   } else {

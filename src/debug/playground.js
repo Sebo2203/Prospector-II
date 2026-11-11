@@ -1,0 +1,340 @@
+// A disposable test world. The live career remains outside G and is never
+// mutated, serialized into a nested save, or replaced by a playground autosave.
+let debugPaletteReturn=null;
+
+function debugBuildPaletteGalaxyObject(id,x,y){
+  const name=id.replaceAll('_',' ');
+  if(id==='BASE'||id==='WAYPOINT'||id==='HULL_WORKSHOP') return {type:'BASE',name:id==='HULL_WORKSHOP'?'Hull Workshop':id==='BASE'?'Starbase Alpha':'Waypoint Omega'};
+  if(id==='CASINO') return {type:'CASINO',name:'The Void Royale'};
+  if((id.startsWith('NEBULA_')&&id!=='NEBULA_COMBAT')||id.startsWith('GAS_')){
+    const variant=id==='NEBULA_BLUE'?'blue':'pink',massive=id==='GAS_DEVOURER';
+    if(id.startsWith('GAS_')) G.gasEntities.push({x,y,alive:true,variant,isMassive:massive,hp:150,maxHp:150,atk:20,
+      engineRating:3,shields:0,maxShields:0,guns:1,name:massive?'Void Devourer':'Nebula Wraith',_chaseTurns:0,_homeCluster:[{x,y}]});
+    return {type:'NEBULA',name,nebulaVariant:variant,massive,expansive:false};
+  }
+  const neutral={TRADER:'trader',CARGO_SHIP:'cargo',SCIENCE_SHIP:'science',PATROL:'patrol'}[id];
+  if(id==='BRIDGE_DRILL'||id==='NEBULA_COMBAT'){
+    for(const [combatTactic,weapon,engine]of [['brawler','mass_driver',2],['skirmisher','pulse_laser',3],['sniper','railgun',1],['missile','artemis',2]]){
+      G.pirates.push({x,y,homeX:x,homeY:y,name:'Drill '+combatTactic,combatTactic,bridgeDrill:true,
+        alive:true,hp:90,maxHp:90,atk:9,engineRating:engine,shields:0,guns:1,pirateType:'guard',
+        bridgeSkills:{gunnery:3,piloting:2},installedWeapons:[weapon],ammo:{artemis:4}});
+    }
+    return id==='NEBULA_COMBAT'?{type:'NEBULA',name,nebulaVariant:'blue'}:{type:'VOID',name};
+  }
+  if(neutral) G.neutralShips.push({x,y,type:neutral,name,speed:1,rescueCost:0,fuelGift:40,destBase:0,destX:x,destY:y,
+    homeX:x,homeY:y,patrolRoute:[{x,y}],patrolIdx:0,rescuing:false,alive:true});
+  else if(id==='ARTEMIS_RAIDER'){
+    G.pirates.push({x,y,name:'Artemis Raider',alive:true,hp:100,maxHp:100,atk:9,engineRating:2,
+      shields:0,maxShields:0,guns:2,pirateType:'guard',homeX:x,homeY:y,
+      installedWeapons:['artemis','mass_driver'],ammo:{artemis:3}});
+  }
+  else if(id==='PIRATE' || id==='PIRATE_WING'){
+    const names=id==='PIRATE' ? ['Palette Pirate'] : ['Pirate Lead','Pirate Wingmate'];
+    for(const name of names) G.pirates.push({x,y,name,alive:true,hp:50,maxHp:50,atk:6,engineRating:2,
+      shields:0,maxShields:0,guns:1,pirateType:'guard',homeX:x,homeY:y,lastMove:0});
+  }
+  else if(id.startsWith('STRANDED_')||id==='RESEARCH_SHIP'){
+    const type=id==='STRANDED_ALIVE'?'alive':id==='RESEARCH_SHIP'?'research':'dead';
+    const ship={x,y,type,name,mapKey:x+','+y+':palette-ship',fuel:0,fuelCost:20,credits:200,age:0};
+    G.npcStranded.push(ship);
+    if(type==='research'){
+      if(G.debugPalette){
+        G.debugPalette.researchShip=ship;
+        G.scienceJob.active={id:'palette-research',type:'research_ship',target:{mapKey:ship.mapKey},reward:900,status:'retrieve research data'};
+      }
+    }
+    return {type:'VOID',name,_npcStranded:ship};
+  } else if(id==='NEBULA_LOOT') G.nebulaLoot.push({x,y,item:makeCommodityItem('ore_xc','palette',0)});
+  else if(id==='QUARANTINE'){
+    ensureExpeditionState().quarantine={x,y,version:2,status:'unvisited',survivors:[],repaired:false,air:180,lastTick:null};
+    return {type:'DERELICT',name:'Mercy of Dawn'};
+  } else throw new Error('No debug palette factory for '+id);
+  return {type:'VOID',name};
+}
+
+function debugPaletteDescriptor(biome,name){
+  const desc={name,biome,biomeName:BIOMES[biome]?.name||biome,orbitSlot:0,scanState:'full',
+    avgTemp:15,gravity:'1.0',atmosphere:'Test environment',radius:'1.0'};
+  if(biome==='GAS_GIANT') desc.moons=[debugPaletteDescriptor('MOON_ROCK','Rocky moon'),
+    {...debugPaletteDescriptor('ANCIENT_STATION','Ancient refueling station'),isAncientStation:true}];
+  return desc;
+}
+
+function debugEnterPalette(area='galaxy',rebuild=false){
+  if(!G) return;
+  if(!debugPaletteReturn){autoSave();debugPaletteReturn={game:G,debug:JSON.parse(JSON.stringify(DEBUG))};}
+  if(!G.debugPalette || rebuild){
+    G=JSON.parse(JSON.stringify(debugPaletteReturn.game));
+    Object.assign(G,{mode:'galaxy',turn:1,dead:false,retired:false,deathCause:'',shipCombat:null,stranded:null,dialogue:null,
+      forcedMove:null,examine:null,rangeTarget:null,_itemAimMode:null,_voidPrompt:null,showOptions:false,crewDeaths:0,
+      _caveReturn:null,_uwReturn:null,shipAnim:null,underwater:false,
+      baseMissiles:[],galaxy:Array.from({length:MAP_H},()=>Array.from({length:MAP_W},()=>({type:'VOID'}))),
+      planets:{},enemies:{},visited:new Array(MAP_W*MAP_H).fill(true),pirates:[],pirateBases:[],neutralShips:[],
+      gasEntities:[],npcStranded:[],nebulaLoot:[],derelicts:[],roguePlanets:[],pulsars:[],blackHoles:[],
+      bases:[],inventory:[],cargo:[],towedShip:null,log:[],msg:'',curPlanet:'',curSystem:'',
+      expedition:{version:1,events:[],surveys:{},quarantine:null},scienceJob:{active:null,completedTypes:[],cooldownUntil:0},
+      debugPalette:{simulate:false,entries:[],surfaceKey:'debug:surface'}});
+    G.crew=Object.keys(CREW_ROLES).map(role=>randomCrewMember(role));
+    G.shipStats=buildShipStats('BULK_FREIGHTER',{weapons:1});G.shipStats.cargoCapacity=100;G.shipStats.maxCrew=100;
+    G.shipStats.mountSizes=[3,3,3];G.shipStats.reactorOutput=100;G.shipStats.maxFuel=1000;
+    G.maxFuel=1000;G.fuel=1000;G.ship={x:3,y:3,hp:1000,maxHp:1000};G.oxygen=100;G.credits=100000;
+    G.installedModules=['tractor_beam','fuel_scoop','mining_drill'];G.installedWeapons=['railgun'];
+    Object.assign(DEBUG,{infiniteFuel:true,infiniteHull:true,infiniteOxy:true,infiniteCrewHp:true,fullVision:true,shipInvisible:true,preScan:1});
+    debugBuildGalaxyPalette();debugBuildSurfacePalette();
+    for(const entry of G.debugPalette.entries.filter(e=>e.kind==='civilization')) debugPrepareCivilization(entry);
+  }
+  debugPaletteNavigateHome(area);
+}
+
+function debugPaletteNavigateHome(area){
+  if(G.debugPalette.bridgeDrillReturn){
+    const saved=G.debugPalette.bridgeDrillReturn;Object.assign(G,saved.game);
+    Object.keys(DEBUG).forEach(key=>delete DEBUG[key]);Object.assign(DEBUG,saved.debug);
+    delete G.debugPalette.bridgeDrillReturn;
+  }
+  if(G.debugPalette.hullWorkshop){
+    Object.assign(G,G.debugPalette.hullWorkshop);
+    delete G.debugPalette.hullWorkshop;
+  }
+  if(G.debugPalette.artemisLoadout){
+    G.installedWeapons=G.debugPalette.artemisLoadout.weapons;
+    G.ship.ammo=G.debugPalette.artemisLoadout.ammo;
+    delete G.debugPalette.artemisLoadout;
+  }
+  G.dead=false;G.retired=false;G.dialogue=null;G.showOptions=false;G.forcedMove=null;G.shipCombat=null;
+  G.examine=null;G.rangeTarget=null;G.stranded=null;G._voidPrompt=null;G._itemAimMode=null;G.underwater=false;
+  for(const component of Object.values(ensureShipSystems())){component.condition=100;component.bypassUntil=0;}
+  G.ship.heat=0;G.ship.shieldCharge=shipShieldCapacity();G.ship.shieldRechargeAt=G.turn;
+  G.ship.weaponReadyAt=[];G.ship.systemTurn=G.turn;syncPlayerShipSystems();
+  G.curSystem='';G.ship.x=3;G.ship.y=3;G.fuel=G.maxFuel;G.oxygen=100;
+  G.ship.hp=G.ship.maxHp;
+  if(!G.crew.length)G.crew=Object.keys(CREW_ROLES).map(role=>randomCrewMember(role));
+  G.crew.forEach(c=>{c.hp=c.maxHp;c.statuses={};});
+  if(area==='surface'){
+    G.mode='planet';G.curPlanet=G.debugPalette.surfaceKey;G.player={x:2,y:2};
+    revealPlanet(G.curPlanet,2,2);
+  } else {G.mode='galaxy';G.curPlanet='';}
+  closeDebugMenu();
+  debugPlaygroundButton.hidden=false;
+  restoreGameUI();addLog('DEBUG PALETTE — Use the Debug Palette button to find samples or return to your career. NPCs '+(G.debugPalette.simulate?'live.':'paused.'),'li');renderAll();
+}
+
+function debugReturnFromPalette(render=true){
+  if(!debugPaletteReturn) return;
+  closeDebugMenu();
+  debugPlaygroundButton.hidden=true;
+  for(const id of ['feedback-overlay','barter-overlay']){const el=document.getElementById(id);if(el)el.style.display='none';}
+  document.getElementById('minimap-overlay')?.classList.remove('visible');
+  const saved=debugPaletteReturn;debugPaletteReturn=null;G=saved.game;
+  Object.keys(DEBUG).forEach(key=>delete DEBUG[key]);Object.assign(DEBUG,saved.debug);
+  if(render){restoreGameUI();renderAll();}
+}
+
+function debugBuildGalaxyPalette(){
+  let index=0;
+  const slot=()=>{const cols=Math.floor((MAP_W-8)/5),x=8+(index%cols)*5,y=8+Math.floor(index++/cols)*4;
+    if(y>=MAP_H-3)throw Error('Galaxy palette is full; extend its layout before adding exhibits');return{x,y};};
+  G.galaxy[3][3]={type:'BASE',name:'Palette arrival'};
+  DEBUG_GALAXY_OBJ_TYPES.forEach(definition=>{
+    const pos=slot();
+    if(!placeDebugGalaxyObject(definition,pos.x,pos.y))throw Error('Missing galaxy factory: '+definition.id);
+    G.debugPalette.entries.push({id:'galaxy:'+definition.id,kind:'galaxy',category:'Galaxy Objects',label:definition.label,...pos});
+  });
+  for(const [star,definition] of Object.entries(STAR_TYPES)){
+    const pos=slot();G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:definition.label,starType:star,planets:[debugPaletteDescriptor('HABITABLE',definition.label+' world')]};
+    G.debugPalette.entries.push({id:'star:'+star,kind:'galaxy',category:'Star Types',label:definition.label,...pos});
+  }
+  for(const biome of Object.keys(BIOMES)){
+    const pos=slot(),label=BIOMES[biome].name||biome;
+    G.galaxy[pos.y][pos.x]=biome==='CASINO'?{type:'CASINO',name:label}:
+      biome==='DERELICT'?{type:'DERELICT',name:label}:
+      {type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor(biome,label)]};
+    if(biome==='CASINO')generateCasinoStationMap('casino:'+pos.x+','+pos.y);
+    else if(biome==='DERELICT')generateDerelict(pos.x+','+pos.y);
+    else if(biome!=='GAS_GIANT')getOrCreateScanPlanetData(pos.x+','+pos.y+':0',biome,'full');
+    G.debugPalette.entries.push({id:'biome:'+biome,kind:'biome',category:'Planet Biomes',biome,label,...pos});
+  }
+  for(const tier of CIV_TIERS)for(const aggression of CIV_AGGRESSION){
+    const pos=slot(),label=tier.label+' / '+aggression;
+    G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor('HABITABLE',label)]};
+    G.debugPalette.entries.push({id:'civ:'+tier.id+':'+aggression,kind:'civilization',category:'Civilization Tiers',tier:tier.id,aggression,species:'Mammalian',label,...pos});
+  }
+  for(const species of CIV_SPECIES_TYPES){
+    const pos=slot(),label=species+' contact';
+    G.galaxy[pos.y][pos.x]={type:'SYSTEM',name:label,starType:'YELLOW',planets:[debugPaletteDescriptor('HABITABLE',label)]};
+    G.debugPalette.entries.push({id:'species:'+species,kind:'civilization',category:'Civilization Species',tier:'information',aggression:'Passive',species,label,...pos});
+  }
+  G.bases=[];for(let y=0;y<MAP_H;y++)for(let x=0;x<MAP_W;x++)if(G.galaxy[y][x].type==='BASE')G.bases.push({x,y,name:G.galaxy[y][x].name});
+}
+
+function debugSurfaceSampleDefinitions(){
+  const galaxyTypes=new Set(['VOID','NEBULA','SYSTEM','BASE','CASINO','PIRATE_BASE']);
+  const rows=Object.keys(TILE).filter(type=>!galaxyTypes.has(type)).map(type=>({id:'tile:'+type,kind:'tile',category:'Terrain and Structures',label:type,type}));
+  for(const group of DEBUG_ITEM_CATALOG)for(const item of group.items)rows.push({id:'item:'+group.cat+':'+item.name,kind:'item',category:'Gear — '+group.cat,label:item.name,item});
+  for(const item of IMPLANT_CATALOG)rows.push({id:'implant:'+item.id,kind:'item',category:'Gear — Implants',label:item.name,item:{name:item.name,col:'#88bbff',value:0,usable:'implant_'+item.id,desc:item.desc||item.detail||'Implant'}});
+  const known=new Set(rows.filter(e=>e.item).map(e=>(e.item.usable||'')+'|'+e.item.name));
+  for(const item of [...Object.values(CORP_ITEM_POOLS).flat(),...PAWN_ITEM_POOL,...MEDBAY_ITEM_POOL]){
+    const identity=(item.usable||'')+'|'+item.name;if(known.has(identity))continue;known.add(identity);
+    rows.push({id:'shop:'+identity,kind:'item',category:'Gear — Store Items',label:item.name,item:{...item,desc:item.desc||item.detail||item.name,value:item.value||0}});
+  }
+  for(const {id,label,category} of debugCargoEntries())rows.push({id:'cargo:'+id,kind:'cargo',category:'Cargo — '+category,label,commodity:id});
+  for(const body of CREATURE_BODY_TYPES)rows.push({id:'creature:'+body.key,kind:'creature',category:'Creatures',label:body.label,body,hostile:false});
+  for(const body of HOSTILE_BODY_TYPES)rows.push({id:'hostile:'+body.key,kind:'creature',category:'Hostile Creatures',label:body.label,body,hostile:true});
+  rows.push({id:'npc:gunner',kind:'gunner',category:'Hostile Creatures',label:'Gunner alien'});
+  return rows;
+}
+
+function debugBuildSurfacePalette(){
+  const rows=debugSurfaceSampleDefinitions(),W=40,H=Math.ceil(rows.length/12)*3+6,key=G.debugPalette.surfaceKey;
+  const grid=Array.from({length:H},()=>Array.from({length:W},()=>({type:'station_floor'})));
+  grid[2][2]={type:'SHIP'};
+  const pd={grid,width:W,height:H,biome:'DERELICT',isDerelict:true,isDebugPalette:true,spawnX:2,spawnY:2,
+    visited:new Array(W*H).fill(true),explored:new Array(W*H).fill(false),planetTurn:0};
+  G.planets[key]=pd;G.enemies[key]=[];
+  rows.forEach((sample,index)=>{
+    const x=4+(index%12)*3,y=4+Math.floor(index/12)*3,entry={...sample,x,y,key};
+    if(sample.kind==='tile') grid[y][x]={type:sample.type,revealed:true,oreType:'fe',_underFloor:'station_floor'};
+    else if(sample.kind==='item') grid[y][x].drops=[JSON.parse(JSON.stringify(sample.item))];
+    else if(sample.kind==='cargo') grid[y][x].debugCommodity=sample.commodity;
+    else if(sample.kind==='creature'){
+      const template=sample.hostile?generateHostileCreatureTemplates('VOLCANIC')[0]:generateCreatureTemplates('HABITABLE')[0];
+      const npc={...template,body:sample.body.key,sprite:sample.body.sprite,bodyLabel:sample.body.label,
+        name:sample.label,x,y,nestX:x,nestY:y,hp:template.maxHp,type:'CREATURE',alive:true,hidden:false,
+        currentlyHostile:sample.hostile,hostileByDefault:sample.hostile,behaviour:sample.hostile?'HUNT':'DOCILE'};
+      npc.speedRating=planetCritterSpeedRating(npc);
+      G.enemies[key].push(npc);
+    } else if(sample.kind==='gunner'){
+      G.mode='planet';G.curPlanet=key;G.player={x:x-1,y};
+      const before=G.enemies[key].length;debugSpawnGunnerAlien();
+      const npc=G.enemies[key][before];if(npc){npc.x=x;npc.y=y;}
+    }
+    G.debugPalette.entries.push(entry);
+  });
+}
+
+function debugPaletteVisit(id){
+  const entry=G?.debugPalette?.entries.find(e=>e.id===id);if(!entry)return;
+  debugPaletteNavigateHome(entry.key?'surface':'galaxy');
+  if(entry.key){G.curPlanet=entry.key;G.player={x:entry.x-1,y:entry.y};revealPlanet(entry.key,G.player.x,G.player.y);}
+  else {
+    G.ship.x=entry.x;G.ship.y=entry.y;
+    if(entry.id==='galaxy:BRIDGE_DRILL'||entry.id==='galaxy:NEBULA_COMBAT'){
+      const keys=['shipStats','ship','shipRefits','hangarStores','crew','crewDeaths','installedWeapons','installedModules','cargo','fuel','maxFuel','credits'];
+      G.debugPalette.bridgeDrillReturn={game:Object.fromEntries(keys.map(key=>[key,JSON.parse(JSON.stringify(G[key]))])),debug:{...DEBUG}};
+      G.shipStats=buildShipStats('ATTACK_CORVETTE');G.shipRefits={};G.hangarStores={};G.cargo=[];G.crewDeaths=0;
+      G.ship={x:entry.x,y:entry.y,hp:110,maxHp:110};G.fuel=G.maxFuel=90;G.credits=1000;
+      G.crew=['captain','scout','mercenary','medic'].map(randomCrewMember);
+      G.installedWeapons=['mass_driver','railgun'];G.installedModules=[];
+      Object.assign(DEBUG,{infiniteHull:false,infiniteCrewHp:false,infiniteFuel:false});ensureShipSystems();
+      const enemies=G.pirates.filter(ship=>ship.bridgeDrill&&ship.homeX===entry.x&&ship.homeY===entry.y);
+      for(const ship of enemies){
+        ship.hp=ship.maxHp;ship.alive=true;ship.ammo={artemis:4};
+        for(const key of ['systems','systemStats','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn','satisfiedUntil','disengagedUntil','combatRewardsResolved','requiresPursuit'])delete ship[key];
+      }
+      startShipCombat(enemies[0],true);
+      if(entry.id==='galaxy:BRIDGE_DRILL')G.shipCombat.asteroids=[{x:16,y:7,width:1,height:2},{x:16,y:9},
+        {x:15,y:3,width:2,height:2},{x:10,y:11,width:2,height:1}];
+    }
+    if(entry.id==='galaxy:HULL_WORKSHOP'){
+      const keys=['shipStats','ship','shipRefits','hangarStores','crew','installedWeapons','installedModules','fuel','maxFuel','credits'];
+      G.debugPalette.hullWorkshop=Object.fromEntries(keys.map(key=>[key,JSON.parse(JSON.stringify(G[key]))]));
+      G.shipStats=buildShipStats('ATTACK_CORVETTE');G.shipRefits={};G.hangarStores={};
+      G.ship={x:entry.x,y:entry.y,hp:G.shipStats.maxHp,maxHp:G.shipStats.maxHp};
+      G.crew=[randomCrewMember('captain'),randomCrewMember('scout')];
+      G.installedWeapons=['railgun'];G.installedModules=[];G.fuel=G.maxFuel=G.shipStats.maxFuel;G.credits=10000;
+      ensureShipSystems();doInteract();G.base.screen='sub';G.base.sel=0;G.base.hangarSub='top';
+    }
+    if(entry.id==='galaxy:ARTEMIS_RAIDER'){
+      const enemy=G.pirates.find(ship=>ship.name==='Artemis Raider' && ship.homeX===entry.x && ship.homeY===entry.y);
+      enemy.hp=enemy.maxHp;enemy.alive=true;delete enemy.combatRewardsResolved;
+      delete enemy.satisfiedUntil;delete enemy.disengagedUntil;delete enemy.requiresPursuit;
+      for(const key of ['systems','systemStats','heat','shieldCharge','shieldRechargeAt','weaponReadyAt','systemTurn']) delete enemy[key];
+      enemy.ammo={artemis:3};
+      G.debugPalette.artemisLoadout={weapons:G.installedWeapons.slice(),ammo:{...G.ship.ammo}};
+      G.installedWeapons=['artemis'];G.ship.ammo={artemis:6};
+      startShipCombat(enemy,true);
+      G.shipCombat.asteroids=[{x:16,y:8}];
+    }
+    if(entry.kind==='civilization'){
+      const key=entry.x+','+entry.y+':0';
+      debugPrepareCivilization(entry);
+      let keyToVisit=entry.species==='Aquatic'?key+':uw':key;
+      G.mode='planet';G.curPlanet=keyToVisit;G.curSystem=entry.x+','+entry.y;
+      const pd=G.planets[keyToVisit];G.player=debugPaletteLandingPoint(pd);
+      if(entry.species==='Aquatic'){G.underwater=true;G._uwReturn={planet:key,x:G.planets[key].spawnX,y:G.planets[key].spawnY};}
+      revealPlanet(keyToVisit,G.player.x,G.player.y);
+    }
+  }
+  addLog('PALETTE: '+entry.label+'. '+(entry.kind==='cargo'?'Step onto the sample and press Enter to load cargo.':
+    entry.kind==='tile'?'Raw tile sample. Context-dependent fixtures also have their full biome, casino, civilization or quarantine scenarios in F6.':
+    'Use the normal movement, examine and interaction controls.'),'li');renderAll();
+}
+
+function debugPaletteLandingPoint(pd){
+  if(Number.isInteger(pd.spawnX)&&Number.isInteger(pd.spawnY)) return {x:pd.spawnX,y:pd.spawnY};
+  for(let y=1;y<PH(pd)-1;y++)for(let x=1;x<PW(pd)-1;x++)if(TILE[pd.grid[y][x].type]?.pass)return{x,y};
+  throw Error('Palette map has no landing point');
+}
+
+function debugPrepareCivilization(entry){
+  const key=entry.x+','+entry.y+':0';if(G.planets[key])return;
+  const pd=getOrCreateScanPlanetData(key,'HABITABLE','full');
+  if(entry.species==='Aquatic')debugPrepareAquaticPaletteSurface(pd);
+  G.mode='planet';G.curPlanet=key;G.player=debugPaletteLandingPoint(pd);
+  DEBUG.debugCivTier=DEBUG_CIV_TIERS.findIndex(t=>t.id===entry.tier);
+  DEBUG.debugCivAggression=CIV_AGGRESSION.indexOf(entry.aggression);DEBUG.debugCivSpecies=CIV_SPECIES_TYPES.indexOf(entry.species);
+  debugSpawnCivilizationOnCurrentPlanet();
+}
+
+function debugPrepareAquaticPaletteSurface(pd){
+  // A random habitable map can have no water. This authored contact exhibit
+  // needs a connected sea large enough for its actual underwater settlement.
+  for(let y=2;y<Math.min(PH(pd)-2,16);y++)for(let x=2;x<Math.min(PW(pd)-2,26);x++){
+    if(x!==pd.spawnX||y!==pd.spawnY)pd.grid[y][x]={type:'EARTH_WATER'};
+  }
+}
+
+function drawDebugPaletteLabels(){
+  if(!G.debugPalette||!['galaxy','planet'].includes(G.mode))return;
+  const pd=G.planets[G.curPlanet],world=G.mode==='galaxy',W=world?MAP_W:PW(pd),H=world?MAP_H:PH(pd);
+  const point=world?G.ship:G.player,camX=Math.max(0,Math.min(W-VIEW_W,point.x-Math.floor(VIEW_W/2))),
+    camY=Math.max(0,Math.min(H-VIEW_H,point.y-Math.floor(VIEW_H/2)));
+  ctx.font='10px Courier New';ctx.textAlign='center';
+  for(const entry of G.debugPalette.entries){
+    if(world?!!entry.key:entry.key!==G.curPlanet)continue;
+    const vx=entry.x-camX,vy=entry.y-camY;
+    if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H)continue;
+    const labelWidth=(world?5:3)*TS-6;
+    let label=entry.label;
+    if(ctx.measureText(label).width>labelWidth){
+      while(label.length && ctx.measureText(label+'…').width>labelWidth)label=label.slice(0,-1);
+      label+='…';
+    }
+    ctx.fillStyle='#d0e4ef';ctx.fillText(label,(vx+.5)*TS,vy*TS-3);
+  }
+  ctx.textAlign='left';ctx.fillStyle='#ffe066';ctx.font='12px Courier New';
+  ctx.fillText('TEST WORLD — F4 return · Shift+B / F6 directory',8,canvasHeight-8);
+}
+
+function drawDebugPaletteBodyIcon(body,x,y){
+  ctx.save();
+  ctx.fillStyle='#04040c';ctx.fillRect(x,y,TS,TS);
+  const color=PLANET_COLS[body.biome]||'#8899aa';
+  if(OPTIONS.asciiMode){
+    const glyph=body.biome==='ANCIENT_STATION'?'B':body.biome==='CAVE'?'>':
+      body.biome==='ASTEROID'?'·':body.biome.includes('RINGWORLD')?'◎':'○';
+    ctx.fillStyle=color;ctx.font='bold '+(TS-1)+'px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(glyph,x+TS/2,y+TS/2+1);
+  }else if(body.biome==='ANCIENT_STATION'){
+    drawSpriteTinted('starbase',x,y,'#77bbaa');
+  }else if(body.biome==='CAVE'){
+    DRAW.cave_floor(ctx,x,y);DRAW.CAVE_ENTRANCE(ctx,x,y);
+  }else{
+    ctx.beginPath();ctx.rect(x,y,TS,TS);ctx.clip();
+    const scale=body.biome.includes('RINGWORLD')?TS/76:body.biome==='GAS_GIANT'?TS/56:
+      body.biome==='ASTEROID'?TS/20:TS/32;
+    ctx.translate(x+TS/2,y+TS/2);ctx.scale(scale,scale);
+    drawSystemBodyIcon(body,0,0,color,true);
+  }
+  ctx.restore();
+}

@@ -2204,7 +2204,7 @@ const DIALOGUE_DEFS = {
       morale: {
         text: ctx => dialogueTextFromTopic(dialogueCrew() || ctx.crew, 'morale'),
         options: [
-          { label:'Issue encouragement', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:'not ready', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
+          { label:'Issue encouragement (+'+CREW_ENCOURAGE_BONUS+' for '+CREW_ENCOURAGE_DURATION+' turns)', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:ctx=>'ready in '+crewEncourageCooldown(dialogueCrew())+' turns', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
           { label:'Request needs', next:'needs' },
           { label:'Back', next:'root' },
         ],
@@ -2217,25 +2217,23 @@ const DIALOGUE_DEFS = {
           return '"Keep the ship supplied, keep the crew paid, and let us have a win now and then. People can survive a lot when they think it means something."';
         },
         options: [
-          { label:'Issue encouragement', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:'not ready', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
+          { label:'Issue encouragement (+'+CREW_ENCOURAGE_BONUS+' for '+CREW_ENCOURAGE_DURATION+' turns)', disabled:ctx=>!canEncourageDialogueCrew(), disabledReason:ctx=>'ready in '+crewEncourageCooldown(dialogueCrew())+' turns', check:{ skill:'soc', dc:6 }, success:'encourage_success', fail:'encourage_fail' },
           { label:'Back', next:'morale' },
         ],
       },
       encourage_success: {
+        repeatable:true,
         text: ctx => '"Thanks, Captain. I needed to hear that."',
-        onEnter: ctx => {
-          const c = dialogueCrew() || ctx.crew;
-          markCrewEncouragementAttempt();
-          if(c){ c.moraleBase = Math.min(100, (c.moraleBase || 55) + 3); updateCrewLowMoraleFlags(); }
-        },
+        onEnter: ctx => resolveCrewEncouragement(true),
         options: [
           { label:'Continue', next:'root' },
           { label:'Close channel', action:'close' },
         ],
       },
       encourage_fail: {
+        repeatable:true,
         text: ctx => '"I know what you are trying to do. It is just not landing right now."',
-        onEnter: ctx => markCrewEncouragementAttempt(),
+        onEnter: ctx => resolveCrewEncouragement(false),
         options: [
           { label:'Try a practical question', next:'needs' },
           { label:'Back', next:'root' },

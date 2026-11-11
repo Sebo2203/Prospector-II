@@ -1,28 +1,45 @@
 // ─────────────────────────────────────────────────────────────────
 //  FULLSCREEN SCALING
 //  Scales #root to fit the viewport while preserving aspect ratio.
-//  The game's natural size is 1298×638. We calculate the scale
-//  factor that fits it into the current window, then use
-//  CSS transform + translate to centre it.
+//  The game's natural size is 1400×720. We calculate the scale
+//  factor that fits it into the current window. Layout zoom lets the
+//  browser paint the HTML text at its displayed size.
 // ─────────────────────────────────────────────────────────────────
 const GAME_W = 1400;
 const GAME_H = 720;
+const supportsLayoutZoom=CSS.supports('zoom','1');
+let fittedPixelRatio;
 
 function scaleToFit(){
+  fittedPixelRatio=window.devicePixelRatio;
   const root  = document.getElementById('root');
   const scaleX = window.innerWidth  / GAME_W;
   const scaleY = window.innerHeight / GAME_H;
   const scale  = Math.min(scaleX, scaleY);
 
-  // Centre the scaled root in the viewport
   const tx = (window.innerWidth  - GAME_W * scale) / 2;
   const ty = (window.innerHeight - GAME_H * scale) / 2;
 
-  root.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  if(supportsLayoutZoom){
+    root.style.zoom=scale;
+    root.style.left=(tx/scale)+'px';
+    root.style.top=(ty/scale)+'px';
+  } else root.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+
+  fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight);
+  if(canvas.classList.contains('menu-canvas')) drawMenuScreen();
+  else if(G?.galaxy){
+    drawCanvas();
+    if(document.getElementById('minimap-overlay').classList.contains('visible')) drawFullGalaxyMap();
+  }
 }
 
 window.addEventListener('resize', scaleToFit);
 scaleToFit();
+new ResizeObserver(()=>{
+  if(G?.galaxy && !canvas.classList.contains('menu-canvas') &&
+     fitCanvasToDisplay(canvas,ctx,canvasWidth,canvasHeight)) drawCanvas();
+}).observe(canvas);
 
 // Lightweight animation loop — only redraws when stranded (SOS pulse)
 // ── FPS counter state ────────────────────────────────────────────
@@ -38,7 +55,10 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     _fpsValue = _fpsFrames;
     _fpsFrames = 0;
     _fpsLast = _now;
+    if(window.devicePixelRatio!==fittedPixelRatio) scaleToFit();
   }
+
+  if(activeShipCombatFeedback())drawCanvas();
 
   if(G && !G.dead && !G.retired){
     let needsDraw = false;
@@ -63,34 +83,33 @@ let _fpsFrames=0, _fpsLast=performance.now(), _fpsValue=0;
     if(DEBUG.showFPS){
       ctx.font='bold 14px Courier New';
       ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.fillRect(canvas.width-58,2,56,18);
+      ctx.fillRect(canvasWidth-58,2,56,18);
       ctx.fillStyle='#44ff88';
       ctx.textAlign='right';
-      ctx.fillText(_fpsValue+' fps', canvas.width-4, 16);
+      ctx.fillText(_fpsValue+' fps', canvasWidth-4, 16);
       ctx.textAlign='left';
     }
   }
 })();
 
-// ── Compass click handlers ───────────────────────────────────────
-(function(){
-  const grid = document.getElementById('compass-grid');
-  grid.addEventListener('mousedown', e=>{
-    if(!G || G.dead || G.retired || G.examine || G.rangeTarget) return;
-    if(G.forcedMove?.active){ e.preventDefault(); return; }
-    if(G.mode !== 'galaxy' && G.mode !== 'planet') return;
-    const btn = e.target.closest('.cmp-btn');
-    if(!btn) return;
-    e.preventDefault();
-    const dx = btn.dataset.dx;
-    const dy = btn.dataset.dy;
-    if(dx === undefined){
-      // centre "wait" button
-      if(G.mode==='planet') doWaitPlanet();
-      else doWaitGalaxy();
-      return;
-    }
-    tryMove(parseInt(dx), parseInt(dy));
-  });
-})();
+// The compass is the only pointer control that can move or wait in the world.
+document.getElementById('compass-grid').addEventListener('mousedown',event=>{
+  if(event.button!==0 || !G || G.dead || G.retired || canvasMenuBlocked() ||
+    G.showOptions || G.dialogue || shipSystemsActive() || shipAttackConfirmationActive() ||
+    G._voidPrompt || G.stranded?.rescuePhase==='offer' || DEBUG.on) return;
+  const direction = event.target.closest('.cmp-btn');
+  if(!direction) return;
+  event.preventDefault();
+  const {dx,dy} = direction.dataset;
+  if(G.examine || G.rangeTarget || G._itemAimMode || G.mode==='scanview' || G.mode==='system'){
+    if(dx===undefined) return;
+    activateGameKey('', 'Numpad'+(5-3*Number(dy)+Number(dx)));
+    return;
+  }
+  if(G.mode!=='galaxy' && G.mode!=='planet' && G.mode!=='shipcombat') return;
+  if(G.stranded) doStrandedWait();
+  else if(dx!==undefined) tryMove(Number(dx),Number(dy));
+  else if(G.mode==='planet') doWaitPlanet();
+  else doWaitGalaxy();
+});
 

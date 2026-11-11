@@ -1,0 +1,534 @@
+const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
+const assert = require('node:assert/strict');
+
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1400, height: 720 } });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route(/^https?:/, route => route.abort());
+    await page.goto(gameUrl);
+    await page.evaluate(() => initGame('LIGHT_SCOUT', 'Interface QA', 'Interface QA'));
+    await page.waitForFunction(() => G?.galaxy && G.log.some(entry => entry.msg.includes('Ready for departure')));
+    assert.equal(await page.locator('#h-mode').textContent(), 'NAVIGATION');
+    assert.equal(await page.locator('#h-vessel').textContent(), 'Interface QA');
+    assert.equal(await page.locator('.cmp-center').textContent(), 'WAIT');
+    assert.deepEqual(await page.locator('#sidebar > .s-title').allTextContents().then(titles=>titles.map(title=>title.trim().split(/\s+/).slice(0,2).join(' '))),
+      ['Crew Status','Comms Log']);
+    for(const panel of ['#hud','#sidebar']){
+      const surface=await page.locator(panel).evaluate(el=>{
+        const style=getComputedStyle(el);
+        return [style.backgroundColor,style.backgroundImage];
+      });
+      assert.deepEqual(surface,['rgb(17, 17, 17)','none']);
+    }
+    for(const fill of ['#fuel-fill','#hull-fill','#oxy-fill']){
+      assert.match(await page.locator(fill).evaluate(el=>getComputedStyle(el,'::after').backgroundImage),/repeating-linear-gradient/);
+    }
+    const log=page.locator('#log-list .log-entry').first();
+    const logSize=await log.evaluate(entry=>getComputedStyle(entry).fontSize);
+    await page.getByRole('button',{name:'Increase log text size'}).click();
+    assert.equal(await log.evaluate(entry=>parseFloat(getComputedStyle(entry).fontSize)),parseFloat(logSize)+1);
+    const decreaseLog=page.getByRole('button',{name:'Decrease log text size'});
+    await decreaseLog.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await log.evaluate(entry=>getComputedStyle(entry).fontSize),logSize);
+    await decreaseLog.blur();
+
+    for(const [width,height] of [[1400,720],[800,600]]){
+      await page.setViewportSize({width,height});
+      await page.waitForFunction(({width,height})=>{
+        const scale=Math.min(width/GAME_W,height/GAME_H);
+        return Math.abs(document.getElementById('root').getBoundingClientRect().width-GAME_W*scale)<1;
+      },{width,height});
+      assert.ok(await page.evaluate(()=>{
+        const display=document.getElementById('gc');
+        const main=document.getElementById('main').getBoundingClientRect();
+        const hull=document.getElementById('g-hull').getBoundingClientRect();
+        return display.clientWidth===960 && display.clientHeight===480 &&
+          display.offsetTop===6 && display.offsetLeft===6 &&
+          hull.bottom<=main.bottom && document.getElementById('hull-ticks').offsetWidth>0;
+      }), 'the dark cockpit keeps the full canvas and both gauges visible');
+      await page.screenshot({path:artifactPath('Cockpit-'+width+'.png')});
+    }
+    await page.setViewportSize({width:1400,height:720});
+
+    // Tank capacity loss stays visible on the original full-size scale, even when refuelled.
+    const gaugeCareer=await page.evaluate(()=>serializeCareer(G));
+    await page.evaluate(()=>{
+      const random=Math.random;Math.random=()=>0.99;
+      try{damageShipSystem(G.ship,'fuelTank',50,'gauge fixture');}finally{Math.random=random;}
+      renderAll();
+    });
+    assert.deepEqual(await page.evaluate(()=>[G.fuel,G.maxFuel,G.shipStats.maxFuel]),[50,50,100]);
+    assert.equal(await page.locator('#fuel-fill').evaluate(el=>el.style.height),'50%');
+    assert.deepEqual(await page.locator('#fuel-restricted').evaluate(el=>[el.hidden,el.style.height]),[false,'50%']);
+    assert.match(await page.locator('#gauge-fuel').getAttribute('aria-valuetext'),/50 usable.*100 installed.*50% capacity unavailable/);
+    for(const style of ['cockpit','classic']){
+      await page.evaluate(style=>{OPTIONS.uiStyle=style;applyUIStyle();renderAll();},style);
+      for(const [width,height] of [[1400,720],[800,600]]){
+        await page.setViewportSize({width,height});
+        await page.waitForFunction(()=>{
+          const fill=document.getElementById('fuel-fill'),wrap=fill.parentElement;
+          return Math.abs(fill.getBoundingClientRect().height/wrap.getBoundingClientRect().height-0.5)<0.02;
+        });
+        assert.ok(await page.locator('#fuel-restricted').isVisible());
+        assert.match(await page.locator('#fuel-restricted').evaluate(el=>getComputedStyle(el).backgroundImage),/repeating-linear-gradient/);
+        await page.screenshot({path:artifactPath('Ruptured-fuel-'+style+'-'+width+'.png')});
+      }
+    }
+    await page.evaluate(()=>{G.fuel=25;renderAll();});
+    assert.equal(await page.locator('#fuel-fill').evaluate(el=>el.style.height),'25%');
+    assert.equal(await page.locator('#fuel-restricted').evaluate(el=>el.style.height),'50%');
+    await page.evaluate(()=>{G.fuel=0;renderAll();});
+    assert.equal(await page.locator('#fuel-fill').evaluate(el=>el.style.height),'0%');
+    assert.ok(await page.locator('#fuel-restricted').isVisible());
+    await page.evaluate(()=>{G.fuel=25;G.mode='base';repairShipSystem('fuelTank','station');renderAll();});
+    assert.equal(await page.locator('#fuel-restricted').evaluate(el=>el.hidden),true);
+    assert.deepEqual(await page.evaluate(()=>[G.fuel,G.maxFuel]),[25,100]);
+    assert.equal(await page.locator('#fuel-fill').evaluate(el=>el.style.height),'25%');
+    await page.evaluate(raw=>{installSaveSnapshot(parseSaveSnapshot(raw));OPTIONS.uiStyle='cockpit';applyUIStyle();renderAll();},gaugeCareer);
+    await page.setViewportSize({width:1400,height:720});
+
+    // Only recently lost hull flashes red; rules and the numeric HP update immediately.
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.evaluate(()=>{
+      const random=Math.random;Math.random=()=>0.99;
+      try{damagePlayerShipHull(20,'hull gauge fixture');}finally{Math.random=random;}
+      renderAll();const animation=document.getElementById('hull-damage-flash').getAnimations()[0];animation.pause();animation.currentTime=100;
+    });
+    assert.deepEqual(await page.evaluate(()=>[G.ship.hp,document.getElementById('g-hull').textContent,
+      document.getElementById('hull-fill').style.height,document.getElementById('hull-damage-flash').style.bottom,
+      document.getElementById('hull-damage-flash').style.height]),[80,'80','80%','80%','20%']);
+    assert.ok(await page.locator('#hull-damage-flash').isVisible());
+    for(const style of ['cockpit','classic']){
+      await page.evaluate(style=>{OPTIONS.uiStyle=style;applyUIStyle();renderAll();},style);
+      await page.screenshot({path:artifactPath('Hull-damage-flash-'+style+'.png')});
+    }
+    await page.evaluate(()=>{
+      const random=Math.random;Math.random=()=>0.99;
+      try{damagePlayerShipHull(10,'second hull hit');}finally{Math.random=random;}
+      renderAll();const animation=document.getElementById('hull-damage-flash').getAnimations()[0];animation.pause();animation.currentTime=100;
+    });
+    assert.deepEqual(await page.locator('#hull-damage-flash').evaluate(el=>[el.style.bottom,el.style.height]),['70%','30%']);
+    const afterDamage=await page.evaluate(()=>serializeCareer(G));
+    await page.evaluate(()=>{renderAll();document.getElementById('hull-damage-flash').getAnimations()[0].finish();});
+    await page.waitForFunction(()=>document.getElementById('hull-damage-flash').hidden);
+    assert.equal(await page.evaluate(()=>serializeCareer(G)),afterDamage,'animation completion changes no saved gameplay state');
+    // Healing cancels pending damage feedback instead of flashing the repaired section.
+    await page.evaluate(()=>{
+      const random=Math.random;Math.random=()=>0.99;
+      try{damagePlayerShipHull(5,'repair fixture');}finally{Math.random=random;}
+      renderAll();G.mode='base';executeBaseAction('repair');
+    });
+    assert.equal(await page.locator('#hull-damage-flash').evaluate(el=>el.hidden),true);
+    assert.equal(await page.evaluate(()=>G.ship.hp),75);
+    // Importing a lower-HP career must not be presented as newly inflicted damage.
+    await page.evaluate(raw=>{
+      const save=JSON.parse(raw);save.ship.hp=40;installSaveSnapshot(parseSaveSnapshot(JSON.stringify(save)));renderAll();
+    },gaugeCareer);
+    assert.equal(await page.locator('#hull-damage-flash').evaluate(el=>el.hidden),true);
+    assert.equal(await page.locator('#hull-fill').evaluate(el=>el.style.height),'40%');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    await page.evaluate(()=>{
+      const random=Math.random;Math.random=()=>0.99;
+      try{damagePlayerShipHull(5,'reduced-motion fixture');}finally{Math.random=random;}
+      renderAll();
+    });
+    assert.equal(await page.locator('#hull-damage-flash').isVisible(),false);
+    assert.equal(await page.locator('#hull-fill').evaluate(el=>el.style.height),'35%');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.evaluate(raw=>{installSaveSnapshot(parseSaveSnapshot(raw));OPTIONS.uiStyle='cockpit';applyUIStyle();renderAll();},gaugeCareer);
+
+    const optionsButton=page.locator('#ctx-bar button[data-game-key="o"]');
+    const toolPosition=()=>page.evaluate(()=>{
+      const tools=document.getElementById('hud-tools').getBoundingClientRect();
+      const footer=document.getElementById('persist-bar').getBoundingClientRect();
+      const scale=document.getElementById('root').getBoundingClientRect().width/GAME_W;
+      if((footer.bottom-tools.bottom)/scale<11.5)
+        throw Error('The footer needs room below the tools');
+      return {left:tools.left,top:tools.top};
+    });
+    for(const [width,height] of [[1400,720],[800,600],[640,480]]){
+      await page.setViewportSize({width,height});
+      await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<1,width);
+      await page.evaluate(()=>{
+        G.neutralShips=[];
+        renderContextBar();
+        hideMsg();
+      });
+      const anchor=await toolPosition();
+      // A long contact name makes both its actions compete for the first row.
+      await page.evaluate(()=>{
+        G.neutralShips=[{type:'patrol',name:'Long-range Station Patrol '.repeat(3).trim(),x:G.ship.x+1,y:G.ship.y}];
+        renderAll();
+        hideMsg();
+      });
+      for(const alert of [false,true]){
+        if(alert) await page.evaluate(()=>showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300'));
+        const position=await toolPosition();
+        for(const key of Object.keys(anchor)){
+          assert.ok(Math.abs(position[key]-anchor[key])<0.1,'footer tools hold position when actions wrap or an alert appears');
+        }
+      }
+      await page.waitForFunction(()=>canvas.width===Math.round(canvas.getBoundingClientRect().width*devicePixelRatio));
+      const layout=await page.evaluate(()=>{
+        const rect=id=>document.getElementById(id).getBoundingClientRect();
+        const bar=document.getElementById('ctx-bar');
+        const rows=new Set(Array.from(bar.children,item=>item.offsetTop));
+        return {
+          rows:rows.size,
+          horizontalOverflow:bar.scrollWidth>bar.clientWidth,
+          verticalOverflow:bar.scrollHeight>bar.clientHeight,
+          canvasFits:rect('gc').bottom<=rect('main').bottom && Math.abs(rect('gc').width-2*rect('gc').height)<1,
+          gaugesFit:rect('g-hull').bottom<=rect('main').bottom,
+          controlsFit:rect('compass-grid').top>=rect('ctx-bar').bottom && rect('minimap-max-btn').bottom<=rect('persist-bar').bottom,
+        };
+      });
+      assert.deepEqual(layout,{rows:2,horizontalOverflow:false,verticalOverflow:false,canvasFits:true,gaugesFit:true,controlsFit:true});
+      if(width===1400) await page.screenshot({path:artifactPath('Wrapped-context.png')});
+      await optionsButton.click();
+      assert.equal(await page.evaluate(()=>G.showOptions),true);
+      await page.keyboard.press('Escape');
+    }
+    await page.setViewportSize({width:1400,height:720});
+
+    // A long destination name wraps the real orbital action bar.
+    const previousCell = await page.evaluate(()=>{
+      const row=G.galaxy[G.ship.y], original=row[G.ship.x];
+      row[G.ship.x]={type:'SYSTEM',name:'Layout QA',starType:'YELLOW',planets:[
+        debugPaletteDescriptor('HABITABLE','Near World'), debugPaletteDescriptor('FROZEN','Outer World'),
+      ]};
+      doInteract();
+      return original;
+    });
+    assert.equal(await page.evaluate(()=>G.mode),'system');
+    for(const width of [1400,800]){
+      await page.setViewportSize({width,height:width===1400?720:600});
+      await page.waitForFunction(width=>Math.abs(document.getElementById('root').getBoundingClientRect().width-width)<1,width);
+      let initial;
+      for(const [wrap,alert] of [[false,false],[true,false],[false,true],[true,true]]){
+        const {bounds,rows} = await page.evaluate(({wrap,alert})=>{
+          G.galaxy[G.ship.y][G.ship.x].planets[0].name = wrap ? 'Long Range Settlement '.repeat(4).trim() : 'Near World';
+          renderContextBar();
+          if(alert) showMsg('FUEL CRITICAL — return to Starbase immediately!', '#ff3300');
+          else hideMsg();
+          const {left,top,width,height}=canvas.getBoundingClientRect();
+          return {bounds:{left,top,width,height},rows:new Set(Array.from(document.querySelector('#ctx-bar').children,item=>item.offsetTop)).size};
+        },{wrap,alert});
+        assert.ok(rows>=1 && rows<=2,'orbital actions fit within two rows beside the sidebar');
+        if(wrap) assert.equal(rows,2);
+        initial ??= bounds;
+        assert.deepEqual(bounds,initial,'orbital canvas stays fixed with wrapped actions and an alert');
+      }
+    }
+    await page.keyboard.press('Escape');
+    await page.evaluate(cell=>{G.galaxy[G.ship.y][G.ship.x]=cell;renderAll();},previousCell);
+    await page.setViewportSize({width:1400,height:720});
+
+    // Put a patrol in range, then use the real map controls and hail/reply keys.
+    await page.evaluate(() => {
+      G.neutralShips = [{ type: 'patrol', name: 'QA Station Patrol', x: G.ship.x + 1, y: G.ship.y }];
+      renderAll();
+    });
+    const map = page.locator('#minimap-overlay');
+    const mapButton = page.locator('#minimap-max-btn');
+    async function askPatrolAboutThreats(key){
+      await page.keyboard.press('h');
+      assert.equal(await page.evaluate(() => G.dialogue?.id), 'galaxy_ship_patrol');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press(key);
+      assert.equal(await page.evaluate(() => G.dialogue?.node), 'threats');
+      assert.equal(await map.isVisible(), false, 'the dialogue reply must not reopen the galaxy map');
+      await page.keyboard.press('Escape');
+    }
+
+    await mapButton.click();
+    assert.equal(await map.isVisible(), true);
+    assert.equal(await map.getByRole('button').count(), 0);
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'minimap-overlay');
+    await page.keyboard.press('Escape');
+    assert.equal(await map.isVisible(), false);
+    assert.equal(await page.evaluate(() => document.activeElement === document.body), true);
+    await askPatrolAboutThreats('Enter');
+
+    await mapButton.click();
+    await map.click({position: {x: 8, y: 8}});
+    assert.equal(await map.isVisible(), false);
+    await askPatrolAboutThreats('Space');
+
+    await page.keyboard.press('m');
+    assert.equal(await map.isVisible(), true);
+    await page.keyboard.press('Escape');
+    assert.equal(await map.isVisible(), false);
+    await askPatrolAboutThreats('Enter');
+
+    await page.keyboard.press('m');
+    assert.equal(await map.isVisible(), true);
+    await page.keyboard.press('m');
+    assert.equal(await map.isVisible(), false);
+    await askPatrolAboutThreats('2');
+
+    for(const key of ['Enter', 'Space']){
+      await mapButton.click();
+      await page.locator('#game-escape').focus();
+      await page.keyboard.press(key);
+      assert.equal(await map.isVisible(), false);
+      assert.equal(await page.evaluate(() => document.activeElement === document.body), true);
+    }
+
+    // Dialogue still owns Enter and Space if the player tabs to the map button.
+    for(const key of ['Enter', 'Space']){
+      await mapButton.focus();
+      await askPatrolAboutThreats(key);
+    }
+    await mapButton.evaluate(button => button.blur());
+
+    const crewList = page.locator('#crew-list');
+    const badges = crewList.locator('.crew-badge');
+    assert.equal(await badges.count(), 2);
+    await page.evaluate(() => {
+      window.qaStartingCrew = G.crew;
+      G.crew = [
+        ...G.crew.map(person => ({ ...person, statuses: {} })),
+        randomCrewMember('engineer'),
+        randomCrewMember('scientist'),
+        randomCrewMember('medic'),
+        ...Array.from({length: 6}, () => randomCrewMember('mercenary')),
+        randomCrewMember('redshirt'),
+      ];
+      G.crew[5].name = 'Merc & "One"';
+      G.crew[5].hp = 4;
+      G.crew[6].hp = 12;
+      applyCrewStatus(G.crew[5], 'bleeding', { amount: 2, silent: true });
+      applyCrewStatus(G.crew[5], 'broken_arm', { silent: true });
+      applyCrewStatus(G.crew[2], 'hallucination', { silent: true });
+      applyCrewStatus(G.crew[4], 'stunned', { duration: 0, silent: true });
+      renderAll();
+    });
+    assert.deepEqual(await badges.evaluateAll(items => items.map(item => item.firstElementChild.textContent)),
+      ['C', 'N', 'S', 'e', '+', 'm', 'm', 'm', 'm', 'm', 'm', 'r']);
+    assert.equal(await badges.nth(5).getAttribute('title'),
+      'Merc & "One" · Mercenary · 4/28 HP (critical) · Bleeding (level 2) · Broken Arm');
+    assert.match(await badges.nth(5).getAttribute('class'), /crew-badge-critical/);
+    assert.match(await badges.nth(6).getAttribute('class'), /crew-badge-low/);
+    assert.match(await badges.nth(7).getAttribute('class'), /crew-badge-good/);
+    assert.ok(await badges.nth(5).evaluate(badge => {
+      const meter = badge.querySelector('.crew-badge-meter');
+      const fill = parseFloat(getComputedStyle(meter, '::before').width);
+      return fill > 0 && fill < meter.clientWidth;
+    }));
+    const condition = crewList.locator('.crew-badge-status');
+    assert.equal(await condition.count(), 1);
+    assert.equal(await condition.evaluate(el => getComputedStyle(el).animationName), 'crew-status-pulse');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    assert.equal(await condition.evaluate(el => getComputedStyle(el).animationName), 'none');
+    assert.equal(await condition.isVisible(), true);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    for(const viewport of [{width: 1400, height: 720}, {width: 800, height: 600}]){
+      await page.setViewportSize(viewport);
+      assert.ok(await badges.evaluateAll(items => {
+        const row = items[0].parentElement;
+        const firstTop = items[0].getBoundingClientRect().top;
+        return items.every(item => item.getBoundingClientRect().top === firstTop) && row.scrollWidth <= row.clientWidth;
+      }), 'all twelve badges fit on one row');
+    }
+    await page.setViewportSize({width: 1400, height: 720});
+    await page.locator('#sidebar').screenshot({path: artifactPath('Crew-sidebar.png')});
+    await page.evaluate(() => {
+      removeCrewStatus(G.crew[5], 'bleeding', true);
+      removeCrewStatus(G.crew[5], 'broken_arm', true);
+      renderAll();
+    });
+    assert.equal(await condition.count(), 0);
+    assert.match(await badges.nth(5).getAttribute('class'), /crew-badge-critical/);
+    await page.evaluate(() => {
+      G.crew[5].hp = 0;
+      renderAll();
+    });
+    assert.equal(await badges.count(), 11);
+    await page.evaluate(() => {
+      G.crew = [];
+      renderSidebar();
+    });
+    assert.match(await crewList.textContent(), /All crew dead!/);
+    await page.evaluate(() => {
+      G.crew = window.qaStartingCrew;
+      renderAll();
+    });
+    await page.keyboard.press('i');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('x');
+    assert.match(await crewList.textContent(), /MORALE.*STATUS/s);
+    assert.equal(await badges.count(), 0);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(() => G.mode), 'galaxy');
+    assert.equal(await badges.count(), 2);
+
+    const banner = page.locator('#msg-bar');
+    const actions = page.locator('#ctx-bar');
+    await page.evaluate(() => {
+      addLog('[Radio] Routine traffic report.', 'li');
+      addLog('Crew member fell during the fight.', 'lc');
+      G.fuel = Math.floor(G.maxFuel * 0.4);
+      renderAll();
+    });
+    assert.equal(await banner.isVisible(), false);
+    assert.match(await page.locator('#log-list').textContent(), /Routine traffic report/);
+    await page.evaluate(() => { G.fuel = Math.floor(G.maxFuel * 0.2); renderAll(); });
+    assert.match(await banner.textContent(), /FUEL CRITICAL/);
+    assert.equal(await banner.isVisible(), true);
+    assert.equal(await page.locator('#gauge-fuel .gauge-label.crit').isVisible(), true);
+    await page.evaluate(() => {
+      G.fuel = G.maxFuel;
+      G.stranded = { rescuePhase: 'offer' };
+      renderCriticalBanner();
+    });
+    assert.match(await banner.textContent(), /RESCUE OFFERED/);
+    await page.evaluate(() => { G.stranded = null; renderAll(); });
+    assert.equal(await banner.isVisible(), false);
+
+    await page.evaluate(() => { debugEnterPalette('galaxy'); debugPaletteVisit('galaxy:QUARANTINE'); });
+    assert.match(await actions.textContent(), /\[Enter\] Board Mercy of Dawn/);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => quarantineInterior()), true);
+    assert.match(await actions.textContent(), /\[Enter\] Transfer passengers/);
+
+    // Isolate each normal interaction while keeping the real Mercy deck and input handler.
+    await page.evaluate(() => {
+      G.player = { x: 6, y: 9 };
+      renderAll();
+    });
+    assert.match(await actions.textContent(), /\[Enter\] Open pressure hatch/);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => G.planets[G.curPlanet].grid[8][6].type), 'q_open_door');
+    assert.doesNotMatch(await actions.textContent(), /\[Enter\] Open pressure hatch/);
+    await page.evaluate(() => {
+      G.player = { x: 5, y: 4 };
+      renderAll();
+    });
+    assert.match(await actions.textContent(), /\[Enter\] Read bridge terminal/);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => G.expedition.quarantine.rosterKnown), true);
+    assert.doesNotMatch(await actions.textContent(), /reserve|air|lift off/i);
+    await page.evaluate(() => {
+      G.player = { x: 7, y: 15 };
+      revealPlanet(G.curPlanet, 7, 15);
+      G.inventory.push({ usable: 'repair_kit', name: 'Repair Kit' });
+      renderAll();
+    });
+    assert.match(await actions.textContent(), /\[Enter\] Repair life support/);
+    assert.match(await page.evaluate(() => quarantineExamine(7, 15).desc), /Reserve: \d+ turns/);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => G.expedition.quarantine.repaired), true);
+    await page.evaluate(() => {
+      G.player = { x: 8, y: 4 };
+      const survivor = G.expedition.quarantine.survivors.find(person => person.id === 'mira');
+      Object.assign(survivor, { x: 8, y: 5, status: 'waiting' });
+      renderAll();
+    });
+    assert.match(await actions.textContent(), /\[Enter\] Ask Mira Vale to follow/);
+    await page.keyboard.press('Enter');
+    assert.match(await actions.textContent(), /\[Enter\] Ask Mira Vale to wait/);
+
+    await page.evaluate(() => {
+      G.inventory.push({ name: 'Armed charge', usable: 'c4', _armed: true, _c4Timer: 1 });
+      renderAll();
+    });
+    assert.match(await banner.textContent(), /C4 ARMED/);
+    await page.evaluate(() => {
+      G.inventory = G.inventory.filter(item => item.usable !== 'c4');
+      G.expedition.quarantine.air = 0;
+      G.expedition.quarantine.repaired = false;
+      G.oxygen = 20;
+      DEBUG.infiniteOxy = false;
+      renderAll();
+    });
+    assert.match(await banner.textContent(), /OXYGEN CRITICAL/);
+    assert.equal(await page.locator('#gauge-fuel').isVisible(), false);
+    assert.equal(await page.locator('#gauge-hull').isVisible(), false);
+    assert.equal(await page.locator('#gauge-oxy .gauge-label.crit').isVisible(), true);
+    assert.equal(await page.locator('#g-oxy').textContent(), '20%');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal(await page.locator('#gauge-oxy .gauge-label.crit').evaluate(label=>getComputedStyle(label).animationName),'none');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.evaluate(() => debugReturnFromPalette());
+    assert.equal(await banner.isVisible(), false);
+
+    await page.evaluate(() => {
+      debugEnterPalette('galaxy');
+      const entry = G.debugPalette.entries.find(entry => entry.kind === 'civilization' && entry.aggression === 'Passive' && entry.tier === 'information');
+      if(!entry) throw Error('No passive civilization fixture');
+      debugPaletteVisit(entry.id);
+      const pdata = G.planets[G.curPlanet];
+      const civ = pdata.civilization;
+      ensureCivilizationState(pdata).relation = 25;
+      civ.species = 'Test' + 'CivilizationName'.repeat(22);
+      G.inventory = Array.from({length: 28}, (_, i) => ({
+        name: 'Offer ' + i + ' ' + 'UnbrokenItemName'.repeat(13),
+        value: 10000,
+      }));
+      G.cargo = [];
+      civ._barterStock = Array.from({length: 28}, (_, i) => ({
+        name: 'Trade good ' + i + ' ' + 'LongStockName'.repeat(14),
+        value: 1,
+        qty: 1,
+      }));
+      startCivilizationDialogue({ pdata }, 'trade');
+    });
+    assert.match(await actions.textContent(), /\[Enter\] Open barter screen/);
+    await page.keyboard.press('Enter');
+    const panel = page.locator('#barter-panel');
+    assert.equal(await panel.isVisible(), true);
+    assert.match(await actions.textContent(), /\[Enter\] Offer selected item/);
+    await page.keyboard.press('ArrowUp');
+    assert.equal(await page.evaluate(() => BARTER.playerSel), 27);
+    assert.ok(await page.locator('#barter-player-list').evaluate(el => el.scrollTop) > 0);
+    await page.keyboard.press('Enter');
+    assert.match(await actions.textContent(), /\[Enter\] Remove from offer/);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    assert.match(await actions.textContent(), /\[Enter\] Remove from request/);
+    for(const id of ['#barter-player-list', '#barter-civ-list']){
+      assert.ok(await page.locator(id).evaluate(list => {
+        const row = list.lastElementChild;
+        return row.offsetTop >= list.scrollTop &&
+          row.offsetTop + row.offsetHeight <= list.scrollTop + list.clientHeight + 1;
+      }), 'the selected row fits after both summaries grow');
+    }
+
+    for(const viewport of [{width: 800, height: 600}, {width: 1400, height: 720}, {width: 2560, height: 1440}]){
+      await page.setViewportSize(viewport);
+      await page.waitForFunction(({width,height})=>{
+        const scale=Math.min(width/GAME_W,height/GAME_H);
+        return Math.abs(document.getElementById('root').getBoundingClientRect().width-GAME_W*scale)<1;
+      },viewport);
+      const fits = await panel.evaluate(el=>{
+        const bounds=el.getBoundingClientRect();
+        const root=document.getElementById('root').getBoundingClientRect();
+        return bounds.width>0 && bounds.height>0 && bounds.left>=root.left && bounds.top>=root.top &&
+          bounds.right<=root.right && bounds.bottom<=root.bottom;
+      });
+      assert.ok(fits,'barter stays inside the scaled game at '+viewport.width+'×'+viewport.height);
+      assert.equal(await panel.evaluate(el => el.scrollWidth > el.clientWidth), false);
+    }
+    await page.setViewportSize({width: 1400, height: 720});
+    await page.screenshot({ path: artifactPath('Barter-bounds.png') });
+    await page.keyboard.press('Tab');
+    assert.equal(await panel.isVisible(), false);
+    assert.equal(await page.evaluate(() => G.inventory.some(item => item.name.startsWith('Trade good 27 '))), true);
+    await page.keyboard.press('Enter');
+    assert.equal(await panel.isVisible(), true);
+    await page.locator('#barter-player-list [data-barter-row="0"]').click();
+    await page.locator('#barter-civ-list [data-barter-row="0"]').click();
+    await page.locator('#barter-confirm-hint').click();
+    assert.equal(await panel.isVisible(), false);
+    assert.equal(await page.evaluate(() => G.inventory.some(item => item.name.startsWith('Trade good 0 '))), true);
+    assert.equal(await banner.isVisible(), false);
+    assert.deepEqual(errors, []);
+    console.log('PASS: cockpit display and gauges, compact crew status, map focus and patrol replies, actionable banners, Mercy action hints and pump examine, and mouse and keyboard barter.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exit(1); });

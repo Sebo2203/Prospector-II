@@ -1,13 +1,14 @@
 const IMG = {};
 function loadSprites(){
   return new Promise(resolve => {
-    const keys = Object.keys(SPRITES_B64);
+    const sources={...SPRITES_B64,...SHIP_SPRITES_B64,...COMBAT_SPRITES_B64};
+    const keys = Object.keys(sources);
     let loaded = 0;
     keys.forEach(k => {
       const img = new Image();
       img.onload = () => { loaded++; if(loaded===keys.length) resolve(); };
       img.onerror = () => { loaded++; if(loaded===keys.length) resolve(); };
-      img.src = SPRITES_B64[k];
+      img.src = sources[k];
       IMG[k] = img;
     });
   });

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Prospector II",
-  "version": "0.26.0",
-  "identifier": "com.sebo2203.prospector-ii",
+  "productName": "Prospector II Experimental",
+  "version": "0.28.0-experimental.96",
+  "identifier": "com.sebo2203.prospector-ii.experimental",
   "build": {
     "frontendDist": "../app"
   },
@@ -10,7 +10,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Prospector II",
+        "title": "Prospector II Experimental",
         "width": 1400,
         "height": 720,
         "fullscreen": true,

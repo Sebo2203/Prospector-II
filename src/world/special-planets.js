@@ -63,8 +63,39 @@ function generateHabitablePlanet(key){
     grid.push(row);
   }
 
-  // ── Loot (only on walkable non-water tiles) ─────────────────────
+  const civ = generateCivDescriptor(key);
   const floor = 'EARTH_FLOOR';
+  function chooseLandingPoint(){
+    for(const [type,attempts] of [[floor,500],['EARTH_WATER',500]]){
+      for(let i=0;i<attempts;i++){
+        const x=1+rnd(W-2), y=1+rnd(H-2);
+        if(grid[y][x].type===type) return {x,y};
+      }
+    }
+    return {x:Math.floor(W/2),y:Math.floor(H/2)};
+  }
+  let landing, aquaticHabitat;
+  if(civ?.species==='Aquatic'){
+    landing = chooseLandingPoint();
+    const size = Math.max(7,Math.ceil(Math.sqrt(civ.count+8)));
+    const y = Math.max(1,Math.min(H-size-1,landing.y-Math.floor(size/2)));
+    const shores = [landing.x-size,landing.x+1].filter(x=>x>=1 && x+size<W);
+    // Prefer the shore that already has the most water. Reserve a contiguous
+    // basin before scattering pickups and wildlife over the surface.
+    const waterCount = x=>{
+      let count = 0;
+      for(let row=y;row<y+size;row++) for(let col=x;col<x+size;col++){
+        if(grid[row][col].type==='EARTH_WATER') count++;
+      }
+      return count;
+    };
+    const x = shores.sort((a,b)=>waterCount(b)-waterCount(a))[0];
+    aquaticHabitat = {x,y,size};
+    for(let row=y;row<y+size;row++) for(let col=x;col<x+size;col++) grid[row][col]={type:'EARTH_WATER'};
+    grid[landing.y][landing.x].type='SHIP';
+  }
+
+  // ── Loot (only on walkable non-water tiles) ─────────────────────
   for(let i=0;i<B.minerals;i++) placeTile(grid,'MINERAL',floor);
 
   // ── Enemies + Nests ──────────────────────────────────────────────
@@ -74,25 +105,18 @@ function generateHabitablePlanet(key){
     for(let i=0;i<B.biodata;i++) placeTile(grid,'BIODATA',floor);
   }
 
-  // ── Ship landing pad — must be on open ground ────────────────────
-  let sx,sy,st=0;
-  do{ sx=1+rnd(W-2); sy=1+rnd(H-2); st++; }
-  while(grid[sy][sx].type!==floor && st<500);
-  // Fallback: if no open ground found (ocean world), place on water
-  if(st>=500){
-    do{ sx=1+rnd(W-2); sy=1+rnd(H-2); st++; }
-    while(grid[sy][sx].type!=='EARTH_WATER' && st<1000);
-  }
+  const {x:sx,y:sy} = landing || chooseLandingPoint();
   grid[sy][sx].type='SHIP';
 
   G.planets[key]={ grid, spawnX:sx, spawnY:sy, biome:'HABITABLE', visited: new Array(W*H).fill(false), explored: new Array(W*H).fill(false), planetTurn:0, surveySoldValue:0, spawnedAliens: enemies.length };
+  if(aquaticHabitat) G.planets[key].aquaticHabitat=aquaticHabitat;
   G.enemies[key]=enemies;
   if(spawnCreatures._pendingTemplates){
     G.planets[key].creatureTemplates = spawnCreatures._pendingTemplates;
     spawnCreatures._pendingTemplates = null;
   }
   // Place civilization structures (habitable planets only)
-  const civData = placeCivilization(key, grid);
+  const civData = placeCivilization(key, grid, civ);
   if(civData){
     G.planets[key].civilization = civData;
     G.enemies[key].push(...spawnCivilizationLocals(key, G.planets[key]));

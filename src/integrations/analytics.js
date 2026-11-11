@@ -5,6 +5,7 @@
   gtag('config', 'G-WDRH4STDM1');
 
   function trackEvent(name, params){
+    if(typeof G !== 'undefined' && G?.debugPalette) return;
     try{
       if(typeof gtag === 'function'){
         gtag('event', name, params || {});

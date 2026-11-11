@@ -1,16 +1,47 @@
+// Presentation only: never save a damage tail or mistake loading another ship for a hit.
+let hullGaugeFeedback=null;
+
+function updateHullGaugeDamage(onPlanet){
+  const fill=document.getElementById('hull-fill'),flash=document.getElementById('hull-damage-flash');
+  const hp=G.ship.hp,maxHp=G.ship.maxHp,state=hullGaugeFeedback;
+  if(!state||state.ship!==G.ship||state.maxHp!==maxHp||hp>state.hp||onPlanet||document.hidden||
+    matchMedia('(prefers-reduced-motion: reduce)').matches){
+    state?.animation?.cancel();flash.hidden=true;fill.classList.remove('hull-damage-active');
+    hullGaugeFeedback={ship:G.ship,hp,maxHp,from:hp,animation:null};return;
+  }
+  if(hp===state.hp)return;
+  const active=state.animation&&['running','paused'].includes(state.animation.playState);
+  const from=active?Math.max(state.from,state.hp):state.hp;
+  state.animation?.cancel();state.hp=hp;state.from=from;
+  flash.style.bottom=Math.max(0,hp/maxHp)*100+'%';
+  flash.style.height=Math.max(0,(from-hp)/maxHp)*100+'%';
+  flash.hidden=false;fill.classList.add('hull-damage-active');
+  const animation=flash.animate([{opacity:1,offset:0},{opacity:1,offset:0.45},{opacity:0,offset:1}],
+    {duration:650,easing:'linear'});
+  state.animation=animation;
+  animation.onfinish=()=>{
+    if(hullGaugeFeedback!==state||state.animation!==animation)return;
+    flash.hidden=true;fill.classList.remove('hull-damage-active');state.animation=null;state.from=state.hp;
+  };
+}
+
 function renderHUD(){
   document.getElementById('h-creds').textContent=G.credits;
+  document.getElementById('h-vessel').textContent=G.shipName || 'Unnamed Vessel';
+  document.getElementById('h-hull-type').textContent=G.shipStats?.hullType ||
+    SHIP_CLASSES[G.shipStats?.classId]?.hullType || 'Unknown hull';
 
   // ── Left gauge panel — swap based on mode ────────────────────
   const onPlanet = (G.mode==='planet');
   document.getElementById('gauge-fuel').style.display = onPlanet ? 'none' : '';
   document.getElementById('gauge-hull').style.display = onPlanet ? 'none' : '';
   document.getElementById('gauge-oxy').style.display  = onPlanet ? ''     : 'none';
+  updateHullGaugeDamage(onPlanet);
 
   if(onPlanet){
     // Oxygen gauge
     const biomeKey = atmosphereBiomeKey(G.curPlanet);
-    const oxyDrain = BIOMES[biomeKey]?.oxyDrain ?? 1.5;
+    const oxyDrain = atmosphereBiome(G.curPlanet).oxyDrain ?? 1.5;
     const oxyPct   = Math.max(0, Math.min(1, G.oxygen/100));
     const oxyFill  = document.getElementById('oxy-fill');
     oxyFill.style.height = Math.round(oxyPct*100)+'%';
@@ -29,27 +60,47 @@ function renderHUD(){
   } else {
     // Fuel gauge
     const fuelPct  = Math.max(0, Math.min(1, G.fuel/G.maxFuel));
+    const installedFuel=G.shipStats.maxFuel;
+    const capacityPct=Math.max(0,Math.min(1,G.maxFuel/installedFuel));
     const fuelFill = document.getElementById('fuel-fill');
-    fuelFill.style.height = Math.round(fuelPct*100)+'%';
-    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'#ff8800';
+    fuelFill.style.height = Math.max(0,Math.min(capacityPct,G.fuel/installedFuel))*100+'%';
+    const restricted=document.getElementById('fuel-restricted');
+    restricted.hidden=capacityPct>=1;
+    restricted.style.height=(1-capacityPct)*100+'%';
+    const fuelGauge=document.getElementById('gauge-fuel');
+    const fuelDescription='Fuel '+Math.round(G.fuel)+' / '+G.maxFuel+' usable ('+installedFuel+' installed)'+
+      (capacityPct<1?' — tank damaged; '+Math.round((1-capacityPct)*100)+'% capacity unavailable.':'');
+    fuelGauge.title=fuelDescription;
+    fuelGauge.setAttribute('role','meter');
+    fuelGauge.setAttribute('aria-label','Ship fuel');
+    fuelGauge.setAttribute('aria-valuemin','0');
+    fuelGauge.setAttribute('aria-valuemax',installedFuel);
+    fuelGauge.setAttribute('aria-valuenow',G.fuel);
+    fuelGauge.setAttribute('aria-valuetext',fuelDescription);
+    fuelFill.style.background = fuelPct<0.2?'#ff2200':fuelPct<0.4?'#ff6600':fuelPct<0.6?'#ffaa00':'var(--fuel-normal)';
     const gFuel = document.getElementById('g-fuel');
     gFuel.textContent = Math.round(G.fuel);
-    gFuel.className   = 'gauge-val '+(fuelPct<0.2?'cr':fuelPct<0.4?'co':'co');
+    gFuel.className   = 'gauge-val '+(fuelPct<0.2?'cr':fuelPct<0.6?'co':'cc');
 
     // Hull gauge
     const hullPct  = Math.max(0, Math.min(1, G.ship.hp/G.ship.maxHp));
     const hullFill = document.getElementById('hull-fill');
-    hullFill.style.height = Math.round(hullPct*100)+'%';
-    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'#44aaff';
+    hullFill.style.height = hullPct*100+'%';
+    hullFill.style.background = hullPct<0.25?'#ff3300':hullPct<0.5?'#ffaa00':'var(--hull-normal)';
     const gHull = document.getElementById('g-hull');
     gHull.textContent = G.ship.hp;
-    gHull.className   = 'gauge-val '+(hullPct<0.25?'cr':hullPct<0.5?'co':'cg');
+    gHull.className   = 'gauge-val '+(hullPct<0.25?'cr':hullPct<0.5?'co':'cc');
   }
 
   document.getElementById('h-turn').textContent=G.turn;
+  document.getElementById('h-clock').textContent=careerClockText();
 
-  const mn={galaxy:'GALAXY MAP', system:'SYSTEM VIEW', planet:'PLANET SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
-  document.getElementById('h-mode').textContent=G.mode==='planet'&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':mn[G.mode]||G.mode.toUpperCase();
+  const modes={galaxy:'NAVIGATION', system:'ORBITAL VIEW', scanview:'ORBITAL SCAN', planet:'SURFACE', base:'STARBASE', inventory:'INVENTORY', shipcombat:'SHIP COMBAT', casino:'THE VOID ROYALE', radio:'SHIP RADIO', examine:'EXAMINE'};
+  const classicModes={galaxy:'GALAXY MAP',system:'SYSTEM VIEW',scanview:'SCANVIEW',planet:'PLANET SURFACE'};
+  const classicMode=OPTIONS.uiStyle==='classic'?classicModes[G.mode]:null;
+  const modeReadout=document.getElementById('h-mode');
+  modeReadout.textContent=onPlanet&&G.planets[G.curPlanet]?.isCasino?'CASINO DECK':classicMode||modes[G.mode]||G.mode.toUpperCase();
+  if(quarantineInterior()) modeReadout.textContent='SHIP INTERIOR';
 
   let loc='Deep Space';
   if(G.mode==='base'){
@@ -61,6 +112,7 @@ function renderHUD(){
     loc = cell?.type==='ROGUE_PLANET' ? (cell?.name||'Rogue Planet')+' (Rogue)' : (cell?.name||'Unknown')+' System';
   } else if(G.mode==='planet'){
     if(G.planets[G.curPlanet]?.isCasino) loc='The Void Royale';
+    else if(G.planets[G.curPlanet]?.isQuarantine) loc='Mercy of Dawn';
     else {
     const cell=G.galaxy[G.ship.y]?.[G.ship.x];
     {
@@ -126,7 +178,8 @@ function renderHUD(){
       const col   = ph==='night' ? '#4466aa' :
                     ph==='dusk'  ? '#ff6622' :
                     ph==='dawn'  ? '#ffaa44' : '#ffcc44';
-      const label = turnsLeft !== null ? `${icon} ${turnsLeft}t` : icon;
+      const localTime=planetLocalTimeText(G.curPlanet);
+      const label=localTime && !B2.tidalLock?`${icon} ${localTime}`:icon;
       phaseEl.textContent = label;
       phaseEl.style.color = col;
       phaseBox.style.display = '';

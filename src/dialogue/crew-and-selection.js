@@ -22,13 +22,16 @@ function crewMoraleBreakdown(c){
   if(!c) return [];
   const awayPenalty = timeAwayFromPortPenalty();
   const rows = [
-    { label:'Base outlook', value:c.moraleBase || 55, col:'#88ccff' },
+    { label:'Base morale', value:c.moraleBase ?? 55, col:'#88ccff' },
   ];
-  if((c.drinkGlow || 0) > 0) rows.push({ label:'Recent drinks', value:'+'+c.drinkGlow, col:'#ffaa44' });
-  if((c.drugRush || 0) > 0) rows.push({ label:'Chemical lift', value:'+'+c.drugRush, col:'#d488ff' });
+  const encouragement = crewEncouragementBonus(c);
+  if(encouragement) rows.push({ label:'Encouragement', value:'+'+encouragement+' ('+(c.encouragedUntil-G.turn)+'t)', col:'#88dd88' });
+  if(c.eventMorale) rows.push({ label:'Events (fade)', value:(c.eventMorale>0?'+':'')+c.eventMorale, col:c.eventMorale>0?'#88dd88':'#ff7777' });
+  if((c.drinkGlow || 0) > 0) rows.push({ label:'Drinks (fade)', value:'+'+c.drinkGlow, col:'#ffaa44' });
+  if((c.drugRush || 0) > 0) rows.push({ label:'Chemicals (fade)', value:'+'+c.drugRush, col:'#d488ff' });
   if((c.grief || 0) > 0) rows.push({ label:'Grief / stress', value:'-'+c.grief, col:'#ff7777' });
   if(awayPenalty > 0) rows.push({ label:'Time away from port', value:'-'+awayPenalty, col:'#ffaa44' });
-  if((c.unpaidDocks || 0) > 0) rows.push({ label:'Unpaid dock visits', value:'-'+(c.unpaidDocks * 10), col:'#ff7777' });
+  if((c.unpaidDocks || 0) > 0) rows.push({ label:'Unpaid (in base)', value:c.unpaidDocks, col:'#ff7777' });
   rows.push({ label:'Current morale', value:crewMoraleScore(c), col:crewMoraleScore(c) >= 45 ? '#88dd88' : crewMoraleScore(c) >= 22 ? '#ffaa44' : '#ff7777' });
   return rows;
 }
@@ -130,7 +133,7 @@ function crewDialogueAction(topic){
 function dialogueCrew(){
   const dlg = G?.dialogue;
   if(!dlg || (dlg.id !== 'crew_basic' && dlg.id !== 'captain_log')) return null;
-  const name = dlg.context?.crewName;
-  return (G.crew||[]).find(c=>c.hp>0 && c.name===name) || selectedCrewMember();
+  const crew = dlg.context?.crew;
+  return crew?.hp>0 && G.crew.includes(crew) ? crew : null;
 }
 

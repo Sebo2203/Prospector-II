@@ -1,6 +1,10 @@
 // ─────────────────────────────────────────────────────────────────
 //  SHIP CLASS DEFINITIONS
 // ─────────────────────────────────────────────────────────────────
+const NEUTRAL_ENGINE_RATINGS={trader:2,cargo:1,science:2,patrol:3};
+const STARTER_HULL_IDS=Object.freeze(['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE']);
+const STARTER_SHIP_WEAPONS=Object.freeze({LIGHT_SCOUT:['mass_driver'],BULK_FREIGHTER:[],ATTACK_CORVETTE:['railgun']});
+
 const SHIP_CLASSES = {
   LIGHT_SCOUT: {
     id:             'LIGHT_SCOUT',
@@ -8,23 +12,15 @@ const SHIP_CLASSES = {
     hullType:       'Light Scout',
     sprite:         'player_ship',
     baseHp:         100,
-    maxUpgradeHp:   120,  // +20% ceiling — scout stays fragile
+    size:1,structure:1,engineering:2,precision:3,geometry:1,hardpointDensity:1,cargoFraction:0.05,price:3000,
     baseFuel:       100,
-    maxUpgradeFuel: 180,  // most drastic fuel ceiling — long-range explorer
-    maxUpgradeEngine: 3,  // mild speed upgrade (corvette keeps the top)
     cargoCapacity:  0,
-    maxUpgradeCargo: 1,   // negligible
     sensorRange:    3,
-    maxUpgradeSensor: 6,  // most drastic sensor ceiling (+3 range)
     shields:        0,
-    maxShields:     1,    // just enough to survive one hit
     engineRating:   2,
     weaponSlots:    1,
-    maxWeaponSlots: 2,
     moduleSlots:    0,
-    maxModuleSlots: 1,
     maxCrew:        4,
-    maxUpgradeCrew: 5,    // negligible +1
     desc:           'Fast and nimble. Excellent sensors, minimal cargo.',
   },
   BULK_FREIGHTER: {
@@ -33,23 +29,15 @@ const SHIP_CLASSES = {
     hullType:       'Bulk Freighter',
     sprite:         'ship_freighter',
     baseHp:         120,
-    maxUpgradeHp:   180,  // drastic — tanky mobile base
+    size:2.5,structure:1,engineering:1.5,precision:1,geometry:0.85,hardpointDensity:0.5,cargoFraction:0.6,price:4500,
     baseFuel:       180,
-    maxUpgradeFuel: 240,  // medium upgrade ceiling
-    maxUpgradeEngine: 1,  // no speed upgrade — stays slow
     cargoCapacity:  5,
-    maxUpgradeCargo: 15,  // drastic — the whole point of this hull
     sensorRange:    1,
-    maxUpgradeSensor: 2,  // negligible +1
     shields:        0,
-    maxShields:     2,
     engineRating:   1,
     weaponSlots:    0,
-    maxWeaponSlots: 2,    // can defend itself eventually
     moduleSlots:    1,
-    maxModuleSlots: 3,
     maxCrew:        8,
-    maxUpgradeCrew: 12,   // drastic — mobile base needs a big crew
     desc:           'Heavy hauler. Massive cargo hold, no weapons, poor sensors.',
   },
   ATTACK_CORVETTE: {
@@ -58,55 +46,31 @@ const SHIP_CLASSES = {
     hullType:       'Attack Corvette',
     sprite:         'ship_corvette',
     baseHp:         110,
-    maxUpgradeHp:   160,  // mid — combat ship but not a tank
+    size:1.5,structure:2,engineering:3,precision:1.5,geometry:1.1,hardpointDensity:1.5,cargoFraction:0.05,price:6000,
     baseFuel:       90,
-    maxUpgradeFuel: 100,  // negligible — short patrol range is the tradeoff
-    maxUpgradeEngine: 5,  // drastic — fastest ship in the sector at full upgrade
     cargoCapacity:  0,
-    maxUpgradeCargo: 1,   // +1 only
     sensorRange:    2,
-    maxUpgradeSensor: 3,  // negligible +1
     shields:        1,
-    maxShields:     5,    // drastic — becomes a fortress
     engineRating:   3,
     weaponSlots:    2,
-    maxWeaponSlots: 3,    // 3 weapons max (not 4)
     moduleSlots:    2,
-    maxModuleSlots: 2,
     maxCrew:        4,
-    maxUpgradeCrew: 4,    // no crew upgrade — tight warship
     desc:           'Built for combat. Dual weapons, shields, short patrol range.',
   },
 };
 
-// Build a live ship stats object from a class definition + any upgrades applied
-function buildShipStats(classId, upgrades) {
-  const cls = SHIP_CLASSES[classId] || SHIP_CLASSES.LIGHT_SCOUT;
-  const u = upgrades || {};
-  return {
-    classId,
-    hullType:       cls.hullType,
-    name:           cls.name,
-    desc:           cls.desc,
-    sprite:         cls.sprite || 'player_ship',
-    maxHp:          Math.min(cls.maxUpgradeHp,  cls.baseHp   + (u.hp||0)),
-    maxUpgradeHp:   cls.maxUpgradeHp,
-    maxFuel:        Math.min(cls.maxUpgradeFuel, cls.baseFuel + (u.fuel||0)),
-    maxUpgradeFuel: cls.maxUpgradeFuel,
-    cargoCapacity:  cls.cargoCapacity + (u.cargo||0),
-    sensorRange:    Math.min(cls.maxUpgradeSensor, cls.sensorRange + (u.sensor||0)),
-    maxUpgradeSensor: cls.maxUpgradeSensor,
-    shields:        u.shields || cls.shields,
-    maxShields:     cls.maxShields,
-    engineRating:   Math.min(cls.maxUpgradeEngine, cls.engineRating + (u.engine||0)),
-    maxUpgradeEngine: cls.maxUpgradeEngine,
-    weaponSlots:    Math.min(cls.maxWeaponSlots, cls.weaponSlots + (u.weapons||0)),
-    maxWeaponSlots: cls.maxWeaponSlots,
-    moduleSlots:     Math.min(cls.maxModuleSlots,  cls.moduleSlots  + (u.module||0)),
-    maxModuleSlots:  cls.maxModuleSlots,
-    maxCrew:        Math.min(cls.maxUpgradeCrew, cls.maxCrew + (u.crew||0)),
-    maxUpgradeCrew: cls.maxUpgradeCrew,
-  };
+// Factory equipment is distinct from the physical envelope and purchased refits.
+function buildShipStats(classId,upgrades={}){
+  const cls=SHIP_CLASSES[classId]||SHIP_CLASSES.LIGHT_SCOUT,limits=hullLimits(cls),u=upgrades;
+  return {...limits,classId:cls.id,hullType:cls.hullType,name:cls.name,desc:cls.desc,sprite:cls.sprite||'player_ship',
+    maxHp:Math.min(limits.maxUpgradeHp,cls.baseHp+(u.hp||0)),
+    maxFuel:Math.min(limits.maxUpgradeFuel,cls.baseFuel+(u.fuel||0)),
+    cargoCapacity:Math.min(limits.maxUpgradeCargo,cls.cargoCapacity+(u.cargo||0)),
+    sensorRange:Math.min(limits.maxUpgradeSensor,cls.sensorRange+(u.sensor||0)),
+    shields:Math.min(limits.maxShields,cls.shields+(u.shields||0)),
+    reactorRating:Math.min(limits.maxReactor,1+(u.reactor||0)),coolingRating:Math.min(limits.maxCooling,1+(u.cooling||0)),
+    engineRating:Math.min(limits.maxUpgradeEngine,cls.engineRating+(u.engine||0)),
+    weaponSlots:Math.min(limits.maxWeaponSlots,cls.weaponSlots+(u.weapons||0)),
+    moduleSlots:Math.min(limits.maxModuleSlots,cls.moduleSlots+(u.module||0)),
+    maxCrew:Math.min(limits.maxUpgradeCrew,cls.maxCrew+(u.crew||0))};
 }
-
-// Add an item to cargo hold — returns true if added, false if full

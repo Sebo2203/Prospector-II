@@ -1,5 +1,8 @@
 
 <div id="root">
+  <button type="button" id="game-escape" class="hud-menu-btn" data-game-key="Escape" data-menu-control aria-label="Escape" hidden>ESC</button>
+  <button type="button" id="pointer-keys-toggle" class="hud-menu-btn" data-menu-control hidden>On-screen keys</button>
+  <div id="pointer-keys" aria-label="On-screen keys" hidden></div>
 
   <!-- Feedback overlay -->
   <div id="feedback-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;">
@@ -17,29 +20,32 @@
     </div>
   </div>
 
-  <div id="minimap-overlay" onclick="if(event.target.id==='minimap-overlay') closeGalaxyMinimapOverlay();">
+  <div id="minimap-overlay" tabindex="-1" onclick="if(event.target.id==='minimap-overlay') closeGalaxyMinimapOverlay();">
     <div id="minimap-overlay-body">
       <div id="minimap-large-panel">
-        <canvas id="galaxy-minimap-large" width="880" height="630"></canvas>
+        <canvas id="galaxy-minimap-large" width="1100" height="636"></canvas>
       </div>
       <div id="minimap-legend">
         <div class="minimap-legend-title">GALAXY MAP</div>
         <div id="minimap-legend-rows"></div>
       </div>
     </div>
-    <div id="minimap-overlay-hint"><span class="ck">ESC</span> close map</div>
   </div>
 
-  <!-- HUD — SHIP HP and FUEL moved to left gauge panel, O2 also in gauge panel -->
+  <!-- Cockpit status rail -->
   <div id="hud">
-    <div class="hud-box" id="h-phase-box" style="display:none"><div class="hud-label">TIME</div><div class="hud-val" id="h-phase">—</div></div>
+    <div class="hud-box" id="h-phase-box" style="display:none"><div class="hud-label">LOCAL</div><div class="hud-val" id="h-phase">—</div></div>
     <div class="hud-box"><div class="hud-label">CREDITS</div><div class="hud-val cy" id="h-creds">500</div></div>
-    <div class="hud-box"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
+    <div class="hud-box location-readout"><div class="hud-label">LOCATION</div><div class="hud-val cc" id="h-loc">Starbase Alpha</div></div>
     <div class="hud-box"><div class="hud-label">TURN</div><div class="hud-val cy" id="h-turn">1</div></div>
-    <div class="hud-box"><div class="hud-label">MODE</div><div class="hud-val cg" id="h-mode">GALAXY MAP</div></div>
+    <div class="hud-box" id="h-clock-box"><div class="hud-label">ELAPSED</div><div class="hud-val cc" id="h-clock">D1 00:00</div></div>
+    <div class="hud-box hud-display"><div class="hud-label" id="h-mode-label">DISPLAY</div><div class="hud-val cc" id="h-mode">NAVIGATION</div></div>
+    <div class="hud-box vessel-plate"><div class="hud-label">VESSEL</div><div class="hud-val" id="h-vessel">Unnamed Vessel</div></div>
+    <div class="hud-box hull-plate"><div class="hud-label">HULL TYPE</div><div class="hud-val" id="h-hull-type">Light Scout</div></div>
+    <button id="debug-playground-button" class="hud-menu-btn" type="button" hidden>Debug Palette</button>
   </div>
 
-  <!-- Canvas + Gauges + Sidebar -->
+  <!-- Canvas and gauges -->
   <div id="main">
 
     <!-- Left gauge panel: swaps between space gauges and planet gauge -->
@@ -48,24 +54,27 @@
       <div class="gauge-wrap" id="gauge-fuel">
         <div class="gauge-label">FUEL</div>
         <div class="gauge-bar-wrap">
-          <div class="gauge-ticks" id="fuel-ticks"></div>
-          <div class="gauge-fill" id="fuel-fill" style="height:100%;background:#ff8800;"></div>
+          <div class="gauge-ticks" id="fuel-ticks" aria-hidden="true"></div>
+          <div class="gauge-fill" id="fuel-fill" style="height:100%;background:#48cdb6;"></div>
+          <div class="gauge-restricted" id="fuel-restricted" aria-hidden="true" hidden></div>
         </div>
-        <div class="gauge-val co" id="g-fuel">100</div>
+        <div class="gauge-val cc" id="g-fuel">100</div>
       </div>
       <!-- Hull gauge (space only) -->
       <div class="gauge-wrap" id="gauge-hull">
         <div class="gauge-label">HULL</div>
         <div class="gauge-bar-wrap">
-          <div class="gauge-fill" id="hull-fill" style="height:100%;background:#44aaff;"></div>
+          <div class="gauge-ticks" id="hull-ticks" aria-hidden="true"></div>
+          <div class="gauge-fill" id="hull-fill" style="height:100%;background:#67bcdd;"></div>
+          <div class="gauge-fill hull-damage-flash" id="hull-damage-flash" aria-hidden="true" hidden></div>
         </div>
-        <div class="gauge-val cg" id="g-hull">100</div>
+        <div class="gauge-val cc" id="g-hull">100</div>
       </div>
       <!-- Oxygen gauge (planet only) -->
       <div class="gauge-wrap" id="gauge-oxy" style="display:none">
         <div class="gauge-label">O₂</div>
         <div class="gauge-bar-wrap">
-          <div class="gauge-ticks" id="oxy-ticks"></div>
+          <div class="gauge-ticks" id="oxy-ticks" aria-hidden="true"></div>
           <div class="gauge-fill" id="oxy-fill" style="height:100%;background:#44ddff;"></div>
         </div>
         <div class="gauge-val cc" id="g-oxy">100%</div>
@@ -76,38 +85,45 @@
       <canvas id="gc"></canvas>
       
     </div>
-    <div id="sidebar">
-      <div class="s-title">Crew</div>
-      <div id="crew-list"></div>
-      <div id="inv-list" style="display:none"></div>
-      <div class="s-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Log</span>
-        <span style="display:flex;gap:3px;">
-          <button onclick="adjustLogFont(-1)" style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">−</button>
-          <button onclick="adjustLogFont(1)"  style="background:#1a1a2e;border:1px solid #333;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;padding:0;line-height:1;border-radius:2px;">+</button>
-        </span>
-      </div>
-      <div id="log-list"></div>
-    </div>
   </div>
 
   <!-- Message bar -->
   <div id="msg-bar">
     <span id="msg-bar-text"></span>
-    <button id="msg-bar-dismiss" onclick="dismissMsg()" title="Dismiss">✕</button>
+    <button id="msg-bar-dismiss" data-menu-control onclick="dismissMsg()" aria-label="Dismiss alert" title="Dismiss">✕</button>
   </div>
   <!-- Contextual actions — rebuilt by renderContextBar() each turn -->
   <div id="ctx-bar"></div>
-  <!-- Persistent global hints — never changes -->
+  <!-- Collapsible shortcut reference and persistent HUD tools -->
   <div id="persist-bar">
-    <div id="persist-hints">
-      <div><span class="ck">WASD</span> cardinal move</div>
-      <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
-      <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
-      <div><span class="ck">Enter</span> interact / dock / land</div>
-      <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
-      <div><span class="ck">ESC</span> back / close</div>
-      <div><span class="ck">.</span> wait / repair (galaxy)</div>
+    <div id="version-tag"><span id="save-state" role="status" aria-live="polite"></span><span id="version-label">__GAME_VERSION_LABEL__</span></div>
+    <div id="persist-shortcuts">
+      <div id="footer-toggles">
+        <button type="button" id="shortcut-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="persist-hints" onclick="toggleShortcutLegend()">Shortcuts</button>
+        <button type="button" id="active-missions-toggle" class="hud-menu-btn" data-menu-control aria-expanded="false" aria-controls="active-missions-panel" onclick="toggleActiveMissions()">Active Missions</button>
+      </div>
+      <div id="footer-panels">
+        <div id="persist-hints" hidden>
+          <div id="combat-shortcuts" hidden>
+            <div>Move with configured keys or compass</div>
+            <div><span class="ck">1–3</span> select mount · <span class="ck">Tab</span> next target</div>
+            <div><span class="ck">F</span> fire · <span class="ck">B</span> boost forward</div>
+            <div><span class="ck" id="combat-wait-key">Space</span> wait and cool</div>
+            <div><span class="ck">R</span> disengage at edge · <span class="ck">H</span> surrender</div>
+            <div><span class="ck">F3</span> systems · <span class="ck">O</span> options · <span class="ck">+/−</span> log size</div>
+          </div>
+          <div id="travel-shortcuts">
+          <div><span class="ck">WASD</span> cardinal move</div>
+          <div><span class="ck">Q/E/Y/C</span> diagonal move</div>
+          <div><span class="ck">I</span> inventory/crew/ship  <span class="ck">O</span> options  <span class="ck">X</span> examine</div>
+          <div><span class="ck">Enter</span> interact / dock / land</div>
+          <div><span class="ck">M</span> full map  <span class="ck">F5</span> save to file</div>
+          <div><span class="ck">ESC</span> back / close</div>
+          <div><span class="ck">.</span> wait / repair (galaxy)</div>
+          </div>
+        </div>
+        <div id="active-missions-panel" tabindex="0" role="region" aria-label="Active missions and contracts" hidden></div>
+      </div>
     </div>
     <div id="hud-tools">
       <!-- 8-dir compass — always visible, functional in galaxy/planet modes -->
@@ -117,7 +133,7 @@
           <div class="cmp-btn" data-dx="0"  data-dy="-1" title="N">↑</div>
           <div class="cmp-btn" data-dx="1"  data-dy="-1" title="NE">↗</div>
           <div class="cmp-btn" data-dx="-1" data-dy="0"  title="W">←</div>
-          <div class="cmp-btn cmp-center"   title="Wait">·</div>
+          <div class="cmp-btn cmp-center"   title="Wait">WAIT</div>
           <div class="cmp-btn" data-dx="1"  data-dy="0"  title="E">→</div>
           <div class="cmp-btn" data-dx="-1" data-dy="1"  title="SW">↙</div>
           <div class="cmp-btn" data-dx="0"  data-dy="1"  title="S">↓</div>
@@ -125,18 +141,32 @@
         </div>
       </div>
       <div id="galaxy-minimap-panel">
-        <canvas id="galaxy-minimap" width="208" height="70"></canvas>
+        <canvas id="galaxy-minimap" width="116" height="70"></canvas>
       </div>
-      <button id="minimap-max-btn" onclick="openGalaxyMinimapOverlay()" title="Maximize galaxy map">M</button>
+      <button id="minimap-max-btn" data-menu-control onclick="openGalaxyMinimapOverlay()" aria-label="Maximize galaxy map (M)" title="Maximize galaxy map">M</button>
     </div>
   </div>
-  <div id="version-tag">v0.26</div>
+
+  <!-- Crew and comms span the full right side beneath the HUD. -->
+  <div id="sidebar">
+    <div class="s-title" id="crew-title">Crew Status</div>
+    <div id="crew-list"></div>
+    <div id="inv-list" style="display:none"></div>
+    <div class="s-title">
+      <span id="log-title">Comms Log</span>
+      <span class="log-size-controls">
+        <button type="button" class="hud-menu-btn" data-menu-control aria-label="Decrease log text size" onclick="adjustLogFont(-1)">−</button>
+        <button type="button" class="hud-menu-btn" data-menu-control aria-label="Increase log text size" onclick="adjustLogFont(1)">+</button>
+      </span>
+    </div>
+    <div id="log-list"></div>
+  </div>
 
   <!-- Barter overlay -->
-  <div id="barter-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:998;align-items:center;justify-content:center;">
-    <div id="barter-panel" style="background:#08080f;border:2px solid #ffe066;border-radius:4px;width:700px;max-width:96vw;font-family:'Courier New',monospace;outline:none;">
+  <div id="barter-overlay">
+    <div id="barter-panel" tabindex="-1">
       <!-- Header -->
-      <div style="background:#100c02;border-bottom:1px solid #3a3000;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+      <div class="barter-header">
         <div>
           <div id="barter-title" style="font-size:15px;font-weight:bold;color:#ffe066;">Barter Exchange</div>
           <div id="barter-subtitle" style="font-size:11px;color:#667788;margin-top:2px;"></div>
@@ -144,37 +174,53 @@
         <div style="font-size:11px;color:#445566;">↑↓ move · ←→ switch side · Enter toggle · Tab confirm · Esc close</div>
       </div>
       <!-- Two column layout -->
-      <div style="display:flex;gap:0;height:320px;">
+      <div class="barter-columns">
         <!-- Left: your inventory -->
-        <div style="flex:1;border-right:1px solid #1e1e2e;display:flex;flex-direction:column;">
+        <div class="barter-column" style="border-right:1px solid #1e1e2e;">
           <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
             <span style="color:#70d8ff;">Your Offer</span>
           </div>
-          <div id="barter-player-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div id="barter-player-list" class="barter-list"></div>
           <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
             <div style="font-size:10px;color:#445566;margin-bottom:2px;">OFFERING</div>
-            <div id="barter-offer-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+            <div id="barter-offer-summary" class="barter-summary">— nothing —</div>
           </div>
         </div>
         <!-- Right: civ stock -->
-        <div style="flex:1;display:flex;flex-direction:column;">
+        <div class="barter-column">
           <div style="padding:8px 12px 4px;font-size:11px;color:#667788;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #141420;">
             <span style="color:#90f0a0;">Their Goods</span>
           </div>
-          <div id="barter-civ-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
+          <div id="barter-civ-list" class="barter-list"></div>
           <div style="padding:6px 12px;border-top:1px solid #141420;min-height:40px;">
             <div style="font-size:10px;color:#445566;margin-bottom:2px;">REQUESTING</div>
-            <div id="barter-want-summary" style="font-size:12px;color:#888;font-style:italic;">— nothing —</div>
+            <div id="barter-want-summary" class="barter-summary">— nothing —</div>
           </div>
         </div>
       </div>
       <!-- Footer -->
-      <div style="background:#0a0a10;border-top:1px solid #1e1e2e;padding:8px 16px;display:flex;align-items:center;gap:12px;">
+      <div class="barter-footer">
         <div id="barter-value-info" style="flex:1;font-size:12px;color:#667788;"></div>
-        <div id="barter-confirm-hint" style="font-size:12px;color:#445566;">[Tab] Confirm Trade</div>
+        <button id="barter-confirm-hint" class="hud-menu-btn" onclick="confirmBarterTrade()">[Tab] Confirm Trade</button>
+        <button class="hud-menu-btn" onclick="closeBarterOverlay()">[Esc] Close</button>
       </div>
     </div>
   </div>
 
 </div><!-- #root -->
 
+<dialog id="debug-dialog" aria-labelledby="debug-title">
+  <header class="debug-header">
+    <h2 id="debug-title"></h2>
+    <div id="debug-navigation"></div>
+  </header>
+  <div id="debug-content"></div>
+</dialog>
+
+<div id="save-notice" role="alert" hidden>
+  <span id="save-notice-text"></span>
+  <button id="save-retry" data-menu-control onclick="retryAutosave()">Retry</button>
+  <button id="save-load-newer" data-menu-control onclick="continueSavedGame()" hidden>Load newer save</button>
+  <button data-menu-control onclick="saveToFile()">Export save</button>
+  <button id="save-notice-dismiss" data-menu-control onclick="AUTOSAVE_STATE.notice='';renderAutosaveStatus()">Dismiss</button>
+</div>

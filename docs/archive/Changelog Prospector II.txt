@@ -1,0 +1,29 @@
+Historical changelog. Ongoing development is recorded in CHANGELOG.md at the repository root.
+
+0.27.1
+-Added sounds for refueling, fuel scooping, repairing ship at the station, applying repair kits.
+
+-Added button in debug menu to make your ship invisible to enemy ships in the galaxy map.
+(Nebulae wraith still follow)
+
+-Deposit ores should no longer spawn on derelict ships/stations.
+
+-Made casinos walkable.
+
+Earlier release notes from the original main menu
+
+0.25 (2026)
+- Expanded the galaxy map by about 2.4 times to the west and south.
+- Added the HUD minimap and the full-screen galaxy map with a legend (M).
+- Animated ship movement in the galaxy view.
+- Added diving from ocean tiles, diving suits and underwater exploration.
+- Added aquatic civilizations to underwater maps.
+- Added Void Poker, arm wrestling, drinking contests and beast arenas to casinos.
+- Expanded the star and crew name pools.
+
+0.2 (public, 2026)
+- Initial public release with galaxy exploration, planet landing, crew and cargo.
+- Added civilization encounters with first-contact dialogue and barter.
+- Included ground and ship combat.
+- Special planets included Ringworld, Bloom, Nuclear War and Ancient Station.
+- Included retirement and its ending narrative.

@@ -16,39 +16,68 @@ const DEFAULT_KEYBINDS = {
   wait:'Space',
 };
 
-// Render log entries into #log-list and scroll to the bottom so the
-// newest message (last in DOM after .reverse()) is always visible.
-function setLogHTML(html){
-  const el = document.getElementById('log-list');
-  if(!el) return;
-  el.style.flex = '1 1 0';
-  el.innerHTML = html;
+// Transient sidebar paging keeps large careers responsive without discarding history.
+let commsLogView={career:null,limit:80};
+function renderCommsLog(){
+  const el=document.getElementById('log-list');
+  if(!el)return;
+  if(commsLogView.career!==G){commsLogView={career:G,limit:80};el.innerHTML='';el.scrollTop=0;}
+  const entries=G.log.filter(entry=>!entry.archive);
+  const atLatest=el.scrollTop>=-2;
+  const bounds=el.getBoundingClientRect();
+  const anchor=atLatest?null:[...el.children].find(child=>{
+    const rect=child.getBoundingClientRect();return rect.bottom>bounds.top && rect.top<bounds.bottom;
+  });
+  const anchorEntry=anchor?._commsEntry;
+  const anchorTop=anchor?.getBoundingClientRect().top;
+  // Keep the reader's anchor in the rendered window when new messages arrive.
+  if(anchorEntry)commsLogView.limit=Math.max(commsLogView.limit,entries.indexOf(anchorEntry)+1);
+  const visible=entries.slice(0,commsLogView.limit);
+  const html=visible.map(entry=>{
+    const age=(G.turn||0)-(entry.turn||0);
+    return `<div class="log-entry ${entry.cls||''}" style="opacity:${age===0?1:0.75}">${htmlEsc(logDisplayText(entry))}</div>`;
+  }).join('');
+  el.style.flex='1 1 0';
+  if(el.innerHTML!==html){
+    el.innerHTML=html;
+    [...el.children].forEach((child,index)=>{child._commsEntry=visible[index];});
+    if(atLatest)el.scrollTop=0;
+    else if(anchorEntry){
+      const replacement=[...el.children].find(child=>child._commsEntry===anchorEntry);
+      if(replacement){
+        const scale=bounds.height/el.offsetHeight;
+        el.scrollTop+=(replacement.getBoundingClientRect().top-anchorTop)/scale;
+      }
+    }
+  }
+  el.onscroll=()=>{
+    if(commsLogView.career!==G || el.clientHeight===0)return;
+    if(commsLogView.limit<entries.length && -el.scrollTop>=el.scrollHeight-el.clientHeight-40){
+      commsLogView.limit+=80;
+      renderCommsLog();
+    }
+  };
 }
 
-function addLog(msg,cls){
+function addLog(msg,cls,category=G?.mode==='shipcombat'?'combat':undefined){
   cls=cls||'';
-  if(G?.mode==='shipcombat' && G.shipCombat){
-    const sc = G.shipCombat;
-    if(sc.log[0] === msg) return;
-    sc.log.unshift(msg);
-    if(sc.log.length > 10) sc.log.length = 10;
-    archiveLog('['+(sc.pirate?.name || 'ship combat')+'] '+msg, cls);
-    return;
-  }
   const latest = G.log[0];
   if(latest && latest.msg === msg && (latest.cls || '') === cls){
     latest.count = (latest.count || 1) + 1;
+    if(category) latest.category=category;
     G.msg = logDisplayText(latest);
     return;
   }
   const entry = {msg, cls, count:1, turn: G.turn||1};
+  if(category) entry.category=category;
   G.log.unshift(entry);
   G.msg=logDisplayText(entry);
 }
 
+function addCombatLog(msg,cls){addLog(msg,cls,'combat');}
+
 // Like addLog but silent — writes to G.log history only, no sidebar flash.
-// Use for high-frequency detail (e.g. per-round ship combat) that belongs in
-// the LOG tab but must NOT duplicate into the sidebar or msg-bar.
+// Use for historical detail that belongs in the LOG tab without a sidebar update.
 function archiveLog(msg,cls){
   cls=cls||'';
   G.log.unshift({msg, cls, count:1, turn: G.turn||1, archive:true});

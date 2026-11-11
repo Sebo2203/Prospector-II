@@ -1,7 +1,20 @@
 // ─────────────────────────────────────────────────────────────────
 //  STRANDED — wait a turn, drain crew, check rescue
 // ─────────────────────────────────────────────────────────────────
-function doStrandedWait(){
+function strandedLifeSupportFailing(){
+  return G.fuel<=0 || shipReactorOutput()<2;
+}
+
+function rescueServices(ship){
+  const services=[];
+  if(shipSystemRating(G.ship,'engine')===0) services.push('engine repair');
+  if(shipReactorOutput()<2) services.push('reactor repair');
+  const fuel=Math.max(0,Math.min(G.maxFuel-G.fuel,ship.fuelGift||0));
+  if(fuel>0) services.push(fuel+' fuel');
+  return services.join(' + ') || 'drive assistance';
+}
+
+function doStrandedWait(activity='waiting'){
   if(!G.stranded) return;
   const st = G.stranded;
 
@@ -15,23 +28,23 @@ function doStrandedWait(){
     st.rescueShip  = null;
   }
   st.turnsStranded++;
-  G.turn++;
+  beginCareerTurn(activity);
 
   // Crew oxygen drain — 3 HP per crew member per turn stranded
-  const dmgPerCrew = 3;
+  const dmgPerCrew = strandedLifeSupportFailing()?3:0;
   G.crew.filter(c=>c.hp>0).forEach(c=>{
     c.hp = Math.max(0, c.hp - dmgPerCrew);
     if(c.hp<=0) addLog(crewDisplayName(c)+' has succumbed to oxygen depletion!','lc');
   });
-  SFX.suffocate();
-  pruneDead();
-  checkDeath();
+  if(dmgPerCrew) SFX.suffocate();
+  applyPulsarExposure();
+  finishCareerTurn();
   if(G.dead){ renderAll(); return; }
 
   // Every 3 turns, log a status message
   if(st.turnsStranded % 3 === 0){
     const hpTotal = G.crew.filter(c=>c.hp>0).reduce((s,c)=>s+c.hp,0);
-    addLog('Turn '+st.turnsStranded+' stranded. Crew HP: '+hpTotal+'. Reserves failing.','lw');
+    addLog('Turn '+st.turnsStranded+' stranded. Crew HP: '+hpTotal+(dmgPerCrew?'. Reserves failing.':'. Life support stable; drive repair or rescue needed.'),'lw');
   }
 
   // Move neutral ships + pirates
@@ -39,11 +52,16 @@ function doStrandedWait(){
   movePirates();
   moveGasEntities();
   tickNpcStranded();
+  if(G.mode==='shipcombat'){
+    G.stranded=null;
+    G.shipCombat.foughtWhileStranded=true;
+    return;
+  }
 
   // SOS makes pirates in range more aggressive (treat as if distance halved)
   if(st.sos && !DEBUG.shipInvisible){
     const aggressivePirate = G.pirates.find(p=>{
-      if(!p.alive) return false;
+      if(!p.alive || shipDisengagementActive(p)) return false;
       const dist = Math.abs(p.x-G.ship.x)+Math.abs(p.y-G.ship.y);
       return dist <= 12; // doubled aggression range
     });
@@ -56,18 +74,21 @@ function doStrandedWait(){
   }
 
   // Check if any pirate has reached our tile → combat even stranded
-  const pirateArrived = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y);
+  const pirateArrived = G.pirates.find(p=>p.alive&&p.x===G.ship.x&&p.y===G.ship.y&&!shipDisengagementActive(p));
   if(pirateArrived && !DEBUG.shipInvisible){
-    addLog(pirateArrived.name+' closes in on your disabled ship!','lc');
-    G.stranded = null;
     startShipCombat(pirateArrived);
-    if(G.shipCombat) G.shipCombat.foughtWhileStranded = true;
-    return;
+    if(G.shipCombat){
+      addLog(pirateArrived.name+' closes in on your disabled ship!','lc');
+      G.stranded = null;
+      G.shipCombat.foughtWhileStranded = true;
+      return;
+    }
   }
 
   // Check if a neutral ship is now adjacent or on our tile → offer rescue
   if(!st.rescuePhase){
     const rescuer = (G.neutralShips||[]).find(ns=>{
+      if(ns.fleeingPlayer || ns.hostile || ns.alive===false || effectiveEngineRating(ns)===0)return false;
       const dist = Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
       return dist <= 1;
     });
@@ -77,14 +98,14 @@ function doStrandedWait(){
       st.rescueShip = rescuer;
       st.rescuePhase = 'offer';
       const costStr = rescuer.rescueCost > 0 ? 'for '+rescuer.rescueCost+' cr' : 'at no charge';
-      addLog(rescuer.name+' pulls alongside your ship! They offer '+rescuer.fuelGift+' fuel '+costStr+'.','lg');
+      addLog(rescuer.name+' pulls alongside your ship! They offer '+rescueServices(rescuer)+' '+costStr+'.','lg');
       renderAll(); return;
     }
 
     // No rescuer yet — occasionally a nearby neutral ship notices you (or SOS attracts)
     const noticeRange = st.sos ? 18 : 8;
     const noticedShip = (G.neutralShips||[]).find(ns=>{
-      if(ns.rescuing) return false;
+      if(ns.rescuing || ns.fleeingPlayer || ns.hostile || ns.alive===false || effectiveEngineRating(ns)===0) return false;
       const dist = Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y);
       const chance = st.sos ? 0.45 : 0.12;
       return dist <= noticeRange && Math.random() < chance;
@@ -103,22 +124,42 @@ function doStrandedWait(){
 
 function doAcceptRescue(){
   const st = G.stranded;
-  if(!st||!st.rescueShip) return;
+  if(!st || st.rescuePhase!=='offer' || !st.rescueShip || G.dead || G.retired) return;
   const ns = st.rescueShip;
+  if(!(G.neutralShips||[]).includes(ns) || ns.alive===false || ns.hostile || ns.fleeingPlayer ||
+     Math.abs(ns.x-G.ship.x)+Math.abs(ns.y-G.ship.y)>1) return;
   if(ns.rescueCost > 0 && G.credits < ns.rescueCost){
     addLog('Cannot afford the rescue fee of '+ns.rescueCost+' cr!','lc');
-    st.rescuePhase = 'broke';
+    ns.rescuing=false;st.rescuePhase = 'broke';
     renderAll(); return;
   }
   if(ns.rescueCost > 0) G.credits -= ns.rescueCost;
-  G.fuel = Math.min(G.maxFuel, G.fuel + ns.fuelGift);
+  const systems=ensureShipSystems();
+  const repaired=[];
+  if(shipSystemRating(G.ship,'engine')===0){
+    systems.engine.condition=Math.max(80,systems.engine.condition);systems.engine.bypassUntil=0;
+    repaired.push('engines');
+  }
+  if(shipReactorOutput()<2){
+    systems.reactor.condition=Math.max(80,systems.reactor.condition);systems.reactor.bypassUntil=0;
+    repaired.push('reactor');
+  }
+  syncPlayerShipSystems();
+  const beforeFuel=G.fuel;
+  G.fuel = Math.min(G.maxFuel, G.fuel + (ns.fuelGift||0));
+  if(repaired.length) addLog(ns.name+' makes emergency repairs to '+repaired.join(' and ')+'. Drive operational.','lg');
   G._alarmFuelWarn = false;
   G._alarmFuelCrit = false;
-  ns.rescuing = false;
+  (G.neutralShips||[]).forEach(ship=>ship.rescuing=false);
   const costMsg = ns.rescueCost>0 ? ' Paid '+ns.rescueCost+' cr.' : ' No charge.';
-  addLog(ns.name+' transferred '+ns.fuelGift+' units of fuel.'+costMsg+' Engines back online!','lg');
+  addLog(ns.name+' transferred '+(G.fuel-beforeFuel)+' units of fuel.'+costMsg,'lg');
   addLog('Crew HP damage from exposure cannot be undone. Seek medical attention.','lw');
-  G.stranded = null;
+  if(shipCanTravel()){
+    G.stranded=null;addLog('Drive operational. Stranded alert cleared.','lg');
+  } else {
+    st.rescueShip=null;st.rescuePhase=null;
+    addLog('The ship is still stranded. Further repair or fuel is needed.','lw');
+  }
   renderAll();
 }
 
@@ -139,7 +180,7 @@ function doDeclineRescue(){
 function drawStrandedOverlay(){
   if(!G.stranded) return;
   const st = G.stranded;
-  const cw = canvas.width, ch = canvas.height;
+  const cw = canvasWidth, ch = canvasHeight;
   const cx = cw/2;
 
   // Dark tinted panel bottom-left
@@ -167,7 +208,7 @@ function drawStrandedOverlay(){
   // Crew drain status
   const living = G.crew.filter(c=>c.hp>0);
   ctx.font='14px Courier New'; ctx.fillStyle='#cc6666';
-  ctx.fillText('Crew: '+living.length+' alive  —  -3 HP/crew/turn', px2+12, py2+64);
+  ctx.fillText('Crew: '+living.length+' alive  —  '+(strandedLifeSupportFailing()?'-3 HP/crew/turn':'life support stable'), px2+12, py2+64);
 
   // HP bars for crew
   living.forEach((c,i)=>{
@@ -182,7 +223,7 @@ function drawStrandedOverlay(){
 
   // Nearest rescue ship
   const rescuer = (G.neutralShips||[]).find(ns=>ns.rescuing);
-  const y3 = py2+102;
+  const y3 = py2+114;
   if(rescuer){
     const dist2 = Math.abs(rescuer.x-G.ship.x)+Math.abs(rescuer.y-G.ship.y);
     const eta2 = Math.max(1, Math.ceil(dist2/rescuer.speed));
@@ -208,13 +249,15 @@ function drawStrandedOverlay(){
     ctx.fillStyle='rgba(0,20,10,0.95)'; ctx.fillRect(opx,opy,opw,oph);
     ctx.strokeStyle='#44ff88'; ctx.lineWidth=2; ctx.strokeRect(opx,opy,opw,oph);
     ctx.font='bold 14px Courier New'; ctx.fillStyle='#44ff88';
-    ctx.fillText(ns2.name+' offers '+ns2.fuelGift+' fuel', opx+12, opy+20);
+    ctx.fillText(ns2.name+': '+rescueServices(ns2), opx+12, opy+20,opw-24);
     const fee2 = ns2.rescueCost>0 ? 'Cost: '+ns2.rescueCost+' cr  (you have '+G.credits+' cr)' : 'No charge';
     ctx.font='13px Courier New'; ctx.fillStyle='#778899';
     ctx.fillText(fee2, opx+12, opy+38);
     ctx.font='bold 14px Courier New';
     ctx.fillStyle='#44ff88'; ctx.fillText('[Y] Accept', opx+12, opy+58);
     ctx.fillStyle='#ff6644'; ctx.fillText('[N] Decline', opx+160, opy+58);
+    canvasMenuTarget(opx+10,opy+43,108,21,doAcceptRescue);
+    canvasMenuTarget(opx+158,opy+43,116,21,doDeclineRescue);
   }
   if(st.rescuePhase==='broke'){
     const opx=px2, opy=py2-52, opw=pw, oph=44;

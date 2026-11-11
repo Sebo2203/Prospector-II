@@ -109,8 +109,15 @@ function applyCorpItem(item){
 }
 
 function executeBaseAction(actionId){
+  if(HULL_REFITS.some(refit=>refit.id===actionId)||actionId.startsWith('remove_refit_')){
+    const removing=actionId.startsWith('remove_refit_');
+    if(performHullRefit(removing?actionId.slice(13):actionId,removing))recordCareerTime('services',30,'stations');
+    renderAll();return;
+  }
+  const beforeCredits=G.credits,beforeFuel=G.fuel;
   const fuelCost = Math.round((G.maxFuel-G.fuel)*0.8);
   switch(actionId){
+    case 'ship_systems': openShipSystems(); return;
     case 'refuel':
       if(G.fuel>=G.maxFuel){ addLog('Fuel already full.','li'); }
       else if(fuelCost===0){ G.fuel=G.maxFuel; SFX.refuel(); addLog('Tank topped off (free).','lg'); }
@@ -123,113 +130,20 @@ function executeBaseAction(actionId){
         G.credits-=50; G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10);
         SFX.repair();
         addLog('Hull patched. Ship +10 HP.','lg');
-        const _engR = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
-        if(_engR) giveSkillXP(_engR, 'eng', 2);
       }
       else addLog('Need 50 cr for repairs.','lw');
-      break;}
-    case 'uphull':{
-      const ssH=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      if(G.ship.maxHp>=ssH.maxUpgradeHp){ addLog('Hull already at maximum ('+ssH.maxUpgradeHp+' HP).','li'); }
-      else if(G.credits>=200){
-        G.credits-=200; G.ship.maxHp+=20; G.ship.hp=Math.min(G.ship.hp+20,G.ship.maxHp);
-        addLog('Hull upgraded! Max HP +20.','lg');
-        const _engH = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
-        if(_engH) giveSkillXP(_engH, 'eng', 4);
-      }
-      else addLog('Need 200 cr for hull upgrade.','lw');
-      break;}
-    case 'upfuel':{
-      const ssF=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      if(G.maxFuel>=ssF.maxUpgradeFuel){ addLog('Fuel tank already at maximum ('+ssF.maxUpgradeFuel+').','li'); }
-      else if(G.credits>=250){
-        G.credits-=250; G.maxFuel+=20; G.fuel=Math.min(G.fuel+20,G.maxFuel);
-        addLog('Fuel tank upgraded! Max fuel +20.','lg');
-        const _engF = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
-        if(_engF) giveSkillXP(_engF, 'eng', 4);
-      }
-      else addLog('Need 250 cr for fuel tank upgrade.','lw');
-      break;}
-    case 'upsensor':{
-      const ss2=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      const sensorCap = ss2.maxUpgradeSensor ?? (ss2.sensorRange + 2);
-      if(ss2.sensorRange>=sensorCap){ addLog('Sensors already at maximum.','li'); }
-      else if(G.credits>=400){ G.credits-=400; G.shipStats.sensorRange++; addLog('Sensors upgraded! Range now '+G.shipStats.sensorRange+'.','lg'); }
-      else addLog('Need 400 cr for sensor upgrade.','lw');
-      break;}
-    case 'upwslot':{
-      const ss3=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      if(ss3.weaponSlots>=ss3.maxWeaponSlots){ addLog('Weapon slots at maximum.','li'); }
-      else if(G.credits>=500){ G.credits-=500; G.shipStats.weaponSlots++; addLog('Weapon slot unlocked! Slots: '+G.shipStats.weaponSlots+'/'+ss3.maxWeaponSlots+'.','lg'); }
-      else addLog('Need 500 cr for weapon slot upgrade.','lw');
-      break;}
-    case 'upmodslot':{
-      const ss4=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      if(ss4.moduleSlots>=ss4.maxModuleSlots){ addLog('Module slots at maximum.','li'); }
-      else if(G.credits>=500){ G.credits-=500; G.shipStats.moduleSlots++; addLog('Module slot unlocked! Slots: '+G.shipStats.moduleSlots+'/'+ss4.maxModuleSlots+'.','lg'); }
-      else addLog('Need 500 cr for module slot upgrade.','lw');
-      break;}
-    case 'upengine':{
-      const ssE=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      const engCap=ssE.maxUpgradeEngine??ssE.engineRating;
-      if(ssE.engineRating>=engCap){ addLog('Engines already at maximum (rating '+engCap+').','li'); }
-      else if(G.credits>=450){
-        G.credits-=450; G.shipStats.engineRating++;
-        addLog('Engines upgraded! Rating now '+G.shipStats.engineRating+'/'+engCap+'.','lg');
-        const _engE = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
-        if(_engE) giveSkillXP(_engE, 'eng', 4);
-      }
-      else addLog('Need 450 cr for engine upgrade.','lw');
       break;}
     case 'changehull':
       G.base.screen = 'changehull';
       G.base.hullSel = 0;
+      G.base.hullQuoteKey=null;
       break;
     case 'confirmhull':{
-      const HULL_IDS = ['LIGHT_SCOUT','BULK_FREIGHTER','ATTACK_CORVETTE'];
-      const targetId = HULL_IDS[G.base.hullSel||0];
-      const targetCls = SHIP_CLASSES[targetId];
-      const hullCost = 3000;
-      if(!targetCls){ addLog('Invalid selection.','lw'); break; }
-      if(targetId === G.shipStats?.classId){ addLog('Already flying that hull type.','lw'); G.base.screen='main'; break; }
-      if(G.credits < hullCost){ addLog('Need '+hullCost+' cr to switch hulls.','lw'); G.base.screen='main'; break; }
-      G.credits -= hullCost;
-      const oldHp = G.ship.hp / G.ship.maxHp; // preserve HP ratio
-      G.shipStats = buildShipStats(targetId);
-      G.ship.maxHp = G.shipStats.maxHp;
-      G.ship.hp = Math.max(1, Math.round(G.ship.maxHp * oldHp));
-      G.maxFuel = G.shipStats.maxFuel;
-      G.fuel = Math.min(G.fuel, G.maxFuel);
-      G.weaponLevel = G.shipStats.weaponSlots > 0 ? Math.min(G.weaponLevel||1, 3) : 0;
-      addLog('Hull switched to '+targetCls.hullType+'! Cost: '+hullCost+' cr.','lg');
-      addLog('All stats reset to '+targetCls.hullType+' base values.','li');
-      G.base.screen = 'main';
-      break;}
-    case 'upshield':{
-      const ss5=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      if(ss5.shields>=ss5.maxShields){ addLog('Shields already at maximum.','li'); }
-      else if(G.credits>=350){
-        G.credits-=350; G.shipStats.shields++;
-        addLog('Shield upgraded! Shields: '+G.shipStats.shields+'/'+ss5.maxShields+'.','lg');
-        const _engS = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
-        if(_engS) giveSkillXP(_engS, 'eng', 4);
-      }
-      else addLog('Need 350 cr for shield upgrade.','lw');
-      break;}
-    case 'upcargo':{
-      const ss6=G.shipStats||buildShipStats('LIGHT_SCOUT');
-      const cargoMax6 = { LIGHT_SCOUT:1, BULK_FREIGHTER:15, ATTACK_CORVETTE:1 };
-      const cap6 = cargoMax6[ss6.classId] || 0;
-      if(cap6===0){ addLog('This hull type cannot carry cargo.','li'); }
-      else if(ss6.cargoCapacity>=cap6){ addLog('Cargo hold at maximum ('+cap6+').','li'); }
-      else if(G.credits>=300){
-        G.credits-=300; G.shipStats.cargoCapacity+=1;
-        addLog('Cargo hold expanded! Capacity: '+G.shipStats.cargoCapacity+'.','lg');
-        const _engC = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.eng||0)-(a.skills?.eng||0))[0];
-        if(_engC) giveSkillXP(_engC, 'eng', 4);
-      }
-      else addLog('Need 300 cr for cargo expansion.','lw');
-      break;}
+      const id=hangarHullIds()[G.base.hullSel||0],quote=getHullPurchaseQuote(id);
+      if(quote.reason){addLog(quote.reason+'.','lw');break;}
+      if(G.credits<quote.net){addLog('Need '+quote.net+' cr for this exchange.','lw');break;}
+      if(G.base.hullQuoteKey!==quote.key){G.base.hullQuoteKey=quote.key;addLog('Review the hull quote, then confirm the exchange.','li');break;}
+      commitHullPurchase(id,quote.key);break;}
     case 'upweapon':
       // Legacy — no-op, replaced by installweapon
       break;
@@ -238,22 +152,29 @@ function executeBaseAction(actionId){
       const weapons2 = Object.values(SHIP_WEAPONS);
       const selW2 = weapons2[G.base.weaponSel || 0];
       if(!selW2 || selW2.placeholder){ addLog('That weapon is not available yet.','lw'); break; }
-      if(G.credits < selW2.cost){ addLog('Need '+selW2.cost+' cr to install '+selW2.name+'.','lw'); break; }
-      G.credits -= selW2.cost;
+      const fit=shipWeaponInstallReason(slot2,selW2);
+      if(fit){addLog(fit+'.','lw');break;}
+      const store=stationEquipmentStore(true),owned=store.weapons.findIndex(item=>item.id===selW2.id),price=shipWeaponInstallPrice(selW2);
+      if(store.weapons.length>=256&&G.installedWeapons[slot2]&&owned<0){addLog('Station weapon storage is full.','lw');break;}
+      if(G.credits < price){ addLog('Need '+price+' cr to install '+selW2.name+'.','lw'); break; }
+      const restored=owned>=0?store.weapons.splice(owned,1)[0]:null;
+      const previous=G.installedWeapons[slot2];
+      if(previous)store.weapons.push({id:previous,readyAt:G.ship.weaponReadyAt[slot2]||0});
+      G.credits -= price;
       if(!G.installedWeapons) G.installedWeapons = [];
       G.installedWeapons[slot2] = selW2.id;
-      addLog(selW2.name+' installed in slot ['+(slot2+1)+']. Cost: '+selW2.cost+' cr.','lg');
+      G.ship.weaponReadyAt[slot2]=Math.max(G.turn,restored?.readyAt||0);
+      addLog(selW2.name+' installed in mount ['+(slot2+1)+']. '+(restored?'Fitted from station stores.':'Cost: '+price+' cr.'),'lg');
       G.base.screen = 'sub';
       break;}
     case 'sell':{
       // Science Office: samples and survey data only — bulk cargo goes to Market
       const activeScienceJob = ensureScienceJobState().active;
-      const reservedNames = scienceJobReservedItemNames(activeScienceJob);
+      const sellableItems = scienceSaleItems();
       let missionCompleted = false;
       if(activeScienceJob && activeScienceJob.type !== 'data_box'){
         missionCompleted = completeScienceJob();
       }
-      const sellableItems = (G.inventory||[]).filter(i=>!reservedNames.has(i.name) && (i.value||0) > 0 && !i.isCapturedCreature);
       const sold=sellableItems.reduce((s,i)=>s+(i.value||0),0);
       const surveyInfo = getSurveyPayoutBreakdown();
       const surveySold = surveyInfo.pending;
@@ -261,19 +182,20 @@ function executeBaseAction(actionId){
         Object.values(G.planets || {}).forEach(pdata=>{
           pdata.surveySoldValue = getSurveySaleValue(pdata);
         });
-        G.credits+=surveySold;
+        earnCredits(surveySold);
         trackEvent('survey_data_sold', analyticsBaseParams({
           survey_value: surveySold,
           full_survey_bodies: surveyInfo.fullBonusBodies.length,
         }));
         addLog('Sold survey data for '+surveySold+' cr.','lg');
+        recordExpeditionEvent('survey-sale:'+G.turn+':'+(G.surveyCareerCredits||0), 'trade', 'Sold survey data for '+surveySold+' cr.', {credits:surveySold});
         awardSurveyMilestones(surveySold);
         if(surveyInfo.fullBonusBodies.length){
           addLog('Full survey bonus awarded for '+surveyInfo.fullBonusBodies.join(', ')+'.','lg');
         }
       }
       if(sold>0){
-        G.credits+=sold;
+        earnCredits(sold);
         const soldSet = new Set(sellableItems);
         G.inventory = (G.inventory||[]).filter(i=>!soldSet.has(i));
         addLog('Sold samples for '+sold+' cr.','ll');
@@ -296,6 +218,9 @@ function executeBaseAction(actionId){
       break;}
     case 'science_job':
       startScienceJob();
+      break;
+    case 'science_abandon':
+      abandonScienceJob();
       break;
     case 'retire':
       G.base.confirm = 'retire';
@@ -357,7 +282,7 @@ function executeBaseAction(actionId){
         mGrand+=rev;
       });
       G.cargo=G.cargo.filter(i=>!i.isCommodity);
-      G.credits+=mGrand;
+      earnCredits(mGrand);
       addLog('Total received: '+mGrand+' cr.','lg');
       if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       break;}
@@ -454,7 +379,7 @@ function executeBaseAction(actionId){
       G.crewHired = (G.crewHired || 3) + 1;
       addLog('Hired '+crewDisplayName(newCrew)+' ('+CREW_ROLES[chosen.key].label+'). Welcome aboard!','lg');
       if(chosen.key !== 'redshirt' && chosen.key !== 'mercenary' && chosen.key !== 'medic'){
-        addLog('Note: hired specialists start at half skill — your original crew are hard to replace.','li');
+        addLog('Note: hired specialists start at half their role training; experience must be earned.','li');
       }
       G.base.screen = 'main';
       break;}
@@ -530,7 +455,27 @@ function executeBaseAction(actionId){
       } else addLog('Need 150 cr for a Simple Handgun.','lw');
       break;
     default:
-      if(actionId.startsWith('hangar_sub_')){
+      if(actionId.startsWith('store_weapon_')){
+        if(G.mode==='base')storeShipWeapon(Number(actionId.slice(13)));
+      } else if(actionId.startsWith('store_module_')){
+        if(G.mode==='base')storeShipModule(actionId.slice(13));
+      } else if(actionId.startsWith('restore_module_')){
+        if(G.mode==='base')restoreShipModule(actionId.slice(15));
+      } else if(actionId.startsWith('sell_stored_weapon_')){
+        if(G.mode==='base')sellStoredEquipment(actionId.slice(19));
+      } else if(actionId.startsWith('sell_stored_module_')){
+        if(G.mode==='base')sellStoredEquipment(actionId.slice(19),true);
+      } else if(actionId.startsWith('ship_ammo_')){
+        const id=actionId.slice('ship_ammo_'.length),ammo=SHIP_AMMO[id];
+        if(G.mode!=='base' || !ammo) break;
+        if(!ownsShipWeapon(id)){addLog('Own an '+SHIP_WEAPONS[id].name+' before buying its ammunition.','lw');break;}
+        ensureShipSystems();
+        const count=G.ship.ammo[id]||0;
+        if(count>=ammo.capacity){addLog('Missile magazine is full.','lw');break;}
+        if(G.credits<ammo.cost){addLog('Need '+ammo.cost+' cr for an '+ammo.name+'.','lw');break;}
+        G.credits-=ammo.cost;G.ship.ammo[id]=count+1;
+        addLog(ammo.name+' loaded. Magazine '+G.ship.ammo[id]+'/'+ammo.capacity+'.','lg');
+      } else if(actionId.startsWith('hangar_sub_')){
         G.base.hangarSub = actionId.replace('hangar_sub_', '');
         G.base.subSel = 0; G.base.subScroll = 0;
       } else if(actionId.startsWith('installweapon_')){
@@ -630,6 +575,10 @@ function executeBaseAction(actionId){
         addLog('Sold '+item.name+': '+rev+' cr '+(prof>=0?'(+'+prof+' profit)':'('+prof+' loss)'),prof>=0?'lg':'lw');
         if(G.credits>=10000) addLog('10,000 cr reached visit the Science Office to retire.','lg');
       }
+  }
+  if(G.credits!==beforeCredits || G.fuel!==beforeFuel){
+    const minutes=actionId==='refuel'||actionId==='repair'||actionId.startsWith('up')||actionId.startsWith('buyweapon')?30:5;
+    recordCareerTime('services',minutes,'stations');
   }
   renderAll();
 }

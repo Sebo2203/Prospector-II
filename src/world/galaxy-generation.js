@@ -1,3 +1,7 @@
+function nebulaEntitySpawnChance(isMassive,isExpansive){
+  return isMassive?0.12:isExpansive?0.04:0.01;
+}
+
 // ═════════════════════════════════════════════════════════════════
 // END DEAD CODE — HUMANITY ARC SCREEN
 // ═════════════════════════════════════════════════════════════════
@@ -116,8 +120,7 @@ function generateGalaxy() {
   }
 
   // ── Nebula Gas Entities — predatory cloud beings ──────────────────────────
-  // Spawn 1-2 entities per game. Each inhabits a nebula region — massive nebulae
-  // always spawn one; normal/expansive nebulae have a small chance.
+  // Rare inhabitants, at most one per connected cluster; no guaranteed massive-nebula spawn.
   G.gasEntities = [];
   {
     // Collect all nebula tiles grouped by their nebula cluster (flood-fill by adjacency)
@@ -159,8 +162,8 @@ function generateGalaxy() {
       if(!tiles.length) return;
       const isMassive = tiles.some(t=>t.cell.massive);
       const isExpansive = tiles.some(t=>t.cell.expansive);
-      const spawnChance = isMassive ? 1.0 : (isExpansive ? 0.35 : 0.08);
-      if(Math.random() > spawnChance) return;
+      const spawnChance = nebulaEntitySpawnChance(isMassive,isExpansive);
+      if(Math.random() >= spawnChance) return;
       // Pick a random tile in this cluster as spawn point
       const tile = tiles[Math.floor(Math.random()*tiles.length)];
       const variant = tiles[0].cell.nebulaVariant || 'pink';
@@ -506,12 +509,12 @@ function generateGalaxy() {
 
   // Pirate ship classes — strength scales with distance from friendly starbase
   const PIRATE_CLASSES = [
-    { name:'Corvette',       hp:30,  maxHp:30,  atk:4,  engineRating:3, shields:0, maxShields:0, guns:1 },
-    { name:'Frigate',        hp:50,  maxHp:50,  atk:6,  engineRating:3, shields:0, maxShields:0, guns:1 },
-    { name:'Cruiser',        hp:80,  maxHp:80,  atk:9,  engineRating:2, shields:1, maxShields:1, guns:2 },
-    { name:'Heavy Cruiser',  hp:120, maxHp:120, atk:12, engineRating:2, shields:2, maxShields:2, guns:2 },
-    { name:'Battleship',     hp:180, maxHp:180, atk:16, engineRating:1, shields:3, maxShields:3, guns:3 },
-    { name:'Flagship',       hp:260, maxHp:260, atk:21, engineRating:1, shields:5, maxShields:5, guns:4 },
+    { combatTactic:'brawler', name:'Corvette',       hp:30,  maxHp:30,  atk:4,  engineRating:3, shields:0, maxShields:0, guns:1 },
+    { combatTactic:'skirmisher', name:'Frigate',        hp:50,  maxHp:50,  atk:6,  engineRating:3, shields:0, maxShields:0, guns:1 },
+    { combatTactic:'sniper', name:'Cruiser',        hp:80,  maxHp:80,  atk:9,  engineRating:2, shields:1, maxShields:1, guns:2 },
+    { combatTactic:'brawler', name:'Heavy Cruiser',  hp:120, maxHp:120, atk:12, engineRating:2, shields:2, maxShields:2, guns:2 },
+    { combatTactic:'brawler', name:'Battleship',     hp:180, maxHp:180, atk:16, engineRating:1, shields:3, maxShields:3, guns:3 },
+    { combatTactic:'sniper', name:'Flagship',       hp:260, maxHp:260, atk:21, engineRating:1, shields:5, maxShields:5, guns:4 },
   ];
   // Pirates start spawning at turn 50 — none at game start
   G.pirates = [];
@@ -555,6 +558,7 @@ function generateGalaxy() {
     const ns = {
       x:nx2, y:ny2,
       type:tmpl.type, name:tmpl.name,
+      engineRating:NEUTRAL_ENGINE_RATINGS[tmpl.type],
       speed:1, rescueCost:tmpl.rescueCost, fuelGift:tmpl.fuelGift,
       rescuing:false,
       // cargo/trader: shuttle between bases; 0=heading to base1, 1=heading to base2
@@ -583,11 +587,17 @@ function generateGalaxy() {
 
   revealAround(bx, by, 5);
   revealAround(b2x, b2y, 1);
+  placeQuarantineShip();
   addLog('Docked at '+grid[by][bx].name+'. Ready for departure.','li');
   addLog('Fly to a star system and press Enter to enter orbit.','li');
 }
 
 function revealAround(cx,cy,r){
+  if(G.shipStats && effectiveSensorRange()===0 && !DEBUG.fullVision) return;
+  function revealTile(x,y){
+    const index=y*MAP_W+x;
+    G.visited[index]=true;
+  }
   // Nebula tiles are visible (border shows) but block vision behind them
   function isNebula(x,y){
     if(x<0||x>=MAP_W||y<0||y>=MAP_H) return false;
@@ -595,7 +605,7 @@ function revealAround(cx,cy,r){
   }
 
   // Always reveal the origin tile
-  G.visited[cy*MAP_W+cx]=true;
+  revealTile(cx,cy);
 
   // Shadowcasting — 8 octants
   function castLight(row,start,end,radius,xx,xy,yx,yy){
@@ -612,7 +622,7 @@ function revealAround(cx,cy,r){
         const ax=cx+dx*xx+dy*xy;
         const ay=cy+dx*yx+dy*yy;
         if(dx*dx+dy*dy<=r2){
-          if(ax>=0&&ax<MAP_W&&ay>=0&&ay<MAP_H) G.visited[ay*MAP_W+ax]=true;
+          if(ax>=0&&ax<MAP_W&&ay>=0&&ay<MAP_H) revealTile(ax,ay);
         }
         if(blocked){
           if(isNebula(ax,ay)){ newStart=rSlope; continue; }
@@ -631,5 +641,6 @@ function revealAround(cx,cy,r){
   const mult=[[1,0,0,-1,-1,0,0,1],[0,1,-1,0,0,-1,1,0],[0,1,1,0,0,-1,-1,0],[1,0,0,1,-1,0,0,-1]];
   for(let oct=0;oct<8;oct++)
     castLight(1,1.0,0.0,r,mult[0][oct],mult[1][oct],mult[2][oct],mult[3][oct]);
+  revealQuarantineShip();
 }
 

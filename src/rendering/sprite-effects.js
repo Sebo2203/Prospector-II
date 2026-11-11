@@ -3,14 +3,48 @@ function drawSprite(key, x, y, fallbackColor){
     drawAsciiTile(key, x, y, null);
     return;
   }
+  drawSpriteGraphic(ctx,key,x,y,fallbackColor);
+}
+
+function drawSpriteGraphic(target,key,x,y,fallbackColor){
   if(IMG[key] instanceof HTMLCanvasElement){
-    ctx.drawImage(IMG[key], x, y, TS, TS);
+    target.drawImage(IMG[key], x, y, TS, TS);
   } else if(IMG[key] && IMG[key].complete && IMG[key].naturalWidth>0){
-    ctx.drawImage(IMG[key], x, y, TS, TS);
+    target.drawImage(IMG[key], x, y, TS, TS);
   } else if(fallbackColor){
-    ctx.fillStyle = fallbackColor;
-    ctx.fillRect(x, y, TS, TS);
+    target.fillStyle = fallbackColor;
+    target.fillRect(x, y, TS, TS);
   }
+}
+
+const TERRAIN_GRAIN_TEXTURES = new Set(['desert_floor','frozen_floor']);
+const WRAPPED_TERRAIN_TEXTURES = new WeakMap();
+function drawTerrainSprite(key, x, y, mx, my, fallbackColor){
+  const source = IMG[key];
+  if(OPTIONS.asciiMode || !TERRAIN_GRAIN_TEXTURES.has(key) || !(source?.naturalWidth || source instanceof HTMLCanvasElement)){
+    drawSprite(key,x,y,fallbackColor);
+    return;
+  }
+
+  // Sample the original grain from different offsets to break up tile repetition.
+  // World coordinates keep the grain fixed as the camera moves.
+  let texture = WRAPPED_TERRAIN_TEXTURES.get(source);
+  if(!texture){
+    texture = document.createElement('canvas');
+    texture.width = texture.height = TS*2;
+    const paint = texture.getContext('2d');
+    for(const dy of [0,TS]) for(const dx of [0,TS]) paint.drawImage(source,dx,dy,TS,TS);
+    WRAPPED_TERRAIN_TEXTURES.set(source,texture);
+  }
+  const phase = Math.imul(mx+1,0x9e3779b1) ^ Math.imul(my+1,0x85ebca77);
+  ctx.drawImage(texture,(phase>>>0)%TS,(phase>>>16)%TS,TS,TS,x,y,TS,TS);
+}
+
+function drawTerrainFloor(tileType, x, y, mx, my, fallbackColor){
+  const info = TILE[tileType];
+  if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx,x,y);
+  else if(OPTIONS.asciiMode) drawAsciiTile(tileType,x,y,fallbackColor);
+  else drawTerrainSprite(info?.sprite || tileType,x,y,mx,my,fallbackColor);
 }
 
 const CHROMA_SPRITE_CACHE = {};
@@ -119,28 +153,40 @@ function drawSpriteDarkMatteKeyed(key, x, y, fallbackColor){
   }
 }
 
-// Draw a sprite with a colour tint — multiply blend keeps darks black, shifts lights
-function drawSpriteTinted(key, x, y, tintColor){
-  if(OPTIONS.asciiMode){
-    drawAsciiTile(key, x, y, null, tintColor);
-    return;
+// Tint source pixels in an isolated cache, preserving the source alpha exactly.
+// Multiplying on the map canvas would also tint/replace the terrain behind a ship.
+const TINTED_SPRITE_CACHE = new WeakMap();
+function tintedSpriteImage(source,tintColor){
+  let colors=TINTED_SPRITE_CACHE.get(source);
+  if(!colors){colors=new Map();TINTED_SPRITE_CACHE.set(source,colors);}
+  if(colors.has(tintColor))return colors.get(tintColor);
+  const off=document.createElement('canvas');
+  off.width=source.naturalWidth||source.width;off.height=source.naturalHeight||source.height;
+  const paint=off.getContext('2d');
+  paint.fillStyle=tintColor;paint.fillRect(0,0,1,1);
+  const tint=paint.getImageData(0,0,1,1).data;
+  paint.clearRect(0,0,off.width,off.height);paint.drawImage(source,0,0);
+  const data=paint.getImageData(0,0,off.width,off.height),pixels=data.data;
+  for(let i=0;i<pixels.length;i+=4)for(let channel=0;channel<3;channel++){
+    // A restrained tint retains metallic hull shading and warm engine colors.
+    pixels[i+channel]=Math.round(pixels[i+channel]*(0.65+0.35*tint[channel]/255));
   }
-  if(IMG[key] && IMG[key].complete && IMG[key].naturalWidth>0){
-    // Black background so dark sprite pixels stay dark
-    ctx.fillStyle = '#04040c';
-    ctx.fillRect(x, y, TS, TS);
-    // Draw sprite normally first
-    ctx.drawImage(IMG[key], x, y, TS, TS);
-    // Multiply blend: black stays black, white becomes tint color, mid tones shift
-    ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = tintColor;
-    ctx.fillRect(x, y, TS, TS);
-    ctx.restore();
-  } else {
-    ctx.fillStyle = tintColor;
-    ctx.fillRect(x, y, TS, TS);
-  }
+  paint.putImageData(data,0,0);colors.set(tintColor,off);return off;
+}
+function drawSpriteTinted(key, x, y, tintColor, opacity=1){
+  if(!OPTIONS.asciiMode && drawTintedSpriteGraphic(ctx,key,x,y,tintColor,opacity)) return;
+  drawAsciiTile(key, x, y, null, tintColor);
+}
+
+function drawTintedSpriteGraphic(target,key,x,y,tintColor,opacity=1){
+  const source=IMG[key];
+  if(!(source instanceof HTMLCanvasElement || source?.complete && source.naturalWidth>0)) return false;
+  target.save();
+  target.globalAlpha*=opacity;
+  target.imageSmoothingEnabled=false;
+  target.drawImage(tintedSpriteImage(source,tintColor),Math.round(x),Math.round(y),TS,TS);
+  target.restore();
+  return true;
 }
 
 // -- Procedural draw helpers (used for galaxy tiles & effects) ---

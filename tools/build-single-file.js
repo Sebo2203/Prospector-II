@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { gameVersion, versionSource, syncVersions } = require('./version');
 
 const root = path.resolve(__dirname, '..');
 
@@ -57,13 +58,15 @@ function build(projectRoot = root) {
     }
   }
   visit('src');
-  return assemble(template, manifest, read);
+  const version = gameVersion(projectRoot);
+  return assemble(versionSource(template, version), manifest, file => versionSource(read(file), version));
 }
 
 if (require.main === module) {
   try {
     const args = process.argv.slice(2);
     if (args.some(arg => arg !== '--check') || args.length > 1) throw new Error('Usage: node tools/build-single-file.js [--check]');
+    syncVersions(root, args.includes('--check'));
     const output = build();
     const target = path.join(root, 'index.html');
     if (args.includes('--check')) {

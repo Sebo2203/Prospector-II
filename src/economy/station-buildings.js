@@ -15,14 +15,15 @@ const STATION_BUILDINGS = [
         return [
           { label: 'Maintenance',   detail: 'Refuel and repair your hull',          id:'hangar_sub_maintenance' },
           { label: 'Upgrades',      detail: 'Hull, fuel, engines, shields, sensors',  id:'hangar_sub_upgrades'    },
+          { label:'Refit layout',detail:'Remove purchased refits to reclaim shared space',id:'hangar_sub_refits'},
           { label: 'Armament',      detail: 'Install and upgrade weapons',          id:'hangar_sub_armament'    },
-          { label: 'Modules',       detail: 'Ship systems and special equipment',   id:'hangar_sub_modules'     },
+          { label: 'Modules',       detail: 'Utility equipment',   id:'hangar_sub_modules'     },
+          { label: 'Core Systems', detail:'Inspect and repair engines, reactor, shields, cooling, sensors and tank', id:'ship_systems' },
           { label: 'Change Hull',   detail: 'Switch to a different ship class',     id:'changehull'             },
         ];
       }
 
       const cls = SHIP_CLASSES[ss.classId] || SHIP_CLASSES.LIGHT_SCOUT;
-      const hasEngineer = G.crew.some(c=>c.role==='engineer'&&c.hp>0);
 
       if(hangarSub === 'maintenance'){
         const fuelCost = Math.round((G.maxFuel-G.fuel)*0.8);
@@ -37,24 +38,8 @@ const STATION_BUILDINGS = [
         return rows;
       }
 
-      if(hangarSub === 'upgrades'){
-        const hullAtMax   = G.ship.maxHp >= ss.maxUpgradeHp;
-        const fuelAtMax   = G.maxFuel    >= ss.maxUpgradeFuel;
-        const sensorAtMax = ss.sensorRange >= (ss.maxUpgradeSensor ?? cls.sensorRange + 2);
-        const shieldAtMax = ss.shields >= ss.maxShields;
-        const cargoMax   = { LIGHT_SCOUT:1, BULK_FREIGHTER:15, ATTACK_CORVETTE:1 };
-      const cargoAtMax  = ss.cargoCapacity >= (cargoMax[ss.classId]||0);
-        return [
-          { label: '← Back',              detail: '',                                                                                                                                                   id:'hangar_sub_top' },
-          { label: 'Upgrade hull plating', detail: hullAtMax   ? 'Max ('+ss.maxUpgradeHp+' HP)'         : hasEngineer ? '200 cr → max HP +20 ('+G.ship.maxHp+'/'+ss.maxUpgradeHp+')'      : 'Needs Engineer', id:'uphull',    disabled: hullAtMax   || !hasEngineer },
-          { label: 'Upgrade fuel tank',    detail: fuelAtMax   ? 'Max ('+ss.maxUpgradeFuel+')'           : hasEngineer ? '250 cr → max fuel +20 ('+G.maxFuel+'/'+ss.maxUpgradeFuel+')'     : 'Needs Engineer', id:'upfuel',    disabled: fuelAtMax   || !hasEngineer },
-          { label: 'Upgrade shields',      detail: shieldAtMax ? 'Max ('+ss.maxShields+')'               : ss.maxShields===0 ? 'Hull cannot mount shields'
-                                                               : hasEngineer ? '350 cr → +1 shield ('+ss.shields+'/'+ss.maxShields+')'                                                     : 'Needs Engineer', id:'upshield',  disabled: shieldAtMax || ss.maxShields===0 || !hasEngineer },
-          { label: 'Upgrade sensors',      detail: sensorAtMax ? 'Max'                                   : '400 cr → range +1 (currently '+ss.sensorRange+')',                                          id:'upsensor',  disabled: sensorAtMax },
-          { label: 'Upgrade cargo hold',   detail: cargoAtMax  ? 'Max'                                   : hasEngineer ? '300 cr → +10 capacity ('+ss.cargoCapacity+')'                    : 'Needs Engineer', id:'upcargo',   disabled: cargoAtMax  || !hasEngineer },
-          { label: 'Upgrade engines',   detail: (()=>{ const cap=ss.maxUpgradeEngine??ss.engineRating; return ss.engineRating>=cap ? 'Max (rating '+cap+')' : hasEngineer ? '450 cr → engine +1 ('+ss.engineRating+'/'+cap+')' : 'Needs Engineer'; })(),  id:'upengine',  disabled: (ss.engineRating>=(ss.maxUpgradeEngine??ss.engineRating)) || !hasEngineer },
-        ];
-      }
+      if(hangarSub==='upgrades')return hullRefitRows();
+      if(hangarSub==='refits')return hullRefitRows(true);
 
       if(hangarSub === 'armament'){
         const weaponAtMax = ss.weaponSlots >= ss.maxWeaponSlots;
@@ -65,15 +50,23 @@ const STATION_BUILDINGS = [
             const wdef = wid ? SHIP_WEAPONS[wid] : null;
             const locked = slot >= ss.weaponSlots;
             return {
-              label: 'Slot ['+(slot+1)+'] '+(wdef ? wdef.name : 'empty'),
-              detail: locked ? 'Locked — add weapon slot first' : wdef ? wdef.minDmg+'–'+wdef.maxDmg+' dmg — press Enter to replace' : 'No weapon installed',
+              label: 'Mount ['+(slot+1)+'] '+(wdef ? wdef.name : 'empty'),
+              detail: (['','Light','Medium','Heavy'][shipMountSize(slot)])+' mount · '+(locked ? 'Locked — unlock mount first' : wdef ? wdef.minDmg+'–'+wdef.maxDmg+' dmg — Enter to replace' : 'No weapon installed'),
               id: 'installweapon_'+slot,
               disabled: locked,
             };
           }),
-          { label: 'Add weapon slot',
-            detail: weaponAtMax ? 'Max ('+ss.maxWeaponSlots+')' : hasEngineer ? '500 cr → unlock slot ('+ss.weaponSlots+'/'+ss.maxWeaponSlots+')' : 'Needs Engineer',
-            id:'upwslot', disabled: weaponAtMax || !hasEngineer },
+          { label: 'Unlock weapon mount',
+            detail: hullRefitPreview('upwslot').reason || '500 cr → unlock slot ('+ss.weaponSlots+'/'+ss.maxWeaponSlots+') · 3 space',
+            id:'upwslot', disabled: !!hullRefitPreview('upwslot').reason },
+          ...(G.installedWeapons||[]).flatMap((id,slot)=>id?[{label:'Store mount ['+(slot+1)+'] '+SHIP_WEAPONS[id].name,detail:'Keep this weapon at this station; refit it later free.',id:'store_weapon_'+slot}]:[]),
+          ...Object.values(SHIP_WEAPONS).filter(weapon=>ownedShipWeaponCount(weapon.id)).map(weapon=>({
+            label:'Sell stored '+weapon.name,detail:ownedShipWeaponCount(weapon.id)+' owned here · '+Math.floor(weapon.cost/2)+' cr each',id:'sell_stored_weapon_'+weapon.id})),
+          ...Object.entries(SHIP_AMMO).map(([id,ammo])=>({
+            label:'Buy '+ammo.name,
+            detail:!ownsShipWeapon(id)?'Requires an owned '+SHIP_WEAPONS[id].name:ammo.cost+' cr each · Magazine '+(G.ship.ammo?.[id]||0)+'/'+ammo.capacity,
+            id:'ship_ammo_'+id,disabled:!ownsShipWeapon(id)||(G.ship.ammo?.[id]||0)>=ammo.capacity,
+          })),
         ];
       }
 
@@ -88,8 +81,8 @@ const STATION_BUILDINGS = [
         const rows = [
           { label: '← Back', detail: '', id:'hangar_sub_top' },
           { label: 'Add module slot',
-            detail: moduleAtMax ? 'Max ('+ss.maxModuleSlots+')' : hasEngineer ? '500 cr → unlock slot ('+moduleSlots+'/'+ss.maxModuleSlots+')' : 'Needs Engineer',
-            id:'upmodslot', disabled: moduleAtMax || !hasEngineer },
+            detail: hullRefitPreview('upmodslot').reason || '500 cr → unlock slot ('+moduleSlots+'/'+ss.maxModuleSlots+') · 2 space',
+            id:'upmodslot', disabled: !!hullRefitPreview('upmodslot').reason },
         ];
         // Fuel Scoop availability — 60% chance per station visit, seeded by station+turn
         if(G.base._scoopStock === undefined){
@@ -138,6 +131,12 @@ const STATION_BUILDINGS = [
             });
           }
         });
+        for(const id of G.installedModules)rows.push({label:'Store '+HULL_MODULES[id].name,detail:'Keep this module at this station.',id:'store_module_'+id});
+        for(const [id,module] of Object.entries(HULL_MODULES))if(stationEquipmentStore().modules.includes(id)){
+          rows.push({label:'Fit owned '+module.name,detail:'Free · stored at this station',id:'restore_module_'+id,
+            disabled:G.installedModules.includes(id)||G.installedModules.length>=G.shipStats.moduleSlots});
+          rows.push({label:'Sell stored '+module.name,detail:Math.floor(module.price/2)+' cr',id:'sell_stored_module_'+id});
+        }
         return rows;
       }
 
@@ -150,7 +149,7 @@ const STATION_BUILDINGS = [
     desc: 'Sell samples, pick up missions',
     col: '#88ffaa',
     actions: () => {
-      const cargo = G.inventory.filter(i=>i.value>0 && !i.isCapturedCreature);
+      const cargo = scienceSaleItems();
       const total = cargo.reduce((s,i)=>s+(i.value||0),0);
       const surveyTotal = getPendingSurveySaleValue();
       const grandTotal = total + surveyTotal;
@@ -225,6 +224,7 @@ const STATION_BUILDINGS = [
         { label: 'Browse '+(corp?.name||'Corp')+' Store', detail: 'exclusive equipment & tech', id:'science_corp_sub' },
         { label: 'File for retirement', detail: G.credits+' cr — end your career here', id:'retire' },
       ];
+      if(jobState.active) actions.splice(2,0,{label:'Relinquish research contract',detail:'No reward; returned cargo and normal cooldown apply',id:'science_abandon'});
       if(isMargo && capturedSpecimens.length > 0){
         actions.splice(1, 0, { label: 'Sell captured specimens ('+capturedSpecimens.length+')', detail: capturedSpecimens.reduce((s,c)=>s+c.bounty,0)+' cr total — live specimen bounties', id:'sell_specimens' });
       } else if(isMargo && capturedSpecimens.length === 0){

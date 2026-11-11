@@ -3,6 +3,12 @@
 // ─────────────────────────────────────────────────────────────────
 function doInteract(){
   if(G.dead||G.retired) return;
+  if(G.debugPalette && G.mode==='planet'){
+    const sample=G.planets[G.curPlanet]?.grid[G.player.y]?.[G.player.x];
+    if(sample?.debugCommodity){addCargo(makeCommodityItem(sample.debugCommodity,'palette',0));renderAll();return;}
+  }
+  if(quarantineAtShip()){ boardQuarantineShip(); return; }
+  if(quarantineInterior()){ interactQuarantine(); return; }
   if(G.mode==='planet' && G.planets[G.curPlanet]?.isCasino){
     casinoInteractAtPlayer(); renderAll(); return;
   }
@@ -11,7 +17,7 @@ function doInteract(){
   if(G.mode==='galaxy'){
     // Check for floating nebula loot at current tile first
     const lootHere = (G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
-    if(lootHere){
+    if(lootHere && (G.cargo.length<(G.shipStats.cargoCapacity||0) || G.galaxy[G.ship.y][G.ship.x].type!=='BASE')){
       collectNebulaLootAt(G.ship.x, G.ship.y);
       return;
     }
@@ -20,8 +26,16 @@ function doInteract(){
       addLog(cell.name+': rotating neutron star. Sensors overwhelmed by electromagnetic output.','lm');
       addLog('Science: pulsar period measured. Do NOT linger — radiation accumulates each turn.','lw');
       const sciCrew = G.crew.filter(c=>c.hp>0&&c.role==='scientist');
-      if(sciCrew.length) sciCrew.forEach(c=>giveSkillXP(c,'sci',2));
+      // A repeat measurement is real field work: time, fuel, radiation and NPCs act.
+      doWaitGalaxy('scan');
+      if(!G.dead) sciCrew.forEach(c=>giveSkillXP(c,'sci',2));
       renderAll(); return;
+    }
+    if(['SYSTEM','ROGUE_PLANET'].includes(cell.type)){
+      if(effectiveSensorRange()===0 && !cell.orbitalCharted && !DEBUG.fullVision){
+        addLog('Sensors offline. Restore sensors to chart unfamiliar orbits.','lw');renderAll();return;
+      }
+      cell.orbitalCharted=true;
     }
     if(cell.type==='ROGUE_PLANET'){
       // Enter orbit — behaves exactly like a 1-planet system but no star, no orrery
@@ -37,9 +51,9 @@ function doInteract(){
       if((G.stationReputation||0) <= -40){
         addLog(cell.name+': "Hostile transponder detected. You are banned from this station!"','lc');
         const dmg = 10 + rnd(15);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const hull=absorbShipHit(G.ship,dmg,'station defense turrets');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
-        addLog('Station defense turrets open fire! Hull takes '+dmg+' damage!','lc');
+        addLog('Station defense turrets open fire! '+dmg+' damage ('+hull+' hull).','lc');
         if(G.ship.hp<=0){
           G.dead=true;
           G.deathCause='The ship was destroyed by defense turrets at '+cell.name+'.';
@@ -57,6 +71,8 @@ function doInteract(){
         pawnStock: generatePawnStock(cell.name),
         medbayStock: generateMedbayStock(cell.name),
       };
+      recordCareerTime('docking',15,'stations');
+      settlePirateBountiesAtStation(cell.name);
       G._drinkCount = 0;
       ensureCrewMoraleState();
       updateCrewLowMoraleFlags();
@@ -75,6 +91,7 @@ function doInteract(){
       updateCrewLowMoraleFlags();
       SFX.dock();
       addLog('Docked at '+cell.name+'.','li');
+      settleQuarantineAtStation(cell.name);
       // Mystery package delivery
       if(cell.name === 'Waypoint Omega'){
         const pkgIdx = (G.cargo||[]).findIndex(i=>i.questItem==='mystery_delivery');
@@ -101,6 +118,8 @@ function doInteract(){
           }));
           addLog('Secured data box delivered to '+cell.name+'. +' + reward + ' cr.','lg');
           if(!(sj.completedTypes||[]).includes(sj.active.type)) sj.completedTypes.push(sj.active.type);
+          sj.lastType=sj.active.type;
+          recordExpeditionEvent((sj.active.id||'science:legacy:'+sj.completed)+':complete','contract','Delivered secured data to '+cell.name+'. Earned '+reward+' cr.');
           sj.active = null;
           sj.cooldownUntil = G.turn + rollScienceJobCooldown();
           sj.completed = (sj.completed||0) + 1;
@@ -115,6 +134,7 @@ function doInteract(){
     } else if(cell.type==='CASINO'){
       const key='casino:'+G.ship.x+','+G.ship.y;
       if(!G.planets[key]) generateCasinoStationMap(key);
+      recordCareerTime('docking',15,'stations');
       G.mode='planet'; G.curPlanet=key; G.curSystem='';
       G.player={x:5,y:10,hp:G.crew.filter(c=>c.hp>0)[0]?.hp||10};
       G.casino = { screen:'main', sel:0, arenaPhase:null, arenaEnemy:null, arenaLog:[], betSel:0 };
@@ -206,6 +226,7 @@ function doInteract(){
 }
 
 function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
+    if(G.debugPalette && pDesc.biome==='CAVE') G._caveReturn={planet:G.debugPalette.surfaceKey,x:2,y:2};
     // Generate terrain first time
     if(!G.planets[pKey] ||
        ((pDesc.biome==='ANCIENT_STATION'||pDesc.isAncientStation) && !G.planets[pKey].isAncientStation) ||
@@ -224,6 +245,7 @@ function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
       else generatePlanet(pKey, pDesc.biome);
     }
 
+    recordCareerTime('travel',15,'space');
     G.mode='planet';
     G.examine = null;
     G.rangeTarget = null;
@@ -278,11 +300,11 @@ function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
       const bestNav = Math.max(0, ...(G.crew.filter(c=>c.hp>0).map(c=>c.skills?.nav||0)));
       const roughChance = Math.max(0, 0.25 - bestNav * 0.03);
       if(Math.random() < roughChance){
-        const dmg = 3 + rnd(8);
-        if(!DEBUG.infiniteHull) G.ship.hp = Math.max(0, G.ship.hp - dmg);
+        const dmg=Math.max(1,Math.round((3+rnd(8))*hullSize()));
+        const hull=damagePlayerShipHull(dmg,'rough landing');
         if(dmg>0) SFX.hullHit && SFX.hullHit();
-        addLog('Rough landing! Hull takes '+dmg+' damage.','lc');
-        // Rough landing is a hard lesson — best navigator learns more
+        addLog('Rough landing! '+hull+' hull damage (shields bypassed; size ×'+hullSize()+').',hull>0?'lc':'lw');
+        // Every rough approach is a hard lesson; the next launch still costs fuel.
         const navCrew = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.nav||0)-(a.skills?.nav||0))[0];
         if(navCrew) giveSkillXP(navCrew, 'nav', 3);
         if(G.ship.hp<=0){
@@ -290,7 +312,7 @@ function doLandOnPlanet(pKey, pDesc, landingX=null, landingY=null){
           renderAll(); return;
         }
       } else {
-        // Clean landing — 1 XP for best navigator
+        // Repeated clean approaches train too: each launch spends fuel.
         const navCrew = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.nav||0)-(a.skills?.nav||0))[0];
         if(navCrew) giveSkillXP(navCrew, 'nav', 1);
         if(bestNav >= 5) addLog('Clean approach — smooth landing.','li');

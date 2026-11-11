@@ -53,6 +53,7 @@ function planetPhase(key){
 // Returns a continuous vision radius (float) based on exact position in the day cycle.
 // Full day = 10 tiles, full night = 1 tile, smooth cosine curve between them.
 function planetVisionRadius(key){
+  if(G?.debugPalette && DEBUG.fullVision) return 10;
   const pdata = G.planets[key];
   if(!pdata) return 10;
   if(pdata.isCasino) return 10;

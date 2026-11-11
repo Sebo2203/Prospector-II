@@ -1,8 +1,11 @@
 function initGame(chosenClass, captainName, shipName) {
+  beginAutosaveCareer();
+  if(debugPaletteReturn) debugReturnFromPalette(false);
   const cls = chosenClass || 'LIGHT_SCOUT';
   G = {
     mode:     'galaxy',   // galaxy | system | planet | base | inventory
     turn:     1,
+    careerTime:newCareerTime(),
     seed:     Math.floor(Math.random() * 0xFFFFFF), // per-run market price seed
     credits:  500,
     oxygen:   100,
@@ -11,6 +14,7 @@ function initGame(chosenClass, captainName, shipName) {
     ship:     { hp:100, maxHp:100, x:0, y:0 },
     shipName: 'Unnamed Vessel',
     shipStats: null,  // populated below from SHIP_CLASSES
+    shipRefits:{},hangarStores:{},
     base:     { screen:'main', sel:0, subSel:0 },
     crew: [],
     inventory:   [],
@@ -34,6 +38,7 @@ function initGame(chosenClass, captainName, shipName) {
     _crewExamine: false,
     dead:        false,
     deathCause:  '',
+    crewDeaths:  0,
     retired:     false,
     showOptions: false,
     scanViewKey:  '',    // planet key being previewed in scan view
@@ -48,10 +53,12 @@ function initGame(chosenClass, captainName, shipName) {
     installedWeapons: [], // array of weapon IDs, one per active slot
     pirates:     [],
     pirateBases: [],
+    baseMissiles:[],
     neutralShips:[],
     gasEntities: [],   // Nebula gas entities, predatory cloud beings
     nebulaLoot:  [],   // Uncollected nebula crystals left at combat sites
     scienceJob:  { active:null, cooldownUntil:0, nextIndex:rnd(SCIENCE_JOB_TYPES.length), completed:0, completedTypes:[] },
+    pirateBounties:{credits:0,kills:0},
     shipCombat:  null,
     stranded:    null,   // null | { sos, turnsStranded, rescueShip, rescuePhase }
     _voidPrompt: null,   // null | { dx, dy } — pending Y/N before stepping into lethal void
@@ -74,9 +81,7 @@ function initGame(chosenClass, captainName, shipName) {
   G.crew = [
     randomCrewMember('captain'),
     randomCrewMember('scout'),
-    randomCrewMember('engineer'),
   ];
-  if(cls === 'LIGHT_SCOUT') G.crew.push(randomCrewMember('scientist'));
   G.crewHired = G.crew.length;       // total crew ever hired (including starting crew)
   G.creditsEarned = 500; // track all credits received (starting credits count)
   // Special planets roll independently per planet at galaxy gen time (see generateGalaxy).
@@ -91,13 +96,10 @@ function initGame(chosenClass, captainName, shipName) {
   G.ship.hp     = G.ship.maxHp;
   G.maxFuel     = G.shipStats.maxFuel;
   G.fuel        = G.maxFuel;
+  ensureShipSystems();
   G.weaponLevel = G.shipStats.weaponSlots > 0 ? 1 : 0; // legacy
-  // Default loadout by hull type
-  G.installedWeapons = [];
-  if(G.shipStats.weaponSlots > 0){
-    // Corvette starts with a railgun — it's a combat ship
-    G.installedWeapons[0] = (G.shipStats.classId === 'ATTACK_CORVETTE') ? 'railgun' : 'mass_driver';
-  }
+  // Starting packages are separate from the bare hulls sold in the shipyard.
+  G.installedWeapons = [...(STARTER_SHIP_WEAPONS[G.shipStats.classId]||[])];
   G.installedModules = [];
   G.shipName    = shipName || 'Unnamed Vessel';
   trackEvent('new_game_started', analyticsBaseParams({
@@ -116,19 +118,5 @@ function initGame(chosenClass, captainName, shipName) {
     addLog('A sealed package sits in your hold. Deliver it to Waypoint Omega for 300 cr.','lw');
   }
   loadSprites().then(()=>{ restoreGameUI(); generateGalaxy(); renderAll(); });
-
-  // Build gauge tick marks (at 25%, 50%, 75%)
-  ['fuel-ticks','oxy-ticks'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.innerHTML='';
-    [25,50,75].forEach(pct=>{
-      const tick=document.createElement('div');
-      tick.className='gauge-tick';
-      tick.style.bottom=pct+'%';
-      el.appendChild(tick);
-    });
-  });
-
 }
 

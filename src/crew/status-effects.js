@@ -293,7 +293,9 @@ function applyCrewMovementInjuryCosts(){
     const c = hurtMovers[rnd(hurtMovers.length)];
     addLog(crewDisplayName(c)+' struggles through pain from a leg injury.','lw');
   }
-  if(G.mode === 'planet'){
+  // Exertion draws suit oxygen only where the crew cannot breathe the air.
+  // Otherwise every step undoes recovery and announces a refill next turn.
+  if(G.mode === 'planet' && (atmosphereBiome(G.curPlanet).oxyDrain > 0 || G.underwater)){
     G.oxygen = Math.max(0, DEBUG.infiniteOxy ? G.oxygen : G.oxygen - hurtMovers.length * 0.2);
   }
 }
@@ -435,7 +437,7 @@ function applyHallucinogenicExposure(){
       const target = living.length ? living[rnd(living.length)] : null;
       if(target){
         if(Math.random() < 0.55){
-          target.moraleBase = Math.max(0, (target.moraleBase || 55) - (1 + rnd(3)));
+          target.moraleBase = Math.max(0, (target.moraleBase ?? 55) - (1 + rnd(3)));
           addLog(crewDisplayName(target)+' nearly loses composure.','lw');
         } else {
           const dmg = 1 + rnd(strength);
@@ -537,7 +539,8 @@ function maybeSpreadDisease(source, id, chance){
   return true;
 }
 
-function tickCrewStatuses(context){
+function tickCrewStatuses(){
+  tickQuarantineIncident();
   ensureCrewStatusState();
   if(!G?.crew) return;
   G.crew.forEach(c=>{
@@ -599,7 +602,7 @@ function tickCrewStatuses(context){
           s.tick = 0;
           const dmg = Math.max(1, Math.floor(sev / 2));
           if(!DEBUG.infiniteCrewHp) c.hp = Math.max(0, c.hp - dmg);
-          c.moraleBase = Math.max(0, (c.moraleBase || 55) - 1);
+          c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 1);
           addLog(crewDisplayName(c)+' is burning with fever. -'+dmg+' HP.','lw');
         }
         s.progressCounter = (s.progressCounter || 0) + 1;
@@ -689,7 +692,7 @@ function tickCrewStatuses(context){
         s.painCounter = (s.painCounter || 0) + 1;
         if(s.painCounter >= 18){
           s.painCounter = 0;
-          c.moraleBase = Math.max(0, (c.moraleBase || 55) - 1);
+          c.moraleBase = Math.max(0, (c.moraleBase ?? 55) - 1);
           const def = CREW_STATUS_DEFS[s.id] || { label:'injury' };
           addLog(crewDisplayName(c)+' is worn down by untreated '+def.label.toLowerCase()+'.','lw');
           if(s.id === 'burns') maybeExposeCrewToInfection(c, 0.02, 'burns',

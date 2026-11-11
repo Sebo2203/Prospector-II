@@ -43,6 +43,7 @@ function randomCrewMember(roleKey){
     grief:       0,
     drinkGlow:   0,
     drugRush:    0,
+    eventMorale: 0,
     lowMoraleSince: null,
     unpaidDocks: 0,
     statuses:    {},

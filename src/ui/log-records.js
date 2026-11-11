@@ -1,0 +1,105 @@
+// The existing LOG tab owns all history and reference records. Saved encounter
+// facts remain separate from transient messages, then join them for display.
+const LOG_FILTERS=[
+  {id:'all',label:'ALL'},{id:'mission',label:'MISSION'},{id:'combat',label:'COMBAT'},
+  {id:'crew',label:'CREW'},{id:'critical',label:'CRITICAL'},{id:'records',label:'RECORDS'},
+];
+
+function careerLogEntries(){
+  return (G?.expedition?.events||[]).slice().reverse().map(event=>({
+    msg:event.text,turn:event.turn,cls:event.kind==='consequence'?'lg':'li',
+    category:'mission',recordId:event.id,
+  }));
+}
+
+function currentLogRecords(){
+  const state=ensureExpeditionState(),active=[],rows=[];
+  const record=msg=>({msg,turn:G.turn,cls:'li'});
+  const add=msg=>rows.push(record(msg));
+  const addActive=msg=>active.push(record(msg));
+  if(G.pirateBounties?.kills)addActive('PIRATE BOUNTIES: '+G.pirateBounties.credits+' cr pending for '+G.pirateBounties.kills+' kills and assets. Collect by docking at a major station.');
+  add('CAREER TIME: '+formatCareerDuration(G.careerTime?.minutes||0));
+  for(const key of CAREER_TIME_LOCATIONS)add(key.toUpperCase()+': '+formatCareerDuration(G.careerTime?.locations[key]||0));
+  const science=ensureScienceJobState();
+  if(science.active){
+    const job=science.active;
+    addActive('SCIENCE CONTRACT: '+scienceJobDetail()+'.');
+    if(job.target?.reportedX!==undefined) addActive('Last reported sector: '+(job.target.reportedX+1)+','+(job.target.reportedY+1)+'. Position may have drifted.');
+    if(job.targetStation) addActive('Delivery destination: '+job.targetStation+'.');
+    if(job.target?.planetName) addActive('Reported world: '+job.target.planetName+' in '+job.target.systemName+'.');
+    if(job.required){
+      const name=job.type==='biodata'?'Biodata Sample':'Alien Corpse';
+      addActive('Required specimens: '+countInventoryByName(name)+' / '+job.required+'.');
+    }
+    addActive('The Science Office can relinquish this contract if its cargo is lost or the expedition is no longer practical.');
+  } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
+  const incident=state.quarantine;
+  if(incident && incident.discovered!==false){
+    const addIncident=incident.status==='closed'||incident.choice ? add : addActive;
+    addIncident('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
+      incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.':
+      'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));
+    if(incident.version===2) for(const person of incident.survivors){
+      if(!person.met && !incident.rosterKnown) continue;
+      const known=['onboard','delivered','lost'].includes(person.status)?person.status:
+        person.seenCondition || (person.met?'last seen aboard the wreck':'listed in the bridge roster; not located');
+      addIncident(person.name+' — '+known+(person.status==='onboard'&&person.pod?' — isolated in cargo':''));
+    }
+  }
+  if((G.cargo||[]).some(item=>item.questItem==='mystery_delivery')){
+    addActive('PACKAGE DELIVERY: Take the mysterious package to Waypoint Omega for 300 cr.');
+  }
+  add('Survey work awaiting sale: '+getPendingSurveySaleValue()+' cr.');
+  const keys=new Set([...Object.keys(state.surveys),...Object.keys(G.planets||{})]);
+  for(const key of keys){
+    const finding=state.surveys[key],pd=G.planets?.[key];
+    const coverage=pd?getScanCoverage(pd.scanMask):finding?.coverage||0;
+    const explored=(pd?.explored||[]).filter(Boolean).length;
+    if(!finding && !coverage && !explored) continue;
+    if(pd?.isDerelict || pd?.isCasino || pd?.isAncientStation || key.includes(':stranded')) continue;
+    const biome=finding?.biome||pd?.biome;
+    add('SURVEY: '+(finding?.name||findBodyNameByKey(key))+' — '+(BIOMES[biome]?.name||biome||'Unclassified')+
+      ' — '+Math.round(coverage*100)+'% scanned; '+explored+' surface tiles explored'+
+      (finding?.civilization?'; recorded civilization: '+finding.civilization:'.'));
+  }
+  for(const [key,pd] of Object.entries(G.planets||{})){
+    const civ=pd.civilization;
+    if(!civ?.state?.contacted) continue;
+    add('CONTACT: '+findBodyNameByKey(key)+' — '+civ.tierLabel+' '+civ.species+' — '+
+      civRelationLabel(civ.state)+' ('+civ.state.relation+'); '+civAlertLabel(civ.state)+'.');
+  }
+  const history=careerLogEntries().reverse();
+  return [
+    ...(active.length ? [{msg:'ACTIVE WORK & LEADS',cls:'ll',heading:true},...active] : []),
+    {msg:'OTHER RECORDS',cls:'ll',heading:true},...rows,
+    ...(history.length ? [{msg:'HISTORY',cls:'ll',heading:true},...history] : []),
+  ];
+}
+
+function gameLogEntries(filter){
+  if(filter==='records') return currentLogRecords();
+  const messages=(G.log||[]).map(entry=>typeof entry==='string'?{msg:entry,turn:1}:entry);
+  const present=new Set(messages.map(entry=>entry.turn+'\n'+entry.msg));
+  return [...messages,...careerLogEntries().filter(entry=>!present.has(entry.turn+'\n'+entry.msg))]
+    .sort((a,b)=>(b.turn||1)-(a.turn||1));
+}
+
+function wrapGameLog(entries,maxWidth,measure){
+  const rows=[];
+  for(const entry of entries){
+    const text=String(entry.msg||'')+(entry.count>1?' (×'+entry.count+')':'');
+    let line='',first=true;
+    const push=()=>{rows.push({...entry,msg:line,continuation:!first});first=false;line='';};
+    for(const word of text.split(/\s+/)){
+      if(line && measure(line+' '+word)>maxWidth) push();
+      if(measure(word)>maxWidth){
+        for(const character of Array.from(word)){
+          if(line && measure(line+character)>maxWidth) push();
+          line+=character;
+        }
+      } else line+=(line?' ':'')+word;
+    }
+    if(line || first) push();
+  }
+  return rows;
+}

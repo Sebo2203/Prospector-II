@@ -3,3 +3,6 @@ desktop/app/
 desktop/src-tauri/target/
 desktop/src-tauri/gen/
 .tmp-tests/
+qa/node_modules/
+qa/artifacts/
+outputs/

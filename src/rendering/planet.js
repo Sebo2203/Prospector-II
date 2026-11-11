@@ -24,6 +24,7 @@ function drawPlanet(){
   // Camera — centre on player, clamped to map bounds
   const camX = Math.max(0, Math.min(W - VIEW_W, px - Math.floor(VIEW_W/2)));
   const camY = Math.max(0, Math.min(H - VIEW_H, py - Math.floor(VIEW_H/2)));
+  canvasMapView={camX,camY,width:W,height:H};
 
   // Continuous vision radius — 10 at peak day, 1 at peak night
   let vr = planetVisionRadius(G.curPlanet);
@@ -54,11 +55,9 @@ function drawPlanet(){
 
   // Helper: map tile (mx,my) → screen pixel (sx,sy)
   function tileToScreen(mx, my){ return [(mx-camX)*TS, (my-camY)*TS]; }
+  const terrain = terrainTileGrid(ctx);
   function drawBaseFloor(tileType, sx, sy, bg){
-    const info = TILE[tileType];
-    if(!OPTIONS.asciiMode && info?.drawFn && DRAW[info.drawFn]) DRAW[info.drawFn](ctx, sx, sy);
-    else if(OPTIONS.asciiMode) drawAsciiTile(tileType, sx, sy, bg);
-    else drawSprite(info?.sprite || tileType, sx, sy, bg);
+    drawTerrainFloor(tileType,sx,sy,camX+sx/TS,camY+sy/TS,bg);
   }
 
   for(let vy=0;vy<VIEW_H;vy++){
@@ -68,6 +67,7 @@ function drawPlanet(){
       const x = camX + vx;
       if(x<0||x>=W) continue;
       const [sx,sy] = tileToScreen(x,y);
+      terrain.align(vx,vy);
       // Fog of war
       if(!pdata.visited || !pdata.visited[y*W+x]){
         if(pdata.isAncientStation){
@@ -224,7 +224,7 @@ function drawPlanet(){
               drawSpriteDarkMatteKeyed(sp, sx, sy, bgAscii.bg);
             }
           } else {
-            drawSprite(sp, sx, sy, bgAscii.bg);
+            drawTerrainSprite(sp,sx,sy,x,y,bgAscii.bg);
           }
         }
       }
@@ -277,7 +277,9 @@ function drawPlanet(){
       }
     }
   }
+  terrain.restore();
 
+  if(pdata.isQuarantine) drawQuarantinePeople(pdata,camX,camY);
   // ── Scanner second pass — draw ? on top of darkness for scanned deposits ──
   if((G.inventory||[]).some(i => i.usable === 'ore_scanner')){
     for(let vy=0;vy<VIEW_H;vy++){
@@ -309,7 +311,8 @@ function drawPlanet(){
     if(edist > vr) return;
     if(edist >= 1.5 && !hasLOS(e.x, e.y)) return;
     const [esx,esy] = tileToScreen(e.x, e.y);
-    if(esx<0||esx>=canvas.width||esy<0||esy>=canvas.height) return;
+    if(esx<0||esx>=canvasWidth||esy<0||esy>=canvasHeight) return;
+    terrain.align(e.x-camX,e.y-camY);
     // Draw the actual tile underneath the enemy, not just the biome default floor,
     // so NPCs overlay on forests, civ buildings, etc. rather than erasing them.
     if(e.shipboardAlien){
@@ -365,6 +368,7 @@ function drawPlanet(){
       drawSprite(sp, esx, esy, e.colour||'#882200');
     }
   });
+  terrain.restore();
   const [psx,psy] = tileToScreen(px,py);
 
   // ── Jetpack propellant trail ───────────────────────────────────
@@ -398,12 +402,16 @@ function drawPlanet(){
       if(sdist > vr) return;
       if(sdist >= 1.5 && !hasLOS(c.x, c.y)) return;
       const [csx,csy] = tileToScreen(c.x, c.y);
+      const vx = c.x-camX, vy = c.y-camY;
+      if(vx<0||vx>=VIEW_W||vy<0||vy>=VIEW_H) return;
+      terrain.align(vx,vy);
       drawSprite(c.sprite, csx, csy, null);
       if(darkAlpha > 0.1){
         ctx.fillStyle = `rgba(${darkR},${darkG},${darkB},${(darkAlpha*0.15).toFixed(2)})`;
         ctx.fillRect(csx, csy, TS, TS);
       }
     });
+    terrain.restore();
   }
 
   // ── Mist cloud rendering (ancient ruins) ─────────────────────
@@ -460,7 +468,7 @@ function drawPlanet(){
   const inForest = pdata.grid[py]?.[px]?.type === 'EARTH_FOREST';
   if(inForest){
     ctx.fillStyle = 'rgba(8,22,6,0.60)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     drawPlayerPawn(psx, psy);
   }
 
@@ -468,14 +476,14 @@ function drawPlanet(){
   if(inSmoke){
     const overlayCol = isToxicBiome ? 'rgba(10,25,8,0.55)' : 'rgba(22,14,8,0.55)';
     ctx.fillStyle = overlayCol;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     drawPlayerPawn(psx, psy);
   }
 
   // ── Mist darkness overlay (standing in mist) ─────────────────
   if(inMist){
     ctx.fillStyle = 'rgba(80,90,76,0.35)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     drawPlayerPawn(psx, psy);
   }
 
@@ -483,14 +491,14 @@ function drawPlanet(){
   if(pdata.isUnderwater){
     const pulse = Math.sin(Date.now()/900) * 0.04;
     ctx.fillStyle = `rgba(0,18,34,${(0.32 + pulse).toFixed(2)})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     ctx.strokeStyle='rgba(70,160,190,0.10)';
     ctx.lineWidth=1;
-    for(let yy = -TS; yy < canvas.height + TS; yy += TS*2){
+    for(let yy = -TS; yy < canvasHeight + TS; yy += TS*2){
       const off = Math.sin(Date.now()/1200 + yy*0.02) * 10;
       ctx.beginPath();
       ctx.moveTo(off, yy);
-      ctx.quadraticCurveTo(canvas.width*0.35, yy+6, canvas.width+off, yy-4);
+      ctx.quadraticCurveTo(canvasWidth*0.35, yy+6, canvasWidth+off, yy-4);
       ctx.stroke();
     }
     drawPlayerPawn(psx, psy);
@@ -505,7 +513,7 @@ function drawPlanet(){
       const age = now - f.born;
       const fade = Math.max(0, 1 - age / TOTAL_MS);
       const [fsx, fsy] = tileToScreen(f.x, f.y);
-      if(fsx<-TS||fsy<-TS||fsx>canvas.width||fsy>canvas.height) return;
+      if(fsx<-TS||fsy<-TS||fsx>canvasWidth||fsy>canvasHeight) return;
       ctx.save();
       ctx.globalAlpha = fade;
       if(OPTIONS.asciiMode){
@@ -539,7 +547,7 @@ function drawPlanet(){
       const fade = age > path.length * FRAME_MS ? Math.max(0, 1 - (age - path.length * FRAME_MS) / HOLD_MS) : 1;
       const p = path[frame];
       const [bsx, bsy] = tileToScreen(p.x, p.y);
-      if(bsx<-TS||bsy<-TS||bsx>canvas.width||bsy>canvas.height) return;
+      if(bsx<-TS||bsy<-TS||bsx>canvasWidth||bsy>canvasHeight) return;
       ctx.save();
       ctx.globalAlpha = fade;
       if(OPTIONS.asciiMode){
@@ -582,7 +590,7 @@ function drawPlanet(){
 
 function drawPlayerPawn(px,py){
   const biomeKey = atmosphereBiomeKey(G.curPlanet);
-  const oxyDrain = biomeKey ? (BIOMES[biomeKey]?.oxyDrain ?? 0) : 0;
+  const oxyDrain = biomeKey ? (atmosphereBiome(G.curPlanet).oxyDrain ?? 0) : 0;
   const sprite = !biomeKey     ? 'player_pawn' :
                  oxyDrain > 0  ? 'player_pawn_helmet' :
                                   'player_pawn_suit';
