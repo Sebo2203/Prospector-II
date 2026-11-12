@@ -50,7 +50,7 @@ function getExamineName(x, y){
       return cell.name+(pct<100?' ('+pct+'% integrity)':'');
     }
     if(cell.type==='CASINO')      return 'The Void Royale';
-    if(cell.type==='DERELICT')    return cell.name+' (derelict station)';
+    if(cell.type==='DERELICT') return cell.name+(cell.storyEvent==='quarantine'?' (distress vessel)':' (derelict station)');
     if(cell.type==='NEBULA'){
       // Check if a gas entity is lurking within a few tiles
       const nearGe = (G.gasEntities||[]).find(ge=>ge.alive && Math.abs(ge.x-x)<=3 && Math.abs(ge.y-y)<=3);
@@ -82,6 +82,8 @@ function getExamineName(x, y){
       ARTIFACT:      'Ancient Artifact',
       BIODATA:       'Biological Sample',
       SHIP:          'Your Ship',
+      rw_locked_door: 'Closed pressure hatch',
+      rw_open_door: 'Open pressure hatch',
       LAVA:          'Active Lava',
       LAVA_FLOOR:    'Active Lava',
       LAVA_FLOOR:    'Active Lava',
@@ -284,9 +286,7 @@ function renderRangeSidebar(){
   const dx = cx - G.player.x, dy = cy - G.player.y;
   const dist = Math.max(Math.abs(dx), Math.abs(dy));
   const inRange = dist <= profile.maxRange && dist > 0;
-  const rawAcc = inRange ? Math.max(0.05, profile.accuracy - (dist-1) * profile.falloff) : 0;
-  const cbtBonus = (shooter.skills && shooter.skills.cbt ? shooter.skills.cbt : 0) * 0.02;
-  const finalAcc = Math.min(0.99, rawAcc + cbtBonus);
+  const finalAcc = groundRangedHitChance(shooter,profile,dist);
   const pct = Math.round(finalAcc * 100);
 
   const enemies = (G.enemies[G.curPlanet]||[]).filter(function(e){ return e.alive && e.x===cx && e.y===cy; });

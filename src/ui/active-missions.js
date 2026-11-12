@@ -43,8 +43,8 @@ function activeMissionSummaries(){
     missions.push({title:scienceJobName(job),details});
   }
   const incident=ensureExpeditionState().quarantine;
-  if(incident && incident.discovered!==false && incident.status!=='closed' && !incident.choice){
-    const details=['Mercy of Dawn [X:'+(incident.x+1)+' Y:'+(incident.y+1)+']'];
+  if(incident && incident.discovered!==false && quarantineMissionActive(incident) && !incident.choice){
+    const details=[quarantineShipName(incident)+' [X:'+(incident.x+1)+' Y:'+(incident.y+1)+']'];
     if(!incident.startedTurn) details.push('Board and investigate the distress call.');
     else{
       const people=incident.survivors||[];
@@ -57,7 +57,7 @@ function activeMissionSummaries(){
       if(waiting) details.push(waiting+' known survivor'+(waiting===1?'':'s')+' still on the wreck.');
       else if(!aboard) details.push('Continue investigating the wreck.');
     }
-    missions.push({title:'Mercy of Dawn rescue',details});
+    missions.push({title:quarantineShipName(incident)+' rescue',details});
   }
   if((G.cargo||[]).some(item=>item.questItem==='mystery_delivery')){
     missions.push({title:'Mysterious package',details:['Deliver to '+missionStationDestination('Waypoint Omega')+' · 300 cr.']});

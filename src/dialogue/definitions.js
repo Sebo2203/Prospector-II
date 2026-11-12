@@ -722,7 +722,7 @@ const DIALOGUE_DEFS = {
             wrap.state.relation = Math.min(huntCap,(wrap.state.relation||0)+2);
             civGainLanguage(wrap.state, 2);
             civAddMemory(wrap,'joined_hunt','The crew ran with the hunters. That earned something no gift could have.');
-            const merc=(G.crew||[]).filter(c=>c.hp>0).sort((a,b)=>(b.skills?.cbt||0)-(a.skills?.cbt||0))[0];
+            const merc=(G.crew||[]).filter(c=>c.hp>0).sort((a,b)=>crewSkillValue(b,'cbt')-crewSkillValue(a,'cbt'))[0];
             if(merc) giveSkillXP(merc,'cbt',3);
             return 'The crew moves with the '+species+' rather than waiting. Understood immediately — they make space in the formation.\n\nThe hunt lasts long enough to establish something conversation could not. Not kin, but not strangers either.';
           } else {
@@ -1050,7 +1050,7 @@ const DIALOGUE_DEFS = {
           wrap.state.alert    = Math.min(5,(wrap.state.alert||0)+1);
           wrap.state.submission = Math.min(3,(wrap.state.submission||0)+1);
           const vs=civVisitState(wrap); if(vs) vs.intimidateDone=true;
-          const merc=(G.crew||[]).filter(c=>c.hp>0).sort((a,b)=>(b.skills?.cbt||0)-(a.skills?.cbt||0))[0];
+          const merc=(G.crew||[]).filter(c=>c.hp>0).sort((a,b)=>crewSkillValue(b,'cbt')-crewSkillValue(a,'cbt'))[0];
           if(merc) giveSkillXP(merc,'cbt',2);
           if(isPrim){
             if(traits.diet==='carnivore') return 'The crew signals force clearly. The hunters read it — not with fear, but with the recalculation of predators assessing another predator. They stand down. For now.';

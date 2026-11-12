@@ -84,9 +84,9 @@ function casinoCrew(){ return (G.crew||[]).filter(c=>c.hp>0); }
 function casinoBest(skill){
   const crew = casinoCrew();
   if(!crew.length) return null;
-  return crew.sort((a,b)=>((b.skills?.[skill]||0)-(a.skills?.[skill]||0))||((b.maxHp||0)-(a.maxHp||0)))[0];
+  return crew.sort((a,b)=>(crewSkillValue(b,skill)-crewSkillValue(a,skill))||((b.maxHp||0)-(a.maxHp||0)))[0];
 }
-function casinoSkill(c, skill){ return c?.skills?.[skill] || 0; }
+function casinoSkill(c, skill){ return crewSkillValue(c,skill); }
 function casinoPay(amount){
   if(amount <= 0) return;
   earnCredits(amount);

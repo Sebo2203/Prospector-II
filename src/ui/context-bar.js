@@ -129,7 +129,7 @@ function renderContextBar(){
       const lootHere=(G.nebulaLoot||[]).find(l=>l.x===G.ship.x&&l.y===G.ship.y);
       const npcStrandedHere=(G.npcStranded||[]).find(s=>s.x===G.ship.x&&s.y===G.ship.y);
       if(quarantineAtShip()){
-        btns.push(btn('Enter','Board Mercy of Dawn','good'));
+        btns.push(btn('Enter','Board '+quarantineShipName(),'good'));
       } else if(lootHere && (G.cargo.length<(G.shipStats.cargoCapacity||0) || cell.type!=='BASE')){
         const ss = G.shipStats || buildShipStats('LIGHT_SCOUT');
         const cargoFull = (G.cargo||[]).length >= (ss.cargoCapacity||0);
@@ -256,11 +256,11 @@ function renderContextBar(){
 
     // Mineral deposit extraction hint
     if(cell?.type==='MINERAL' && cell.revealed){
-      const _ctxTool = (G.inventory||[]).find(i=>i.usable==='mining_tool');
+      const _ctxTool = bestMiningTool();
       if(_ctxTool){
         const _ctxProg = (G._miningProgress?.x===G.player.x && G._miningProgress?.y===G.player.y) ? G._miningProgress.progress : 0;
         const _ctxOre  = ORE_TYPES[cell.oreType||'fe'] || ORE_TYPES.fe;
-        const _ctxBestEng = Math.max(...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.eng||0), 0);
+        const _ctxBestEng = Math.max(...(G.crew||[]).filter(c=>c.hp>0).map(c=>crewSkillValue(c,'eng')), 0);
         const _ctxTotal = Math.max(2, Math.round((10 / (_ctxTool.miningMult||1.0)) - _ctxBestEng * 0.5));
         btns.push(btn('Enter', 'Drill '+_ctxOre.sym+' ('+_ctxProg+'/'+_ctxTotal+')', 'good'));
       } else {

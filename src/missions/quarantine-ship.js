@@ -1,5 +1,30 @@
-// Mercy of Dawn is a persistent interior. Actions use position, ordinary items,
+// The quarantine rescue is a persistent story interior. Actions use position, ordinary items,
 // crew skills, cargo space, line of sight and the existing planet turn loop.
+const QUARANTINE_SHIP_NAMES=["Mercy of Dawn","Quiet Horizon","Last Lantern","Solace","Wayfarer's Hope",'Evening Star','Patient Voyager','Kindred Light','Aurora Passage','Second Sunrise','Gentle Horizon','Far Haven'];
+// One eligibility/time roll per career, independent of player wealth or progress.
+const STORY_EVENT_CATALOG={quarantine:{chance:0.6,initialChance:0.35,minDelay:80,maxDelay:600,spawn:placeQuarantineShip}};
+function scheduleStoryEvents(){
+  const state=ensureExpeditionState();state.storySchedule={};
+  for(const [id,def] of Object.entries(STORY_EVENT_CATALOG)){
+    const eligible=Math.random()<def.chance;
+    state.storySchedule[id]={status:eligible?'pending':'absent',dueTurn:eligible?(Math.random()<def.initialChance?G.turn:G.turn+def.minDelay+rnd(def.maxDelay-def.minDelay+1)):null};
+  }
+  tickStoryEvents();
+}
+function tickStoryEvents(){
+  if(!G || G.debugPalette || G.dead || G.retired)return;
+  for(const [id,plan] of Object.entries(G.expedition?.storySchedule||{})){
+    if(plan.status!=='pending'||G.turn<plan.dueTurn)continue;
+    const def=STORY_EVENT_CATALOG[id];
+    if(def && (G.expedition[id]||def.spawn()))plan.status='spawned';
+    else plan.dueTurn=G.turn+25;
+  }
+  revealQuarantineShip();
+}
+function quarantineShipName(q=G?.expedition?.quarantine){return q?.name||'Distress vessel';}
+function createQuarantineIncident(x,y,name=QUARANTINE_SHIP_NAMES[rnd(QUARANTINE_SHIP_NAMES.length)]){
+  return {x,y,name,version:2,status:'unvisited',discovered:false,survivors:[],repaired:false,air:180,lastTick:null};
+}
 function placeQuarantineShip(){
   const state=ensureExpeditionState();
   if(!state || state.quarantine || G.debugPalette) return false;
@@ -13,18 +38,25 @@ function placeQuarantineShip(){
   }
   if(!candidates.length) return false;
   const {x,y}=candidates[rnd(candidates.length)];
-  state.quarantine={x,y,version:2,status:'unvisited',discovered:false,
-    survivors:[],repaired:false,air:180,lastTick:null};
-  G.galaxy[y][x]={type:'DERELICT',name:'Mercy of Dawn'};
+  state.quarantine=createQuarantineIncident(x,y);
+  G.galaxy[y][x]={type:'DERELICT',name:state.quarantine.name,storyEvent:'quarantine'};
   return true;
 }
 
+function quarantineSignalInRange(q){
+  if(!G.ship || !['galaxy','radio'].includes(G.mode))return false;
+  const dx=q.x-G.ship.x,dy=q.y-G.ship.y,range=Math.min(3,effectiveSensorRange());
+  if(range<=0 || Math.hypot(dx,dy)>range)return false;
+  const steps=Math.max(Math.abs(dx),Math.abs(dy));
+  for(let i=1;i<steps;i++)if(G.galaxy[Math.round(G.ship.y+dy*i/steps)]?.[Math.round(G.ship.x+dx*i/steps)]?.type==='NEBULA')return false;
+  return true;
+}
 function revealQuarantineShip(){
   const q=G?.expedition?.quarantine;
   if(!q || q.discovered!==false || G.debugPalette || DEBUG.on ||
-    !G.visited[q.y*MAP_W+q.x]) return;
+    !G.visited[q.y*MAP_W+q.x] || !quarantineSignalInRange(q)) return;
   q.discovered=true;
-  const text='Nearby distress transmission: Mercy of Dawn at '+(q.x+1)+','+(q.y+1)+'. The caller mentions a sealed ward before the signal cuts out.';
+  const text='Nearby distress transmission: '+quarantineShipName(q)+' at '+(q.x+1)+','+(q.y+1)+'. The caller mentions a sealed ward before the signal cuts out.';
   recordExpeditionEvent('quarantine:signal','lead',text);
   addLog(text+' Coordinates recorded in LOG.','lw');
 }
@@ -34,6 +66,12 @@ function quarantineAtShip(){
   return G?.mode==='galaxy' && q && q.x===G.ship.x && q.y===G.ship.y ? q : null;
 }
 function quarantineInterior(){ return G?.mode==='planet' && G.planets?.[G.curPlanet]?.isQuarantine; }
+function quarantineAirContaminated(x=G?.player?.x,y=G?.player?.y,pd=G?.planets?.[G?.curPlanet]){
+  return !!(pd?.isQuarantine&&!G.expedition?.quarantine?.filtered&&pd.grid[y]?.[x]?.type==='q_contamination');
+}
+function quarantineCrewAirProtected(c){
+  return crewHelmetSealed(c);
+}
 function quarantinePeople(){ return ensureExpeditionState()?.quarantine?.survivors || []; }
 function quarantineCrewSkill(skill){
   return Math.max(0,...G.crew.filter(c=>c.hp>0).map(c=>crewSkillValue(c,skill)));
@@ -45,8 +83,8 @@ function generateQuarantineShip(q){
   const room=(x1,y1,x2,y2)=>{for(let y=y1;y<=y2;y++) for(let x=x1;x<=x2;x++) grid[y][x]={type:'station_floor'};};
   room(2,9,29,10); room(3,3,10,7); room(13,3,19,7); room(22,3,29,7);
   room(4,12,11,17); room(15,12,29,17);
-  for(const [x,y] of [[6,8],[16,8],[25,8],[7,11]]) grid[y][x]={type:'q_door'};
-  grid[11][22]={type:'q_sealed_door'};
+  for(const [x,y] of [[6,8],[16,8],[25,8],[7,11]]) grid[y][x]={type:'rw_locked_door'};
+  grid[11][22]={type:'rw_locked_door',wardSealed:true};
   for(let y=12;y<=17;y++) for(let x=23;x<=29;x++) grid[y][x]={type:'q_contamination'};
   const fixtures=[[3,9,'SHIP'],[5,4,'q_log'],[16,5,'q_medical'],[18,5,'q_pods'],
     [23,5,'q_parts'],[27,5,'q_salvage'],[7,15,'q_life_support'],[19,13,'q_filter']];
@@ -69,14 +107,13 @@ function generateQuarantineShip(q){
 function boardQuarantineShip(){
   const q=quarantineAtShip();
   if(!q) return;
-  if(q.choice){ addLog('This incident belongs to an earlier expedition record and is already resolved.','li'); renderAll(); return; }
-  const pdata=G.planets[q.mapKey] || generateQuarantineShip(q);
+    const pdata=G.planets[q.mapKey] || generateQuarantineShip(q);
   G.mode='planet'; G.curSystem=''; G.curPlanet=q.mapKey;
   G.examine=null; G.rangeTarget=null;
   G.player={x:pdata.spawnX,y:pdata.spawnY};
   revealPlanet(q.mapKey,G.player.x,G.player.y);
-  recordExpeditionEvent('quarantine:boarding','discovery','Boarded Mercy of Dawn. Emergency lights illuminate an empty passage; a sealed ward lies somewhere beyond.');
-  addLog('Boarding Mercy of Dawn. Emergency lighting only. Doors respond to [Enter] from beside them; [X] examines what you can see.','li');
+  recordExpeditionEvent('quarantine:boarding','discovery','Boarded '+quarantineShipName(q)+'. Emergency lights illuminate an empty passage; a sealed ward lies somewhere beyond.');
+  addLog('Boarding '+quarantineShipName(q)+'. Emergency lighting only. Doors respond to [Enter] from beside them; [X] examines what you can see.','li');
   addLog('A docking placard marks bridge to port, stores forward, engineering aft. Return to this airlock to transfer passengers or depart.','li');
   discoverQuarantinePeople();
   SFX.land && SFX.land(); renderAll();
@@ -94,10 +131,16 @@ function quarantineNearSurvivor(){
     .sort((a,b)=>(Math.abs(a.x-G.player.x)+Math.abs(a.y-G.player.y))-(Math.abs(b.x-G.player.x)+Math.abs(b.y-G.player.y)))[0] || null;
 }
 
+function openInteriorHatch(cell,quarantine=false){
+  if(cell?.type!=='rw_locked_door')return false;
+  cell.type='rw_open_door';SFX.door();
+  addLog(cell.wardSealed?'The quarantine hatch opens. Stale air escapes from the ward.':quarantine?'Pressure hatch opened.':'Maintenance hatch forced open. The hallway beyond is pressurised.','li');
+  return true;
+}
 function quarantineAdjacentHatch(pd,x,y){
   return [[0,-1],[1,0],[0,1],[-1,0]]
     .map(([dx,dy])=>pd.grid[y+dy]?.[x+dx])
-    .find(cell=>cell?.type==='q_door'||cell?.type==='q_sealed_door');
+    .find(cell=>cell?.type==='rw_locked_door');
 }
 
 function quarantineEnterLabel(pd,cell,person){
@@ -117,7 +160,7 @@ function quarantineEnterLabel(pd,cell,person){
     case 'q_filter': return q.filtered?'Check scrubber':'Reconnect scrubber';
   }
   const hatch=quarantineAdjacentHatch(pd,G.player.x,G.player.y);
-  if(hatch) return hatch.type==='q_sealed_door'?'Open ward hatch':'Open pressure hatch';
+  if(hatch) return hatch.wardSealed?'Open ward hatch':'Open pressure hatch';
   if(!person) return '';
   if(person.status==='carried') return 'Set down '+person.name;
   if(person.status==='following') return 'Ask '+person.name+' to wait';
@@ -134,7 +177,7 @@ function discoverQuarantinePeople(){
       s.seenCondition=s.status==='dead'?'found dead':s.status==='carried'?'carried by the away team':
         s.status==='following'?'following the away team':s.injured?'last seen injured aboard the wreck':
         s.infectious?'last seen in the isolation ward, feverish':'last seen aboard the wreck';
-      if(s.status==='dead') recordExpeditionEvent('quarantine:death:'+s.id,'discovery','Found '+s.name+' dead aboard Mercy of Dawn.');
+      if(s.status==='dead') recordExpeditionEvent('quarantine:death:'+s.id,'discovery','Found '+s.name+' dead aboard '+quarantineShipName()+'.');
     }
     if(!s.met && ['waiting','following'].includes(s.status) && canSeePlanetTile(s.x,s.y)){
       s.met=true;
@@ -143,6 +186,7 @@ function discoverQuarantinePeople(){
         s.infectious?' is coughing heavily. The ward carries a contamination warning.':': "The others are in the ward. I can walk. Please get us out."'),'lw');
     }
   }
+  resolveQuarantineOutcome();
 }
 
 function quarantineExamine(x,y){
@@ -150,11 +194,10 @@ function quarantineExamine(x,y){
   const pd=G.planets[G.curPlanet],q=ensureExpeditionState().quarantine;
   if(!canSeePlanetTile(x,y)) return 'Unobserved interior';
   const person=quarantineSurvivorAt(x,y);
-  if(person?.status==='dead') return {type:'tile',name:person.name+' — remains',desc:'A crew member who did not survive the failure of life support.'};
-  if(person) return {type:'tile',name:person.name,desc:
-    (person.injured?'Their leg is trapped and injured. ':'They can walk. ')+
-    (person.infectious?'Fever and a wet cough; close handling and shared ship air may spread infection. ':'No obvious respiratory symptoms. ')+
-    'Condition '+person.hp+'/'+person.maxHp+'. Stand beside them: Enter assists or releases, T gives medical care, P uses a portable isolation pod.'};
+  if(person)return {type:'creature',enemy:{...person,storySurvivor:true,alive:person.status!=='dead',bodyLabel:'human survivor',size:1,behaviour:'DOCILE',diet:'omnivore',
+    desc:person.status==='dead'?'A crew member who did not survive the failure of life support.':
+      (person.injured?'An injured leg prevents unaided walking. ':'Able to walk. ')+(person.infectious?'Fever and a wet cough. ':'No obvious respiratory symptoms. ')+
+      (person.pod?'Sealed inside an isolation pod. ':'')+'Stand beside them to assist, treat or isolate; leave Examine to use the context controls.'}};
   const type=pd.grid[y]?.[x]?.type;
   const descriptions={
     q_log:['Bridge terminal','A damaged terminal holds the crew roster, ward notes and engineering report. Stand here and press Enter to read it.'],
@@ -165,9 +208,9 @@ function quarantineExamine(x,y){
     q_parts:['Maintenance stores',pd.grid[y][x].looted?'The spare coupling has been removed.':'A sealed replacement pump coupling. Enter retrieves it.'],
     q_salvage:['Cargo rack',pd.grid[y][x].looted?'The rack has been stripped.':'A crate of navigation instruments. Enter loads salvage if your ship has a free cargo slot.'],
     q_filter:['Isolation scrubber',q.filtered?'The scrubber is running. Contaminated ward air is being filtered.':'The filter motor is disconnected. Enter reconnects it; engineering skill reduces the work.'],
-    q_sealed_door:['Sealed ward hatch','A quarantine seal blocks sight into the ward. Enter from beside it opens the hatch. Broken suits or handling untreated patients can expose the crew.'],
-    q_door:['Pressure hatch','Closed hatch. Enter from beside it opens it.'],
-    q_contamination:['Contaminated deck','Residue surrounds the isolation bunks. Intact sealed suits protect against the ward air; punctured or missing suits do not.'],
+    rw_locked_door:[pd.grid[y][x].wardSealed?'Sealed ward hatch':'Pressure hatch',pd.grid[y][x].wardSealed?'A quarantine seal blocks sight into the ward. Enter from beside it opens the hatch. Broken suits can expose the crew inside.':'Closed pressure hatch. Enter from beside it or move into it to open it.'],
+    rw_open_door:['Open pressure hatch','The open frame matches the ringworld maintenance hatches.'],
+    q_contamination:['Contaminated deck','Unfiltered airborne contamination surrounds the isolation bunks. An intact environmental suit with a closed helmet protects against it. Open helmets, armor plates, missing suits and punctured suits do not.'],
   };
   const d=descriptions[type]; return d?{type:'tile',name:d[0],desc:d[1]}:null;
 }
@@ -199,7 +242,7 @@ function interactQuarantine(){
   } else if(cell.type==='q_medical'){
     if(cell.looted){addLog('Medical locker empty.','li');return true;}
     cell.looted=true;
-    G.inventory.push({name:'Emergency Antibiotics',usable:'antibiotics',value:50,col:'#77ddaa',desc:'Antibiotics recovered from Mercy of Dawn.'},
+    G.inventory.push({name:'Emergency Antibiotics',usable:'antibiotics',value:50,col:'#77ddaa',desc:'Antibiotics recovered from '+quarantineShipName()+'.'},
       {name:'Emergency Medikit',usable:'medikit',value:80,col:'#ff6688',desc:'Emergency supplies for wound stabilization.'});
     addLog('Recovered antibiotics and a medikit. These can be used on your crew or on a survivor beside you [T].','ll');
   } else if(cell.type==='q_pods'){
@@ -209,7 +252,7 @@ function interactQuarantine(){
     addLog('Two folded isolation pods recovered. Deploy beside a survivor with [P].','ll');
   } else if(cell.type==='q_parts'){
     if(cell.looted){addLog('Maintenance stores empty.','li');return true;}
-    cell.looted=true; G.inventory.push({name:'Mercy Pump Coupling',usable:'quarantine_coupling',value:0,col:'#ddaa55',desc:'Replacement coupling for Mercy of Dawn life support.'});
+    cell.looted=true; G.inventory.push({name:'Pump Coupling',usable:'quarantine_coupling',value:0,col:'#ddaa55',desc:'Replacement coupling for '+quarantineShipName()+' life support.'});
     addLog('Recovered a replacement pump coupling.','ll');
   } else if(cell.type==='q_life_support'){
     if(q.repaired){addLog('Life support holds steady.','lg');return true;}
@@ -220,7 +263,7 @@ function interactQuarantine(){
       if(q.repairProgress>=3){q.repaired=true;addLog('The engineer completes a bypass. Life support is stable.','lg');}
       else addLog('The engineer rewires the pump bypass ('+q.repairProgress+'/3).','li');
     } else { addLog('A replacement coupling or repair kit is needed. A skilled engineer could build a bypass. [R] works the manual pump for temporary air.','lw');return true; }
-    if(q.repaired) recordExpeditionEvent('quarantine:repair','action','Restored life support aboard Mercy of Dawn. Survivors left aboard now have breathable air.');
+    if(q.repaired) recordExpeditionEvent('quarantine:repair','action','Restored life support aboard '+quarantineShipName()+'. Survivors left aboard now have breathable air.');
   } else if(cell.type==='q_filter'){
     if(q.filtered){addLog('Isolation scrubber is running.','lg');return true;}
     q.filterProgress=(q.filterProgress||0)+1;
@@ -230,9 +273,9 @@ function interactQuarantine(){
   } else if(cell.type==='q_salvage'){
     if(cell.looted){addLog('Cargo rack empty.','li');return true;}
     if(!addCargo({name:'Recovered Navigation Instruments',isCommodity:true,commodityId:'instruments',boughtPrice:0,symbol:'N',shortName:'Instruments',col:'#ddbb77',value:180,
-      desc:'Civilian instruments recovered from Mercy of Dawn.'})) return true;
+      desc:'Civilian instruments recovered from '+quarantineShipName()+'.'})) return true;
     cell.looted=true;
-    recordExpeditionEvent('quarantine:salvage','action','Loaded navigation instruments from Mercy of Dawn into the cargo hold.');
+    recordExpeditionEvent('quarantine:salvage','action','Loaded navigation instruments from '+quarantineShipName()+' into the cargo hold.');
     addLog('Loaded the instrument crate. It occupies cargo space and can be sold or jettisoned like other salvage.','ll');
   } else if(cell.type==='SHIP'){
     for(const s of quarantinePeople()){
@@ -245,8 +288,7 @@ function interactQuarantine(){
     const door=quarantineAdjacentHatch(pd,x,y);
     const survivor=quarantineNearSurvivor();
     if(door){
-      const sealed=door.type==='q_sealed_door';door.type='q_open_door';
-      addLog(sealed?'The quarantine hatch opens. Stale air escapes from the ward.':'Pressure hatch opened.','lw');
+      openInteriorHatch(door,true);
       revealPlanet(G.curPlanet,x,y);
     } else if(survivor){
       survivor.met=true;
@@ -267,9 +309,7 @@ function interactQuarantine(){
   quarantineActionTurn(); return true;
 }
 
-function treatQuarantineSurvivor(){
-  const s=quarantineNearSurvivor();
-  if(!s){addLog('Stand beside a survivor to give medical care.','li');renderAll();return;}
+function treatQuarantinePatient(s){
   if(s.infectious && takeQuarantineItem('antibiotics')){
     s.infectious=false;s.treated=true;s.hp=Math.min(s.maxHp,s.hp+2);
     addLog('Antibiotics administered to '+s.name+'. The cough settles; continued transport is now safer.','lg');
@@ -281,10 +321,15 @@ function treatQuarantineSurvivor(){
     if(s.careProgress>=3){s.injured=false;s.treated=true;addLog('The medic finishes an improvised splint. '+s.name+' can walk.','lg');}
     else addLog('The medic works on an improvised splint ('+s.careProgress+'/3).','li');
   } else {addLog(s.infectious?'Antibiotics are needed. An isolation pod is another way to transport this patient safely.':
-    s.injured?'A medikit or a trained medic is needed. Two crew can also carry them.':'No field treatment is needed.','li');renderAll();return;}
+    s.injured?'A medikit or a trained medic is needed. Two crew can also carry them.':'No field treatment is needed.','li');return false;}
   const medic=G.crew.filter(c=>c.hp>0).sort((a,b)=>crewSkillValue(b,'med')-crewSkillValue(a,'med'))[0];
   if(medic) giveSkillXP(medic,'med',2);
-  quarantineActionTurn();
+  return true;
+}
+function treatQuarantineSurvivor(){
+  const s=quarantineNearSurvivor();
+  if(!s){addLog('Stand beside a survivor to give medical care.','li');renderAll();return;}
+  if(treatQuarantinePatient(s))quarantineActionTurn();else renderAll();
 }
 
 function podQuarantineSurvivor(){
@@ -352,6 +397,7 @@ function noteQuarantinePodLoss(item){
   if(!survivor) return;
   survivor.status='lost';
   recordExpeditionEvent('quarantine:lost:'+survivor.id,'consequence',survivor.name+'\'s occupied isolation pod was jettisoned. Recovery is unconfirmed.');
+  resolveQuarantineOutcome();
 }
 
 function tickQuarantineIncident(){
@@ -388,11 +434,11 @@ function tickQuarantineIncident(){
       if(s.status==='following') quarantineStepToward(s,G.player,G.planets[G.curPlanet]);
     }
   }
+  resolveQuarantineOutcome();
   if(quarantineInterior()){
     const pd=G.planets[G.curPlanet];
-    const contaminated=pd.grid[G.player.y]?.[G.player.x]?.type==='q_contamination';
-    if(contaminated && !q.filtered){
-      for(const c of G.crew.filter(c=>c.hp>0 && (!c.armorUsable || c.statuses?.suit_puncture))){
+    if(quarantineAirContaminated(G.player.x,G.player.y,pd)){
+      for(const c of G.crew.filter(c=>c.hp>0&&!quarantineCrewAirProtected(c))){
         c._quarantineExposure=(c._quarantineExposure||0)+elapsed;
         if(c._quarantineExposure>=3){
           c._quarantineExposure=0;
@@ -421,16 +467,33 @@ function settleQuarantineAtStation(stationName){
     const text=stationName+' medical staff receive '+s.name+'. The survivor relief fund pays 100 cr.';
     addLog(text,'lg');recordExpeditionEvent('quarantine:delivered:'+s.id,'consequence',text);
   }
-  if(q.survivors.length && q.survivors.every(s=>['delivered','dead','lost'].includes(s.status))) q.status='closed';
+  resolveQuarantineOutcome();
 }
 
 function expeditionLegacy(){
   const q=ensureExpeditionState()?.quarantine;
-  if(!q || q.discovered===false) return 'No Mercy of Dawn encounter recorded.';
-  if(q.version!==2) return 'Mercy of Dawn: see the preserved record from the earlier experiment.';
-  if(!q.survivors.length) return 'The Mercy of Dawn distress call remained unexplored.';
+  if(!q || q.discovered===false) return 'No quarantine rescue recorded.';
+  if(q.version!==2) return 'No quarantine rescue recorded.';
+  if(!q.survivors.length) return 'The '+quarantineShipName(q)+' distress call remained unexplored.';
   const rescued=q.survivors.filter(s=>s.status==='delivered').length;
   const aboard=q.survivors.filter(s=>s.status==='onboard').length;
-  return 'Mercy of Dawn: '+rescued+' survivors delivered'+(aboard?', '+aboard+' still aboard':'')+
+  return quarantineShipName(q)+': '+rescued+' survivors delivered'+(aboard?', '+aboard+' still aboard':'')+
     (q.repaired?'; life support restored.':'; wreck life support unrepaired.');
+}
+
+function resolveQuarantineOutcome(){
+  const q=G?.expedition?.quarantine;
+  if(!q?.survivors.length || !q.survivors.every(s=>['delivered','dead','lost'].includes(s.status)))return false;
+  q.status='closed';
+  // A remote death must not disclose a fate the player has not observed.
+  if(q.survivors.every(s=>s.status!=='dead'||s.seenCondition==='found dead')){
+    const delivered=q.survivors.filter(s=>s.status==='delivered').length;
+    const text=quarantineShipName(q)+': rescue concluded. '+delivered+' of '+q.survivors.length+' survivors delivered.';
+    if(!G.expedition.events.some(e=>e.id==='quarantine:closed')){recordExpeditionEvent('quarantine:closed','consequence',text);addLog(text,delivered?'lg':'lw');}
+  }
+  return true;
+}
+
+function quarantineMissionActive(q){
+  return q.status!=='closed'||q.survivors.some(s=>s.status==='dead'&&s.seenCondition!=='found dead');
 }

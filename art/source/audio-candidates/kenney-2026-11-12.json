@@ -1,0 +1,263 @@
+[
+  {
+    "id": "C1",
+    "role": "Mass Driver",
+    "pitch": "A low report with a mechanical strike; a candidate for a single kinetic shot.",
+    "bytes": 8507,
+    "output_sha256": "05d1f42f016e0185dd86e9e521711081e52a9a4244c2e1309f77f65b18c137ba",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_000.ogg",
+        "trim": 0.65,
+        "delay": 0,
+        "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      },
+      {
+        "pack": "sci-fi-sounds",
+        "file": "impactMetal_000.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "956c6612a256aa1a67a2327fffe2454f6b1d82e4c1c2be28fd66916335d5b1d6",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C2",
+    "role": "Railgun",
+    "pitch": "A brief electronic rise followed by a harder discharge. The lead-in is presentation, not an extra charging turn.",
+    "bytes": 11015,
+    "output_sha256": "3209a50d5f60e4f7bb33d2b6b4b9ed41d88208b893ae660e2e244a453342dd62",
+    "sources": [
+      {
+        "pack": "digital-audio",
+        "file": "highUp.ogg",
+        "trim": 0.18,
+        "delay": 0,
+        "sha256": "cbc1c3c7ccf5d7903818144a4c3f5b2ed2385095792f29d8d7c76360ba4fa559",
+        "url": "https://kenney.nl/assets/digital-audio",
+        "license": "CC0"
+      },
+      {
+        "pack": "sci-fi-sounds",
+        "file": "laserLarge_001.ogg",
+        "trim": null,
+        "delay": 0.14,
+        "sha256": "e678aca631495b7dfef4ac625f0349875ccac81a60f538d530e072241af3e4bd",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C3",
+    "role": "Laser Cannon",
+    "pitch": "A larger energy-weapon candidate, separate from the original ground-laser recording.",
+    "bytes": 9448,
+    "output_sha256": "0388440155d07ff754837c37e465c4f5d68f3b129732a7d30375369f89c96dea",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "laserLarge_003.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "3c7b3c9d856ee31fa1b92d29322f6ee472446627381595baeaba2af35c07135f",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C4",
+    "role": "Pulse Laser",
+    "pitch": "A short energy pulse for a faster weapon; compare its identity with C3.",
+    "bytes": 3805,
+    "output_sha256": "9688dbc582ec3c28e789152de79cd1299d3bdce1c883dd17bd87f7e08e6a388d",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "laserSmall_001.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "ab87913aba9790a0c5fa173d086267ba521ad522fcad2252271db49988313cf5",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C5",
+    "role": "Artemis launch",
+    "pitch": "A short thruster burst at missile launch. Detonation would remain a separate sound at actual impact.",
+    "bytes": 9134,
+    "output_sha256": "8016b15444a23a31e916a5e04ee0ab6e3c9ae7c0d417aca0b43d03caa950a4da",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "thrusterFire_002.ogg",
+        "trim": 0.7,
+        "delay": 0,
+        "sha256": "5f7731c30196d73777d62eec7cb36a28bf63852e70244057b7625b888e71a3a8",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C6",
+    "role": "Shield absorption",
+    "pitch": "An electronic force-field candidate for a shield hit, keeping it distinct from W5 hull damage.",
+    "bytes": 12269,
+    "output_sha256": "9cfb5a8f5771cc82c32ea54bf12365a9085264dc74553d36100ee6a26b8e024a",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "forceField_001.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "5574e69dd04e5f59322c5ddffde5978f077b09170ae5e29cec0bd9901828cd90",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C7",
+    "role": "Boost",
+    "pitch": "A bounded engine burst for one boost action, without a continuous background engine loop.",
+    "bytes": 11015,
+    "output_sha256": "c294e762b11a28c7ab623dbac772177c12a196f796c297eacd77aaa4a9a5b419",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "spaceEngineSmall_001.ogg",
+        "trim": 0.85,
+        "delay": 0,
+        "sha256": "a87d5d8b2233f7bd803df78927b52c27be251e8d1354c6cc9ea00ce26215e3da",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C8",
+    "role": "Ship ramming",
+    "pitch": "A direct metal collision candidate, separate from weapon fire and the original W5 explosion.",
+    "bytes": 5059,
+    "output_sha256": "2e35f99a7f940ab7f21776ecb427fb0eb9f0bd2851576f3b336d6a8f0c536301",
+    "sources": [
+      {
+        "pack": "impact-sounds",
+        "file": "impactMetal_heavy_001.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "83554049f81f4db9209379e103c30bfa63f65c42189a03f300b045c2c82e23ae",
+        "url": "https://kenney.nl/assets/impact-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C9",
+    "role": "Asteroid collision",
+    "pitch": "Mining and plate impacts layered into a collision candidate with a different identity from C8.",
+    "bytes": 12582,
+    "output_sha256": "88763accc71e2a5d1b48146039a44ce3a7311395f502f37606077a005e55b818",
+    "sources": [
+      {
+        "pack": "impact-sounds",
+        "file": "impactMining_003.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "4237fa2cd80364ad81cd0af44f67d7497f1c5edcc7bdb02cd22be2ba4580c83d",
+        "url": "https://kenney.nl/assets/impact-sounds",
+        "license": "CC0"
+      },
+      {
+        "pack": "impact-sounds",
+        "file": "impactPlate_heavy_001.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "142fd6c77f13d25f318265901163f70f8dfe12f87829169a570025be43de7011",
+        "url": "https://kenney.nl/assets/impact-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C10",
+    "role": "Nebula lightning",
+    "pitch": "A short zap and force-field layer for the resolved strike, without an advance warning sound.",
+    "bytes": 7880,
+    "output_sha256": "ac30d4858bb74d2af4c6153b8ba54a6551b2bca2f8c74888eee644b633386f6c",
+    "sources": [
+      {
+        "pack": "digital-audio",
+        "file": "zap1.ogg",
+        "trim": 0.6,
+        "delay": 0,
+        "sha256": "4e4bf11c671a4be0723022a7177f8e122329fa32a0c59555581f4193ed111585",
+        "url": "https://kenney.nl/assets/digital-audio",
+        "license": "CC0"
+      },
+      {
+        "pack": "sci-fi-sounds",
+        "file": "forceField_003.ogg",
+        "trim": 0.6,
+        "delay": 0,
+        "sha256": "15e3fe971ffd3415e5ab641d3a4d043fb31f6712b0956315b524ba29c3889cda",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C11",
+    "role": "Successful scan",
+    "pitch": "A short computer phrase and confirmation for an actual successful scan, rather than every menu movement.",
+    "bytes": 9448,
+    "output_sha256": "961088a113dc353c0f2bbbf336b309647ab665f30f8f0721f00de60b30bdb4ee",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "computerNoise_001.ogg",
+        "trim": 0.45,
+        "delay": 0,
+        "sha256": "29b4842f6d8c0ba2b0cb00bfaff3b852b492bb43197a82e697917aacbe106757",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      },
+      {
+        "pack": "interface-sounds",
+        "file": "confirmation_003.ogg",
+        "trim": null,
+        "delay": 0.4,
+        "sha256": "3091bf0be0497f825769ee0733ca7bdc3bcd59bd6c6e8f2ba8f93d580ff38022",
+        "url": "https://kenney.nl/assets/interface-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "C12",
+    "role": "Door / docking latch",
+    "pitch": "A mechanical closing candidate for on-foot doors or the latch part of docking.",
+    "bytes": 7253,
+    "output_sha256": "790fe2affa7f9d65b1340ab20b818f14dc1bbed31c4508a9499fa9de97bc89d2",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "doorClose_001.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "2153e83ff9880c78f9539aa5dcce80fc9e3b39c6fa0f8dec9325ec6d7ea2c9d5",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  }
+]

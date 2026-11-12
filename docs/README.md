@@ -6,7 +6,9 @@ Start at the [project README](../README.md) for the public and experimental down
 | --- | --- |
 | Understand the intended difficulty and treatment of the player | [Design philosophy](design-philosophy.md) |
 | Use the log, find research work, or explore Mercy of Dawn | [Expedition guide](experiment.md) |
+| Understand the reusable story-rescue lifecycle and future station infection | [Story missions](story-missions.md) |
 | Understand starting crews, morale modifiers and skill training | [Crew progression](crew-progression.md) |
+| Check equipment behavior, fixes and known unfinished gear | [November 12 equipment audit](equipment-audit-2026-11-12.md) |
 | See measured skill progression in automated careers | [Experimental.74 skill audit](skill-progression-audit.md) |
 | Understand bridge skills, crew casualties and enemy tactics | [Ship combat and crew](ship-combat-crew.md) |
 | Read the earlier combat diagnosis | [November combat review](combat-review-2026-11-09.md) |
@@ -18,6 +20,7 @@ Start at the [project README](../README.md) for the public and experimental down
 | Run scripted careers or browser regression checks | [Testing guide](../qa/README.md) |
 | Inspect a game object without affecting a career | [Debug playground](debug-playground.md) |
 | Work with ship and station sprites | [Art direction and credits](art-direction.md) |
+| Understand sound routing and audition original recordings | [Audio guide](audio.md) |
 | Check what shipped or what is planned | [Changelog](../CHANGELOG.md) and [roadmap](roadmap.md) |
 | Understand the public and experimental branches | [Branch history](branch-history.md) |
 | Read past playthroughs, audits, and release notes | [Archive](archive/README.md) |

@@ -1,6 +1,6 @@
 {
   "name": "prospector-ii",
-  "version": "0.28.0-experimental.96",
+  "version": "0.28.0-experimental.105",
   "private": true,
   "description": "Prospector II experimental development with modular sources and a single HTML build.",
   "engines": { "node": ">=22" },
@@ -8,6 +8,7 @@
     "build": "node tools/build-single-file.js",
     "art:ships": "node tools/import-prospector-ships.js",
     "art:plasma": "node tools/import-prospector-plasma.js",
+    "art:audio": "node tools/import-prospector-audio.js",
     "check": "node tools/build-single-file.js --check",
     "test": "node --test tests/*.test.js && npm run check",
     "verify:migration": "node tools/verify-migration.js"

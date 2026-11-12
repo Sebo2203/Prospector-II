@@ -569,6 +569,8 @@ document.addEventListener('keydown', e=>{
       if(e.key==='p'||e.key==='P'){e.preventDefault();podQuarantineSurvivor();return;}
       if(e.key==='r'||e.key==='R'){e.preventDefault();manualQuarantinePump();return;}
     }
+    // Surface visor control takes precedence over remapped movement; U elsewhere keeps scooping.
+    if(G.mode==='planet'&&(e.key==='u'||e.key==='U')){e.preventDefault();if(!e.repeat)toggleCrewHelmets();return;}
     // Movement — arrows always work; numpad always works; letter keys use remappable keybinds
     // All keybind checks use e.code (physical position, layout-independent)
     const kb = (OPTIONS.keybinds || DEFAULT_KEYBINDS);
@@ -620,7 +622,7 @@ document.addEventListener('keydown', e=>{
         const _comId   = _oreDef.id;
         const _com     = COMMODITIES[_comId];
         const _ss      = G.shipStats;
-        const _tool    = (G.inventory||[]).find(i => i.usable === 'mining_tool');
+        const _tool    = bestMiningTool();
         if(!_tool){
           addLog(_com.name+' deposit identified — you need a mining tool and cargo space to extract it.','lw');
           renderAll(); return;
@@ -636,11 +638,11 @@ document.addEventListener('keydown', e=>{
         if(_oreKey === 'ur'){
           applyRadiationExposureToCrew(1, 'uranium_extraction', 0.6);
         }
-        const _bestEng = Math.max(...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.eng||0), 0);
+        const _bestEng = Math.max(...(G.crew||[]).filter(c=>c.hp>0).map(c=>crewSkillValue(c,'eng')), 0);
         const _mult    = _tool.miningMult || 1.0;
         const _totalNeeded = Math.max(2, Math.round((10 / _mult) - _bestEng * 0.5));
-        if(!G._miningProgress || G._miningProgress.x !== G.player.x || G._miningProgress.y !== G.player.y){
-          G._miningProgress = { x:G.player.x, y:G.player.y, progress:0, total:_totalNeeded, oreKey:_oreKey, comId:_comId };
+        if(!G._miningProgress || G._miningProgress.x !== G.player.x || G._miningProgress.y !== G.player.y || G._miningProgress.planetKey!==G.curPlanet){
+          G._miningProgress = { planetKey:G.curPlanet,x:G.player.x,y:G.player.y,progress:0,total:_totalNeeded, oreKey:_oreKey, comId:_comId };
         }
         G._miningProgress.progress++;
         if(G._miningProgress.progress >= G._miningProgress.total){

@@ -7,6 +7,7 @@ function launchShipCombatMissile(combat,source,target){
   const ship=source<0?G.ship:from.ship;
   combat.missiles.push({source,target,x:from.x,y:from.y,gunnery:shipBridgeSkills(ship).gunnery,
     range:shipCombatDistance(from,to),lastRound:combat.round,ticks:0});
+  if(source<0||shipCombatInSensorRange(combat,from))SFX.shipFire('artemis',combat);
   addCombatLog((source<0?'You launch':ship.name+' launches')+' an Artemis missile at '+
     (target<0?'your ship':to.ship.name)+'. Estimated flight '+Math.max(1,Math.ceil(shipCombatDistance(from,to)/ARTEMIS_FLIGHT_SPEED))+'t.','lw');
 }

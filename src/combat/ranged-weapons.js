@@ -9,17 +9,27 @@
 //  falloff   — accuracy loss per tile of distance
 // ─────────────────────────────────────────────────────────────────
 const GROUND_WEAPONS = {
-  'gun':          { maxRange: 6,  accuracy: 0.85, falloff: 0.10 },  // Simple Handgun
-  'gun_sniper':   { maxRange: 12, accuracy: 0.90, falloff: 0.05 },  // Sniper Rifle
-  'gun_shotgun':  { maxRange: 3,  accuracy: 0.95, falloff: 0.20 },  // Shotgun — close range, high acc
-  'gun_burst':    { maxRange: 5,  accuracy: 0.75, falloff: 0.08 },  // Burst Carbine — medium, fast
-  'gun_plasma':   { maxRange: 7,  accuracy: 0.80, falloff: 0.07 },  // Plasma Pistol
-  'gun_breacher': { maxRange: 4,  accuracy: 0.90, falloff: 0.15 },  // Assault Carbine — short-medium, high acc
-  'knife':        { maxRange: 1,  accuracy: 1.00, falloff: 0.00 },  // Knife — melee only range
-  'stun_baton':   { maxRange: 1,  accuracy: 1.00, falloff: 0.00 },  // Stun Baton — melee, non-lethal
-  'vibroblade':   { maxRange: 1,  accuracy: 1.00, falloff: 0.00 },  // Vibroblade — high melee ATK
-  'tranq_darts':  { maxRange: 5,  accuracy: 0.80, falloff: 0.06 },  // Tranq Dart Kit — ranged, non-lethal
+  'gun':          { attackBonus:2, maxRange: 6,  accuracy: 0.85, falloff: 0.10 },  // Simple Handgun
+  'gun_sniper':   { attackBonus:5, maxRange: 12, accuracy: 0.90, falloff: 0.05 },  // Sniper Rifle
+  'gun_shotgun':  { attackBonus:3, maxRange: 3,  accuracy: 0.95, falloff: 0.20 },  // Shotgun — close range, high acc
+  'gun_burst':    { attackBonus:3, maxRange: 5,  accuracy: 0.75, falloff: 0.08 },  // Burst Carbine — medium, fast
+  'gun_plasma':   { attackBonus:3, maxRange: 7,  accuracy: 0.80, falloff: 0.07 },  // Plasma Pistol
+  'gun_breacher': { attackBonus:4, maxRange: 4,  accuracy: 0.90, falloff: 0.15 },  // Assault Carbine — short-medium, high acc
+  'knife':        { attackBonus:1, maxRange: 1,  accuracy: 1.00, falloff: 0.00 },  // Knife — melee only range
+  'stun_baton':   { attackBonus:2, maxRange: 1,  accuracy: 1.00, falloff: 0.00 },  // Stun Baton — melee, non-lethal
+  'vibroblade':   { attackBonus:4, maxRange: 1,  accuracy: 1.00, falloff: 0.00 },  // Vibroblade — high melee ATK
+  'tranq_darts':  { attackBonus:0, maxRange: 5,  accuracy: 0.80, falloff: 0.06 },  // Tranq Dart Kit — ranged, non-lethal
 };
+function groundWeaponAttackBonus(id){return GROUND_WEAPONS[id]?.attackBonus??2;}
+function groundRangedHitChance(shooter,profile,distance){
+  if(distance<1||distance>profile.maxRange)return 0;
+  return Math.min(0.99,Math.max(0.05,profile.accuracy-(distance-1)*profile.falloff)+
+    crewSkillValue(shooter,'cbt')*0.02+crewImplantAccuracyBonus(shooter));
+}
+function consumeEquippedTranq(shooter){
+  shooter.weapon='Bare hands';shooter.weaponUsable=null;shooter._equippedItem=null;
+}
+
 // Returns all living crew with ranged weapons, ordered by default usefulness.
 function getRangedShooters(){
   return (G.crew||[])

@@ -52,7 +52,7 @@ function doInteract(){
         addLog(cell.name+': "Hostile transponder detected. You are banned from this station!"','lc');
         const dmg = 10 + rnd(15);
         const hull=absorbShipHit(G.ship,dmg,'station defense turrets');
-        if(dmg>0) SFX.hullHit && SFX.hullHit();
+        if(dmg>0) SFX.shipImpact(hull);
         addLog('Station defense turrets open fire! '+dmg+' damage ('+hull+' hull).','lc');
         if(G.ship.hp<=0){
           G.dead=true;

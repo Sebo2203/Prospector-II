@@ -403,7 +403,7 @@ const assert = require('node:assert/strict');
     });
     assert.match(await actions.textContent(), /\[Enter\] Open pressure hatch/);
     await page.keyboard.press('Enter');
-    assert.equal(await page.evaluate(() => G.planets[G.curPlanet].grid[8][6].type), 'q_open_door');
+    assert.equal(await page.evaluate(() => G.planets[G.curPlanet].grid[8][6].type), 'rw_open_door');
     assert.doesNotMatch(await actions.textContent(), /\[Enter\] Open pressure hatch/);
     await page.evaluate(() => {
       G.player = { x: 5, y: 4 };

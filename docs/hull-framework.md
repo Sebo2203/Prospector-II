@@ -29,6 +29,8 @@ These ceilings cannot all be fitted simultaneously. Factory equipment is already
 
 Hangar → Upgrades shows the shared budget and the reason an upgrade is unavailable. **Refit layout** removes additional refits to reclaim space, recovering 25% of their documented purchase price. Factory allocations cannot be stripped. Store weapons/utilities before removing occupied bays; unload cargo or reduce crew before removing needed capacity. Removing tanks explicitly reports surplus fuel that will be vented. No engineer is required.
 
+The F3 list shows plain system names and integrity. Each selected core's detail heading displays its **installed rating in Roman numerals**: engines, reactor, shields, cooling and sensors. Headings read “Engines IV”, “Reactor I”, and so on, with no “rating” label. Fuel tanks have no separate rating, so their heading shows installed capacity as a numeric amount; usable capacity remains separate after rupture. The engine detail also uses Roman numerals for effective rating and hull ceiling, with OFFLINE at zero, while drive pace, power, range, charge, capacity and integrity remain numeric quantities. Damage or insufficient reactor power is identified when engine performance is reduced. An upgrade changes the installed rating; a healthy core remains at 100% integrity. The factory Light Scout starts at rating II: one purchased refit gives III, and another gives IV. The option to remove an engine refit therefore exists at III; it is not evidence that a second purchase reached IV.
+
 ## Travel and risk
 
 | Stock hull | Drive pace | Fuel / sector | Fuel / space wait | Fuel / launch | Fuel / combat boost |

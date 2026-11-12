@@ -1,0 +1,147 @@
+[
+  {
+    "id": "C8-B",
+    "role": "Ramming \u2014 low impact + metal",
+    "intent": "A low impact with one shortened metal layer. Tests whether removing the extended locker-room rattle gives enough weight.",
+    "sources": [
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_000.ogg",
+        "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 1.4,
+        "speed": 0.78,
+        "gain": 0.85,
+        "lowpass_hz": 700,
+        "delay_ms": 0
+      },
+      {
+        "provider": "freesound",
+        "sound_id": 40158,
+        "sha256": "bca4ff755425d5201a69b8562020e059251af19426906a56870a64105da2e254",
+        "url": "https://freesound.org/people/moxobna/sounds/40158/",
+        "preview_url": "https://cdn.freesound.org/previews/40/40158_43834-hq.mp3",
+        "license": "CC0",
+        "seconds": 0.48,
+        "speed": 0.55,
+        "gain": 0.34,
+        "lowpass_hz": 1600,
+        "delay_ms": 20
+      }
+    ]
+  },
+  {
+    "id": "C8-C",
+    "role": "Ramming \u2014 low impact + crunch",
+    "intent": "A low impact with a processed crunch effect instead of the rejected raw metal crash.",
+    "sources": [
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_000.ogg",
+        "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 1.4,
+        "speed": 0.78,
+        "gain": 0.8,
+        "lowpass_hz": 700,
+        "delay_ms": 0
+      },
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "explosionCrunch_001.ogg",
+        "sha256": "fdd04d6f0032d4d57c134ad37f3587d2d00e58c9572715275bd8cf4f43593576",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 0.8,
+        "speed": 0.65,
+        "gain": 0.45,
+        "lowpass_hz": 2200,
+        "delay_ms": 15
+      }
+    ]
+  },
+  {
+    "id": "C9-B",
+    "role": "Asteroid \u2014 low impact + rock",
+    "intent": "A low impact with a shortened and lowered rock-effect tail. Tests whether the rejected raw source works as a quieter texture.",
+    "sources": [
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_001.ogg",
+        "sha256": "cdda50600a4928f2f1b8371224d53c171ac799c1cf2c30b11999508985250b3b",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 0.9,
+        "speed": 0.72,
+        "gain": 0.85,
+        "lowpass_hz": 750,
+        "delay_ms": 0
+      },
+      {
+        "provider": "freesound",
+        "sound_id": 202098,
+        "sha256": "19ed329f3a7ac18a107938b1e61e4e864e19fb8c858c972d57e7e16d1fb6241a",
+        "url": "https://freesound.org/people/spookymodem/sounds/202098/",
+        "preview_url": "https://cdn.freesound.org/previews/202/202098_3756348-hq.mp3",
+        "license": "CC0",
+        "seconds": 1.05,
+        "speed": 0.6,
+        "gain": 0.34,
+        "lowpass_hz": 2100,
+        "delay_ms": 30
+      }
+    ]
+  },
+  {
+    "id": "C9-C",
+    "role": "Asteroid \u2014 impact + crunch + rock",
+    "intent": "An alternative with a separate crunch attack and a quieter lowered rock tail.",
+    "sources": [
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_001.ogg",
+        "sha256": "cdda50600a4928f2f1b8371224d53c171ac799c1cf2c30b11999508985250b3b",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 0.9,
+        "speed": 0.72,
+        "gain": 0.7,
+        "lowpass_hz": 750,
+        "delay_ms": 0
+      },
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "explosionCrunch_000.ogg",
+        "sha256": "4b597d658d0ae101f0a030fbeea5fc3a4292ab85f017470a8254a8e7959cbd69",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 0.65,
+        "speed": 0.72,
+        "gain": 0.48,
+        "lowpass_hz": 2600,
+        "delay_ms": 0
+      },
+      {
+        "provider": "freesound",
+        "sound_id": 202098,
+        "sha256": "19ed329f3a7ac18a107938b1e61e4e864e19fb8c858c972d57e7e16d1fb6241a",
+        "url": "https://freesound.org/people/spookymodem/sounds/202098/",
+        "preview_url": "https://cdn.freesound.org/previews/202/202098_3756348-hq.mp3",
+        "license": "CC0",
+        "seconds": 0.9,
+        "speed": 0.65,
+        "gain": 0.22,
+        "lowpass_hz": 1800,
+        "delay_ms": 90
+      }
+    ]
+  }
+]

@@ -1,3 +1,7 @@
+function bestMiningTool(){
+  return (G.inventory||[]).reduce((best,item)=>item.usable==='mining_tool'&&(!best||(item.miningMult||1)>(best.miningMult||1))?item:best,null);
+}
+
 const MINERAL_SAMPLE_TYPES = [
   // ── Geological / geochemical samples (indices 0-7) ──────────────────────
   { name:'Rock Sample',         col:'#ffe066', value:40,  desc:'Powdered stone and metallic grit in a labeled vial.' },

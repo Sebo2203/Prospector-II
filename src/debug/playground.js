@@ -46,8 +46,8 @@ function debugBuildPaletteGalaxyObject(id,x,y){
     return {type:'VOID',name,_npcStranded:ship};
   } else if(id==='NEBULA_LOOT') G.nebulaLoot.push({x,y,item:makeCommodityItem('ore_xc','palette',0)});
   else if(id==='QUARANTINE'){
-    ensureExpeditionState().quarantine={x,y,version:2,status:'unvisited',survivors:[],repaired:false,air:180,lastTick:null};
-    return {type:'DERELICT',name:'Mercy of Dawn'};
+    ensureExpeditionState().quarantine=createQuarantineIncident(x,y,'Mercy of Dawn');
+    return {type:'DERELICT',name:'Mercy of Dawn',storyEvent:'quarantine'};
   } else throw new Error('No debug palette factory for '+id);
   return {type:'VOID',name};
 }

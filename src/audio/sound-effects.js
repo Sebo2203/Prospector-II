@@ -1,19 +1,68 @@
-// ─────────────────────────────────────────────────────────────────
-//  SOUND ENGINE  (Web Audio API — no files, fully offline)
-//
-//  Short synthesized cues for ship actions, hazards, and crew damage.
-//
-//  AudioContext is created on first user interaction to comply with
-//  browser autoplay policy — it will silently skip until then.
-// ─────────────────────────────────────────────────────────────────
+// Offline sampled effects. Audio state stays outside the career and never uses rule RNG.
 const SFX = (() => {
-  let ac = null;
-
-  function ctx() {
-    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+  let ac=null,output=null;
+  const buffers=new Map(),decodes=new Map(),pending=new Map(),voices=[];
+  const weapons={mass_driver:'massDriver',railgun:'railgun',laser_cannon:'laserCannon',pulse_laser:'pulseLaser',artemis:'artemisLaunch'};
+  function ctx(){
+    if(!ac){
+      ac=new (window.AudioContext||window.webkitAudioContext)();output=ac.createDynamicsCompressor();
+      output.threshold.value=-3;output.knee.value=0;output.ratio.value=20;output.attack.value=0.002;output.release.value=0.1;
+      output.connect(ac.destination);
+    }
     return ac;
   }
-
+  function matches(event){
+    if(!event || G!==event.career || !G)return false;
+    if(event.scope==='pain')return G.mode==='planet'&&G.curPlanet===event.planet;
+    if(event.scope==='surface')return (G.mode==='planet'||(G.mode==='inventory'&&G._prevMode==='planet'))&&G.curPlanet===event.planet;
+    if(event.scope==='combat')return ['shipcombat','galaxy'].includes(G.mode)&&(!G.shipCombat||G.shipCombat===event.combat);
+    return G.mode===event.mode && (event.mode!=='planet'||G.curPlanet===event.planet);
+  }
+  function stop(voice){try{voice.node.stop();}catch(e){}const index=voices.indexOf(voice);if(index>=0)voices.splice(index,1);}
+  function syncContext(){
+    for(const [key,event] of pending)if(!matches(event))pending.delete(key);
+    for(const voice of [...voices])if(!matches(voice))stop(voice);
+  }
+  function load(key){
+    if(buffers.has(key))return Promise.resolve(buffers.get(key));
+    if(!decodes.has(key)){
+      try{
+        const bytes=Uint8Array.from(atob(AUDIO_SAMPLES[key].split(',')[1]),char=>char.charCodeAt(0));
+        decodes.set(key,ctx().decodeAudioData(bytes.buffer).then(buffer=>{buffers.set(key,buffer);return buffer;}).catch(()=>null));
+      }catch(e){decodes.set(key,Promise.resolve(null));}
+    }
+    return decodes.get(key);
+  }
+  function prepare(){try{const c=ctx();if(c.state==='suspended')void c.resume().catch(()=>{});for(const key of Object.keys(AUDIO_SAMPLES))void load(key);}catch(e){}}
+  function start(event,buffer){
+    if(pending.get(event.key)!==event)return;
+    pending.delete(event.key);
+    if(!buffer||!matches(event)||performance.now()-event.born>1500)return;
+    const same=voices.filter(voice=>voice.group===event.group);
+    const limit=event.group==='pain'||event.group==='alarm'||event.group==='travel'?1:3;
+    while(same.length>=limit)stop(same.shift());
+    while(voices.length>=8)stop(voices[0]);
+    const c=ctx(),node=c.createBufferSource(),gain=c.createGain();
+    node.buffer=buffer;gain.gain.value=event.key==='alarmWarn'?0.35:event.key==='alarmCrit'?0.45:0.65;
+    node.connect(gain);gain.connect(output);
+    const voice={...event,node};voices.push(voice);
+    node.onended=()=>{const index=voices.indexOf(voice);if(index>=0)voices.splice(index,1);node.disconnect();gain.disconnect();};
+    node.start();
+  }
+  function sample(key,scope='location',group='effects',combat=G?.shipCombat){
+    if(!G || !AUDIO_SAMPLES[key])return;
+    const event={key,scope,group,combat,career:G,mode:G.mode,planet:G.curPlanet,born:performance.now()};
+    if(!matches(event))return;
+    try{
+      const c=ctx();if(c.state==='suspended')void c.resume().catch(()=>{});
+      if(['pain','alarm','travel'].includes(group))for(const [id,queued] of pending)if(queued.group===group)pending.delete(id);
+      pending.set(key,event);
+      if(buffers.has(key))start(event,buffers.get(key));
+      else void load(key).then(buffer=>{try{start(event,buffer);}catch(e){}});
+    }catch(e){}
+  }
+  // Prime once per genuine interaction; no autoplay, network, or render-driven decoding.
+  for(const type of ['keydown','pointerdown'])window.addEventListener(type,prepare,{once:true,capture:true});
   // Helper: create oscillator + gain, connect to output, auto-stop
   function osc(type, freq, startVol, endVol, startTime, duration, dest) {
     const c  = ctx();
@@ -46,73 +95,40 @@ const SFX = (() => {
   }
 
   return {
-
-    prepare(){try{const c=ctx();if(c.state==='suspended')void c.resume().catch(()=>{});}catch(e){}},
-
-    // Short confirmation for our successful ship shot; distinct from an incoming metal hit.
-    shipHit(){
-      try{const t=ctx().currentTime;
-        oscRamp('triangle',720,260,0.17,t,0.12);
-        osc('sine',1040,0.09,0,t+0.035,0.12);
+    prepare,syncContext,
+    shipFire(id,combat=G?.shipCombat){if(weapons[id])sample(weapons[id],combat?'combat':'location','weapons',combat);},
+    groundFire(id){
+      if(id==='gun_plasma'||id==='energy pulse')sample('groundLaser','surface','weapons');
+      else if(['gun_burst','gun_breacher','Spitter Carbine'].includes(id))sample('groundBurst','surface','weapons');
+    },
+    shipHit(){sample('hullHit','combat','impact');},
+    shieldHit(){sample('shieldHit',G?.shipCombat?'combat':'location','impact');},
+    coreHit(){sample('hullHit','combat','impact');},
+    hullHit(){sample('hullHit',G?.shipCombat?'combat':'location','impact');},
+    shipImpact(hull){sample(hull>0?'hullHit':'shieldHit',G?.shipCombat?'combat':'location','impact');},
+    ram(combat=G?.shipCombat){sample('ram','combat','collision',combat);},
+    asteroid(combat=G?.shipCombat){sample('asteroid','combat','collision',combat);},
+    wraith(combat=G?.shipCombat){sample('wraith','combat','collision',combat);},
+    boost(){sample('boost','combat','engine');},
+    lightning(){sample('lightning',G?.shipCombat?'combat':'location','weather');},
+    scan(){sample('scan','location','scan');},
+    door(kind='hatch'){sample(kind==='ancient'?'door':'dock','surface','door');},
+    // Original station-entry chime: C5, G5, then C4.
+    dock(){
+      try{
+        const t=ctx().currentTime;
+        osc('sine',523,0.22,0,t,0.4);
+        osc('sine',784,0.18,0,t+0.22,0.5);
+        osc('sine',261,0.12,0,t+0.5,0.6);
       }catch(e){}
     },
-    shieldHit(){
-      try{const t=ctx().currentTime;
-        oscRamp('sine',350,140,0.19,t,0.20);
-        oscRamp('triangle',900,360,0.07,t,0.12);
-      }catch(e){}
-    },
-    // A heavier mechanical failure followed by an urgent, brief electrical alarm.
-    coreHit(){
-      try{const t=ctx().currentTime;
-        oscRamp('sawtooth',140,28,0.27,t,0.25);
-        oscRamp('square',1200,120,0.08,t,0.12);
-        osc('square',660,0.10,0,t+0.16,0.08);
-        osc('square',440,0.11,0,t+0.29,0.10);
-      }catch(e){}
-    },
-
-    // Landing: high-freq engine whine descending to a low thud
-    land() {
-      try {
-        const c  = ctx();
-        const t  = c.currentTime;
-        // Engine whine descending
-        oscRamp('sawtooth', 420, 60, 0.18, t,      0.7);
-        // Low impact thud
-        oscRamp('sine',     120, 30, 0.35, t + 0.6, 0.5);
-        // Short rumble burst (noise-like via detuned saws)
-        oscRamp('sawtooth',  80, 40, 0.12, t + 0.65, 0.4);
-        oscRamp('sawtooth',  85, 38, 0.10, t + 0.65, 0.4);
-      } catch(e) {}
-    },
-
-    // Liftoff: low rumble building to rising engine roar
-    liftoff() {
-      try {
-        const c = ctx();
-        const t = c.currentTime;
-        // Initial ignition thump
-        oscRamp('sine',     50, 90,  0.30, t,        0.25);
-        // Engine building
-        oscRamp('sawtooth', 80, 340, 0.20, t + 0.15, 0.8);
-        oscRamp('sawtooth', 78, 350, 0.15, t + 0.15, 0.8);
-        // High whine fading out as ship recedes
-        oscRamp('square',  340, 600, 0.08, t + 0.7,  0.4);
-      } catch(e) {}
-    },
-
-    // Docking: two-tone chime — friendly, station-like
-    dock() {
-      try {
-        const c = ctx();
-        const t = c.currentTime;
-        osc('sine', 523, 0.22, 0,    t,        0.4);   // C5
-        osc('sine', 784, 0.18, 0,    t + 0.22, 0.5);   // G5
-        osc('sine', 261, 0.12, 0,    t + 0.5,  0.6);   // C4
-      } catch(e) {}
-    },
-
+    land(){sample('land','location','travel');},
+    liftoff(){sample('liftoff','location','travel');},
+    wormhole(){sample('wormhole','location','travel');}, // Reserved: no wormhole-travel action exists yet.
+    explosion(){sample('explosion',G?.shipCombat?'combat':'surface','explosion');},
+    alarmWarn(){sample('alarmWarn','location','alarm');},
+    alarmCrit(){sample('alarmCrit','location','alarm');},
+    crewHit(){if(G?.mode==='planet')sample('crewPain','pain','pain');},
     // Refueling: valve click, a rising pump, then a full-tank confirmation.
     refuel() {
       try {
@@ -136,88 +152,6 @@ const SFX = (() => {
         oscRamp('square', 480, 170, 0.09, t + 0.32, 0.07);
         oscRamp('sawtooth', 290, 130, 0.08, t + 0.41, 0.17);
         osc('sine', 392, 0.13, 0, t + 0.56, 0.30);
-      } catch(e) {}
-    },
-
-    // Warning alarm: two rising beeps — oxygen or fuel at 50%
-    alarmWarn() {
-      try {
-        const c = ctx();
-        const t = c.currentTime;
-        // Two short ascending beeps
-        osc('square', 440, 0.18, 0, t,        0.12);
-        osc('square', 554, 0.18, 0, t + 0.18, 0.12);
-      } catch(e) {}
-    },
-
-    // Critical alarm: rapid triple beep — oxygen or fuel at 25%
-    alarmCrit() {
-      try {
-        const c = ctx();
-        const t = c.currentTime;
-        // Three urgent high beeps
-        osc('square', 880, 0.22, 0, t,        0.10);
-        osc('square', 880, 0.22, 0, t + 0.15, 0.10);
-        osc('square', 880, 0.22, 0, t + 0.30, 0.10);
-        // Low drone underneath
-        osc('sawtooth', 110, 0.08, 0, t, 0.45);
-      } catch(e) {}
-    },
-
-    // Hull hit: deep metallic clang — ship takes damage
-    hullHit() {
-      try {
-        const c = ctx();
-        const t = c.currentTime;
-        // Metal impact — low thud + high ring
-        oscRamp('sawtooth', 180, 40,  0.30, t,        0.3);
-        oscRamp('sine',     900, 200, 0.12, t,        0.4);
-        oscRamp('sine',     400, 100, 0.08, t + 0.05, 0.3);
-      } catch(e) {}
-    },
-
-    // Crew hit: synthesised grunt — short voiced "oof"
-    // Approximates the Minecraft hurt sound: voiced descending
-    // pitch burst with breath noise, fast attack, fast decay.
-    crewHit() {
-      try {
-        const c = ctx();
-        const t = c.currentTime;
-
-        // Noise burst (breath/impact component) via high-freq oscillator
-        const noise = c.createOscillator();
-        const nGain = c.createGain();
-        const nFilter = c.createBiquadFilter();
-        noise.type = 'sawtooth';
-        noise.frequency.setValueAtTime(180, t);
-        noise.frequency.linearRampToValueAtTime(60, t + 0.12);
-        nFilter.type = 'bandpass';
-        nFilter.frequency.value = 800;
-        nFilter.Q.value = 0.8;
-        nGain.gain.setValueAtTime(0.25, t);
-        nGain.gain.linearRampToValueAtTime(0, t + 0.14);
-        noise.connect(nFilter);
-        nFilter.connect(nGain);
-        nGain.connect(c.destination);
-        noise.start(t); noise.stop(t + 0.15);
-
-        // Voiced component — descending "uh" vowel shape
-        const voiced = c.createOscillator();
-        const vGain  = c.createGain();
-        const vFilter = c.createBiquadFilter();
-        voiced.type = 'sawtooth';
-        voiced.frequency.setValueAtTime(220, t);
-        voiced.frequency.linearRampToValueAtTime(130, t + 0.10);
-        vFilter.type = 'lowpass';
-        vFilter.frequency.setValueAtTime(1200, t);
-        vFilter.frequency.linearRampToValueAtTime(400, t + 0.10);
-        vGain.gain.setValueAtTime(0.20, t);
-        vGain.gain.linearRampToValueAtTime(0, t + 0.13);
-        voiced.connect(vFilter);
-        vFilter.connect(vGain);
-        vGain.connect(c.destination);
-        voiced.start(t); voiced.stop(t + 0.15);
-
       } catch(e) {}
     },
 
@@ -262,4 +196,3 @@ const SFX = (() => {
 
   };
 })();
-

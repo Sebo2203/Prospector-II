@@ -4,7 +4,7 @@ Every starting hull carries a Captain and Navigator. The Scout no longer receive
 
 ## Morale
 
-Current morale is base morale + encouragement + drinks + chemicals + recent events − grief/stress − time-away penalty, clamped to 0–135. Base morale begins at 55. Lasting losses from deaths, neglected injuries, disease and unpaid wages still change the base. Each rescued Mercy survivor delivered once to station medical staff still earns a lasting +1 base morale; this finite rescue reward is distinct from repeatable leisure/aid boosts. The unpaid-visits row records a penalty already applied to base morale, not another subtraction. Paying a later payroll clears the unpaid-visit counter; it does not erase past base losses.
+Current morale is base morale + encouragement + drinks + chemicals + recent events − grief/stress − time-away penalty, clamped to 0–135. Base morale begins at 55. Lasting losses from deaths, neglected injuries, disease and unpaid wages still change the base. Each rescued quarantine-ship survivor delivered once to station medical staff still earns a lasting +1 base morale; this finite rescue reward is distinct from repeatable leisure/aid boosts. The unpaid-visits row records a penalty already applied to base morale, not another subtraction. Paying a later payroll clears the unpaid-visit counter; it does not erase past base losses.
 
 Short-lived rewards do not permanently improve the base:
 

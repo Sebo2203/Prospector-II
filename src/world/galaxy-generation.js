@@ -587,7 +587,7 @@ function generateGalaxy() {
 
   revealAround(bx, by, 5);
   revealAround(b2x, b2y, 1);
-  placeQuarantineShip();
+  scheduleStoryEvents();
   addLog('Docked at '+grid[by][bx].name+'. Ready for departure.','li');
   addLog('Fly to a star system and press Enter to enter orbit.','li');
 }

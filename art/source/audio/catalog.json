@@ -1,0 +1,498 @@
+[
+  {
+    "id": "groundLaser",
+    "path": "art/source/audio/groundLaser.mp3",
+    "sha256": "24aeeae9579e1a1b50c1c3ec018ccdef6ff8ad7125e2dc3c2ad227d8e05d526b",
+    "bytes": 16030,
+    "choice": "W1",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "weap_1.wav",
+        "git_blob": "88436e39fcd4f8549b8bd82b03054bbf1827a785",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "explosion",
+    "path": "art/source/audio/explosion.mp3",
+    "sha256": "9691a1437861170cd674168b1c8b5568fc24f975b364b48e5dbede96f72056bf",
+    "bytes": 36719,
+    "choice": "W2",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "weap_2.wav",
+        "git_blob": "de3787a46b6249e65e08320997d25d7878db4123",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "wraith",
+    "path": "art/source/audio/wraith.mp3",
+    "sha256": "ff1f4362d82c8a55de059b3e1f1728f36cb6ddddcf1959b151668bf4d141782f",
+    "bytes": 24808,
+    "choice": "W3",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "weap_3.wav",
+        "git_blob": "3b8499de084630a2151666672ca5c45a7869755c",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "groundBurst",
+    "path": "art/source/audio/groundBurst.mp3",
+    "sha256": "1360ba4630190311d7b0a2b289fac02692acfc34f03f2027a72dd1c8c0b5f410",
+    "bytes": 10388,
+    "choice": "W4",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "weap_4.wav",
+        "git_blob": "1c479595d67609b63c78293b94acabbec9c76b70",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "hullHit",
+    "path": "art/source/audio/hullHit.mp3",
+    "sha256": "67231d5806016c4ddc8bb0688b3e557863fb0b82528cb51b755fc03964e19603",
+    "bytes": 32331,
+    "choice": "W5",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "weap_5.wav",
+        "git_blob": "286494e391df9e9c8eb03b48a5039949a9143b44",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "alarmWarn",
+    "path": "art/source/audio/alarmWarn.mp3",
+    "sha256": "2313e2c5a2cf9c783cfa1689d1324850c08d56a5a6d58cf69535dd43ef8094fc",
+    "bytes": 4119,
+    "choice": "A1",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "alarm_1.wav",
+        "git_blob": "425beb433a011ff7d71d0e86bd507785b6485368",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "alarmCrit",
+    "path": "art/source/audio/alarmCrit.mp3",
+    "sha256": "69ec4062d7687d948bbda26ded849f6dfd647c54ce012a85c675b984580f9eca",
+    "bytes": 11015,
+    "choice": "A2",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "alarm_2.wav",
+        "git_blob": "a94560e69f6f48cb7290b586702d8d2de90dffb0",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "land",
+    "path": "art/source/audio/land.mp3",
+    "sha256": "fd9fa8a256a92a95cfd0e48ca03b8ded4f34ca3a5ddf10fa117a1d85824e9e55",
+    "bytes": 93771,
+    "choice": "LAND",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "land.wav",
+        "git_blob": "a162647f8c834eb73f0a338b0cb43b9edc0e4e97",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "liftoff",
+    "path": "art/source/audio/liftoff.mp3",
+    "sha256": "5c0dc64b98d6b93a60ff0cf78dbbf07345f647d70a5eca9dd02fa182c4cae49a",
+    "bytes": 41108,
+    "choice": "START",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "start.wav",
+        "git_blob": "030efb1dda9a61d3c526935830221ef0a86a5ee5",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "wormhole",
+    "path": "art/source/audio/wormhole.mp3",
+    "sha256": "eb5d6f1d313f4449ce66f92c044db7145149da6a6f7c68865971aec72e7ae3dc",
+    "bytes": 38914,
+    "choice": "WORM",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "wormhole.wav",
+        "git_blob": "67d10291c1ea08c96725c8fc350dfb07af678f15",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "crewPain",
+    "path": "art/source/prospector/audio/pain.wav",
+    "sha256": "5161536e60a37fabbc71e92c3d1cb9d60d43052c7466cb5a91438ea9c32dccb3",
+    "bytes": 74132,
+    "choice": "PAIN",
+    "sources": [
+      {
+        "provider": "Original Prospector",
+        "file": "pain.wav",
+        "git_blob": "d626fdc0deeb65ec66fc6155ce3e2bd2dd7dedd8",
+        "commit": "1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e",
+        "notes": "art/source/prospector/audio/README.md"
+      }
+    ]
+  },
+  {
+    "id": "massDriver",
+    "path": "art/source/audio/massDriver.mp3",
+    "sha256": "05d1f42f016e0185dd86e9e521711081e52a9a4244c2e1309f77f65b18c137ba",
+    "bytes": 8507,
+    "choice": "C1",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_000.ogg",
+        "trim": 0.65,
+        "delay": 0,
+        "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      },
+      {
+        "pack": "sci-fi-sounds",
+        "file": "impactMetal_000.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "956c6612a256aa1a67a2327fffe2454f6b1d82e4c1c2be28fd66916335d5b1d6",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "railgun",
+    "path": "art/source/audio/railgun.mp3",
+    "sha256": "3209a50d5f60e4f7bb33d2b6b4b9ed41d88208b893ae660e2e244a453342dd62",
+    "bytes": 11015,
+    "choice": "C2",
+    "sources": [
+      {
+        "pack": "digital-audio",
+        "file": "highUp.ogg",
+        "trim": 0.18,
+        "delay": 0,
+        "sha256": "cbc1c3c7ccf5d7903818144a4c3f5b2ed2385095792f29d8d7c76360ba4fa559",
+        "url": "https://kenney.nl/assets/digital-audio",
+        "license": "CC0"
+      },
+      {
+        "pack": "sci-fi-sounds",
+        "file": "laserLarge_001.ogg",
+        "trim": null,
+        "delay": 0.14,
+        "sha256": "e678aca631495b7dfef4ac625f0349875ccac81a60f538d530e072241af3e4bd",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "laserCannon",
+    "path": "art/source/audio/laserCannon.mp3",
+    "sha256": "0388440155d07ff754837c37e465c4f5d68f3b129732a7d30375369f89c96dea",
+    "bytes": 9448,
+    "choice": "C3",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "laserLarge_003.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "3c7b3c9d856ee31fa1b92d29322f6ee472446627381595baeaba2af35c07135f",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "pulseLaser",
+    "path": "art/source/audio/pulseLaser.mp3",
+    "sha256": "9688dbc582ec3c28e789152de79cd1299d3bdce1c883dd17bd87f7e08e6a388d",
+    "bytes": 3805,
+    "choice": "C4",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "laserSmall_001.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "ab87913aba9790a0c5fa173d086267ba521ad522fcad2252271db49988313cf5",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "artemisLaunch",
+    "path": "art/source/audio/artemisLaunch.mp3",
+    "sha256": "8016b15444a23a31e916a5e04ee0ab6e3c9ae7c0d417aca0b43d03caa950a4da",
+    "bytes": 9134,
+    "choice": "C5",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "thrusterFire_002.ogg",
+        "trim": 0.7,
+        "delay": 0,
+        "sha256": "5f7731c30196d73777d62eec7cb36a28bf63852e70244057b7625b888e71a3a8",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "shieldHit",
+    "path": "art/source/audio/shieldHit.mp3",
+    "sha256": "9cfb5a8f5771cc82c32ea54bf12365a9085264dc74553d36100ee6a26b8e024a",
+    "bytes": 12269,
+    "choice": "C6",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "forceField_001.ogg",
+        "trim": null,
+        "delay": 0,
+        "sha256": "5574e69dd04e5f59322c5ddffde5978f077b09170ae5e29cec0bd9901828cd90",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "scan",
+    "path": "art/source/audio/scan.mp3",
+    "sha256": "961088a113dc353c0f2bbbf336b309647ab665f30f8f0721f00de60b30bdb4ee",
+    "bytes": 9448,
+    "choice": "C11",
+    "sources": [
+      {
+        "pack": "sci-fi-sounds",
+        "file": "computerNoise_001.ogg",
+        "trim": 0.45,
+        "delay": 0,
+        "sha256": "29b4842f6d8c0ba2b0cb00bfaff3b852b492bb43197a82e697917aacbe106757",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0"
+      },
+      {
+        "pack": "interface-sounds",
+        "file": "confirmation_003.ogg",
+        "trim": null,
+        "delay": 0.4,
+        "sha256": "3091bf0be0497f825769ee0733ca7bdc3bcd59bd6c6e8f2ba8f93d580ff38022",
+        "url": "https://kenney.nl/assets/interface-sounds",
+        "license": "CC0"
+      }
+    ]
+  },
+  {
+    "id": "boost",
+    "path": "art/source/audio/boost.mp3",
+    "sha256": "a147054a5d5e962fcda23b7a02a1efcba16b524442dc61b15a0be8911ee6a66a",
+    "bytes": 20106,
+    "choice": "C7-A",
+    "sources": [
+      {
+        "id": "C7-A",
+        "creator": "LimitSnap_Creations",
+        "sound_id": 318688,
+        "url": "https://freesound.org/people/LimitSnap_Creations/sounds/318688/",
+        "preview_url": "https://cdn.freesound.org/previews/318/318688_5340548-hq.mp3",
+        "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+        "description": "Creator identifies this as a rocket-thrust rumble; recording method is unspecified.",
+        "bytes": 3162991,
+        "role": "Boost",
+        "title": "Rocket Thrust effect.wav",
+        "start_seconds": 2,
+        "duration_seconds": 1.6,
+        "preview_sha256": "b7389e2241edd9502abdd40280d91a9ae807634268c8319e161009dfc20754f1"
+      }
+    ]
+  },
+  {
+    "id": "lightning",
+    "path": "art/source/audio/lightning.mp3",
+    "sha256": "d1af3a475b7165e445f1102a7834e6e8dc3815651754411509c46babe7a3d854",
+    "bytes": 72768,
+    "choice": "C10-B",
+    "sources": [
+      {
+        "id": "C10-B",
+        "creator": "BlueDelta",
+        "sound_id": 446753,
+        "url": "https://freesound.org/people/BlueDelta/sounds/446753/",
+        "preview_url": "https://cdn.freesound.org/previews/446/446753_1790434-hq.mp3",
+        "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+        "description": "Creator reports an unprocessed thunder recording with little rain using a Zoom F8 and four microphones. This audition uses the public stereo preview.",
+        "bytes": 1435584,
+        "role": "Nebula discharge — thunder",
+        "title": "Heavy Thunder Strike - no Rain - QUADRO.wav",
+        "start_seconds": 0,
+        "duration_seconds": 6,
+        "preview_sha256": "343c8e7a6d24b7f71fd65117cb0120bb01460127cbfdf00668c42a0b69ad9c00"
+      }
+    ]
+  },
+  {
+    "id": "dock",
+    "path": "art/source/audio/dock.mp3",
+    "sha256": "9f1463d1e7365c8b1946b1e6e9cd48cd5bb6108ff7ab24872808b4a16c26a339",
+    "bytes": 32017,
+    "choice": "C12-A",
+    "sources": [
+      {
+        "id": "C12-A",
+        "creator": "Sheyvan",
+        "sound_id": 524231,
+        "url": "https://freesound.org/people/Sheyvan/sounds/524231/",
+        "preview_url": "https://cdn.freesound.org/previews/524/524231_3248005-hq.mp3",
+        "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+        "description": "Creator credits Philipp Grzemba with recording this heavy door in Mainz using a Tascam DR-40 and two Rode M5 microphones.",
+        "bytes": 61920,
+        "role": "Door / docking latch — A",
+        "title": "Heavy Metal Door 2",
+        "start_seconds": 0,
+        "duration_seconds": null,
+        "preview_sha256": "18110d00f662bf6497fabbfcf0ed3e24bfca7d8eec4251aacd95b9aaf80f129d"
+      }
+    ]
+  },
+  {
+    "id": "door",
+    "path": "art/source/audio/door.mp3",
+    "sha256": "48b1536b1badf260c3da767ecb08c36e18fee331cf26f64b0b8867c03d0ba33f",
+    "bytes": 50199,
+    "choice": "C12-B",
+    "sources": [
+      {
+        "id": "C12-B",
+        "creator": "Sheyvan",
+        "sound_id": 524284,
+        "url": "https://freesound.org/people/Sheyvan/sounds/524284/",
+        "preview_url": "https://cdn.freesound.org/previews/524/524284_3248005-hq.mp3",
+        "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+        "description": "Creator credits Philipp Grzemba with recording this heavy door using a Tascam DR-40 and two Rode M5 microphones.",
+        "bytes": 98016,
+        "role": "Door / docking latch — B",
+        "title": "Heavy Metal Door 3",
+        "start_seconds": 0,
+        "duration_seconds": null,
+        "preview_sha256": "0ebc983180d254d66727471365994fb9c28778175a0f4189ee85c1e51a8e0575"
+      }
+    ]
+  },
+  {
+    "id": "asteroid",
+    "path": "art/source/audio/asteroid.mp3",
+    "sha256": "2746a7eb574f2db25ab88c20d2668fc61d04c219aecca4a40d963b62258a05a9",
+    "bytes": 22300,
+    "choice": "C9-B",
+    "sources": [
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_001.ogg",
+        "sha256": "cdda50600a4928f2f1b8371224d53c171ac799c1cf2c30b11999508985250b3b",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 0.9,
+        "speed": 0.72,
+        "gain": 0.85,
+        "lowpass_hz": 750,
+        "delay_ms": 0
+      },
+      {
+        "provider": "freesound",
+        "sound_id": 202098,
+        "sha256": "19ed329f3a7ac18a107938b1e61e4e864e19fb8c858c972d57e7e16d1fb6241a",
+        "url": "https://freesound.org/people/spookymodem/sounds/202098/",
+        "preview_url": "https://cdn.freesound.org/previews/202/202098_3756348-hq.mp3",
+        "license": "CC0",
+        "seconds": 1.05,
+        "speed": 0.6,
+        "gain": 0.34,
+        "lowpass_hz": 2100,
+        "delay_ms": 30
+      }
+    ]
+  },
+  {
+    "id": "ram",
+    "path": "art/source/audio/ram.mp3",
+    "sha256": "04665813ce39397518043f54510977d3ade1a0f9871b9d0d7ddd0feda0ff423f",
+    "bytes": 22300,
+    "choice": "C8-D",
+    "sources": [
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_000.ogg",
+        "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 1.4,
+        "speed": 0.78,
+        "gain": 0.65,
+        "lowpass_hz": 700,
+        "delay_ms": 0
+      },
+      {
+        "provider": "freesound",
+        "sound_id": 40158,
+        "sha256": "bca4ff755425d5201a69b8562020e059251af19426906a56870a64105da2e254",
+        "url": "https://freesound.org/people/moxobna/sounds/40158/",
+        "preview_url": "https://cdn.freesound.org/previews/40/40158_43834-hq.mp3",
+        "license": "CC0",
+        "seconds": 0.9,
+        "speed": 1,
+        "gain": 0.6,
+        "lowpass_hz": null,
+        "delay_ms": 0,
+        "start_seconds": 0.48
+      }
+    ]
+  }
+]

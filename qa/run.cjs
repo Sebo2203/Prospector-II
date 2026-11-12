@@ -1,6 +1,11 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const suites = {
+  helmets: 'helmet-scenarios.cjs',
+  'quarantine-air': 'quarantine-air-scenarios.cjs',
+  'story-rescue': 'story-rescue-scenarios.cjs',
+  equipment: 'equipment-audit.cjs',
+  audio: 'audio-scenarios.cjs',
   interface: 'interface-scenarios.cjs',
   'menu-input': 'menu-input-scenarios.cjs',
   stations: 'station-art-scenarios.cjs',

@@ -11,7 +11,7 @@ function context(seed=1){
     cargo:[],inventory:[],planets:{},enemies:{},credits:0,
     galaxy:Array.from({length:20},()=>Array.from({length:32},()=>({type:'VOID'}))),visited:[]},
     MAP_W:32,MAP_H:20,DEBUG:{on:false},effectiveSensorRange:()=>3,TILE:{station_wall:{pass:false},station_floor:{pass:true},SHIP:{pass:true},
-      q_door:{pass:false},q_sealed_door:{pass:false},q_open_door:{pass:true},q_contamination:{pass:true}},
+      rw_locked_door:{pass:false},rw_open_door:{pass:true},q_contamination:{pass:true}},
     rnd:n=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return Math.floor(state/4294967296*n);},
     PW:p=>p.width,PH:p=>p.height,addLog:()=>{},renderAll:()=>{},
     earnCredits:n=>{c.G.credits+=n;},adjustCrewMoraleBase:()=>{},
@@ -20,7 +20,7 @@ function context(seed=1){
     hasPlanetLOS:()=>true,doWaitPlanet:()=>{},getScanCoverage:m=>m.filter(Boolean).length/m.length,
     addCargo:item=>{if(c.G.cargo.length>=c.G.shipStats.cargoCapacity)return false;c.G.cargo.push(item);return true;},
   });
-  for(const file of ['missions/expedition.js','missions/quarantine-ship.js']){
+  for(const file of ['missions/expedition.js','missions/quarantine-ship.js','crew/oxygen.js']){
     vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),c);
   }
   const random=c.rnd;c.rnd=()=>0;c.placeQuarantineShip();c.rnd=random;return c;
@@ -34,7 +34,7 @@ test('Mercy placement is selected once across the galaxy and stays hidden until 
     assert.equal(c.placeQuarantineShip(),true);
     const q=c.G.expedition.quarantine;
     assert.equal(q.discovered,false);assert.equal(q.lastTick,null);
-    assert.equal(c.G.galaxy[q.y][q.x].name,'Mercy of Dawn');
+    assert.equal(c.G.galaxy[q.y][q.x].name,q.name);
     assert.equal(!!c.G.visited[q.y*c.MAP_W+q.x],false);
     assert.equal(c.G.expedition.events.length,0);positions.add(q.x+','+q.y);
     const before=JSON.stringify(q);c.rnd=()=>{throw Error('Placement rerolled');};
@@ -50,16 +50,47 @@ test('placement protects occupied, charted, border and nonempty cells; a full ga
   for(const {x,y} of cells)c.G.galaxy[y][x]={type:'VOID'};
   c.G.pirates=[cells[1]];c.G.neutralShips=[cells[2]];c.G.npcStranded=[cells[3]];c.G.nebulaLoot=[cells[4]];
   c.G.visited[12*c.MAP_W+16]=true;
-  c.rnd=n=>{assert.equal(n,1);return 0;};
+  let first=true;c.rnd=n=>{assert.equal(n,first?1:12);first=false;return 0;};
   assert.equal(c.placeQuarantineShip(),true);assert.equal(c.G.expedition.quarantine.x,17);
   c.G.expedition.quarantine=null;c.rnd=()=>{throw Error('Empty candidate list rolled');};
   assert.equal(c.placeQuarantineShip(),false);assert.equal(c.G.expedition.quarantine,null);
 });
 
+test('story eligibility is optional, later spawning is saved once, and age drives the due turn',()=>{
+  const absent=context();absent.G.expedition.quarantine=null;
+  vm.runInContext('Math.random=()=>0.99',absent);absent.scheduleStoryEvents();
+  assert.equal(absent.G.expedition.storySchedule.quarantine.status,'absent');
+  absent.G.turn+=10000;absent.tickStoryEvents();assert.equal(absent.G.expedition.quarantine,null);
+  const c=context();c.G.expedition.quarantine=null;vm.runInContext('Math.random=()=>0.5',c);c.scheduleStoryEvents();
+  const plan=c.G.expedition.storySchedule.quarantine;
+  assert.equal(plan.status,'pending');assert.ok(plan.dueTurn>=81&&plan.dueTurn<=601);
+  c.G=JSON.parse(JSON.stringify(c.G));c.G.turn=plan.dueTurn-1;c.tickStoryEvents();assert.equal(c.G.expedition.quarantine,null);
+  c.G.turn++;c.tickStoryEvents();assert.equal(c.G.expedition.storySchedule.quarantine.status,'spawned');
+  assert.ok(c.G.expedition.quarantine.name);const before=JSON.stringify(c.G.expedition);
+  c.rnd=()=>{throw Error('Spawn rerolled');};c.tickStoryEvents();assert.equal(JSON.stringify(c.G.expedition),before);
+});
+
+test('charted remote contacts, offline sensors and obstructed signals do not announce a rescue',()=>{
+  const c=context(),q=c.G.expedition.quarantine;Object.assign(q,{x:10,y:10});c.G.visited[10*c.MAP_W+10]=true;
+  c.G.ship={x:5,y:10};c.revealQuarantineShip();assert.equal(q.discovered,false);
+  c.G.ship.x=7;c.G.galaxy[10][8]={type:'NEBULA'};c.revealQuarantineShip();assert.equal(q.discovered,false);
+  c.G.galaxy[10][8]={type:'VOID'};c.effectiveSensorRange=()=>0;c.revealQuarantineShip();assert.equal(q.discovered,false);
+  c.effectiveSensorRange=()=>3;c.revealQuarantineShip();assert.equal(q.discovered,true);
+  c.revealQuarantineShip();assert.equal(c.G.expedition.events.filter(e=>e.id==='quarantine:signal').length,1);
+});
+
+test('known casualties close a failed rescue without a station visit or payout, while unknown deaths stay unreported',()=>{
+  const c=context(),q=c.G.expedition.quarantine;c.generateQuarantineShip(q);
+  q.survivors.forEach(s=>Object.assign(s,{status:'dead',hp:0}));c.resolveQuarantineOutcome();
+  assert.equal(q.status,'closed');assert.equal(c.G.expedition.events.some(e=>e.id==='quarantine:closed'),false);
+  q.survivors.forEach(s=>s.seenCondition='found dead');c.resolveQuarantineOutcome();c.resolveQuarantineOutcome();
+  assert.equal(c.G.expedition.events.filter(e=>e.id==='quarantine:closed').length,1);assert.equal(c.G.credits,0);
+});
+
 test('reveal never places a wreck or rolls RNG; a preset wreck signals once and persists',()=>{
   const c=context();vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/world/galaxy-generation.js'),'utf8'),c);
   const q=c.G.expedition.quarantine;c.G.expedition.events=[];
-  c.rnd=()=>{throw Error('Exploration rolled RNG');};
+  c.rnd=()=>{throw Error('Exploration rolled RNG');};c.G.ship.x=q.x;c.G.ship.y=q.y;
   c.revealAround(q.x,q.y,1);assert.equal(q.discovered,true);assert.equal(q.lastTick,null);
   assert.equal(c.G.expedition.events.filter(e=>e.id==='quarantine:signal').length,1);
   const before=JSON.stringify(c.G.expedition);c.revealAround(q.x,q.y,3);
@@ -76,7 +107,7 @@ test('nebula visibility blocks the preset signal until sensors actually reach th
   Object.assign(q,{x:10,y:10});c.G.galaxy[10][10]={type:'DERELICT',name:'Mercy of Dawn'};
   for(let y=0;y<c.MAP_H;y++)c.G.galaxy[y][7]={type:'NEBULA'};
   c.revealAround(5,10,6);assert.equal(q.discovered,false);assert.equal(c.G.expedition.events.length,0);
-  c.revealAround(10,10,1);assert.equal(q.discovered,true);assert.equal(c.G.expedition.events.length,1);
+  c.G.ship={x:10,y:10};c.revealAround(10,10,1);assert.equal(q.discovered,true);assert.equal(c.G.expedition.events.length,1);
 });
 
 test('debug reveals do not signal, and legacy known incidents retain their location and state',()=>{
@@ -112,10 +143,10 @@ test('100 generated decks connect all fixtures and survivors through operable do
 
 test('survivors cannot path through closed hatches and advance at most one tile per turn',()=>{
   const c=context(),pd={width:5,height:3,grid:[Array(5).fill({type:'station_wall'}),
-    [{type:'station_wall'},{type:'station_floor'},{type:'q_door'},{type:'station_floor'},{type:'station_wall'}],
+    [{type:'station_wall'},{type:'station_floor'},{type:'rw_locked_door'},{type:'station_floor'},{type:'station_wall'}],
     Array(5).fill({type:'station_wall'})]};
   const person={x:1,y:1};c.quarantineStepToward(person,{x:3,y:1},pd);assert.equal(person.x,1);
-  pd.grid[1][2].type='q_open_door';c.quarantineStepToward(person,{x:3,y:1},pd);assert.equal(person.x,2);
+  pd.grid[1][2].type='rw_open_door';c.quarantineStepToward(person,{x:3,y:1},pd);assert.equal(person.x,2);
 });
 
 test('air reserve advances with elapsed turns, survives reload, and repair stops depletion',()=>{

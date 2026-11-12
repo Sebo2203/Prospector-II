@@ -407,11 +407,11 @@ function doShipFire(){
     const damage = weapon.minDmg+rnd(weapon.maxDmg-weapon.minDmg+1);
     const absorbed=Math.min(damage,enemy.ship.shieldCharge,shipShieldCapacity(enemy.ship));
     addCombatLog(weapon.name+' hits '+enemy.ship.name+' for '+damage+' ('+(damage-absorbed)+' hull).','lg');
-    damageShipCombatEnemy(combat,enemy,damage);
-    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:true,guided:weapon.guided});
+    const hull=damageShipCombatEnemy(combat,enemy,damage);
+    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:true,hull,weapon:weapon.id,guided:weapon.guided});
   } else {
     addCombatLog(weapon.name+' misses '+enemy.ship.name+'.','ln');
-    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:false,guided:weapon.guided});
+    queueShipCombatFeedback(combat,combat.player,enemy,{side:'player',hit:false,weapon:weapon.id,guided:weapon.guided});
   }
   trainShipBridge('cbt',gunner);
   advanceShipCombat(combat,false,'fire');
@@ -520,7 +520,7 @@ function fireShipCombatEnemy(combat,enemy){
   if(damage) damageShipCombatPlayer(combat,damage,true,ship.name);
   if(!G.dead)trainShipBridge('nav',pilot);
   const critical=Object.values(G.ship.systems).some((component,index)=>component.condition<before[index]);
-  queueShipCombatFeedback(combat,enemy,combat.player,{side:'enemy',hit:damage>0,hull,critical,visible,impactOnly:!entry,guided:entry?.weapon.guided});
+  queueShipCombatFeedback(combat,enemy,combat.player,{side:'enemy',hit:damage>0,hull,critical,visible,impactOnly:!entry,weapon:entry?.weapon.id,guided:entry?.weapon.guided});
   return damage>0;
 }
 
@@ -578,6 +578,7 @@ function boostShipInCombat(){
   const path=[{x:x+dx,y:y+dy},{x:x+dx*2,y:y+dy*2}];
   spendShipFuel(2*hullSize());
   G.ship.heat+=heat;
+  SFX.boost();
   for(const point of path){
     const collision=shipCombatCollisionAt(combat,point);
     if(collision){

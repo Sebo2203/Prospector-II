@@ -5,75 +5,16 @@
 
 // Shared helper: apply a purchased pawn/supply item to the game state
 function applyPawnItem(item){
-  if(!item) return;
-  if(item.usable === 'supplies'){
-    const hullDamaged = G.ship.hp < G.ship.maxHp;
-    G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10));
-    G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10);
-    if(hullDamaged) SFX.repair();
-    addLog('Supplies bought. Crew and hull patched up.','lg');
-  } else if(item.usable === 'medikit'){
-    G.inventory.push({name:'Medikit',col:'#ff6688',desc:'A medikit.',value:0,usable:'medikit'});
-    addLog('Medikit purchased. Open inventory to use.','lg');
-  } else if(item.usable === 'oxytank'){
-    G.inventory.push({name:'Oxygen Tank',col:'#44ddff',desc:'An oxygen tank.',value:0,usable:'oxytank'});
-    addLog('Oxygen Tank purchased. Open inventory to use on the surface.','lg');
-  } else if(item.usable === 'gun'){
-    G.inventory.push({name:item.name,col:'#aaaaff',desc:'+2 ATK when equipped.',value:0,usable:'gun'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'gun_sniper'){
-    G.inventory.push({name:item.name,col:'#ffaa44',desc:'+5 ATK when equipped.',value:0,usable:'gun_sniper'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'knife'){
-    G.inventory.push({name:item.name,col:'#ccccaa',desc:'+1 ATK when equipped.',value:0,usable:'knife'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'floodlight'){
-    G.inventory.push({name:'Floodlight',col:'#ffffaa',desc:'Passive: always illuminates +2 tile radius.',value:0,usable:'floodlight'});
-    addLog('Floodlight purchased and active. +2 tile vision radius at all times.','lg');
-  } else if(item.usable === 'armor_flight'){
-    G.inventory.push({name:item.name,col:'#88ddff',desc:'+1 DEF when equipped.',value:0,usable:'armor_flight'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'armor_reinforced'){
-    G.inventory.push({name:item.name,col:'#ffcc44',desc:'+2 DEF when equipped.',value:0,usable:'armor_reinforced'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'gun_shotgun'){
-    G.inventory.push({name:item.name,col:'#cc9966',desc:'+3 ATK when equipped. Close range, high accuracy.',value:0,usable:'gun_shotgun'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'gun_burst'){
-    G.inventory.push({name:item.name,col:'#88ccff',desc:'+3 ATK when equipped. Medium range, rapid fire.',value:0,usable:'gun_burst'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'gun_plasma'){
-    G.inventory.push({name:item.name,col:'#ff66cc',desc:'+3 ATK when equipped. Range 7, burns targets.',value:0,usable:'gun_plasma'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'stun_baton'){
-    G.inventory.push({name:item.name,col:'#aaffdd',desc:'+2 ATK when equipped. Melee, non-lethal — deals 1-2 damage and 65% chance to stun.',value:0,usable:'stun_baton'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'vibroblade'){
-    G.inventory.push({name:item.name,col:'#ff88ff',desc:'+4 ATK when equipped. High-precision melee.',value:0,usable:'vibroblade'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'armor_exosuit'){
-    G.inventory.push({name:item.name,col:'#ff8833',desc:'+3 DEF when equipped. Heavy combat plating.',value:0,usable:'armor_exosuit'});
-    addLog(item.name+' purchased. Open inventory to equip to a crew member.','lg');
-  } else if(item.usable === 'repair_kit'){
-    const hullDamaged = G.ship.hp < G.ship.maxHp;
-    G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 15);
-    if(hullDamaged) SFX.repair();
-    addLog('Repair Kit applied. Ship hull +15 HP.','lg');
-  } else if(item.usable === 'jetpack'){
-    G.inventory.push({name:'Jetpack',col:'#ff9922',desc:'Leap 2 tiles over any terrain. Use from inventory — enter target mode to aim. Fuel: 15 charges.',value:0,usable:'jetpack',fuel:15});
-    addLog('Jetpack purchased — 15 fuel charges loaded. Open inventory, select it, then use [T] target mode to aim.','lg');
-  } else if(item.usable === 'grapple'){
-    G.inventory.push({name:'Grappling Hook',col:'#ccaa88',desc:'One-use: hook over 1 obstacle tile. Use from inventory — enter target mode to aim direction.',value:0,usable:'grapple'});
-    addLog('Grappling Hook purchased. Open inventory, select it, then use [T] target mode to aim.','lg');
-  } else if(item.usable === 'sensor_drone'){
-    G.inventory.push({name:'Sensor Drone',col:'#44ffcc',desc:'Galaxy use only: launches ahead of ship for 4–7 turns, revealing fog.',value:0,usable:'sensor_drone'});
-    addLog('Sensor Drone purchased. Use from galaxy view — ship must be moving to set launch direction.','lg');
-  } else if(item.usable){
-    // Generic usable item fallback — field_rations, stim_pack, rad_flush, etc.
-    G.inventory.push({name:item.name,col:item.col||'#aaaacc',desc:item.desc||item.detail||'',value:0,usable:item.usable});
-    addLog(item.name+' purchased. Open inventory to use.','lg');
+  if(!item)return;
+  if(item.usable==='supplies'){
+    const hullDamaged=G.ship.hp<G.ship.maxHp;
+    G.crew.forEach(c=>c.hp=Math.min(c.maxHp,c.hp+10));G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+10);
+    if(hullDamaged)SFX.repair();addLog('Supplies bought. Crew and hull patched up.','lg');
+  }else if(item.usable){
+    G.inventory.push(inventoryItemFromStock(item));
+    addLog(item.name+' purchased. Open inventory to use or equip.','lg');
   }
-  if(item.stock === 0) addLog('That was the last one!','lw');
+  if(item.stock===0)addLog('That was the last one!','lw');
 }
 
 // Apply a purchased corporate shop item
@@ -96,14 +37,7 @@ function applyCorpItem(item){
     if(item.stock === 0) addLog('That was the last one!','lw');
     return;
   }
-  // Everything else goes to inventory as a generic usable
-  G.inventory.push({
-    name: item.name,
-    col: item.col || '#aaaacc',
-    desc: item.detail || '',
-    value: 0,
-    usable: item.usable,
-  });
+  G.inventory.push(inventoryItemFromStock(item));
   addLog(item.name+' purchased. Open inventory to use.','lg');
   if(item.stock === 0) addLog('That was the last one!','lw');
 }
@@ -514,13 +448,9 @@ function executeBaseAction(actionId){
         G.base.subSel = 0; G.base.subScroll = 0;
       } else if(actionId.startsWith('implant_remove_')){
         const REMOVAL_COST = 200;
-        // id format: implant_remove_<crew_name_underscored>_<slot_index>
-        const rest = actionId.slice('implant_remove_'.length);
-        const lastUnderscore = rest.lastIndexOf('_');
-        const crewNameKey = rest.slice(0, lastUnderscore).replace(/_/g,' ');
-        const slotIdx = parseInt(rest.slice(lastUnderscore+1));
-        const target = (G.crew||[]).find(c=>c.name===crewNameKey && c.hp>0);
-        if(!target){ addLog('Crew member not found.','lw'); break; }
+        const [crewIndex,slotIdx]=actionId.slice('implant_remove_'.length).split('_').map(Number);
+        const target=Number.isInteger(crewIndex)&&Number.isInteger(slotIdx)&&slotIdx>=0?G.crew[crewIndex]:null;
+        if(!target||target.hp<=0){ addLog('Crew member not found.','lw'); break; }
         if(!target.implants || target.implants[slotIdx]===undefined){ addLog('Implant slot not found.','lw'); break; }
         if(G.credits < REMOVAL_COST){ addLog('Need '+REMOVAL_COST+' cr for implant removal.','lw'); break; }
         const impId = target.implants[slotIdx];

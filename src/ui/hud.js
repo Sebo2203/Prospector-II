@@ -112,7 +112,7 @@ function renderHUD(){
     loc = cell?.type==='ROGUE_PLANET' ? (cell?.name||'Rogue Planet')+' (Rogue)' : (cell?.name||'Unknown')+' System';
   } else if(G.mode==='planet'){
     if(G.planets[G.curPlanet]?.isCasino) loc='The Void Royale';
-    else if(G.planets[G.curPlanet]?.isQuarantine) loc='Mercy of Dawn';
+    else if(G.planets[G.curPlanet]?.isQuarantine) loc=quarantineShipName();
     else {
     const cell=G.galaxy[G.ship.y]?.[G.ship.x];
     {

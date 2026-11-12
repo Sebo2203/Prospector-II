@@ -8,6 +8,7 @@ function finishCareerTurn(){
   if(G.dead) return;
   tickShipSystems(G.ship,G.ship.extraCooling||0);
   G.ship.extraCooling=0;
+  tickStoryEvents();
   tickCrewStatuses();
   checkDeath();
   if(G.dialogue?.context?.crew?.hp<=0) G.dialogue=null;

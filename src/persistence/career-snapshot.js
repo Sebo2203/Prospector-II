@@ -1,5 +1,26 @@
-const CAREER_SAVE_VERSION = 5;
+const CAREER_SAVE_VERSION = 6;
 const SAVE_SHIP_SYSTEMS = ['engine','reactor','shields','cooling','sensors','fuelTank'];
+
+function validateSavedStoryEvents(game){
+  const schedule=game.expedition?.storySchedule;
+  if(schedule!==undefined){
+    if(!schedule||typeof schedule!=='object'||Array.isArray(schedule))throw invalidCareerSave();
+    for(const [id,plan] of Object.entries(schedule)){
+      if(!Object.hasOwn(STORY_EVENT_CATALOG,id)||!plan||!['pending','absent','spawned'].includes(plan.status)||
+        (plan.status==='absent'?plan.dueTurn!==null:!Number.isSafeInteger(plan.dueTurn)||plan.dueTurn<1))throw invalidCareerSave();
+    }
+  }
+  const q=game.expedition?.quarantine;
+  if(q?.name!==undefined && (typeof q.name!=='string'||!q.name.length||q.name.length>80))throw invalidCareerSave();
+}
+
+function validateSavedCrewEquipment(crew){
+  for(const c of crew)for(const [key,name,usable] of [['_equippedItem','weapon','weaponUsable'],['_equippedArmor','armor','armorUsable']]){
+    const item=c[key];if(item===undefined||item===null)continue;
+    if(typeof item!=='object'||Array.isArray(item)||item.name!==c[name]||item.usable!==c[usable]||
+      !Number.isFinite(item.value??0)||(item.value??0)<0)throw invalidCareerSave();
+  }
+}
 
 function validateSavedShipAmmo(ship){
   if(ship.requiresPursuit!==undefined && typeof ship.requiresPursuit!=='boolean') throw invalidCareerSave();
@@ -137,6 +158,9 @@ function parseSaveSnapshot(raw){
        .every(key=>Array.isArray(game[key]))){
     throw invalidCareerSave();
   }
+  validateSavedCrewEquipment(game.crew);
+  if(game.helmetMode!==undefined&&!['auto','open','closed'].includes(game.helmetMode))throw invalidCareerSave();
+  validateSavedStoryEvents(game);
   const view = game.mode==='inventory' ? game._prevMode : game.mode;
   if(!CAREER_MODES.has(view) || (game.mode==='inventory' && view==='inventory') ||
      (view==='planet' && !Array.isArray(game.planets[game.curPlanet]?.grid)) ||

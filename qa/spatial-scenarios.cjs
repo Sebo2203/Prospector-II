@@ -39,7 +39,7 @@ const {pathToFileURL}=require('node:url');
         const [x,y,trail]=queue[i];if(x===tx&&y===ty){route=trail;break;}
         for(const [dx,dy] of [[1,0],[0,1],[-1,0],[0,-1]]){
           const nx=x+dx,ny=y+dy,key=nx+','+ny,type=pd.grid[ny]?.[nx]?.type;
-          if(seen.has(key)||(!TILE[type]?.pass&&!['q_door','q_sealed_door'].includes(type)))continue;
+          if(seen.has(key)||(!TILE[type]?.pass&&!['rw_locked_door','rw_locked_door'].includes(type)))continue;
           seen.add(key);queue.push([nx,ny,[...trail,[dx,dy]]]);
         }
       }

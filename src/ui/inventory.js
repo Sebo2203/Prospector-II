@@ -2,7 +2,7 @@ const INVENTORY_TABS = ['inventory','crew','ship','log'];
 
 function selectInventoryTab(tab){
   if(G._viewTab===tab && !shipSystemsView) return;
-  shipSystemsView=null;
+  shipSystemsView=null;storyPassengerView=null;
   G._viewTab = tab;
   G._viewCrewSel = 0;
   G._inventoryExamine = false;
@@ -21,6 +21,7 @@ function canToggleInventoryMenu(){
 
 function toggleInventoryMenu(){
   if(!canToggleInventoryMenu() || canvasMenuBlocked()) return;
+  storyPassengerView=null;
   if(G.mode==='inventory') G.mode=G._prevMode;
   else {
     if(G.mode!=='system') G._viewTab='inventory';
@@ -33,6 +34,7 @@ function toggleInventoryMenu(){
 }
 
 function closeInventoryMenu(){
+  if(storyPassengerView?.career===G){storyPassengerView=null;renderAll();return;}
   if(G._cargoExamine) G._cargoExamine=false;
   else if(G._crewExamine) G._crewExamine=false;
   else if(G._inventoryExamine) G._inventoryExamine=false;
@@ -91,6 +93,8 @@ function drawInventoryOverlay(){
   ensureCrewMoraleState();
   updateCrewLowMoraleFlags();
   const {cw,ch,tab}=drawInventoryFrame();
+  if(storyPassengerView?.career!==G)storyPassengerView=null;
+  if(storyPassengerView&&tab==='ship'){drawStoryPassengers(cw,ch);return;}
 
   if(tab==='inventory'){
     // ── INVENTORY tab — usable/personal items ────────────────────
@@ -295,7 +299,7 @@ function drawInventoryOverlay(){
         // Stats
         const stats = [
           ['HP',      c.hp+' / '+c.maxHp],
-          ['Attack', (()=>{ const wBonus = c.weapon&&c.weapon!=='Bare hands' ? (c.weaponUsable==='gun_sniper'?5:c.weaponUsable==='gun_breacher'?4:c.weaponUsable==='vibroblade'?4:c.weaponUsable==='knife'?1:c.weaponUsable==='stun_baton'?2:c.weaponUsable==='tranq_darts'?0:3) : 0; const iBonus = crewImplantAtkBonus(c); const sBonus = (c._stimAtk||0)>0&&G.turn<=(c._stimUntil||0) ? c._stimAtk : 0; const total = c.atk + wBonus + iBonus + sBonus; const parts = [wBonus?'+'+wBonus+'w':'', iBonus?'+'+iBonus+'i':'', sBonus?'+'+sBonus+'s':''].filter(Boolean).join(' '); return total + (parts ? ' ('+parts+')' : ''); })()],
+          ['Attack', (()=>{ const wBonus = c.weapon&&c.weapon!=='Bare hands' ? groundWeaponAttackBonus(c.weaponUsable) : 0; const iBonus = crewImplantAtkBonus(c); const sBonus = (c._stimAtk||0)>0&&G.turn<(c._stimUntil||0) ? c._stimAtk : 0; const total = c.atk + wBonus + iBonus + sBonus; const parts = [wBonus?'+'+wBonus+'w':'', iBonus?'+'+iBonus+'i':'', sBonus?'+'+sBonus+'s':''].filter(Boolean).join(' '); return total + (parts ? ' ('+parts+')' : ''); })()],
           ['Defence', (()=>{ const aBonus = armorDefBonus(c); const iBonus = crewImplantDefBonus(c); const total = c.def + aBonus + iBonus; const parts = [aBonus?'+'+aBonus+'a':'', iBonus?'+'+iBonus+'i':''].filter(Boolean).join(' '); return total > 0 ? total + (parts ? ' ('+parts+')' : '') : '0 — unprotected'; })()],
         ];
         stats.forEach((s,i)=>{
@@ -371,7 +375,7 @@ function drawInventoryOverlay(){
         const MAX_SKILL = 10;
 
         CREW_SKILLS.forEach((sk, i)=>{
-          const val = skills[sk.id] || 0;
+          const val=skills[sk.id]||0,effective=crewSkillValue(c,sk.id);
           const ry = py + 34 + i * skillRowH;
 
           // Skill label
@@ -415,8 +419,8 @@ function drawInventoryOverlay(){
           // Skill level label (0–10 text descriptions)
           const SKILL_LABELS = ['None','Novice','Basic','Trained','Skilled',
                                  'Proficient','Expert','Senior','Veteran','Elite','Master'];
-          ctx.font='11px Courier New'; ctx.fillStyle = val===0 ? '#222233' : '#445566';
-          ctx.fillText(SKILL_LABELS[Math.min(val, 10)], sx + 42 + barW + 6, ry + 13);
+          ctx.font='11px Courier New'; ctx.fillStyle = effective!==val ? '#88bbcc' : val===0 ? '#222233' : '#445566';
+          ctx.fillText(effective!==val?'Effective '+effective:SKILL_LABELS[Math.min(val, 10)], sx + 42 + barW + 6, ry + 13);
         });
       }
     }
@@ -484,6 +488,7 @@ function drawInventoryOverlay(){
     // an unfitted shield generator leaves an empty slot.
     ctx.fillStyle='#708b9c';ctx.font='bold 12px Courier New';
     ctx.fillText('CORE SYSTEMS',40,217);
+    if(quarantinePeople().some(s=>s.status==='onboard'))canvasMenuButton('Passengers [P]',200,202,openStoryPassengers);
     canvasMenuButton('Inspect / repair [F3]',cw-210,202,openShipSystems);
     const coreNames={engine:'Engines',reactor:'Reactor',shields:'Shields',cooling:'Cooling',sensors:'Sensors',fuelTank:'Fuel tank'};
     const coreValues={
@@ -798,6 +803,8 @@ function drawInventoryOverlay(){
 
 
 function handleInventoryKey(key,shiftKey=false){
+  if(storyPassengerView?.career===G&&G._viewTab==='ship'){handleStoryPassengerKey(key);return;}
+  if(G._viewTab==='ship'&&key.toLowerCase()==='p'){openStoryPassengers();return;}
   if((key==='x'||key==='X') && G._viewTab==='inventory'){
     if(G.inventory.length){
       G._inventoryExamine = !G._inventoryExamine;
@@ -894,12 +901,13 @@ function handleInventoryKey(key,shiftKey=false){
           const oldIsSniper = target.weaponUsable === 'gun_sniper';
           const oldIsKnife  = target.weaponUsable === 'knife';
           const oldUsable   = target.weaponUsable || 'gun';
-          const oldDesc     = oldIsSniper ? '+5 ATK when equipped.' : oldIsKnife ? '+1 ATK when equipped.' : '+2 ATK when equipped.';
+          const oldDesc='+'+groundWeaponAttackBonus(oldUsable)+' ATK when equipped.';
           const oldCol      = oldIsSniper ? '#ffaa44' : oldIsKnife ? '#ccccaa' : '#aaaaff';
-          G.inventory.push({name:oldGun, col:oldCol, desc:oldDesc, value:0, usable:oldUsable});
+          G.inventory.push(target._equippedItem?JSON.parse(JSON.stringify(target._equippedItem)):{name:oldGun,col:oldCol,desc:oldDesc,value:0,usable:oldUsable});
           addLog(crewDisplayName(target)+' unequips '+oldGun+'.','li');
         }
-        const atkBonus = gun.usable === 'gun_sniper' ? 5 : gun.usable === 'gun_breacher' ? 4 : gun.usable === 'vibroblade' ? 4 : gun.usable === 'knife' ? 1 : gun.usable === 'stun_baton' ? 2 : gun.usable === 'tranq_darts' ? 0 : (gun.usable === 'gun_shotgun' || gun.usable === 'gun_burst' || gun.usable === 'gun_plasma') ? 3 : 2;
+        const atkBonus=groundWeaponAttackBonus(gun.usable);
+        target._equippedItem=JSON.parse(JSON.stringify(gun));
         target.weapon = gun.name;
         target.weaponUsable = gun.usable;
         G.inventory.splice(G._equipGunIdx, 1);
@@ -917,10 +925,11 @@ function handleInventoryKey(key,shiftKey=false){
         if(target.armorUsable){
           const oldDef = armorDefBonus(target);
           const oldCol = target.armorUsable === 'armor_exosuit' ? '#ff8833' : target.armorUsable === 'armor_reinforced' ? '#ffcc44' : target.armorUsable === 'armor_plate' ? '#aaaacc' : '#88ddff';
-          G.inventory.push({name:target.armor, col:oldCol, desc:'+'+oldDef+' DEF when equipped.', value:0, usable:target.armorUsable});
+          G.inventory.push(target._equippedArmor?JSON.parse(JSON.stringify(target._equippedArmor)):{name:target.armor,col:oldCol,desc:'+'+oldDef+' DEF when equipped.',value:0,usable:target.armorUsable});
           addLog(crewDisplayName(target)+' removes '+target.armor+'.','li');
         }
-        const defBonus = armor.usable === 'armor_exosuit' ? 3 : armor.usable === 'armor_reinforced' ? 2 : 1;
+        const defBonus=armorDefBonus({armorUsable:armor.usable});
+        target._equippedArmor=JSON.parse(JSON.stringify(armor));
         target.armor = armor.name;
         target.armorUsable = armor.usable;
         G.inventory.splice(G._equipArmorIdx, 1);
@@ -980,7 +989,7 @@ function handleInventoryKey(key,shiftKey=false){
       const target = living[G._viewCrewSel||0];
       const stimItem = G.inventory[G._equipStimIdx];
       if(target && stimItem){
-        if((target._stimAtk||0) > 0 && G.turn <= (target._stimUntil||0)){
+        if((target._stimAtk||0) > 0 && G.turn < (target._stimUntil||0)){
           addLog(crewDisplayName(target)+' is already stimmed — wait for it to wear off.','lw');
         } else {
           target._stimUntil = G.turn + 8;
@@ -1006,10 +1015,11 @@ function handleInventoryKey(key,shiftKey=false){
         const oldIsSniper = sc.weaponUsable === 'gun_sniper';
         const oldIsKnife  = sc.weaponUsable === 'knife';
         const oldUsable   = sc.weaponUsable || 'gun';
-        const oldDesc     = oldIsSniper ? '+5 ATK when equipped.' : oldIsKnife ? '+1 ATK when equipped.' : '+2 ATK when equipped.';
+        const oldDesc='+'+groundWeaponAttackBonus(oldUsable)+' ATK when equipped.';
         const oldCol      = oldIsSniper ? '#ffaa44' : oldIsKnife ? '#ccccaa' : '#aaaaff';
-        G.inventory.push({name:sc.weapon, col:oldCol, desc:oldDesc, value:0, usable:oldUsable});
+        G.inventory.push(sc._equippedItem?JSON.parse(JSON.stringify(sc._equippedItem)):{name:sc.weapon,col:oldCol,desc:oldDesc,value:0,usable:oldUsable});
         addLog(crewDisplayName(sc)+' unequips '+sc.weapon+'.','li');
+        sc._equippedItem=null;
         sc.weapon = 'Bare hands';
         sc.weaponUsable = null;
       } else addLog('No weapon to unequip.','li');
@@ -1020,8 +1030,9 @@ function handleInventoryKey(key,shiftKey=false){
       if(sc && sc.armorUsable){
         const oldDef = armorDefBonus(sc);
         const oldCol = sc.armorUsable === 'armor_exosuit' ? '#ff8833' : sc.armorUsable === 'armor_reinforced' ? '#ffcc44' : sc.armorUsable === 'armor_plate' ? '#aaaacc' : '#88ddff';
-        G.inventory.push({name:sc.armor, col:oldCol, desc:'+'+oldDef+' DEF when equipped.', value:0, usable:sc.armorUsable});
+        G.inventory.push(sc._equippedArmor?JSON.parse(JSON.stringify(sc._equippedArmor)):{name:sc.armor,col:oldCol,desc:'+'+oldDef+' DEF when equipped.',value:0,usable:sc.armorUsable});
         addLog(crewDisplayName(sc)+' strips off '+sc.armor+'.','lw');
+        sc._equippedArmor=null;
         sc.armor = 'Naked';
         sc.armorUsable = null;
       } else addLog('Already unarmored.','li');
@@ -1092,7 +1103,7 @@ function handleInventoryKey(key,shiftKey=false){
           G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
           addLog('Medikit used on '+target.name+'. +10 HP.','lg');
           // Best medic gains XP from the treatment
-          const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.med||0)-(a.skills?.med||0))[0];
+          const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(crewSkillValue(b,'med'))-(crewSkillValue(a,'med')))[0];
           if(_medUser) giveSkillXP(_medUser, 'med', 2);
         }
         renderAll(); return;
@@ -1112,7 +1123,7 @@ function handleInventoryKey(key,shiftKey=false){
         G.inventory.splice(G._viewInvSel||0, 1);
         G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
         addLog('Advanced Trauma Kit used on '+target.name+'. '+(hadInjury ? 'Injury treated. ' : '')+'+20 HP.','lg');
-        const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.med||0)-(a.skills?.med||0))[0];
+        const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(crewSkillValue(b,'med'))-(crewSkillValue(a,'med')))[0];
         if(_medUser) giveSkillXP(_medUser, 'med', 4);
         renderAll(); return;
       }
@@ -1142,7 +1153,7 @@ function handleInventoryKey(key,shiftKey=false){
         G.inventory.splice(G._viewInvSel||0, 1);
         G._viewInvSel = Math.min(G._viewInvSel||0, Math.max(0,G.inventory.length-1));
         addLog('Antibiotics used. Disease treated for '+treated+' crew.','lg');
-        const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.med||0)-(a.skills?.med||0))[0];
+        const _medUser = G.crew.filter(c=>c.hp>0).sort((a,b)=>(crewSkillValue(b,'med'))-(crewSkillValue(a,'med')))[0];
         if(_medUser) giveSkillXP(_medUser, 'med', 4);
         renderAll(); return;
       }

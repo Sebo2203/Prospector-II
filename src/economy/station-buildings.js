@@ -207,7 +207,7 @@ const STATION_BUILDINGS = [
                 rows.push({
                   label: 'Remove: '+crewDisplayName(c)+' — '+(imp?imp.name:impId),
                   detail: REMOVAL_COST+' cr — permanent removal, effects lost',
-                  id: 'implant_remove_'+c.name.replace(/\s/g,'_')+'_'+si,
+                  id: 'implant_remove_'+G.crew.indexOf(c)+'_'+si,
                 });
               });
             });

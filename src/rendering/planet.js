@@ -197,7 +197,7 @@ function drawPlanet(){
             ctx.fillRect(sx+(x*13+y*7)%TS, sy+(x*5+y*11)%TS, 1, 1);
           }
         } else if(OPTIONS.asciiMode){
-          drawAsciiTile(pdata.isCasino ? cell.type : sp, sx, sy, bgAscii.bg);
+          drawAsciiTile(pdata.isCasino||pdata.isQuarantine ? cell.type : sp, sx, sy, bgAscii.bg);
         } else if(cell.type === 'EARTH_FOREST' && tileInfo?.sprite){
           drawBaseFloor(floorTileType, sx, sy, floorAscii.bg);
           drawSpriteDarkMatteKeyed(tileInfo.sprite, sx, sy, '#224422');
@@ -590,10 +590,10 @@ function drawPlanet(){
 
 function drawPlayerPawn(px,py){
   const biomeKey = atmosphereBiomeKey(G.curPlanet);
-  const oxyDrain = biomeKey ? (atmosphereBiome(G.curPlanet).oxyDrain ?? 0) : 0;
-  const sprite = !biomeKey     ? 'player_pawn' :
-                 oxyDrain > 0  ? 'player_pawn_helmet' :
-                                  'player_pawn_suit';
+  // The pawn represents the leading living crew member and the actual visor choice.
+  const lead=G.crew.find(c=>c.hp>0);
+  const sprite=!biomeKey||!crewWearsEnvironmentalSuit(lead)?'player_pawn':
+    surfaceHelmetsOpen()?'player_pawn_suit':'player_pawn_helmet';
 
   // Check if standing on water
   const pdata = G.planets[G.curPlanet];

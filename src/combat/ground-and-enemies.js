@@ -17,21 +17,24 @@ function doCombat(enemy){
   if(!attackers.length) return;
 
   // -- All crew attack simultaneously ---------------------------
-  let totalDmg = 0;
+  let totalDmg = 0,nonlethalDmg=0;
   const hitters = [];
   let stunBatonHit = false;
   attackers.forEach(c=>{
-    const weaponBonus = c.weaponUsable === 'gun_sniper' ? 5 : c.weaponUsable === 'gun_breacher' ? 4 : c.weaponUsable === 'knife' ? 1 : c.weaponUsable === 'vibroblade' ? 4 : c.weaponUsable === 'stun_baton' ? 2 : c.weaponUsable === 'gun_shotgun' ? 3 : c.weaponUsable === 'gun_burst' ? 3 : c.weaponUsable === 'gun_plasma' ? 3 : c.weaponUsable === 'tranq_darts' ? 0 : (c.weapon && c.weapon !== 'Bare hands') ? 2 : 0;
-    const stimBonus = (c._stimAtk||0) > 0 && G.turn <= (c._stimUntil||0) ? c._stimAtk : 0;
+    SFX.groundFire(c.weaponUsable);
+    const weaponBonus = c.weapon&&c.weapon!=='Bare hands'?groundWeaponAttackBonus(c.weaponUsable):0;
+    const stimBonus = (c._stimAtk||0) > 0 && G.turn < (c._stimUntil||0) ? c._stimAtk : 0;
     const implantAtkBonus = crewImplantAtkBonus(c);
     // CBT skill: base hit chance 70% + 3% per skill point (max 100% at CBT 10)
     const cbtSkill = crewSkillValue(c, 'cbt');
     const hitChanceGround = Math.min(1.0, 0.70 + cbtSkill * 0.03);
     if(Math.random() < hitChanceGround){
-      if(c.weaponUsable === 'stun_baton'){
+      if(c.weaponUsable==='tranq_darts'){
+        enemy.stunTurns=(enemy.stunTurns||0)+4;hitters.push(c);
+      }else if(c.weaponUsable === 'stun_baton'){
         // Stun baton: fixed 1-2 damage, ignores ATK bonus, 65% stun chance
         const dmg = 1 + rnd(2);
-        totalDmg += dmg;
+        totalDmg += dmg;nonlethalDmg+=dmg;
         hitters.push(c);
         if(Math.random() < 0.65 * (10 / (10 + (enemy.maxHp || enemy.hp || 10)))) stunBatonHit = true;
       } else {
@@ -41,8 +44,10 @@ function doCombat(enemy){
       }
     }
   });
-  // Guarantee at least 1 damage so combat always progresses
-  if(totalDmg === 0) totalDmg = 1;
+  const lethalAttacker=attackers.some(c=>!['stun_baton','tranq_darts'].includes(c.weaponUsable));
+  if(totalDmg===0&&lethalAttacker)totalDmg=1;
+  totalDmg-=Math.max(0,nonlethalDmg-Math.max(0,enemy.hp-1));
+  attackers.filter(c=>c.weaponUsable==='tranq_darts').forEach(consumeEquippedTranq);
 
   // CBT XP — crew who landed hits. Captain gains SOC from coordinating the team.
   hitters.forEach(c => giveSkillXP(c, 'cbt', 2));
@@ -87,6 +92,7 @@ function tryEnemyRangedAttack(e, pdata){
   if(!crew) return false;
 
   addPlanetBulletTracer(e.x, e.y, G.player.x, G.player.y, '#ffee88');
+  SFX.groundFire(gun.name);
 
   const baseAcc = Math.max(0.08, (gun.accuracy ?? 0.65) - Math.max(0, dist-1) * (gun.falloff ?? 0.06));
   const hit = Math.random() < Math.min(0.95, baseAcc);

@@ -8,7 +8,7 @@ function store(){
   return c;
 }
 function game(turn=1){
-  return {saveVersion:5,crewDeaths:0,shipRefits:{},hangarStores:{},baseMissiles:[],entitySerial:1,mode:'galaxy',turn,maxFuel:100,fuel:100,ship:{x:0,y:0,hp:100,maxHp:100,
+  return {saveVersion:6,crewDeaths:0,shipRefits:{},hangarStores:{},baseMissiles:[],entitySerial:1,mode:'galaxy',turn,maxFuel:100,fuel:100,ship:{x:0,y:0,hp:100,maxHp:100,
     systems:Object.fromEntries(['engine','reactor','shields','cooling','sensors','fuelTank'].map(id=>[id,{condition:100,bypassUntil:0}])),
     heat:0,shieldCharge:0,shieldRechargeAt:0,systemTurn:1,weaponReadyAt:[]},
     crew:[{name:'Captain',role:'captain',hp:30,_careerId:1}],galaxy:[[{type:'VOID'}]],

@@ -403,7 +403,9 @@ function renderSidebar(){
     if(examineData && typeof examineData === 'object' && examineData.type === 'creature'){
       const e = examineData.enemy;
       const detailVisible = canExamineCreatureDetails(e);
-      if(e.civLocal){
+      if(e.storySurvivor){
+        html+=storySurvivorExamineHtml(e,detailVisible);
+      }else if(e.civLocal){
         html += civilizationLocalExamineHtml(e, detailVisible);
       } else {
       const dietCol   = e.diet==='carnivore'?'#ff7755':e.diet==='herbivore'?'#88dd55':'#ffaa44';

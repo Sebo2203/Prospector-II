@@ -162,6 +162,7 @@ function doFireAtBase(base){
   const entry=shipCombatWeapons().find(entry=>shipWeaponAvailability(G.ship,entry.slot)==='Ready');
   if(!entry){addCombatLog('No mount ready: check ammunition, heat, reloads and core power.','lw');renderAll();return;}
   commitShipWeapon(G.ship,entry.slot);
+  SFX.shipFire(entry.weapon.id);
   if(entry.weapon.guided){
     G.baseMissiles.push({x:base.x,y:base.y,dueTurn:G.turn+2});
     addCombatLog('Artemis missile launched at '+base.name+'. Impact after the next career turn.','lw');
@@ -171,7 +172,7 @@ function doFireAtBase(base){
     const turretDmg = 8 + rnd(18);
     const hull=absorbShipHit(G.ship,turretDmg,'defense turrets');
     addCombatLog('Defense turrets return fire: '+turretDmg+' damage ('+hull+' hull).','lc');
-    SFX.hullHit && SFX.hullHit();
+    SFX.shipImpact(hull);
     if(G.ship.hp<=0){
       G.dead=true;
       G.deathCause='The ship was destroyed by defense turrets at '+base.name+'.';

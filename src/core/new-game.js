@@ -9,6 +9,7 @@ function initGame(chosenClass, captainName, shipName) {
     seed:     Math.floor(Math.random() * 0xFFFFFF), // per-run market price seed
     credits:  500,
     oxygen:   100,
+    helmetMode:'auto',
     fuel:     100,
     maxFuel:  100,
     ship:     { hp:100, maxHp:100, x:0, y:0 },

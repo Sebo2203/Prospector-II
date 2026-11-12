@@ -256,7 +256,7 @@ function maybeExposeAnimalAttackInfection(enemy, target, dmg){
 }
 
 function crewSkillValue(c, skill){
-  let value = c?.skills?.[skill] || 0;
+  let value = (c?.skills?.[skill]||0)+(c&&typeof crewImplantSkillBonus==='function'?crewImplantSkillBonus(c,skill):0);
   if(getCrewStatus(c, 'concussion')) value -= 2;
   if(getCrewStatus(c, 'fever')) value -= 1;
   if(getCrewStatus(c, 'sepsis')) value -= 2;
@@ -546,7 +546,7 @@ function tickCrewStatuses(){
   G.crew.forEach(c=>{
     if(c.hp <= 0) return;
     // Stim expiry — clear bonus once turns run out
-    if((c._stimAtk||0) > 0 && G.turn > (c._stimUntil||0)){
+    if((c._stimAtk||0) > 0 && G.turn >= (c._stimUntil||0)){
       addLog(crewDisplayName(c)+'\'s combat stim wears off.','li');
       c._stimAtk = 0;
       c._stimUntil = 0;

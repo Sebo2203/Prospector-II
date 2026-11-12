@@ -37,14 +37,16 @@ function ramShipCombatEnemy(combat,enemy,boosted=false,incoming=false){
   const critical=incoming?Object.values(G.ship.systems).some((system,index)=>system.condition<before[index]):
     Object.values(enemy.ship.systems).some((system,index)=>system.condition<enemyBefore[index]);
   queueShipCombatFeedback(combat,incoming?enemy:combat.player,incoming?combat.player:enemy,
-    {side:incoming?'enemy':'player',hit:true,hull:incoming?playerHull:enemyHull,critical,impactOnly:true});
+    {side:incoming?'enemy':'player',hit:true,hull:incoming?playerHull:enemyHull,critical,impactOnly:true,
+      impact:incoming&&enemy.ship._homeCluster?'wraith':'ram'});
   if(G.ship.hp===0)G.deathCause='The ship was destroyed in a '+(boosted?'boosted ':'')+'ramming collision with '+enemy.ship.name+'.';
   return {playerHull,enemyHull};
 }
 
 function crashShipCombatAsteroid(combat,rock){
   const area=(rock.width??1)*(rock.height??1),damage=Math.round((6+rnd(5))*2.5*Math.sqrt(area));
-  const hull=damageShipCombatPlayer(combat,damage,false,'an asteroid collision',true);
+  const hull=damageShipCombatPlayer(combat,damage,true,'an asteroid collision',true);
+  queueShipCombatFeedback(combat,combat.player,rock,{side:'enemy',hit:true,hull,impactOnly:true,impact:'asteroid'});
   addCombatLog('BOOST COLLISION with '+(rock.width??1)+'×'+(rock.height??1)+' asteroid — '+hull+' hull lost. Shields bypassed.','lc');
   if(G.ship.hp===0)G.deathCause='The ship was destroyed by boosting into an asteroid.';
 }

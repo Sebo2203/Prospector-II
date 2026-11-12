@@ -229,8 +229,7 @@ function confirmBarterTrade(){
     if(stock.isCommodity && stock.commodityId){
       addCargo(makeCommodityItem(stock.commodityId, 'civ_barter', stock.value));
     } else {
-      const item = { name:stock.name, col:stock.col||'#aaa', desc:stock.desc||'', value:stock.value };
-      if(stock.usable) item.usable = stock.usable;
+      const item=inventoryItemFromStock(stock);
       G.inventory.push(item);
     }
     received.push(stock.name);

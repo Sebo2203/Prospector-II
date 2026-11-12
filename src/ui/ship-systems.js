@@ -78,6 +78,15 @@ function handleShipSystemsKey(key){
   }
 }
 
+function shipSystemRomanRating(value){
+  if(!Number.isSafeInteger(value)||value<=0)return 'None';
+  let text='';
+  for(const [number,roman] of [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]){
+    while(value>=number){text+=roman;value-=number;}
+  }
+  return text;
+}
+
 function shipSystemEffect(id){
   const stats=G.shipStats,component=ensureShipSystems()[id];
   if(id==='reactor') return 'Output '+shipReactorOutput()+' / fitted demand '+shipWeaponPowerUsed();
@@ -88,7 +97,12 @@ function shipSystemEffect(id){
   }
   if(id==='sensors') return effectiveSensorRange()===0?'OFFLINE · Existing charts retained; new terrain and live contacts hidden':
     'Installed range '+stats.sensorRange+' / effective '+effectiveSensorRange();
-  if(id==='engine') return 'Installed rating '+stats.engineRating+' / effective '+effectiveEngineRating();
+  if(id==='engine'){
+    const effective=effectiveEngineRating(),reason=shipReactorOutput()<2?' · reactor power offline':
+      effective<stats.engineRating?' · reduced by engine damage':'';
+    return 'Installed '+shipSystemRomanRating(stats.engineRating)+' / effective '+(effective?shipSystemRomanRating(effective):'OFFLINE')+reason+
+      ' · Drive pace '+shipDrivePerformance()+' · Hull limit '+shipSystemRomanRating(stats.maxUpgradeEngine);
+  }
   return 'Usable capacity '+G.maxFuel+' / '+stats.maxFuel+' / fuel '+Math.floor(G.fuel)+(component.condition<=50?' / RUPTURED':'');
 }
 
@@ -125,7 +139,8 @@ function drawShipSystems(){
     canvasMenuTarget(x,y,listW,30,()=>selectShipSystem(id),{label:SHIP_SYSTEMS[id].name});
   });
   const component=systems[view.id],temporary=Math.max(0,component.bypassUntil-G.turn);
-  text(SHIP_SYSTEMS[view.id].name,detailX,top+14,'#aaddff','bold 16px Courier New');
+  const installed=G.shipStats[SHIP_SYSTEMS[view.id].stat];
+  text(SHIP_SYSTEMS[view.id].name+(view.id==='fuelTank'?' · Capacity '+installed:' '+shipSystemRomanRating(installed)),detailX,top+14,'#aaddff','bold 16px Courier New');
   text(component.condition+'% integrity'+(temporary?' · improvised repair '+temporary+' turns':''),detailX,top+35,
     component.condition<=50?'#ff9977':'#99bbaa');
   ctx.fillStyle='#11151d';ctx.fillRect(detailX,top+43,detailW,5);

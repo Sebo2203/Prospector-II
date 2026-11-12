@@ -29,19 +29,17 @@ function resolveRangedShot(shooter, profile){
 
   if(dist === 0){ addLog('Choose a target tile.','lw'); return false; }
   if(dist > profile.maxRange){ addLog('Out of range — max '+profile.maxRange+' tiles for '+shooter.weapon+'.','lw'); return false; }
+  SFX.groundFire(shooter.weaponUsable);
 
-  var cbtSkill = shooter.skills && shooter.skills.cbt ? shooter.skills.cbt : 0;
-  var cbtBonus = cbtSkill * 0.02;
-  var rawAcc   = Math.max(0.05, profile.accuracy - (dist-1)*profile.falloff);
-  var finalAcc = Math.min(0.99, rawAcc + cbtBonus);
+  var finalAcc = groundRangedHitChance(shooter,profile,dist);
   var hitRoll  = Math.random() < finalAcc;
 
   var trace = traceBullet(G.player.x, G.player.y, cx, cy, profile.maxRange);
   var pathEnemy = trace.hit;
   addPlanetBulletTracer(G.player.x, G.player.y, trace.landX, trace.landY, '#88ddff');
-  var weaponBonus = shooter.weaponUsable === 'gun_sniper' ? 5 : shooter.weaponUsable === 'gun_breacher' ? 4 : shooter.weaponUsable === 'gun_shotgun' ? 3 : shooter.weaponUsable === 'gun_burst' ? 3 : shooter.weaponUsable === 'gun_plasma' ? 3 : 2;
-  var stimBonus = (shooter._stimAtk||0) > 0 && G.turn <= (shooter._stimUntil||0) ? shooter._stimAtk : 0;
-  var dmg = Math.max(1, shooter.atk + weaponBonus + stimBonus + Math.floor(Math.random()*2));
+  var weaponBonus = groundWeaponAttackBonus(shooter.weaponUsable);
+  var stimBonus = (shooter._stimAtk||0) > 0 && G.turn < (shooter._stimUntil||0) ? shooter._stimAtk : 0;
+  var dmg = Math.max(1, shooter.atk + weaponBonus + stimBonus + crewImplantAtkBonus(shooter) + Math.floor(Math.random()*2));
 
   giveSkillXP(shooter, 'cbt', 2);
   var cap = G.crew.find(function(c){ return c.role==='captain'&&c.hp>0; });
@@ -63,13 +61,9 @@ function resolveRangedShot(shooter, profile){
   }
 
   // Helper: consume tranq dart and unequip from shooter
-  function consumeTranqDart(){
-    const dartIdx = (G.inventory||[]).findIndex(i=>i.usable==='tranq_darts');
-    if(dartIdx !== -1){ G.inventory.splice(dartIdx,1); }
-    shooter.weapon='Bare hands'; shooter.weaponUsable=null; shooter._equippedItem=null;
-  }
+  function consumeTranqDart(){consumeEquippedTranq(shooter);}
 
-  if(hitRoll && intendedTarget){
+  if(hitRoll && intendedTarget && pathEnemy===intendedTarget){
     if(shooter.weaponUsable === 'tranq_darts'){
       intendedTarget.stunTurns = (intendedTarget.stunTurns||0) + 4;
       addLog(crewDisplayName(shooter)+' hits '+intendedTarget.name+' with a tranq dart — incapacitated for 4 turns.','lg');
@@ -83,24 +77,26 @@ function resolveRangedShot(shooter, profile){
         killEnemy(intendedTarget);
       }
     }
-  } else if(hitRoll && shooter.weaponUsable === 'tranq_darts'){
+  } else if(hitRoll && !pathEnemy && shooter.weaponUsable === 'tranq_darts'){
     addLog(crewDisplayName(shooter)+' fires a tranq dart — hits nothing.','li');
     consumeTranqDart();
-  } else if(!hitRoll && pathEnemy && pathEnemy !== intendedTarget){
-    if(shooter.weaponUsable === 'tranq_darts'){ consumeTranqDart(); }
+  } else if(pathEnemy && pathEnemy !== intendedTarget){
+    const tranquilizer=shooter.weaponUsable==='tranq_darts';
+    if(tranquilizer)consumeTranqDart();
     if(pathEnemy.civLocal){
       makeCivilizationHostileFromLocal(pathEnemy, 'Responding to stray crew gunfire');
     }
     if(pathEnemy.canCommunicate){
       makeCommunicableAlienHostile(pathEnemy, 'Defending itself from stray crew gunfire');
     }
-    var strayDmg = Math.max(1, Math.floor(dmg/2));
+    var strayDmg=tranquilizer?0:hitRoll?dmg:Math.max(1,Math.floor(dmg/2));
+    if(tranquilizer){pathEnemy.stunTurns=(pathEnemy.stunTurns||0)+4;addLog('Stray tranquilizer hits '+pathEnemy.name+' — incapacitated for 4 turns.','lw');return true;}
     pathEnemy.hp -= strayDmg;
     if(pathEnemy.hp <= 0){
-      addLog('Shot misses — stray bullet fells '+pathEnemy.name+'!','lc');
+      addLog((hitRoll?'Shot hits intervening target ':'Shot misses — stray bullet fells ')+pathEnemy.name+'!','lc');
       killEnemy(pathEnemy);
     } else {
-      addLog(crewDisplayName(shooter)+' misses — stray shot grazes '+pathEnemy.name+' for '+strayDmg+'.','lc');
+      addLog((hitRoll?'Shot hits intervening target ':crewDisplayName(shooter)+' misses — stray shot grazes ')+pathEnemy.name+' for '+strayDmg+'.','lc');
     }
   } else if(!hitRoll){
     if(shooter.weaponUsable === 'tranq_darts'){ consumeTranqDart(); }

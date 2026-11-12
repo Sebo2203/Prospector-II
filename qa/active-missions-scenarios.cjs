@@ -88,7 +88,7 @@ const {chromium,gameUrl,artifactPath}=require('./runtime.cjs');
     assert.doesNotMatch(await panel.textContent(),/Research data recovered/);
     await page.evaluate(()=>{
       G.inventory.push({name:'Research Ship Data',scienceJobId:G.scienceJob.active.id});
-      const incident=G.expedition.quarantine;
+      const incident=G.expedition.quarantine||(G.expedition.quarantine=createQuarantineIncident(1,1,'Mercy of Dawn'));
       incident.discovered=true;incident.startedTurn=G.turn;incident.rosterKnown=false;
       incident.survivors=[
         {id:'known',name:'Known passenger',met:true,status:'onboard'},

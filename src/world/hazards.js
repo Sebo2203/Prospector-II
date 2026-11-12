@@ -249,6 +249,7 @@ function processPlanetHazards(){
         // Explodes in inventory — lethal
         G.inventory.splice(_ci, 1);
         addLog('The C4 detonates inside the inventory!','lc');
+        SFX.explosion();
         G.crew.filter(c=>c.hp>0).forEach(c=>{
           if(!DEBUG.infiniteCrewHp) c.hp = Math.max(0, c.hp - 80);
           addLog(c.name+' severely wounded by internal blast!','lc');
@@ -420,7 +421,7 @@ function processPlanetHazards(){
           const dmg = 4 + rnd(6);
           G.crew.filter(c=>c.hp>0).forEach(c=>{ c.hp=Math.max(0,c.hp-dmg); });
           addLog('Meteor impact! Crew takes '+dmg+' damage!','lc');
-          SFX.hullHit();
+          SFX.explosion();SFX.crewHit();
         }
         // Crater — convert floor to rock
         if(( grid[iy]?.[ix]?.type === B.floor || grid[iy]?.[ix]?.type === 'VOLCANIC_FLOOR2' || grid[iy]?.[ix]?.type === 'TOXIC_FLOOR2' || grid[iy]?.[ix]?.type === 'TOXIC_FLOOR3' )){
@@ -576,7 +577,7 @@ function applyPulsarExposure(){
       applyRadiationExposureToCrew(4, 'pulsar_direct');
       const dmg = 20 + rnd(15);
       const hull=absorbShipHit(G.ship,dmg,'pulsar radiation');
-      if(dmg>0) SFX.hullHit && SFX.hullHit();
+      if(dmg>0) SFX.shipImpact(hull);
       addLog('Electromagnetic pulse strips '+dmg+' hull integrity!','lc');
       if(G.ship.hp<=0){
         G.dead=true;

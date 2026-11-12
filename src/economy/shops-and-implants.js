@@ -21,19 +21,19 @@ const IMPLANT_CATALOG = [
     desc:'Titanium mesh supplementing the pulmonary filter. Quiet hiss on deep breaths.',
     effect:{ oxyRate:0.75 }, tier:'common' },
   { id:'subdermal_hud',name:'Subdermal HUD',        col:'#ffe066', cost:420,
-    detail:'+1 SCI, reveals creature health in combat',
+    detail:'+1 SCI',
     desc:'A pressure-sensitive display etched beneath the forearm skin.',
-    effect:{ sci:1, creatureHud:true }, tier:'uncommon' },
+    effect:{ sci:1 }, tier:'uncommon' },
   { id:'pain_block',   name:'Pain Suppressor',      col:'#ff88cc', cost:350,
-    detail:'crew member does not flinch; +10 max HP',
-    desc:'Blocks ascending pain signals. Crew fight at full efficiency until zero HP.',
+    detail:'+10 max HP',
+    desc:'Blocks ascending pain signals; increases maximum health.',
     effect:{ maxHp:10 }, tier:'common' },
   { id:'reflex_coil',  name:'Reflex Coil',          col:'#88ff88', cost:700,
     detail:'+2 CBT, ranged accuracy +10%',
     desc:'Myomer-wound coil along the motor cortex. Reaction time: inhuman.',
     effect:{ cbt:2, accuracy:0.10 }, tier:'rare' },
   { id:'biosense_skin',name:'Biosense Skin Graft',  col:'#44cc88', cost:480,
-    detail:'+2 MED, +1 SCI; detect alien biology passively',
+    detail:'+2 MED, +1 SCI',
     desc:'A grafted secondary epithelium threaded with chemoreceptors.',
     effect:{ med:2, sci:1 }, tier:'uncommon' },
 ];
@@ -45,7 +45,7 @@ const CORP_ITEM_POOLS = {
   eridani: [
     { name:'Sensor Drone',        cost:300, detail:'galaxy only: flies ahead of ship for 4–7 turns, revealing fog', usable:'sensor_drone', col:'#44ffcc', tier:'uncommon' },
     { name:'Grappling Hook',      cost:50, detail:'one-use: hook over 1 obstacle tile; enter target mode to aim', usable:'grapple',       col:'#ccaa88', tier:'uncommon' },
-    { name:'Jetpack',             cost:800, detail:'leap 2 tiles over any terrain; enter target mode to aim; 15 charges', usable:'jetpack',      col:'#ff9922', tier:'rare'     },
+    { name:'Jetpack',             cost:800, detail:'leap 2 tiles over any terrain; enter target mode to aim; 15 charges', usable:'jetpack', fuel:15, col:'#ff9922', tier:'rare'     },
     { name:'Floodlight',          cost:200, detail:'passive: always +2 tile vision radius',  usable:'floodlight',      col:'#ffffaa', tier:'uncommon' },
     { name:'Repair Kit',          cost:150, detail:'patch the hull for +15 HP',              usable:'repair_kit',      col:'#66aaff', tier:'common'   },
   ],
@@ -116,6 +116,20 @@ function crewImplantMaxHpBonus(c){
 // ─────────────────────────────────────────────────────────────────
 //  SUPPLY DEPOT — randomised per-station stock (formerly pawn shop)
 // ─────────────────────────────────────────────────────────────────
+// Preserve equipment-specific metadata across every shop/delivery path.
+function inventoryItemFromStock(item){
+  const {cost,stock,tier,detail,qty,_remaining,...gear}=JSON.parse(JSON.stringify(item));
+  gear.col=gear.col||'#aaaacc';gear.desc=gear.desc||detail||'';gear.value=gear.value??0;
+  return gear;
+}
+
+function crewImplantAccuracyBonus(c){
+  return (c.implants||[]).reduce((sum,id)=>sum+(IMPLANT_CATALOG.find(imp=>imp.id===id)?.effect.accuracy||0),0);
+}
+function crewImplantOxygenRate(c){
+  return (c.implants||[]).reduce((rate,id)=>rate*(IMPLANT_CATALOG.find(imp=>imp.id===id)?.effect.oxyRate??1),1);
+}
+
 const PAWN_ITEM_POOL = [
   // ── Consumables ──────────────────────────────────────────────
   { name:'Medikit',            cost:100,  detail:'heals lowest HP crew member by 10',    usable:'medikit',         col:'#ff6688', tier:'common' },
@@ -142,7 +156,7 @@ const PAWN_ITEM_POOL = [
   { name:'Floodlight',         cost:200,  detail:'passive: always +2 tile vision radius',  usable:'floodlight',      col:'#ffffaa', tier:'uncommon' },
   { name:'Sensor Drone',       cost:300,  detail:'galaxy only: flies ahead of ship for 4–7 turns, revealing fog',       usable:'sensor_drone',    col:'#44ffcc', tier:'uncommon' },
   { name:'Grappling Hook',     cost:250,  detail:'one-use: hook over 1 obstacle; enter target mode to aim', usable:'grapple',       col:'#ccaa88', tier:'uncommon' },
-  { name:'Jetpack',            cost:800,  detail:'leap 2 tiles over any terrain; enter target mode to aim; 15 charges', usable:'jetpack',      col:'#ff9922', tier:'rare'     },
+  { name:'Jetpack',            cost:800,  detail:'leap 2 tiles over any terrain; enter target mode to aim; 15 charges', usable:'jetpack', fuel:15, col:'#ff9922', tier:'rare'     },
   { name:'Handheld Drill',     cost:280,  detail:'extract ore deposits from planet surface', usable:'mining_tool',   col:'#cc9944', tier:'common',   miningMult:1.0 },
   { name:'Mining Laser',       cost:650,  detail:'fast ore extraction — significantly fewer presses', usable:'mining_tool', col:'#44eeff', tier:'rare', miningMult:2.5 },
   { name:'Ore Scanner',        cost:400,  detail:'passive: marks ore deposits within 8 tiles with ? on the map', usable:'ore_scanner', col:'#88ff44', tier:'uncommon' },

@@ -2,6 +2,7 @@
 //  RENDER
 // ─────────────────────────────────────────────────────────────────
 function renderAll(){
+  SFX.syncContext();
   syncAnalyticsState();
   drawCanvas();
   renderHUD();

@@ -71,11 +71,11 @@ function doWaitGalaxy(activity='waiting'){
 
   // Engineer passive hull repair
   const bestEngineer = G.crew.filter(c=>c.hp>0).reduce((best,c)=>{
-    const e = c.skills?.eng||0; return e > (best?.skills?.eng||0) ? c : best;
+    const e = crewSkillValue(c,'eng'); return e > (crewSkillValue(best,'eng')) ? c : best;
   }, null);
   let repaired = false;
-  if(bestEngineer && (bestEngineer.skills?.eng||0) > 0 && G.ship.hp < G.ship.maxHp){
-    const engChance = Math.min(0.80, bestEngineer.skills.eng * 0.08);
+  if(bestEngineer && (crewSkillValue(bestEngineer,'eng')) > 0 && G.ship.hp < G.ship.maxHp){
+    const engChance = Math.min(0.80, crewSkillValue(bestEngineer,'eng') * 0.08);
     if(Math.random() < engChance){
       G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 1);
       addLog(crewDisplayName(bestEngineer)+' patches the hull. +1 HP.','lg');

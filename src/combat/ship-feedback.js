@@ -35,10 +35,15 @@ function playNextShipCombatFeedback(){
   event.born=performance.now();
   event.flight=event.impactOnly?0:event.guided?230:110;
   event.hold=event.critical?430:event.side==='enemy' && event.hit?300:190;
+  if(event.weapon && !event.impactOnly && (event.side==='player'||event.visible))SFX.shipFire(event.weapon,event.combat);
   SHIP_FEEDBACK.timer=setTimeout(()=>{
     if(activeShipCombatFeedback()!==event)return;
     if(event.hit){
-      if(event.side==='player')SFX.shipHit();
+      if(event.impact==='ram')SFX.ram(event.combat);
+      else if(event.impact==='asteroid')SFX.asteroid(event.combat);
+      else if(event.impact==='wraith')SFX.wraith(event.combat);
+      else if(event.hull===0)SFX.shieldHit();
+      else if(event.side==='player')SFX.shipHit();
       else if(event.critical)SFX.coreHit();
       else if(event.hull>0)SFX.hullHit();
       else SFX.shieldHit();

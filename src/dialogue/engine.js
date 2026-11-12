@@ -219,7 +219,7 @@ function chooseDialogueOption(idx){
       const actor = dialogueCrew();
       if(actor && actor !== cap) giveSkillXP(actor, 'soc', total >= opt.check.dc ? 1 : 0);
     } else if(opt.check.skill === 'cbt'){
-      const best = (G.crew||[]).filter(c=>c.hp>0).sort((a,b)=>(b.skills?.cbt||0)-(a.skills?.cbt||0))[0];
+      const best = (G.crew||[]).filter(c=>c.hp>0).sort((a,b)=>crewSkillValue(b,'cbt')-crewSkillValue(a,'cbt'))[0];
       if(best) giveSkillXP(best, 'cbt', total >= opt.check.dc ? 2 : 1);
     }
     enterDialogueNode(total >= opt.check.dc ? opt.success : opt.fail);

@@ -2,8 +2,12 @@
 
 The ordered lists in `src/build-manifest.json` preserve the original execution order. These are classic-script sections sharing globals, not ES modules. Read only relevant systems and their callers.
 
+For crew/field equipment, start at `src/economy/shops-and-implants.js` (catalogs, stock-to-inventory conversion, implant modifiers), `src/ui/inventory.js` (use/equip/return), `src/crew/status-effects.js` (effective skill), `src/crew/oxygen.js`, `src/combat/ranged-weapons.js`, `src/combat/ranged-fire.js` and `src/combat/ground-and-enemies.js`. Acquisition callers include station purchases, merchant contacts and civilization barter. Mining crosses `src/world/minerals.js`, `src/input/keyboard.js`, `src/movement/player.js` and the context bar. Retained equipped-item validation lives in `src/persistence/career-snapshot.js`. [Current audit and native scenarios](equipment-audit-2026-11-12.md).
+
 | File | Lines at extraction |
 | --- | ---: |
+| [src/ui/story-passengers.js](../src/ui/story-passengers.js) | Added later: onboard rescue manifest, shared treatment actions and disposable selection |
+| [src/assets/audio-samples.js](../src/assets/audio-samples.js) | Generated embedded catalog of 24 selected offline recordings; recreated by `art:audio` |
 | [src/combat/ship-collisions.js](../src/combat/ship-collisions.js) | Added later: physical sizes, mutual hull ramming, asteroid boost impacts and terminal maneuver commitment |
 | [src/combat/ship-environment.js](../src/combat/ship-environment.js) | Added later: seeded nebula pockets, symmetric direct-fire penalties and persisted unannounced lightning |
 | [src/rendering/ship-environment.js](../src/rendering/ship-environment.js) | Added later: pixel-art nebula backdrop, charted pockets, ASCII and unannounced lightning strikes |

@@ -1,0 +1,71 @@
+[
+  {
+    "id": "C8-D",
+    "role": "Ramming \u2014 restored crash attack",
+    "intent": "Corrected comparison: the actual metal impact starts at about 0.5 seconds. This excerpt begins at 0.48 seconds, preserving its normal pitch and high-frequency attack over the earlier low body.",
+    "sources": [
+      {
+        "provider": "kenney",
+        "pack": "sci-fi-sounds",
+        "file": "lowFrequency_explosion_000.ogg",
+        "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343",
+        "url": "https://kenney.nl/assets/sci-fi-sounds",
+        "license": "CC0",
+        "seconds": 1.4,
+        "speed": 0.78,
+        "gain": 0.65,
+        "lowpass_hz": 700,
+        "delay_ms": 0
+      },
+      {
+        "provider": "freesound",
+        "sound_id": 40158,
+        "sha256": "bca4ff755425d5201a69b8562020e059251af19426906a56870a64105da2e254",
+        "url": "https://freesound.org/people/moxobna/sounds/40158/",
+        "preview_url": "https://cdn.freesound.org/previews/40/40158_43834-hq.mp3",
+        "license": "CC0",
+        "seconds": 0.9,
+        "speed": 1,
+        "gain": 0.6,
+        "lowpass_hz": null,
+        "delay_ms": 0,
+        "start_seconds": 0.48
+      }
+    ]
+  },
+  {
+    "id": "C8-E",
+    "role": "Ramming \u2014 crash + original W5",
+    "intent": "The same restored crash attack with the original W5 impact/debris recording instead of the low-rumble body. No pitch lowering or low-pass filters on either layer.",
+    "sources": [
+      {
+        "provider": "freesound",
+        "sound_id": 40158,
+        "sha256": "bca4ff755425d5201a69b8562020e059251af19426906a56870a64105da2e254",
+        "url": "https://freesound.org/people/moxobna/sounds/40158/",
+        "preview_url": "https://cdn.freesound.org/previews/40/40158_43834-hq.mp3",
+        "license": "CC0",
+        "seconds": 0.9,
+        "speed": 1,
+        "gain": 0.48,
+        "lowpass_hz": null,
+        "delay_ms": 0,
+        "start_seconds": 0.48
+      },
+      {
+        "provider": "prospector",
+        "file": "weap_5.wav",
+        "sha256": "b30b4aeb2440147d4182f15f2aeaf26f2d8bad57ba618f254500c680a92e1d6f",
+        "git_blob": "286494e391df9e9c8eb03b48a5039949a9143b44",
+        "url": "https://github.com/roguelikes/prospector/blob/1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e/data/weap_5.wav",
+        "download_url": "https://raw.githubusercontent.com/roguelikes/prospector/1b928c0bb95643302b9dc4ece55fd1fba6e5ba1e/data/weap_5.wav",
+        "license": "Original Prospector distribution; see art/source/prospector/audio/README.md for license and unresolved sound-specific credits",
+        "seconds": 2.617,
+        "speed": 1,
+        "gain": 0.68,
+        "lowpass_hz": null,
+        "delay_ms": 15
+      }
+    ]
+  }
+]

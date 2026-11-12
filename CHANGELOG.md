@@ -23,6 +23,176 @@ Saves: compatibility, migration or reset requirements.
 Remaining: known limitations or follow-up; link to the relevant guide/roadmap.
 ```
 
+## 2026-11-12 — GitHub handoff of experimental.105 for Hal 3000
+
+Branch: `codex/hal3000-handoff`; user-authorized source handoff, without changing the public main release or the older experimental branch.
+
+Changes and reason: published the accumulated local experimental.97–105 source/build/assets/tests/guides so development can continue on another computer. Added a branch-specific clone/start guide and the exact unfinished next request in [development handoff](docs/handoff.md#current-hal-3000-handoff--2026-11-12). The pending isolation-pod removal, ordinary-ship framing, reduced hints, Examine-only medical controls and inconspicuous volume control are not implemented in this snapshot. Corrected local review filename guidance to `experimental.NNN.html`.
+
+Validation: root `npm test`/generated-version checks run for handoff; prior gameplay/browser validation is recorded in the entries below and was not repeated for a documentation-only handoff. No new game-version bump. Career schema six and the built experimental.105 gameplay remain unchanged. Generated transfer files, temporary SSH keys, caches, personal saves and private lore are excluded. No executable repackaging or GitHub Pages promotion.
+
+## 2026-11-12 — experimental.105: manual helmets and truthful airborne exposure
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: reproduced an open-looking visor in the contaminated ward despite the rules treating an intact suit as sealed. Added a real surface **U** open/close toggle for all crew, as requested; O remains Options and off-surface U retains fuel scooping. New careers begin with automatic hazard-appropriate visor selection; the first toggle makes an explicit open/closed choice that persists across travel and saves. The control is documented only as a muted static Shortcuts entry, remains collapsed by default, and has no context-bar button. Held key repeats do not toggle repeatedly. Each toggle commits one normal surface turn without confirmation.
+
+Open helmets in unbreathable air or underwater now cause immediate 5-HP suffocation/drowning per living crew member per action, even with full stored oxygen. Closing permits ordinary suit oxygen use again; it neither heals nor creates oxygen. The own-ship airlock is breathable. Existing infinite-oxygen/crew-health debug protections remain effective. Correctly records open-helmet deaths without also applying empty-tank suffocation a second time. Crew without environmental suits, including armor-plate wearers, retain unprotected-atmosphere damage rather than treating any armor as a sealed suit.
+
+Ward infection now uses the actual sealed-helmet predicate: full flight/reinforced/exosuit/diving gear with closed, intact seals protects; open helmets, absent suits, armor plates and punctures do not. Retained the existing three exposed turns per infection dose and scrubber/clean-tile protection. The player pawn follows the leading living crew member's equipment and actual visor state, including manually open helmets in vacuum. [Controls/exposure](docs/experiment.md#controls) and [implementation](docs/architecture.md#helmet-state-and-respiratory-exposure).
+
+Validation: built the HTML and passed `npm test` (118 root checks plus generated/version synchronization). Maintained headless `helmets` scenarios cover native lower/uppercase U, repeats, exact turn/HP effects with full oxygen, closing protection, safe air/airlock, plate exclusion, underwater exposure, debug oxygen protection, actual ward infection, saved/invalid/fatal states, unchanged O and absence of a context control. `quarantine-air` covers ten suit/unprotected/filtered/clean/save scenarios. Oxygen, equipment, rescue and story-rescue regressions passed during the change; the last oxygen/gear pass follows the shared suit classification adjustment. Replaced the oxygen fixture's nonexistent `armor_vac` with real catalog Flight Suits, retaining its exact oxygen expectations. Visually inspected the visor/Shortcuts presentation. Fixtures isolate hazards and force bounded rolls; no natural-career balance, human sound audition, or unrelated ship-combat audit was performed.
+
+Saves: schema six unchanged; present `helmetMode` values are validated as auto/open/closed, and exposure progress retains ordinary transactional save/load behavior. No migrations or compatibility layer; no new station infection or other deferred story features. No GitHub upload, executable packaging or private-lore changes. Release filename: `experimental.105.html`.
+
+## 2026-11-12 — experimental.104: named, optional story-rescue foundation
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: made the quarantine rescue a blueprint for later story events. A career saves one 60% eligibility roll; eligible events have a 35% initial-placement chance, otherwise appear 80–600 career turns later, independently of player progress. Placement uses an uncharted empty sector and can retry if none is available. The ship receives one of twelve saved names, including Mercy of Dawn; HUD, boarding, comms, records, mission titles, item provenance and endings use that instance name. A drone/chart-history reveal no longer sends a remote distress message: the player ship needs working sensors within the smaller of three tiles or sensor range, with no intervening nebula. The signal occurs once.
+
+Replaced the three separate rescue door types with actual ringworld closed/open door tiles and shared opening logic/art/collision/sound; both movement and adjacent Enter can open rescue hatches. Ward seals remain metadata. Replaced ordinary-mode letter fixtures and rudimentary people with integer-pixel equipment, humans, remains and pods; ASCII mode retains glyphs. Survivors now use the normal creature examine payload, keyboard/pointer selection, two-tile detail gate and common sidebar without becoming combat enemies. Renamed the fixed Mercy Pump Coupling to Pump Coupling.
+
+Fixed the two reviewed gaps: I → SHIP → Passengers [P] now supplies keyboard/pointer passenger treatment through the same medical action as field care, using actual medicine and one turn per successful treatment/work step, with free refusals and a return-to-ship guard. Terminal survivor outcomes close the rescue without a station visit or failure payout; unknown remote deaths retain last-known mission information until observed, and completion is recorded once. [Story-mission blueprint and future station-infection direction](docs/story-missions.md), [player controls](docs/experiment.md#mercy-of-dawn).
+
+Validation: `npm run build` and `npm test` passed (118 root checks plus generated/version checks). Root scenarios cover optional/delayed schedules, local/blocked/offline signals and casualty closure. Added maintained `story-rescue` headless scenarios for saved late spawning through a native turn, name/range, shared hatches, native keyboard/pointer NPC examination, glyph/RNG/save-free pixel drawing, onboard treatment/costs/refusal/persistence, failed closure and malformed deadlines. Existing rescue, encounters, audio, interface, palette, missions, equipment, autosave, log and turns suites passed during this pass; story-rescue/encounters/autosave were rerun after the format bump. The full existing rescue controller walked 872 surface steps across fifteen scenarios; seeded opening checks observed absent, initial and delayed plans. Equipment retained 160 passing checks across fifty entries. Visually inspected the interior art, common examine sidebar, passenger page and three-passenger page at 800×600. Fixtures control placement/resources/outcomes; these are not natural-career frequency/balance measurements or a substitute for human expedition playtesting. Generated evidence remains ignored under `qa/artifacts/`.
+
+Saves: career schema **six**, replacing five because old rescue decks contain removed door types. Earlier exports fail clearly before replacing the active career; start a new career. No tile/name/schedule migration or compatibility shim. Present plans validate catalog IDs, status/deadlines and names; transactional autosave/recovery remains intact. Palette retains a canonical interactive Mercy sample, includes the changed runtime catalogs, resets and restores the actual career without sharing event state.
+
+Deferred: survivor dialogue/backstory, developing patient illness, richer delivery aftermath and reconsidering the first-boarding air-clock policy. Station outbreaks are a documented future direction, not implemented or triggered by current deliveries. No GitHub upload, executable packaging or private-lore changes. Release filename: `experimental.104.html`.
+
+## 2026-11-12 — experimental.103: restore station chime, move recording to hatches
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: restored the original synthesized station/casino entry chime (523/784/261 Hz with the original timing). Reassigned the former station-entry C12-A recording to successful ringworld maintenance-hatch and Mercy of Dawn pressure/ward-hatch openings; added the missing Mercy cue at the actual opening action. Ancient door unlocking retains C12-B. Refused locks and already-open hatches stay silent. All recording bytes and other audio/gameplay behavior remain unchanged. Download filenames now use only the experimental label, starting with `experimental.103.html`. [Current audio routing](docs/audio.md).
+
+Validation: `npm run build` and `npm test` passed (115 root checks plus generated/version synchronization). Headless Edge audio scenarios passed, including original scheduled oscillator notes/timing, no station-entry recording, native ringworld opening, native Enter opening both Mercy hatch types, silent repeats, retained ancient unlock/refusal and the surrounding offline audio routing/cache/cancellation checks. Corrected the scenario observer to read scheduled frequency events rather than the oscillator's not-yet-active default value. Controlled fixtures verify routing and scheduling; subjective listening remains the author's check. No unrelated equipment or full-career scenarios repeated.
+
+Saves: schema five unchanged; no saved state, migration or gameplay rule changes. No GitHub upload, executable packaging or private-lore changes.
+
+## 2026-11-12 — experimental.102: equipment functionality audit
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: audited equipment acquisition/use/equip/return and persistence against actual actions. Fixed radio purchases delivering nothing, corporate Jetpacks missing charges, shop/barter mining metadata loss, and Repair Kits being immediately spent on purchase instead of delivered. Activated implant effective-skill/oxygen/ranged modifiers; retained trained skill and XP display separately. Removed unsupported HUD creature-reveal, pain-efficiency immunity and passive-biosense claims while retaining their numeric implant bonuses. Fixed duplicate-name clinic removal, equipped darts also consuming spares, lethal adjacent/stray darts, lethal baton chip damage, shots bypassing walls/intervening creatures, inconsistent handgun/diving-suit feedback and the extra Combat Stim turn. Equipped gear now retains its complete owned object through swaps/save/load. Mining chooses the strongest carried tool and binds progress to its planet. Full item coverage, implementation details and limitations: [equipment audit](docs/equipment-audit-2026-11-12.md).
+
+Validation: built the HTML and passed `npm test` (115 root tests plus generated/version checks). Added maintained `equipment` QA controller: 50 named inventory catalog entries/44 usable types, five ship weapons, two working utility modules and the disabled drill placeholder; 160 strict scenario checks passed with no uncovered types/browser errors. Sixteen related headless suites also passed, including crew equipment, armament, cores/hulls, missiles, oxygen/crew/morale, turns, interface/Mercy, missions, stations, palette, transactional autosaves, bridge and audio. The final inventory-label adjustment was rebuilt/root-tested and rerun through equipment. Visually checked the modified skill table and corrected label overlap. Generated traces/screenshots/synthetic saves remain ignored. These are fixture-assisted functional checks, not natural careers, availability/economy balance or exhaustive procedural playtesting.
+
+Saves: schema five unchanged; retained equipped objects are validated against actor name/type/value before load installation. No migrations/shims; previously discarded gear metadata is not recoverable. Existing transactional save/load recovery and career isolation passed. Ship Mining Drill remains explicitly disabled/Coming soon; the three removed secondary implant abilities remain unimplemented. No GitHub upload, executable packaging or private-lore changes.
+
+## 2026-11-12 — experimental.101: quiet repeat planet scans
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: C11 now sounds only when a previously unscanned planet/moon first produces successful or partial scan results. Repeated paid scans of a partially scanned body stay quiet, including after save/load; a different planet or moon has its own first cue. Failed attempts and free completed-scan browsing remain silent. Reused the authoritative saved scan state instead of adding a separate sound-history field. Scan rolls, fuel/turn costs, terrain coverage, hints, training and payouts are unchanged. See [audio routing](docs/audio.md).
+
+Validation: built the HTML and passed `npm test` (115 root checks plus generated/version checks). Headless Edge audio, scan-comms and turns passed. The existing offline audio scenario now verifies first results after a failed attempt, quiet partial rescans with the normal one-fuel/one-turn charge, confirmed transactional save/load retaining silence, and an independently new moon's cue. The scan suite retains terrain-progress/hint checks. Corrected the audio fixture to use normal procedural RNG after its forced outcome roll, retain legal stock sensors for save validation, and await initial career-ID persistence before checking decoder-failure state. These are fixture corrections, not game rule changes. Controlled scenarios are not human listening or unassisted careers; no unrelated combat/whole-career audit repeated.
+
+Saves: schema five unchanged; no new fields, migrations or compatibility handling. Existing current-format scan progress supplies the cue gate. All other selected sounds and Roman core details retained. No GitHub upload, executable packaging or private-lore changes.
+
+## 2026-11-12 — experimental.100: Roman core values inside F3 details
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: removed experimental.99's engine number from the F3 list. All core rows again show plain names and existing integrity/offline status. Each selected rated core now shows its installed Roman numeral in the detail heading: Engines IV, Reactor I, Shield generator I, Cooling I, Sensors III, etc. Removed the visible “rating” word, including the engine's installed/effective readout; engine effective grades and hull ceiling also use Roman numerals, with OFFLINE at zero. Fuel tanks have no separate grade, so their selected heading uses installed numeric capacity instead of inventing a level. Effective output, range, drive pace, charge, fuel and integrity remain numeric quantities. See [core/refit readouts](docs/hull-framework.md). Rules, purchases, repair costs and power allocation are unchanged.
+
+Validation: `npm run build` and `npm test` passed (115 root checks plus generated/version checks). Headless Edge hangar-systems and ship-systems passed. Extended the maintained Hangar scenario to inspect all six selected cores after a real paid shield installation, assert every list row remains a plain name, check Roman headings and absence of the “rating” label, preserve installed tank capacity after a controlled rupture, and retain paid engine upgrades, integrity/damage/power explanations, confirmed save/load, read-only rendering, keyboard/mouse navigation and two-theme/two-viewport fit. Visually inspected the generated core detail page. Fixtures grant credits/controlled damage; no new mechanics or unassisted-career claim. No unrelated audio/career audit repeated for this UI-only change.
+
+Saves: schema five unchanged; no new fields or migration. All selected sounds retained. No GitHub upload, executable packaging or private-lore changes.
+
+## 2026-11-12 — experimental.99: clearer engine rating in F3
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: the reported Scout upgrade mismatch did not reproduce: paid native 2→3→4 refits updated both the installed and effective F3 values. The author subsequently confirmed the ship had only the 2→3 refit; being able to refund that refit did not establish a second purchase. Clarified the F3 engine row and heading with its installed rating, retained separate integrity, and added drive pace/hull ceiling plus explicit engine-damage or reactor-power reasons for reduced effective performance. Purchase, refund, damage, power, travel and combat rules are unchanged. See [engine/refit readouts](docs/hull-framework.md).
+
+Validation: built the HTML and passed `npm test` (115 root checks and generated/version checks). Three headless Edge suites passed: hangar-systems, ship-systems and hulls. Extended the existing Hangar scenario with actual paid Scout refits, F3 rating 3 and 4 while integrity stays 100%, exact normal charges, damage/power readouts, read-only rendering and confirmed transactional save/load retaining rating 4. Existing checks cover keyboard/mouse entry, repairs, both UI styles, 1400×720 and 800×600 viewport fit, hull transactions and travel rules. Visually inspected the upgraded F3 page. Fixtures grant credits and controlled damage; no claim of reproducing the author's career/save or a purchase defect. No need to rerun unrelated audio/combat career audits for this readout-only change.
+
+Saves: schema five unchanged; no new fields or migration. All experimental.98 sounds retained. No GitHub upload, executable packaging or private-lore change.
+
+## 2026-11-12 — experimental.98: selected sounds integrated offline
+
+Branch: `codex/original-prospector-audio`; local experimental build, not published.
+
+Changes and reason: integrated the author's selected C1–C6 ship weapons/shield, C7-A boost, C8-D ram, C10-B nebula lightning, C11 scan and C12-A/B dock/door recordings, with C9-B used as the provisional asteroid cue under the instruction to implement the complete set. Added original W1 ground energy fire, W4 automatic carbines, W2 placed/inventory C4 and damaging meteor explosions, W3 Wraith/Devourer contact attack, W5 actual weapon hull impacts, original warning/critical alarms, LAND and START. Original pain stays exclusive to planetside physical crew damage. Corrected the former ground meteor/energy-node hull-hit callers; they no longer play the ship hull recording. Refueling, repair and breathing remain synthesized because no replacement was selected. Original WORM is embedded/reserved: the game has no wormhole-travel action, and none was invented for a sound cue.
+
+Firing follows committed direct shots, including misses, in the existing ordered presentation; shield-only results use the shield cue rather than a hull sound. Artemis launches once and receives real later impact feedback. Dedicated ram/asteroid/creature cues replace generic collision hits; only committed boosts, resolved lightning, successful/partial paid scans, successful doors and docking sound. Existing alarm latches remain. Refused actions produce no firing/engine/success cue, though existing resource alarms may still sound. No damage, fuel, turn, difficulty or encounter rules changed.
+
+Retained all eleven original WAVs with verified upstream Git blob hashes and added a pinned 24-recording playback catalog, source/license notes and 23 compressed MP3s. The exact selected audition bytes are retained, including the final C8-D encode. `art:audio` regenerates the embedded catalog offline without an encoder or network. All samples total 666,651 bytes before Base64; built HTML is 3,196,970 bytes (about 3.20 MB), replacing .97's 2,405,602-byte artifact. Rejected alternatives, raw extra WAVs, preview pages and encoder binaries are not added to the playable HTML download. Original recording-specific credit research remains separate from the verified original distribution; no CC0/Minecraft claim is made for those files.
+
+The sound engine caches each decode, primes on real input, bounds/coalesces voices, reduces overlapping peaks with a shared compressor and cancels stale pending/active sounds by career/location/encounter identity. All audio state stays outside the career and gameplay RNG. A failed decoder leaves gameplay playable. Added explicit weapon/hull/collision metadata to disposable feedback, not saves. See [routing, sources and limits](docs/audio.md); [audition decisions](docs/audio-candidates-2026-11-12.md) remain historical evidence rather than uninstalled current plans.
+
+Validation: `npm run build` and `npm test` passed (115 root checks plus generated/version checks); extended the existing asset check to verify catalog hashes, exact selected choices, unchanged pain bytes and all retained original WAV identities. Final headless Edge run passed 12 native-action suites: audio, combat-feedback, ramming, missile-flight, nebula-combat, nebula-damage, scan-comms, landing-impact, turns, oxygen, palette and autosave. The audio suite blocks HTTP(S), decodes all 24 clips once, observes actual native-action playback, checks miss/refusal/launch-versus-impact timing, shield/collision routing, ground-only pain, alarm latches, stale/retrigger cancellation, unchanged serialized state/RNG and harmless decoder failure. Controlled fixtures grant equipment/positions and force outcomes; they are not unassisted careers or subjective listening. A test fixture's initial fixed-RNG generation stall and MP3-header-only identity ambiguity were corrected; source generation uses ordinary RNG and sample observations compare full bytes. Optional audition-page checking now uses the separate preview checker rather than the former audio-scenario `--preview` path.
+
+Saves: schema five unchanged; no audio data or new rule fields enter saves. No migration or compatibility shim. Transactional save/load and playground return-to-career checks passed; sandbox persistence remains isolated. Remaining: human listening across devices/sustained play, final asteroid choice, future wormhole action and any further unassigned sounds. No GitHub upload, PR, executable build or private-lore changes.
+
+## 2026-11-12 — Ramming sound selected
+
+Branch: `codex/original-prospector-audio`; local audio-choice documentation. Game remains experimental.97.
+
+Changes and reason: author selected C8-D for ramming from the final headroom-adjusted comparison board. Recorded the choice in the audio guide, source notes, proposal and future audition-page labels, preserving the existing pinned construction and gain. C8-E remains unselected; C9-B is still only a tentative asteroid fallback. See [the selection](docs/audio-candidates-2026-11-12.md#ramming-selection).
+
+Validation: reviewed choice/status wording and diff whitespace; no sound bytes, processing, runtime, generated game HTML or saves changed. Existing audition playback checks remain the evidence for the selected clip; no build, game tests or new playback checks repeated for this decision-only update. Remaining: runtime integration and asteroid final choice. Nothing published.
+
+## 2026-11-12 — Collision feedback and corrected crash excerpt
+
+Branch: `codex/original-prospector-audio`; local previews/documentation. Game remains experimental.97.
+
+Changes and reason: recorded C8-B as improved but lacking a crash, rejected C8-C/C9-C as boost-like, and retained C9-B only as a tentative asteroid fallback. Found the C8-B metal crop stopped at 0.48 seconds before its main impact around 0.5 seconds. Prepared unapproved C8-D with the restored crash attack/earlier low body, and C8-E with the restored crash/original W5. Normal pitch and no low-pass on the crash preserve its attack; source hashes, excerpts and W5 provenance are pinned. Extended the existing optional collision generator with `--set crash`; earlier boards are preserved. See [current decisions and comparisons](docs/audio-candidates-2026-11-12.md#collision-feedback-and-restored-crash-attack).
+
+Validation: inspected decoded energy windows to identify the missing onset; final two clips passed offline headless Edge decoding, distinct IDs, actual one-at-a-time playback, shared volume and no page errors. Initial encoded overshoot was corrected with post-limiter headroom; final stereo sample peaks about 0.706/0.683. Clips total 54,631 bytes outside the game. Game .97 SHA-256 unchanged; no build/gameplay tests repeated for preview-only work. Saves/runtime unchanged. Remaining: human collision listening and later routing/integration. Nothing published or packaged as an executable.
+
+## 2026-11-12 — Accepted replacement sounds and layered collision auditions
+
+Branch: `codex/original-prospector-audio`; local preview/documentation work. Game remains experimental.97.
+
+Changes and reason: accepted C7-A boost, C10-B lightning and both C12-A/B mechanical doors after author listening. C1–C6/C11 remain accepted; original C7 fallback is superseded. Rejected standalone C8-A (locker-room smashing) and C9-A (billiards); C10-A was close but too short and is not selected. Exact door-event routing remains open. Recorded these decisions in the [audio proposal](docs/audio-candidates-2026-11-12.md#second-feedback-and-layered-collision-auditions), audio guide and source notes.
+
+Prepared four unapproved layered collision alternatives with pinned CC0 source hashes and a reproducible optional generator. Use low-frequency impact bodies, shortened/lowered/filtered metal, crunch or rock textures, explicit gains/delays, tail fades and a ceiling limiter; no synthesis or runtime assignments. Earlier boards and accepted clips are preserved. Generated files remain ignored and total 85,438 bytes outside the game.
+
+Validation: all four clips decoded in headless Edge with HTTP(S) blocked; unique labels, one-at-a-time playback, shared volume and no page errors passed. Decoded sample peaks stayed below full scale; .97 game SHA-256 unchanged. No build/gameplay tests repeated for preview-only work. Saves unchanged. Remaining: human listening for collisions, exact event routing and later integration. Nothing uploaded or packaged as an executable.
+
+## 2026-11-12 — Sound feedback and replacement auditions
+
+Branch: `codex/original-prospector-audio`; local preview/documentation work. Game remains experimental.97.
+
+Changes and reason: recorded acceptance of C1–C6 and C11, kept original C7 as a boost fallback, and rejected C8–C10/C12 after author listening. Prepared seven alternatives for boost, ramming, rock collision, discharge and doors using individual CC0 Freesound public preview MP3s. Explicitly distinguish recorded sources from designed/unspecified effects and public previews from original files. Source metadata/roles are shortlisting evidence, not a claim of perceptual assessment. Added pinned source hashes, a reproducible optional generator and source/treatment notes; previous boards are preserved. See [the updated proposal](docs/audio-candidates-2026-11-12.md#author-feedback-and-replacement-audition).
+
+Validation: all seven clips decoded in headless Edge; offline one-at-a-time playback, shared volume, unique labels and no page errors passed. Game HTML still matches the delivered .97 SHA-256; no build/gameplay tests repeated for audition-only changes. Clips total 295,594 bytes outside the game. Saves/runtime unchanged. Remaining: author listening, final trimming/routing and later integration. No public upload or executable packaging.
+
+## 2026-11-12 — Additional CC0 sound pitches and audition tools
+
+Branch: `codex/original-prospector-audio`; local proposals/development tools. Game version remains experimental.97.
+
+Changes and reason: prepared a twelve-candidate listening board for the remaining ship weapons, missile launch, shields, boost, physical collisions, nebula strikes, scanning and mechanical latches. Used Kenney's CC0 Sci-fi, Impact, Interface and Digital Audio packs, inspecting the actual downloaded license notices. Recorded the author's positive W5 compression comparison as a starting point for 96-kbit/s auditions. Candidates remain proposals; original Prospector assignments and the game's single installed pain recording are unchanged.
+
+Added a reusable optional preview generator, pinned source/hash/construction manifest, retained source-credit notes and a browser audition checker. Compressed candidates total 107,415 bytes before HTML embedding; excerpts, normalized layers and gain are identified on the cards. Downloaded packs, audio previews and standalone listening pages stay in ignored caches/outputs. Updated [the audio proposal](docs/audio-candidates-2026-11-12.md), audio guide and QA documentation. No runtime, game assets, package version, generated game HTML, mechanics or save state changed.
+
+Validation: inspected source notices and hashes; decoded all twelve compressed clips in a browser, tested actual one-at-a-time playback and the shared volume control, and verified unique labels/no page errors. The listening check blocks HTTP(S), and the game remains byte-identical to the delivered .97 artifact. Build/gameplay tests were not repeated for preview-only work. Remaining: human acceptance or rejection, exact event mappings, single-shot ground firearm/tool/pump candidates, later integration and device listening. Nothing published; no executable packaged for the game.
+
+## 2026-11-12 — Audio directions and download budget (documentation only)
+
+Branch: `codex/original-prospector-audio`; local documentation. Game version remains experimental.97.
+
+Changes and reason: recorded the author's descriptions and intended uses for W1–W5 and the other original clips in the [audio guide](docs/audio.md). Distinguished reserved ground laser/explosion roles, tentative C4/natural-entity/incoming-hull uses and the automatic-fire description from installed sounds. Retained PAIN as the only installed recording. Added measured current HTML/raw-audio sizes and a clearly labeled compressed-audio bitrate estimate to guide the next integration without assuming that every source WAV must be embedded unchanged.
+
+Validation: read actual file sizes and WAV headers for all eleven preview clips; calculated Base64 overhead and an illustrative 96-kbit/s budget. No audio was re-encoded, no quality comparison was claimed and no game behavior, build artifact or saved format changed. Build/gameplay tests not rerun for documentation only. Remaining: exact event assignments, compressed-candidate auditions and integration. Nothing published.
+
+## 2026-11-12 — experimental.97 Original ground pain and sound auditions
+
+Branch: `codex/original-prospector-audio`; local chat build, not published.
+
+Changes and reason: replaced the synthesized `SFX.crewHit()` grunt with the exact original Prospector `data/pain.wav` the author auditioned and approved. The cue is restricted to the game's planet/ground mode; existing ground combat and physical surface-hazard callers remain. Ship combat, galaxy, inventory and menu calls cannot start the recording. Ship hull/shield/core cues and the separate synthesized breathing/suffocation sound remain unchanged. The original 0.84-second mono WAV is retained unedited with pinned hashes and source attribution notes; playback gain is 0.65.
+
+Added a generated embedded audio catalog and dependency-free `art:audio` importer. The ordinary source build stays offline and single-file. Web Audio decodes the sample once; repeated hits replace the active voice, pending requests coalesce, and career/location/mode checks prevent delayed audio crossing into another context. Rendering cancels stale/active ground playback when leaving that context, including entry to ship combat, without creating audio contexts or changing career state. Playback remains outside saves and gameplay RNG; decode failure is harmless. Removed the former synthesized physical hurt approximation, retaining its public function name.
+
+Added an optional original-sound audition tool and standalone listening page: W1–W5 are the five original weapon filenames, A1/A2 the alarms, plus landing, start, wormhole and the approved pain clip. All eleven downloads are pinned and hash-verified; recordings and the self-contained preview page stay in ignored outputs. Only pain is installed in the game. Other labels deliberately do not assert a mapping to II weapons; the author will assign them after listening. Updated the [audio guide](docs/audio.md), build/source/QA documentation and roadmap status.
+
+Validation: rebuilt HTML; all 115 root tests and generated-source/version checks passed. The new asset test verifies the exact approved WAV and embedded bytes, and that no other original sound is bundled. Passed the new headless `audio` scenario plus six regression suites: `combat-feedback`, `bridge`, `turns`, `oxygen`, `palette` and `autosave`. Native surface damage plays a real decoded mono 0.84-second buffer; native ship crew injuries and firing do not. Checked one decode, non-overlapping retriggers, delayed-decode cancellation, unchanged serialized state/RNG, harmless decode failure, debug reset/career isolation and save integrity. All eleven audition clips decoded, and actual preview playback pauses/resets the preceding clip. These are functional playback/routing checks; final loudness, comfort and tone need human listening. No whole-career or balance audit was repeated for this audio-only change.
+
+Saves: schema five unchanged, with no migration or reset. No new galaxy/debug content or gameplay costs/damage were added. Remaining: the author's assignments for other original clips, audio-specific provenance/creator research before a later public asset publication, and listening across devices. No GitHub upload or Windows executable was produced.
+
 ## 2026-11-12 — Await initial save before hull-exchange QA
 
 Branch: `main`; test-only follow-up to experimental.96 publication. Game version and HTML unchanged.

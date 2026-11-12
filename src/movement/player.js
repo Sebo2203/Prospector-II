@@ -75,7 +75,7 @@ function tryMove(dx,dy,confirmed){
         addLog('WARNING: '+cell.name+' — pirate stronghold. Weapons fire detected!','lc');
         const dmg = 15 + rnd(20);
         const hull=absorbShipHit(G.ship,dmg,'base defense turrets');
-        if(dmg>0) SFX.hullHit && SFX.hullHit();
+        if(dmg>0) SFX.shipImpact(hull);
         addLog('Defense turrets hit for '+dmg+' damage ('+hull+' hull).','lc');
         if(G.ship.hp<=0){
           G.dead=true;
@@ -104,6 +104,8 @@ function tryMove(dx,dy,confirmed){
         const discharge=rollNebulaDischarge(G.shipStats.classId,bestNav),dmg=discharge.damage;
         const shield=Math.min(dmg,G.ship.shieldCharge,shipShieldCapacity());
         const hull=absorbShipHit(G.ship,dmg,'charged nebula gas');
+        SFX.lightning();
+        SFX.shipImpact(hull);
         const navNote = bestNav >= 5 ? ' (navigator reduced impact)' : '';
         addLog('Charged nebula gas hits for '+dmg+' damage ('+shield+' shield, '+hull+' hull'+
           (DEBUG.infiniteHull && dmg>shield?' — debug hull protection':'')+').'+
@@ -162,10 +164,10 @@ function tryMove(dx,dy,confirmed){
     // Medic: small chance to heal one injured crewmember by 1–3 HP
     // Chance = 2% per MED skill point of the best medic alive
     const bestMedic = G.crew.filter(c=>c.hp>0).reduce((best,c)=>{
-      const m = c.skills?.med||0; return m > (best?.skills?.med||0) ? c : best;
+      const m = crewSkillValue(c,'med'); return m > (crewSkillValue(best,'med')) ? c : best;
     }, null);
-    if(bestMedic && (bestMedic.skills?.med||0) > 0){
-      const medChance = (bestMedic.skills.med) * 0.02;
+    if(bestMedic && (bestMedicrewSkillValue(c,'med')) > 0){
+      const medChance = (crewSkillValue(bestMedic,'med')) * 0.02;
       if(Math.random() < medChance){
         // Pick a random injured crewmember (not the medic themselves if others hurt)
         const injured = G.crew.filter(c=>c.hp>0 && c.hp<c.maxHp);
@@ -182,10 +184,10 @@ function tryMove(dx,dy,confirmed){
     // Engineer: small chance to repair 1 HP of ship hull
     // Chance = 1.5% per ENG skill point of the best engineer alive
     const bestEngineer = G.crew.filter(c=>c.hp>0).reduce((best,c)=>{
-      const e = c.skills?.eng||0; return e > (best?.skills?.eng||0) ? c : best;
+      const e = crewSkillValue(c,'eng'); return e > (crewSkillValue(best,'eng')) ? c : best;
     }, null);
-    if(bestEngineer && (bestEngineer.skills?.eng||0) > 0 && G.ship.hp < G.ship.maxHp){
-      const engChance = (bestEngineer.skills.eng) * 0.015;
+    if(bestEngineer && (crewSkillValue(bestEngineer,'eng')) > 0 && G.ship.hp < G.ship.maxHp){
+      const engChance = (crewSkillValue(bestEngineer,'eng')) * 0.015;
       if(Math.random() < engChance){
         G.ship.hp = Math.min(G.ship.maxHp, G.ship.hp + 1);
         addLog(crewDisplayName(bestEngineer)+' patches the hull. +1 HP.','lg');
@@ -227,8 +229,7 @@ function tryMove(dx,dy,confirmed){
     if(!TILE[cell.type]?.pass){
       // Ringworld locked door — open with [E]
       if(cell.type==='rw_locked_door'){
-        cell.type='rw_open_door';
-        addLog('Maintenance hatch forced open. The hallway beyond is pressurised.','li');
+        openInteriorHatch(cell,!!pdata.isQuarantine);
         completeSurfaceAction();
         renderAll(); return;
       }
@@ -240,6 +241,7 @@ function tryMove(dx,dy,confirmed){
         const SCI_THRESHOLD = 5;
         if(sciVal >= SCI_THRESHOLD){
           cell.type = 'ANCIENT_ROAD';
+          SFX.door('ancient');
           addLog(crewDisplayName(bestSci)+' deciphers the lock sequence. The door sighs open.','lg');
           // Disturbing the lock may activate interior defences
           if(!cell._orbSpawned){ cell._orbSpawned = true; maybeSpawnAncientSentinel(pdata, nx, ny); }
@@ -595,7 +597,7 @@ function tryMove(dx,dy,confirmed){
         }
       } else {
         // ── Extraction: requires a mining tool ────────────────────────────
-        const toolItem = (G.inventory||[]).find(i => i.usable === 'mining_tool');
+        const toolItem = bestMiningTool();
         if(!toolItem){
           addLog(com.name+' deposit identified — you need a mining tool and cargo space to extract it.','lw');
         } else if(ss && ss.cargoCapacity <= 0){
@@ -608,11 +610,11 @@ function tryMove(dx,dy,confirmed){
             applyRadiationExposureToCrew(1, 'uranium_extraction', 0.6);
           }
           // Init or reset progress state
-          const bestEng = Math.max(...(G.crew||[]).filter(c=>c.hp>0).map(c=>c.skills?.eng||0), 0);
+          const bestEng = Math.max(...(G.crew||[]).filter(c=>c.hp>0).map(c=>crewSkillValue(c,'eng')), 0);
           const mult = toolItem.miningMult || 1.0;
           const totalNeeded = Math.max(2, Math.round((10 / mult) - bestEng * 0.5));
-          if(!G._miningProgress || G._miningProgress.x !== G.player.x || G._miningProgress.y !== G.player.y){
-            G._miningProgress = { x:G.player.x, y:G.player.y, progress:0, total:totalNeeded, oreKey, comId };
+          if(!G._miningProgress || G._miningProgress.x !== G.player.x || G._miningProgress.y !== G.player.y || G._miningProgress.planetKey!==G.curPlanet){
+            G._miningProgress = { planetKey:G.curPlanet,x:G.player.x,y:G.player.y,progress:0,total:totalNeeded, oreKey, comId };
           }
           G._miningProgress.progress++;
           if(G._miningProgress.progress >= G._miningProgress.total){
@@ -729,7 +731,7 @@ function tryMove(dx,dy,confirmed){
         } else {
           addLog('Ancient energy node discharges! No crew to protect you.','lc');
         }
-        SFX.hullHit && SFX.hullHit();
+        if(victim)SFX.crewHit();
         cell.type = 'ancient_st_floor';
         // Check if all crew dead
         debugRestoreCrewHp();

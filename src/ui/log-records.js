@@ -35,8 +35,8 @@ function currentLogRecords(){
   } else if(science.cooldownUntil>G.turn) add('SCIENCE OFFICE: replacement work in '+(science.cooldownUntil-G.turn)+' turns.');
   const incident=state.quarantine;
   if(incident && incident.discovered!==false){
-    const addIncident=incident.status==='closed'||incident.choice ? add : addActive;
-    addIncident('Mercy of Dawn at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
+    const addIncident=!quarantineMissionActive(incident)||incident.choice ? add : addActive;
+    addIncident(quarantineShipName(incident)+' at '+(incident.x+1)+','+(incident.y+1)+'. '+(incident.startedTurn?
       incident.repaired?'Life support restored.':incident.rosterKnown?'Engineering reported a failing pump.':'Interior not fully investigated.':
       'Broken distress transmission mentions a sealed ward. No survivors confirmed yet.'));
     if(incident.version===2) for(const person of incident.survivors){

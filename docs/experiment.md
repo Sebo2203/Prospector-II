@@ -4,13 +4,17 @@ These rules apply to the active experimental build. [Download instructions](../R
 
 ## Hull roles and refits
 
-Hulls now derive upgrade ceilings from physical and layout stats, with a shared spare-space budget. Larger ships use more fuel, need more engine grade for comparable drive pace and suffer stronger rough-landing/nebula impacts. Hangar hull exchanges include condition-based trade-in, explicit review and station-local stores for retained equipment. See the [full hull rules and price tables](hull-framework.md). Career schema five requires a new career.
+Hulls now derive upgrade ceilings from physical and layout stats, with a shared spare-space budget. Larger ships use more fuel, need more engine grade for comparable drive pace and suffer stronger rough-landing/nebula impacts. Hangar hull exchanges include condition-based trade-in, explicit review and station-local stores for retained equipment. See the [full hull rules and price tables](hull-framework.md). Career schema six requires a new career.
 
 ## Controls
+
+Equipment details and the current implementation audit are recorded [here](equipment-audit-2026-11-12.md). Purchased Repair Kits now enter inventory for later hull/core repair. Implant skill modifiers apply to effective checks; the crew skill table keeps trained levels/XP separate and shows an **Effective** value when modifiers change them. A Lung Filter reduces its wearer's share of surface oxygen consumption. Carrying both mining tools uses the faster tool. Ship Mining Drill remains a disabled future module.
 
 The top HUD shows the ship's current hull type to the right of its vessel name. When the visible hull gauge loses HP, the newly lost section briefly highlights red and fades out over 650 ms. Numeric HP updates immediately; consecutive hits merge into the current damage band. Healing, hull replacement, capacity changes or loading another ship clear the effect. Reduced-motion preferences skip the flash.
 
 Click the context bar actions or use their displayed shortcuts. During play, the top-left **ESC** button does the same thing as the Escape key. Use the compass to move or wait. In Examine and landing scans, click a tile or move the cursor with the compass or arrow keys. Confirm a landing with **Enter** or **Land at selected site**. Orbital scans remember the previous landing spot but show its underlying terrain rather than a player ship left on the surface. In ground firing mode, click a tile to aim and click that tile again to fire, or use **Enter**. Toggle **Shortcuts** to show or hide the gray keyboard reference.
+
+Press **U** on the surface to open or close all crew helmets. It appears only in the collapsed Shortcuts list. The first toggle takes over automatic helmet selection; your manual choice persists through travel and saves. Opening helmets in unbreathable air or underwater costs a turn and immediately harms the crew even with full oxygen tanks. Closing them restores protection only where suitable intact suits exist. Your own ship airlock is breathable. **O** still opens Options; **U** still scoops fuel in galaxy/orbital views.
 
 Open Inventory with **I** or Options with **O**, or click their context buttons. Click menu choices or use their displayed keys. Select cargo and press **X**, or click its slot, to open the same details. Hover gives a quick preview. Use **On-screen keys** to enter names or feedback text, or to choose a common movement key while rebinding.
 
@@ -184,7 +188,9 @@ Survey income comes from planetary scans and exploration. The office counts thei
 
 ## Mercy of Dawn
 
-Ship sensors and sensor drones can reveal the wreck at its fixed location. A fresh galaxy places it once among eligible empty interior sectors, outside the opening station reveals and clear of ships, loot, and other objects. The distress signal records its coordinates in the log. Fly there and press **Enter** to board its persistent 32-by-20 deck. Existing careers keep their original wreck location and encounter history.
+This optional quarantine-rescue event uses one of twelve ship names; **Mercy of Dawn** is one possibility. A new career has a 60% eligibility roll. Of eligible careers, 35% place the wreck initially; others schedule its appearance 80–600 career turns later. The choice and deadline are saved once, independently of player equipment/progress. Placement uses an uncharted empty sector clear of other actors. An eligible event may wait longer if no valid sector exists.
+
+A drone can chart the wreck, but the distress transmission requires your own ship within **three tiles or its working sensor range, whichever is smaller**, with no intervening nebula. Offline sensors cannot receive it. The signal records the instance's name and coordinates once. Fly there and press **Enter** to board its persistent 32-by-20 deck. [Story-event lifecycle and implementation](story-missions.md).
 
 ### Rescue details and spoilers
 
@@ -192,7 +198,7 @@ The bridge, medical stores, cargo hold, engineering compartment and sealed isola
 
 ### Interaction
 
-Move normally. The context bar labels what Enter will do as you move between equipment, hatches, and survivors. X examines visible equipment and people. Examine the engineering pump to see the remaining air reserve. T gives medical care to an adjacent survivor. P deploys a recovered isolation pod. At the pump, R manually restores temporary pressure. L departs only from your own airlock.
+Move normally. Ringworld and rescue hatches use identical closed/open tiles, art, collision and opening logic: Enter beside a rescue hatch or moving into a closed hatch opens it. The context bar labels the available actions. X examines survivors through the same creature interface and two-tile detail range as other beings; hidden actors disclose nothing. Normal rendering uses pixel equipment and human/pod art, while ASCII mode retains glyphs. Examine the engineering pump to see the remaining air reserve. T gives medical care to an adjacent survivor. P deploys a recovered isolation pod. At the pump, R manually restores temporary pressure. L departs only from your own airlock.
 
 ### Survival
 
@@ -204,15 +210,19 @@ Mira can walk, Rowan needs an injury stabilized or two crew to carry them, and I
 
 ### Exposure
 
-Contaminated ward tiles expose crew whose suits are absent or punctured; intact flight suits protect against the air. Reconnecting the local scrubber removes that environmental exposure. An untreated passenger in shared ship quarters can infect the crew during travel. These exposures use the crew infection and disease system.
+Unfiltered contaminated ward tiles infect unprotected crew after three exposed turns. Opening helmets permits exposure even with intact suits. Closed flight, reinforced, exosuit and diving-suit helmets protect against the air unless punctured; armor plates do not provide a seal. Helmet graphics follow the actual choice. Before a manual toggle, suits automatically close their helmets in contaminated or unbreathable air. Reconnecting the local scrubber removes that environmental exposure. An untreated passenger in shared ship quarters can infect the crew during travel. These exposures use the crew infection and disease system.
 
 ### Transport
 
 Assisted survivors path through open, passable tiles one cardinal step per turn. Carried survivors remain with the away team. They enter your ship only at the airlock. Normal passenger capacity equals unused crew bunks plus one emergency berth, with a minimum of one. Pods occupy real cargo slots and protect occupants from shared-air exposure. Repair life support before making return trips with a small hull. Full holds or berths leave people physically aboard the wreck. Jettisoning an occupied pod records the passenger as lost. Departure leaves untransported followers and carried casualties at their actual deck positions.
 
+### Passenger care aboard your ship
+
+Open **I → SHIP → Passengers [P]**. Select a passenger with the arrow keys or pointer, then **Give medical care [T]**. Antibiotics treat infection; a medikit stabilizes an injury, or MED 3 permits the existing three-turn splint. Each successful treatment/work step consumes one turn and the relevant medicine when needed. Refused or unnecessary treatment is free. You must be aboard your own ship, including its surface airlock; browsing the manifest while away does not permit remote treatment. This page shares the same treatment rules as adjacent field care.
+
 ### Aftermath
 
-Docking at a major station transfers only actual onboard passengers to medical care, pays 100 cr per person and improves standing once per delivery. Loading a save or redocking cannot repeat a payment. Sell recovered instruments through the station market. The log records observed conditions and actions. Deaths out of sight remain unconfirmed until observed. The retirement record counts delivered and still-onboard survivors.
+Docking at a major station transfers only actual onboard passengers to medical care, pays 100 cr per person and improves standing once per delivery. Loading a save or redocking cannot repeat a payment. Sell recovered instruments through the station market. The log records observed conditions and actions. Deaths out of sight remain unconfirmed until observed. The retirement record counts delivered and still-onboard survivors. Once every survivor has been delivered, confirmed dead or lost, the rescue closes without requiring another docking. A failed rescue pays nothing. Deaths outside observation do not produce an omniscient completion message; their last-known status remains until confirmed.
 
 ### Saves
 

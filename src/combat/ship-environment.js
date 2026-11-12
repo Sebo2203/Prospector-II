@@ -38,6 +38,7 @@ function advanceShipCombatEnvironment(combat){
   if(environment.charge && environment.charge.dueTurn<=G.turn){
     const index=environment.charge.pocket,pocket=environment.pockets[index];
     environment.charge=null;environment.lastStrike={pocket:index,turn:G.turn};environment.nextChargeAt=G.turn+4;
+    SFX.lightning();
     addCombatLog('NEBULA LIGHTNING strikes charged gas at '+pocket.x+','+pocket.y+'!','lw');
     const impact=ship=>Math.max(1,Math.round((4+rnd(7))*(ship===G.ship?hullSize():(SHIP_CLASSES[shipSystemStats(ship).classId]?.size||1))));
     if(shipCombatRectContains(pocket,combat.player)){

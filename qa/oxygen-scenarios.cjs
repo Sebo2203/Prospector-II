@@ -19,7 +19,7 @@ const { chromium, gameUrl, artifactPath } = require('./runtime.cjs');
       const planet=G.planets[key];
       G.mode='planet';G.curPlanet=key;G.player={x:10,y:1};G.enemies[key]=[];
       G.underwater=false;G.oxygen=100;
-      G.crew.forEach(c=>{c.statuses={};c.armorUsable='armor_vac';});
+      G.crew.forEach(c=>{c.statuses={};c.armorUsable='armor_flight';});
       applyCrewInjury(G.crew[0],'broken_foot',{silent:true});
       applyCrewInjury(G.crew[1],'broken_leg',{silent:true});
       for(let y=0;y<=2;y++)for(let x=9;x<=12;x++)planet.grid[y][x]={type:'rw_floor'};

@@ -329,11 +329,12 @@ function doScan(){
   // NAV skill: best navigator's skill adds up to +0.20 scan success
   const navScanBonus = bestNavScan * 0.02;
   const roll = Math.random();
+  const wasUnscanned = !targetDesc.scanState || targetDesc.scanState==='none' || targetDesc.scanState==='failed';
 
   if(roll < difficulty + scoutBonus + sensorBonus + navScanBonus){
+    if(wasUnscanned)SFX.scan();
     // Every successful paid scan trains navigation; completed-scan browsing is free.
     const navCrewScan = G.crew.filter(c=>c.hp>0).sort((a,b)=>(b.skills?.nav||0)-(a.skills?.nav||0))[0];
-    const wasUnscanned = !targetDesc.scanState || targetDesc.scanState==='none' || targetDesc.scanState==='failed';
     if(targetDesc.biome==='GAS_GIANT'){
       targetDesc.scanState = 'full';
       if(navCrewScan) giveSkillXP(navCrewScan,'nav',2);
@@ -348,6 +349,7 @@ function doScan(){
       logBodyScanHint(targetDesc,pdata);
     }
   } else if(roll < (difficulty + scoutBonus + navScanBonus)*1.5){
+    if(wasUnscanned)SFX.scan();
     if(targetDesc.biome==='GAS_GIANT'){
       targetDesc.scanState = 'partial';
       logBodyScanHint(targetDesc);
